@@ -1,5 +1,4 @@
 @php
-    // menu statis tanpa controller
     $menuItems = [
         ['id' => 'home', 'label' => 'Home', 'icon' => 'home', 'href' => url('/')],
         ['id' => 'courses', 'label' => 'Courses', 'icon' => 'book-text', 'href' => url('/courses')],
@@ -27,7 +26,6 @@
         ['id' => 'development', 'label' => 'Development', 'icon' => 'goal', 'href' => url('/development')],
     ];
 
-    // segment pertama utk active state (mirip firstSegment di Next)
     $firstSegment = '/' . (request()->segment(1) ?? '');
 @endphp
 
@@ -69,36 +67,46 @@
         :class="isOpen
             ?
             'w-64 h-[85vh] top-[15vh] translate-x-0' :
-            'w-23 h-80 top-[15vh] rounded-br-[60px] rounded-tr-[60px] -translate-x-full md:translate-x-0'">
+            'w-23 h-80 top-[15vh] rounded-br-[60px] !rounded-tr-[60px] -translate-x-full md:translate-x-0'">
         <div class="flex flex-col h-full p-4 pr-[24px]" :class="!isOpen && 'pl-[10px] pr-[30px]'">
 
             <!-- Nav -->
             <nav class="flex-1 space-y-2 transition-all duration-1000 ease-out"
-                :class="isOpen ? 'mt-[11px]' : 'mt-4 space-y-3'">
+                :class="isOpen ? 'mt-[15px]' : 'mt-6 space-y-3'">
 
                 @foreach ($menuItems as $item)
                     @php
-                        $hasSub = isset($item['submenu']) && count($item['submenu']) > 0;
-                        $isActiveTop = !$hasSub && $firstSegment === parse_url($item['href'], PHP_URL_PATH);
+                        $hasSub = isset($item['submenu']) && count(value: $item['submenu']) > 0;
+                        $path = ltrim(parse_url($item['href'], PHP_URL_PATH) ?? '/', '/');
+                        $isActiveTop = !$hasSub && request()->is($path === '' ? '/' : $path . '*');
                     @endphp
 
                     <div class="transition-all duration-1000 ease-out">
                         <!-- Main item -->
                         <button
                             @click="{{ $hasSub ? "toggle('{$item['id']}')" : "window.location.href='{$item['href']}'" }}"
-                            class="group flex items-center justify-between w-full px-3 py-2 rounded-md text-left text-white hover:bg-white/10 transition"
+                            @class([
+                                'group flex w-full px-3 py-2 text-left transition-all cursor-pointer',
+                                'rounded-md',
+                                'bg-white text-primary' => $isActiveTop,
+                                'text-white hover:bg-white/10 hover:text-white' => !$isActiveTop,
+                            ])
                             :class="{
-                                'bg-white text-primary': {{ $isActiveTop ? 'true' : 'false' }},
+                                'justify-between': isOpen,
+                                'justify-center': !isOpen,
+                                'rounded-tr-[80px]': isOpen && '{{ $item['id'] }}'
+                                === 'home'
                             }"
                             @keydown.enter.prevent="{{ $hasSub ? "toggle('{$item['id']}')" : '' }}"
                             aria-expanded="{{ $hasSub ? 'true' : 'false' }}">
+
                             <span class="flex items-center gap-3">
-                                <x-dynamic-component :component="'lucide-' . $item['icon']" class="w-5 h-5" />
+                                <x-dynamic-component :component="'lucide-' . $item['icon']" class="w-[23px] h-[23px]" />
                                 <span x-show="isOpen" x-transition>{{ $item['label'] }}</span>
                             </span>
 
                             @if ($hasSub)
-                                <!-- Chevron/arrow muncul hanya saat terbuka -->
+                                <!-- arrow muncul hanya saat terbuka -->
                                 <x-lucide-chevron-down x-show="isOpen" class="w-4 h-4 transition-transform duration-300"
                                     :class="'rotate-0 w-4 h-4 transition-transform duration-300'"
                                     x-bind:class="has('{{ $item['id'] }}') ? 'rotate-180' : 'rotate-0'" />
@@ -107,7 +115,7 @@
 
                         <!-- Submenu -->
                         @if ($hasSub)
-                            <div class="ml-6 overflow-hidden transition-all ease-out"
+                            <div class="ml-6 overflow-hidden transition-all ease-out mt-2"
                                 x-show="has('{{ $item['id'] }}') && isOpen"
                                 x-transition:enter="transition duration-500 ease-out"
                                 x-transition:enter-start="opacity-0 -translate-y-2"
@@ -121,10 +129,11 @@
                                             request()->fullUrlIs($sub['href']) || url()->current() === $sub['href'];
                                     @endphp
                                     <button @click="window.location.href='{{ $sub['href'] }}'"
-                                        class="block w-full text-left px-3 py-2 text-sm rounded-md transition
-                                               text-white/80 hover:text-white hover:bg-white/5
-                                               {{ $subActive ? 'bg-white text-primary hover:text-primary' : '' }}"
-                                        style="transition-delay: {{ $index * 50 }}ms">
+                                        @class([
+                                            'block w-full text-left px-3 py-2 text-sm rounded-md transition',
+                                            'hover:bg-white/5 text-white/80 hover:text-white' => !$subActive,
+                                            'bg-white text-primary hover:text-primary hover:opacity-80' => $subActive,
+                                        ]) style="transition-delay: {{ $index * 50 }}ms">
                                         {{ $sub['label'] }}
                                     </button>
                                 @endforeach
