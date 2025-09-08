@@ -9,6 +9,7 @@
             'href' => '#',
             'submenu' => [
                 ['label' => 'Training History', 'href' => url('/history/training')],
+                ['label' => 'Training Module', 'href' => url('/training/module')],
                 ['label' => 'Certification History', 'href' => url('/history/certification')],
             ],
         ],

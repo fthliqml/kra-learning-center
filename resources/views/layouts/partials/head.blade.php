@@ -6,7 +6,7 @@
 @else
     <title>KRA</title>
 @endisset
-<link rel="icon" href="/images/logo.avif" type="image/avif">
+<link rel="icon" href="/images/logo_kra.png" type="image/png">
 
 @yield('css')
 

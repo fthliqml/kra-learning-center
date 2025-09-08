@@ -1,10 +1,10 @@
 <?php
 
-use App\Http\Controllers\TrainingHistoryController;
+use App\Http\Controllers\TrainingModuleController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
     return view('pages.dashboard');
 });
 
-Route::get('/history/training', [TrainingHistoryController::class, 'index']);
+Route::get('/training/module', [TrainingModuleController::class, 'index']);
