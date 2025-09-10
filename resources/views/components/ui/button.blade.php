@@ -2,11 +2,13 @@
     'variant' => 'default',
     'size' => 'default',
     'href' => null,
+    'class' => '',
 ])
 
 @php
     $variants = [
-        'default' => 'bg-primary text-primary-foreground shadow-xs hover:opacity-90 cursor-pointer',
+        // default: base color + border
+        'default' => 'bg-base-100 text-base-content border border-gray-300 shadow-xs hover:bg-base-200 cursor-pointer',
         'primary' =>
             'bg-gradient-to-r from-primary to-secondary text-primary-foreground shadow-xs hover:opacity-90 cursor-pointer',
     ];
@@ -24,8 +26,9 @@
 
     $variantClass = $variants[$variant] ?? $variants['default'];
     $sizeClass = $sizes[$size] ?? $sizes['default'];
-    $classes = $baseClasses . ' ' . $variantClass . ' ' . $sizeClass;
+    $classes = $baseClasses . ' ' . $variantClass . ' ' . $sizeClass . ' ' . $class;
 @endphp
+
 
 @if ($href)
     <a href="{{ $href }}" class="{{ $classes }}" {{ $attributes }}>

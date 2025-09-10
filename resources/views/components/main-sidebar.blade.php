@@ -1,11 +1,11 @@
 @php
     $menuItems = [
         ['id' => 'home', 'label' => 'Home', 'icon' => 'home', 'href' => url('/')],
-        ['id' => 'courses', 'label' => 'Courses', 'icon' => 'book-text', 'href' => url('/courses')],
+        ['id' => 'courses', 'label' => 'Courses', 'icon' => 'book-open', 'href' => url('/courses')],
         [
             'id' => 'history',
             'label' => 'History',
-            'icon' => 'history',
+            'icon' => 'clock',
             'href' => '#',
             'submenu' => [
                 ['label' => 'Training History', 'href' => url('/history/training')],
@@ -16,7 +16,7 @@
         [
             'id' => 'survey',
             'label' => 'Survey',
-            'icon' => 'file-text',
+            'icon' => 'document-text',
             'href' => '#',
             'submenu' => [
                 ['label' => 'Survey 1', 'href' => url('/survey/1')],
@@ -24,7 +24,7 @@
                 ['label' => 'Survey 3', 'href' => url('/survey/3')],
             ],
         ],
-        ['id' => 'development', 'label' => 'Development', 'icon' => 'goal', 'href' => url('/development')],
+        ['id' => 'development', 'label' => 'Development', 'icon' => 'trophy', 'href' => url('/development')],
     ];
 
     $firstSegment = '/' . (request()->segment(1) ?? '');
@@ -51,7 +51,7 @@
         <button @click="isOpen = !isOpen"
             class="p-2 rounded-lg bg-white shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 cursor-pointer opacity-60 hover:opacity-100 md:opacity-100"
             :class="isOpen && 'opacity-100'">
-            <x-lucide-menu class="w-5 h-5 text-primary" />
+            <x-icon name="o-bars-3" class="w-5 h-5 text-primary" />
         </button>
 
         <!-- Logo -->
@@ -102,14 +102,14 @@
                             aria-expanded="{{ $hasSub ? 'true' : 'false' }}">
 
                             <span class="flex items-center gap-3">
-                                <x-dynamic-component :component="'lucide-' . $item['icon']" class="w-[23px] h-[23px]" />
+                                <x-icon :name="'o-' . $item['icon']" class="w-[23px] h-[23px]" />
                                 <span x-show="isOpen" x-transition>{{ $item['label'] }}</span>
                             </span>
 
                             @if ($hasSub)
                                 <!-- arrow muncul hanya saat terbuka -->
-                                <x-lucide-chevron-down x-show="isOpen" class="w-4 h-4 transition-transform duration-300"
-                                    :class="'rotate-0 w-4 h-4 transition-transform duration-300'"
+                                <x-icon name="o-chevron-down" x-show="isOpen"
+                                    class="w-4 h-4 transition-transform duration-300" :class="'rotate-0 w-4 h-4 transition-transform duration-300'"
                                     x-bind:class="has('{{ $item['id'] }}') ? 'rotate-180' : 'rotate-0'" />
                             @endif
                         </button>

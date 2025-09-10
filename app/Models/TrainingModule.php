@@ -11,6 +11,9 @@ class TrainingModule extends Model
     protected $fillable = [
         'title',
         'group_comp',
+        'objective',
+        'training_content',
+        'method',
         'duration',
         'frequency',
     ];

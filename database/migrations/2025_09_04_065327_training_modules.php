@@ -14,6 +14,9 @@ return new class extends Migration {
             $table->id();
             $table->string('title');
             $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
+            $table->text('objective');
+            $table->text('training_content');
+            $table->string('method');
             $table->integer('duration');
             $table->integer('frequency');
             $table->timestamps();
