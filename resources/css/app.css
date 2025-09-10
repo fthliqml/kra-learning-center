@@ -177,7 +177,7 @@ select {
 }
 
 .table-zebra tbody tr:nth-child(odd) {
-    @apply bg-gray-200;
+    @apply bg-[#EDEDED];
 }
 
 .table-zebra tbody tr:nth-child(even) {

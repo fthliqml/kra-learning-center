@@ -5,14 +5,17 @@ namespace App\Livewire\Pages\Training;
 use App\Models\TrainingModule;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
 class Module extends Component
 {
-    use Toast;
+    use Toast, WithPagination;
     public $modal = false;
     public $selectedId = null;
     public $mode = 'create'; //  create | edit | preview
+    public $search = '';
+    public $filter = null;
 
     public $groupOptions = [
         ['value' => 'BMC', 'label' => 'BMC'],
@@ -43,6 +46,13 @@ class Module extends Component
         'formData.frequency' => 'required|integer|min:1',
     ];
 
+    public function updated($property): void
+    {
+        if (!is_array($property) && $property != "") {
+            $this->resetPage();
+        }
+    }
+
     public function openCreateModal()
     {
         $this->reset(['formData', 'selectedId']);
@@ -70,16 +80,6 @@ class Module extends Component
         $this->modal = true;
 
         $this->resetValidation();
-    }
-
-    public function openPreviewModal($id)
-    {
-        $module = TrainingModule::findOrFail($id);
-
-        $this->resetValidation();
-        $this->formData = $module->toArray();
-        $this->mode = 'preview';
-        $this->modal = true;
     }
 
     public function save()
@@ -139,12 +139,28 @@ class Module extends Component
         ];
     }
 
+    public function modules()
+    {
+        return TrainingModule::query()
+            ->when(
+                $this->search,
+                fn($q) =>
+                $q->where('title', 'like', '%' . $this->search . '%')
+            )
+            ->when(
+                $this->filter,
+                fn($q) =>
+                $q->where('group_comp', $this->filter)
+            )
+            ->orderBy('created_at', 'asc')
+            ->paginate(10);
+    }
+
     public function render()
     {
-        $modules = TrainingModule::all();
 
         return view('livewire.pages.training.module.index', [
-            'modules' => $modules,
+            'modules' => $this->modules(),
             'headers' => $this->headers()
         ]);
 
