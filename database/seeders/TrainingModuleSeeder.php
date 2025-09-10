@@ -1,0 +1,200 @@
+<?php
+
+namespace Database\Seeders;
+
+use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\DB;
+
+class TrainingModuleSeeder extends Seeder
+{
+    /**
+     * Run the database seeds.
+     */
+    public function run(): void
+    {
+        DB::table('training_modules')->insert([
+            [
+                'title' => '5S Management',
+                'group_comp' => 'BMC',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 8,
+                'frequency' => 2,
+            ],
+            [
+                'title' => '7 HABITS',
+                'group_comp' => 'BC',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 8,
+                'frequency' => 2,
+            ],
+            [
+                'title' => '8 STEPS IMPROVEMENT',
+                'group_comp' => 'BMC',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 12,
+                'frequency' => 3,
+            ],
+            [
+                'title' => 'ADVANCE ASSEMBLY OF AXLE ASSY',
+                'group_comp' => 'MMP',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 16,
+                'frequency' => 4,
+            ],
+            [
+                'title' => 'ADVANCE ASSEMBLY OF COUNTER SHAFT TRANSMISSION',
+                'group_comp' => 'MMP',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 16,
+                'frequency' => 4,
+            ],
+            [
+                'title' => 'ADVANCE ASSEMBLY OF DIFFERENTIAL',
+                'group_comp' => 'MMP',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 16,
+                'frequency' => 4,
+            ],
+            [
+                'title' => 'ADVANCE ASSEMBLY OF ENGINE PART 2',
+                'group_comp' => 'MMP',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 20,
+                'frequency' => 5,
+            ],
+            [
+                'title' => 'ADVANCE ASSEMBLY OF FINAL DRIVE DZ AND PC SERIES',
+                'group_comp' => 'MMP',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 16,
+                'frequency' => 4,
+            ],
+            [
+                'title' => 'ADVANCE ASSEMBLY OF FINAL DRIVE GD SERIES',
+                'group_comp' => 'MMP',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 16,
+                'frequency' => 4,
+            ],
+            [
+                'title' => 'ADVANCE ASSEMBLY OF POWER TRAIN MODUL',
+                'group_comp' => 'MMP',
+                'objective' => '',
+                'training_content' => '',
+                'method' => '',
+                'duration' => 16,
+                'frequency' => 4,
+            ],
+
+            [
+                'title' => 'BASIC QUALITY CONTROL',
+                'group_comp' => 'MMP',
+                'objective' => "Memahami dasar-dasar quality control\nMampu mengidentifikasi defect\nMengurangi produk cacat",
+                'training_content' => "1. Konsep dasar QC\n2. Jenis-jenis defect\n3. Teknik inspeksi dasar\n4. Praktik lapangan",
+                'method' => 'Lecture & Workshop',
+                'duration' => 6,
+                'frequency' => 2,
+            ],
+            [
+                'title' => 'LEAN MANUFACTURING FUNDAMENTALS',
+                'group_comp' => 'BMC',
+                'objective' => "Mengurangi pemborosan proses\nMeningkatkan efisiensi produksi",
+                'training_content' => "1. Konsep Lean\n2. 7 Waste\n3. Value Stream Mapping\n4. Implementasi di lapangan",
+                'method' => 'Case Study & Simulation',
+                'duration' => 12,
+                'frequency' => 3,
+            ],
+            [
+                'title' => 'EFFECTIVE TEAM COMMUNICATION',
+                'group_comp' => 'BC',
+                'objective' => "Meningkatkan keterampilan komunikasi\nMengurangi miskomunikasi antar tim",
+                'training_content' => "1. Prinsip komunikasi efektif\n2. Active listening\n3. Feedback konstruktif\n4. Role play",
+                'method' => 'Interactive Training',
+                'duration' => 8,
+                'frequency' => 2,
+            ],
+            [
+                'title' => 'TOTAL PRODUCTIVE MAINTENANCE (TPM)',
+                'group_comp' => 'MMP',
+                'objective' => "Menjaga ketersediaan mesin\nMengurangi downtime\nMeningkatkan umur mesin",
+                'training_content' => "1. Konsep TPM\n2. Autonomous maintenance\n3. Planned maintenance\n4. Kaizen untuk TPM",
+                'method' => 'Workshop & On-site Practice',
+                'duration' => 14,
+                'frequency' => 3,
+            ],
+            [
+                'title' => 'BASIC ELECTRICAL TROUBLESHOOTING',
+                'group_comp' => 'MMP',
+                'objective' => "Mampu membaca diagram listrik\nMelakukan analisis masalah listrik sederhana",
+                'training_content' => "1. Dasar kelistrikan\n2. Simbol & diagram\n3. Teknik troubleshooting\n4. Simulasi kasus",
+                'method' => 'Practical Training',
+                'duration' => 10,
+                'frequency' => 2,
+            ],
+            [
+                'title' => 'PROBLEM SOLVING & DECISION MAKING',
+                'group_comp' => 'BC',
+                'objective' => "Menguasai teknik pemecahan masalah\nMengambil keputusan berbasis data",
+                'training_content' => "1. Root cause analysis\n2. Fishbone diagram\n3. 5 Why’s technique\n4. Group decision making",
+                'method' => 'Workshop & Case Study',
+                'duration' => 8,
+                'frequency' => 2,
+            ],
+            [
+                'title' => 'WORKPLACE SAFETY & HAZARD AWARENESS',
+                'group_comp' => 'BMC',
+                'objective' => "Meningkatkan kesadaran akan bahaya kerja\nMengurangi angka kecelakaan kerja",
+                'training_content' => "1. Identifikasi hazard\n2. Safety procedures\n3. PPE usage\n4. Emergency response",
+                'method' => 'Lecture & Simulation',
+                'duration' => 6,
+                'frequency' => 2,
+            ],
+            [
+                'title' => 'ADVANCED WELDING TECHNIQUES',
+                'group_comp' => 'MMP',
+                'objective' => "Menguasai teknik pengelasan lanjut\nMengurangi defect hasil las",
+                'training_content' => "1. TIG & MIG welding\n2. Position welding\n3. Safety welding\n4. Praktik langsung",
+                'method' => 'Hands-on Training',
+                'duration' => 20,
+                'frequency' => 5,
+            ],
+            [
+                'title' => 'TIME MANAGEMENT & PRODUCTIVITY',
+                'group_comp' => 'BC',
+                'objective' => "Mengelola waktu secara efektif\nMeningkatkan produktivitas individu",
+                'training_content' => "1. Prinsip manajemen waktu\n2. Prioritization matrix\n3. Teknik Pomodoro\n4. Goal setting",
+                'method' => 'Workshop',
+                'duration' => 6,
+                'frequency' => 2,
+            ],
+            [
+                'title' => 'DIGITAL TRANSFORMATION IN MANUFACTURING',
+                'group_comp' => 'BMC',
+                'objective' => "Memahami konsep digitalisasi\nMengaplikasikan teknologi baru dalam produksi",
+                'training_content' => "1. Industry 4.0 overview\n2. IoT in manufacturing\n3. Data-driven decision\n4. Automation case study",
+                'method' => 'Seminar & Group Discussion',
+                'duration' => 12,
+                'frequency' => 3,
+            ]
+
+        ]);
+    }
+}

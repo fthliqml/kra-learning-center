@@ -11,10 +11,11 @@
         <x-main-sidebar />
 
         <div class="flex-1 pb-5 min-w-0">
-            @yield('content')
+            {{ $slot }}
         </div>
-
     </main>
+
+    <x-toast />
     @livewireScripts
 </body>
 
