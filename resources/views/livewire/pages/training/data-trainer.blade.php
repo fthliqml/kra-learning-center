@@ -1,0 +1,102 @@
+<div>
+    @livewire('components.confirm-dialog')
+
+    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
+                grid-cols-1 lg:grid-cols-2 items-center">
+        <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
+            Data Trainer
+        </h1>
+
+        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
+
+            <div class="flex items-center justify-center gap-2">
+
+                <x-ui.button variant="primary" size="lg" wire:click="openCreateModal" wire:target="openCreateModal"
+                    class="h-9" wire:loading.attr="readonly">
+                    <span wire:loading.remove wire:target="openCreateModal" class="flex items-center gap-2">
+                        <x-icon name="o-plus" class="size-4" />
+                        Add
+                    </span>
+                    <span wire:loading wire:target="openCreateModal">
+                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                    </span>
+                </x-ui.button>
+            </div>
+
+            <x-search-input placeholder="Cari trainer..." class="max-w-md" wire:model.live="search" />
+        </div>
+    </div>
+
+    <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+        <x-table :headers="$headers" :rows="$trainers" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
+            with-pagination>
+            {{-- Custom cell untuk kolom Trainer Name --}}
+            @scope('cell_no', $trainer)
+                {{ $loop->iteration }}
+            @endscope
+
+            {{-- Custom cell untuk kolom Trainer Name --}}
+            @scope('cell_name', $trainer)
+                {{ $trainer->user->name }}
+            @endscope
+
+            {{-- Custom cell untuk kolom Action --}}
+            @scope('cell_action', $trainer)
+                <div class="flex gap-2 justify-center">
+
+                    <!-- Details -->
+                    <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
+                        wire:click="openDetailModal({{ $trainer->id }})" />
+
+                    <!-- Edit -->
+                    <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
+                        wire:click="openEditModal({{ $trainer->id }})" />
+
+                    <!-- Delete -->
+                    <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
+                        wire:click="$dispatch('confirm', {
+                            title: 'Yakin mau hapus?',
+                            text: 'Data yang sudah dihapus tidak bisa dikembalikan!',
+                            action: 'deleteTrainer',
+                            id: {{ $trainer->id }}
+                        })" />
+                </div>
+            @endscope
+
+        </x-table>
+    </div>
+
+    <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Data Trainer' : ($mode === 'edit' ? 'Edit Data Trainer' : 'Preview Data Trainer')" separator box-class="max-w-3xl h-fit">
+
+        <x-form wire:submit.prevent="save" no-separator>
+            {{-- Title --}}
+            @if ($mode !== 'create' && $mode !== 'edit')
+                <x-input label="Trainer Name" placeholder="Name of the trainer..." wire:model.defer="formData.name"
+                    class="focus-within:border-0" :error="$errors->first('formData.name')" :readonly="$mode === 'preview'" />
+            @else
+                <x-select label="Trainer Name" wire:model.defer="formData.user_id" :options="$users"
+                    option-value="value" option-label="label" placeholder="Select Trainer" :error="$errors->first('formData.user_id')"
+                    :disabled="$mode === 'preview'" />
+            @endif
+
+            <x-input label="Institution" placeholder="Institution name..." wire:model.defer="formData.institution"
+                class="focus-within:border-0" :error="$errors->first('formData.institution')" :readonly="$mode === 'preview'" />
+
+            <x-input label="Competency" placeholder="Describe the competency..." wire:model.defer="formData.competency"
+                class="focus-within:border-0" :error="$errors->first('formData.competency')" :readonly="$mode === 'preview'" />
+
+            {{-- Actions --}}
+            <x-slot:actions>
+                <x-ui.button @click="$wire.modal = false" type="button">
+                    {{ $mode === 'preview' ? 'Close' : 'Cancel' }}
+                </x-ui.button>
+
+                @if ($mode !== 'preview')
+                    <x-ui.button variant="primary" type="submit">
+                        {{ $mode === 'create' ? 'Save' : 'Update' }}
+                    </x-ui.button>
+                @endif
+            </x-slot:actions>
+        </x-form>
+    </x-modal>
+</div>

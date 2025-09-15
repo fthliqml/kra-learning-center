@@ -11,6 +11,7 @@
                 ['label' => 'Training History', 'href' => url('/history/training')],
                 ['label' => 'Training Module', 'href' => url('/training/module')],
                 ['label' => 'Training Schedule', 'href' => url('/training/schedule')],
+                ['label' => 'Data Trainer', 'href' => url('/training/trainer')],
                 ['label' => 'Certification History', 'href' => url('/history/certification')],
             ],
         ],
