@@ -85,7 +85,7 @@
         <!-- Modal for Event Details -->
         <x-modal wire:model="modal" icon='o-document-text' title="Training Details"
             subtitle="Information about training details" separator box-class="max-w-4xl h-fit">
-            <div class="grid grid-cols-2 gap-5 justify-items-center items-center">
+            <div class="grid grid-cols-2 gap-5 justify-items-center items-center border-b border-gray-400 pb-5">
                 <x-card body-class="flex justify-center items-center gap-5"
                     class="shadow border border-gray-200 w-full border-l-[6px] border-l-[#FF6B6B]" separator>
                     <x-icon name="o-document-text" class="w-7 h-7 text-[#FF6B6B]" />
@@ -117,14 +117,59 @@
                     class="shadow border border-gray-200 w-full border-l-[6px] border-l-[#4CAF50]" separator>
                     <x-icon name="o-calendar-date-range" class="w-7 h-7 text-[#4CAF50]" />
                     <div>
-                        <span class="text-sm text-gray-700">Venue</span>
+                        <span class="text-sm text-gray-700">Location</span>
                         <h1 class="font-semibold">
-                            {{ formatRangeDate($selectedEvent['start_date'], $selectedEvent['end_date']) }}</h1>
+                            {{ $selectedEvent['location'] }}</h1>
                     </div>
                 </x-card>
-
             </div>
 
+            <div class="mt-5">
+                <div class="flex justify-between items-center mb-5">
+                    <h2 class="text-xl font-bold ">Attendance List</h2>
+                    <div class="flex gap-2">
+                        <x-ui.button variant="primary"> Update <x-icon name="o-pencil-square" class="w-5 h-5" />
+                        </x-ui.button>
+                        <x-select placeholder="06 May 2025" :options="[
+                            ['id' => '07 May 2025', 'name' => '07 May 2025'],
+                            ['id' => '08 May 2025', 'name' => '08 May 2025'],
+                        ]" />
+
+                    </div>
+                </div>
+
+                <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+                    <x-table :headers="[
+                        ['key' => 'no', 'label' => 'No', 'class' => 'text-center'],
+                        ['key' => 'nrp', 'label' => 'NRP', 'class' => 'text-center'],
+                        ['key' => 'name', 'label' => 'Name', 'class' => 'w-[100px] text-center'],
+                        ['key' => 'section', 'label' => 'Section'],
+                        ['key' => 'attendance', 'label' => 'Attendance', 'class' => 'text-center'],
+                        ['key' => 'remark', 'label' => 'Remark', 'class' => 'text-center'],
+                    ]" :rows="$rows" striped>
+
+                        {{-- Custom cell No --}}
+                        @scope('cell_no', $row)
+                            {{ $loop->iteration }}
+                        @endscope
+
+                        {{-- Custom cell Attendance --}}
+                        @scope('cell_attendance', $row)
+                            <x-select placeholder="Select" :options="[
+                                ['id' => 'present', 'name' => 'Present'],
+                                ['id' => 'absent', 'name' => 'Absent'],
+                            ]" class="!w-28 !h-8 text-sm" />
+                        @endscope
+
+                        {{-- Custom cell Remark --}}
+                        @scope('cell_remark', $row)
+                            <x-input placeholder="" class="!w-40 !h-8 text-sm" />
+                        @endscope
+
+                    </x-table>
+
+                </div>
+            </div>
         </x-modal>
     @endisset
 

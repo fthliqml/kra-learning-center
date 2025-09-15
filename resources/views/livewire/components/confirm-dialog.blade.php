@@ -1,4 +1,4 @@
-<x-modal wire:model="show" :title="$title" separator>
+<x-modal wire:model="show" :title="$title">
     <p class="text-gray-700 mb-4">{{ $text }}</p>
 
     <x-slot:actions>

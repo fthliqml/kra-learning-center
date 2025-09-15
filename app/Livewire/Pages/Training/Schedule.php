@@ -104,6 +104,19 @@ class Schedule extends Component
         ]
     ];
 
+    public array $rows = [
+        [
+            'nrp' => '50*****',
+            'name' => 'Peserta 1',
+            'section' => 'DYNO AND COMPLETION, SUB ASSY 1 AND 2',
+        ],
+        [
+            'nrp' => '50*****',
+            'name' => 'Peserta 2',
+            'section' => 'ENGINE SHORT BLOCK LONG BLOCK AND MAIN ASSY',
+        ],
+    ];
+
     public function mount()
     {
         $this->currentMonth = Carbon::now()->month;

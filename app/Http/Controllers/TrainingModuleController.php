@@ -7,13 +7,6 @@ use Illuminate\Http\Request;
 
 class TrainingModuleController extends Controller
 {
-    public function index()
-    {
-        $modules = TrainingModule::all();
-
-        return view('pages.training.module', compact('modules'));
-    }
-
     public function store(Request $request)
     {
         $validated = $request->validate([
