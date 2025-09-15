@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\TrainingModuleController;
 use App\Livewire\Pages\Training\Module;
+use App\Livewire\Pages\Training\Schedule;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -13,4 +14,5 @@ Route::post('/training/module', [TrainingModuleController::class, 'store'])->nam
 Route::put('/training/module/{id}', [TrainingModuleController::class, 'edit'])->name('training-module.edit');
 Route::delete('/training/module/{id}', [TrainingModuleController::class, 'destroy'])->name('training-module.destroy');
 
+Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
 

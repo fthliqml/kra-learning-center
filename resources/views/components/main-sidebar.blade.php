@@ -10,6 +10,7 @@
             'submenu' => [
                 ['label' => 'Training History', 'href' => url('/history/training')],
                 ['label' => 'Training Module', 'href' => url('/training/module')],
+                ['label' => 'Training Schedule', 'href' => url('/training/schedule')],
                 ['label' => 'Certification History', 'href' => url('/history/certification')],
             ],
         ],
@@ -107,7 +108,6 @@
                             </span>
 
                             @if ($hasSub)
-                                <!-- arrow muncul hanya saat terbuka -->
                                 <x-icon name="o-chevron-down" x-show="isOpen"
                                     class="w-4 h-4 transition-transform duration-300" :class="'rotate-0 w-4 h-4 transition-transform duration-300'"
                                     x-bind:class="has('{{ $item['id'] }}') ? 'rotate-180' : 'rotate-0'" />
@@ -131,7 +131,7 @@
                                     @endphp
                                     <button @click="window.location.href='{{ $sub['href'] }}'"
                                         @class([
-                                            'block w-full text-left px-3 py-2 text-sm rounded-md transition',
+                                            'block w-full text-left px-3 py-2 text-sm rounded-md transition cursor-pointer',
                                             'hover:bg-white/5 text-white/80 hover:text-white' => !$subActive,
                                             'bg-white text-primary hover:text-primary hover:opacity-80' => $subActive,
                                         ]) style="transition-delay: {{ $index * 50 }}ms">
