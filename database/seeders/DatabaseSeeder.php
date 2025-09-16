@@ -15,5 +15,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(UserSeeder::class);
         $this->call(TrainingModuleSeeder::class);
+
+        User::factory()->count(10)->create();
     }
 }
