@@ -4,5 +4,6 @@
     </h1>
 
     <livewire:components.training.full-calendar />
+    {{-- <livewire:components.training.schedule-table /> --}}
 
 </div>

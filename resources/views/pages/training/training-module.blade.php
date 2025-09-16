@@ -10,6 +10,21 @@
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
+                <x-dropdown no-x-anchor right>
+                    <x-slot:trigger>
+                        <x-button icon="o-clipboard-document-list" class="btn-success h-9">Excel</x-button>
+                    </x-slot:trigger>
+
+                    <x-menu-item title="Export" icon="o-arrow-down-on-square" wire:click.stop="export" spinner="export" />
+
+                    <label class="w-full cursor-pointer">
+                        <x-menu-item title="Import" icon="o-arrow-up-on-square" />
+                        <input type="file" wire:model="file" class="hidden" />
+                    </label>
+
+                    <x-menu-item title="Download Template" icon="o-document-arrow-down"
+                        wire:click.stop="downloadTemplate" spinner="downloadTemplate" />
+                </x-dropdown>
 
                 <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal" class="h-9"
                     wire:loading.attr="readonly">
