@@ -159,7 +159,7 @@ class Module extends Component
     public function render()
     {
 
-        return view('livewire.pages.training.module', [
+        return view('pages.training.training-module', [
             'modules' => $this->modules(),
             'headers' => $this->headers()
         ]);

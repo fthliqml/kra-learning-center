@@ -44,6 +44,6 @@ class ConfirmDialog extends Component
 
     public function render()
     {
-        return view('livewire.components.confirm-dialog');
+        return view('components.confirm-dialog');
     }
 }
