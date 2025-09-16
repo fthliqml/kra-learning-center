@@ -33,14 +33,15 @@ class DataTrainer extends Component
         // 'name' => '',
         'user_id' => '',
         'institution' => '',
-        'competency' => '',
+        'competencies' => [''],
     ];
 
     protected $rules = [
         // 'formData.name' => 'required|string|max:255',
         'formData.user_id' => 'required',
         'formData.institution' => 'required|string',
-        'formData.competency' => 'nullable|string',
+        'formData.competencies' => 'required|array|min:1',
+        'formData.competencies.*' => 'nullable|string|max:255',
     ];
 
     public function updated($property): void
@@ -63,15 +64,15 @@ class DataTrainer extends Component
     {
         $trainer = Trainer::findOrFail($id);
 
-        // Ambil competency dari relasi pivot (ambil satu saja jika ada)
-        $competencyDesc = $trainer->competencies->first()->description ?? '';
+        // Ambil semua competency dari relasi pivot
+        $competencyDescs = $trainer->competencies->pluck('description')->toArray();
 
         $this->selectedId = $id;
         $this->formData = [
             'name' => $trainer->user->name ?? '',
             'user_id' => $trainer->user_id,
             'institution' => $trainer->institution,
-            'competency' => $competencyDesc,
+            'competencies' => !empty($competencyDescs) ? $competencyDescs : [''],
         ];
 
         $this->mode = 'preview';
@@ -84,14 +85,14 @@ class DataTrainer extends Component
     {
         $trainer = Trainer::findOrFail($id);
 
-        // Ambil competency dari relasi pivot (ambil satu saja jika ada)
-        $competencyDesc = $trainer->competencies->first()->description ?? '';
+        // Ambil semua competency dari relasi pivot
+        $competencyDescs = $trainer->competencies->pluck('description')->toArray();
 
         $this->selectedId = $id;
         $this->formData = [
             'user_id' => $trainer->user_id,
             'institution' => $trainer->institution,
-            'competency' => $competencyDesc,
+            'competencies' => !empty($competencyDescs) ? $competencyDescs : [''],
         ];
 
         $this->mode = 'edit';
@@ -102,16 +103,24 @@ class DataTrainer extends Component
 
     public function save()
     {
+        $this->validate();
 
-        $this->validate([
-            'formData.user_id' => 'required',
-            'formData.institution' => 'required|string',
-            'formData.competency' => 'required|string',
-        ]);
+        // Kumpulkan list competency yang diisi (hapus kosong & duplikasi)
+        $descs = collect($this->formData['competencies'] ?? [])
+            ->map(fn($v) => is_string($v) ? trim($v) : $v)
+            ->filter()
+            ->unique()
+            ->values();
 
-        // Simpan competency ke tabel competency jika belum ada
-        $competencyDesc = $this->formData['competency'];
-        $competency = Competency::firstOrCreate(['description' => $competencyDesc]);
+        if ($descs->isEmpty()) {
+            $this->addError('formData.competencies', 'Minimal 1 competency harus diisi.');
+            return;
+        }
+
+        // Buat/ambil ID untuk tiap competency
+        $competencyIds = $descs->map(function ($desc) {
+            return Competency::firstOrCreate(['description' => $desc])->id;
+        })->all();
 
         // Simpan trainer
         $trainerData = [
@@ -120,19 +129,34 @@ class DataTrainer extends Component
         ];
 
         if ($this->mode === 'create') {
-            $trainer = \App\Models\Trainer::create($trainerData);
-            // Simpan relasi ke competency di pivot
-            $trainer->competencies()->attach($competency->id);
+            $trainer = Trainer::create($trainerData);
+            // Simpan relasi ke competency di pivot (banyak)
+            $trainer->competencies()->attach($competencyIds);
             $this->success('Berhasil menambahkan data baru', position: 'toast-top toast-center');
         } else {
-            $trainer = \App\Models\Trainer::findOrFail($this->selectedId);
+            $trainer = Trainer::findOrFail($this->selectedId);
             $trainer->update($trainerData);
-            // Update relasi competency
-            $trainer->competencies()->sync([$competency->id]);
+            // Update relasi competency (sinkron banyak)
+            $trainer->competencies()->sync($competencyIds);
             $this->success('Berhasil memperbarui data', position: 'toast-top toast-center');
         }
 
         $this->modal = false;
+    }
+
+    // Tambah baris input competency
+    public function addCompetencyRow(): void
+    {
+        $this->formData['competencies'][] = '';
+    }
+
+    // Hapus baris input competency berdasarkan index
+    public function removeCompetencyRow(int $index): void
+    {
+        if (!isset($this->formData['competencies'][$index])) return;
+        unset($this->formData['competencies'][$index]);
+        // rapikan index agar berurutan
+        $this->formData['competencies'] = array_values($this->formData['competencies']);
     }
 
     #[On('deleteTrainer')]
@@ -155,7 +179,7 @@ class DataTrainer extends Component
 
     public function trainers()
     {
-        return Trainer::query()
+        $query = Trainer::query()
             ->when(
                 $this->search,
                 fn($q) =>
@@ -165,9 +189,17 @@ class DataTrainer extends Component
                     ->orWhere('institution', 'like', '%' . $this->search . '%')
             )
             ->join('users', 'trainer.user_id', '=', 'users.id')
-            ->orderBy('users.name', 'asc')
-            ->select('trainer.*')
-            ->paginate(10);
+            ->orderBy('created_at', 'asc')
+            ->select('trainer.*');
+
+        $paginator = $query->paginate(10);
+
+        // Attach continuous row numbers so the view doesn't need paginator context inside slots
+        return $paginator->through(function ($trainer, $index) use ($paginator) {
+            $start = $paginator->firstItem() ?? 0;
+            $trainer->no = $start + $index;
+            return $trainer;
+        });
     }
 
     public function render()

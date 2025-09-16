@@ -32,7 +32,7 @@
             with-pagination>
             {{-- Custom cell untuk kolom Trainer Name --}}
             @scope('cell_no', $trainer)
-                {{ $loop->iteration }}
+                {{ $trainer->no ?? $loop->iteration }}
             @endscope
 
             {{-- Custom cell untuk kolom Trainer Name --}}
@@ -62,7 +62,6 @@
                         })" />
                 </div>
             @endscope
-
         </x-table>
     </div>
 
@@ -82,8 +81,42 @@
             <x-input label="Institution" placeholder="Institution name..." wire:model.defer="formData.institution"
                 class="focus-within:border-0" :error="$errors->first('formData.institution')" :readonly="$mode === 'preview'" />
 
-            <x-input label="Competency" placeholder="Describe the competency..." wire:model.defer="formData.competency"
-                class="focus-within:border-0" :error="$errors->first('formData.competency')" :readonly="$mode === 'preview'" />
+            <div class="space-y-3">
+                <label class="font-medium">Competency</label>
+                @if ($mode === 'preview')
+                    @foreach ($formData['competencies'] ?? [] as $i => $comp)
+                        <x-input class="w-full" placeholder="Describe the competency..." :readonly="true"
+                            :value="$comp" />
+                    @endforeach
+                @else
+                    @foreach ($formData['competencies'] ?? [''] as $i => $comp)
+                        <div class="grid grid-cols-1 md:grid-cols-12 items-start gap-2">
+                            <div class="md:col-span-11">
+                                <x-input class="w-full focus-within:border-0" placeholder="Describe the competency..."
+                                    wire:model.defer="formData.competencies.{{ $i }}" :error="$errors->first('formData.competencies.' . $i)" />
+                            </div>
+                            <div class="md:col-span-1">
+                                <x-ui.button type="button"
+                                    class="w-full bg-danger text-white hover:bg-red-400 hover:text-white border-0 shadow-none"
+                                    size="lg" wire:click="removeCompetencyRow({{ $i }})"
+                                    :disabled="count($formData['competencies'] ?? []) <= 1">
+                                    <x-icon name="o-trash" class="size-5" />
+                                </x-ui.button>
+                            </div>
+                        </div>
+                    @endforeach
+
+                    <div>
+                        <x-ui.button type="button" variant="primary" size="sm" outline
+                            wire:click="addCompetencyRow">
+                            + Add Row
+                        </x-ui.button>
+                        @error('formData.competencies')
+                            <div class="text-error text-sm mt-1">{{ $message }}</div>
+                        @enderror
+                    </div>
+                @endif
+            </div>
 
             {{-- Actions --}}
             <x-slot:actions>
