@@ -2,15 +2,21 @@
 
 namespace App\Livewire\Pages\Training;
 
+use App\Exports\TrainingModuleExport;
+use App\Exports\TrainingModuleTemplateExport;
+use App\Imports\TrainingModuleImport;
 use App\Models\TrainingModule;
 use Livewire\Attributes\On;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 use Mary\Traits\Toast;
 
 class Module extends Component
 {
-    use Toast, WithPagination;
+    use Toast, WithPagination, WithFileUploads;
+    public $file;
     public $modal = false;
     public $selectedId = null;
     public $mode = 'create'; //  create | edit | preview
@@ -116,7 +122,6 @@ class Module extends Component
 
     }
 
-
     public function headers()
     {
         return [
@@ -153,13 +158,39 @@ class Module extends Component
                 $q->where('group_comp', $this->filter)
             )
             ->orderBy('created_at', 'asc')
-            ->paginate(10);
+            ->paginate(10)
+            ->onEachSide(1);
+    }
+
+    public function export()
+    {
+        return Excel::download(new TrainingModuleExport(), 'training_modules.xlsx');
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(new TrainingModuleTemplateExport(), 'training_module_template.xlsx');
+    }
+
+    public function updatedFile()
+    {
+        if (!$this->file)
+            return;
+
+        $this->validate([
+            'file' => 'required|mimes:xlsx,xls',
+        ]);
+
+        Excel::import(new TrainingModuleImport, $this->file);
+
+        $this->success('Berhasil menambah data', position: 'toast-top toast-center');
+        $this->file = null;
     }
 
     public function render()
     {
 
-        return view('livewire.pages.training.module', [
+        return view('pages.training.training-module', [
             'modules' => $this->modules(),
             'headers' => $this->headers()
         ]);

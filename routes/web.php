@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\TrainingModuleController;
+use App\Http\Controllers\Training\TrainingModuleController;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\Schedule;

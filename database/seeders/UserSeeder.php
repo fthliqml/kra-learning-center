@@ -21,6 +21,8 @@ class UserSeeder extends Seeder
                 'name' => ucfirst($role) . ' User',
                 'email' => $role . '@example.com',
                 'password' => Hash::make('123456'),
+                'NRP' => 1234567,
+                'section' => 'LID',
                 'role' => $role,
             ]);
         }

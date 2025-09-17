@@ -15,6 +15,8 @@ return new class extends Migration {
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
+            $table->string('section');
+            $table->integer('NRP');
             $table->enum('role', ['employee', 'spv', 'instructor', 'admin', 'leader'])->default('employee');
             $table->rememberToken();
             $table->timestamps();

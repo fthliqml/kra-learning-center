@@ -153,7 +153,8 @@ class DataTrainer extends Component
     // Hapus baris input competency berdasarkan index
     public function removeCompetencyRow(int $index): void
     {
-        if (!isset($this->formData['competencies'][$index])) return;
+        if (!isset($this->formData['competencies'][$index]))
+            return;
         unset($this->formData['competencies'][$index]);
         // rapikan index agar berurutan
         $this->formData['competencies'] = array_values($this->formData['competencies']);
@@ -204,7 +205,7 @@ class DataTrainer extends Component
 
     public function render()
     {
-        return view('livewire.pages.training.data-trainer', [
+        return view('pages.training.data-trainer', [
             'headers' => $this->headers(),
             'trainers' => $this->trainers(),
         ]);

@@ -1,19 +1,13 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Training;
 
+use App\Http\Controllers\Controller;
 use App\Models\TrainingModule;
 use Illuminate\Http\Request;
 
 class TrainingModuleController extends Controller
 {
-    public function index()
-    {
-        $modules = TrainingModule::all();
-
-        return view('pages.training.module', compact('modules'));
-    }
-
     public function store(Request $request)
     {
         $validated = $request->validate([
