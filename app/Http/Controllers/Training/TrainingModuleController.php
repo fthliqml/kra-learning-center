@@ -1,7 +1,8 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Http\Controllers\Training;
 
+use App\Http\Controllers\Controller;
 use App\Models\TrainingModule;
 use Illuminate\Http\Request;
 

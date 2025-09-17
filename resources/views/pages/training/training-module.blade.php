@@ -50,6 +50,7 @@
     <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
         <x-table :headers="$headers" :rows="$modules" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
             with-pagination>
+            {{-- TODO : Custom cell no --}}
             {{-- Custom cell untuk kolom Action --}}
             @scope('cell_action', $module)
                 <div class="flex gap-2 justify-center">

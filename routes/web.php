@@ -1,6 +1,7 @@
 <?php
 
-use App\Http\Controllers\TrainingModuleController;
+use App\Http\Controllers\Training\TrainingModuleController;
+use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\Schedule;
 use Illuminate\Support\Facades\Route;
@@ -16,3 +17,4 @@ Route::delete('/training/module/{id}', [TrainingModuleController::class, 'destro
 
 Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
 
+Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
