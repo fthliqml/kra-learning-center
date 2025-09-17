@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\Training;
+use App\Models\TrainingAssesment;
 use App\Models\TrainingAttendance;
 use App\Models\TrainingSession;
 use App\Models\User;
@@ -27,12 +28,13 @@ class TrainingSeeder extends Seeder
             'status' => "in_progress",
         ]);
 
-        for ($i = 1; $i <= 3; $i++) {
-            $training_session = TrainingSession::create([
+        $sessions = [];
+        for ($i = 1; $i <= 4; $i++) {
+            $sessions[] = TrainingSession::create([
                 'training_id' => $training->id,
-                // 'instructor_id' => 1,
+                'instructor_id' => 1,
                 'room_name' => 'Wakatobi',
-                'room_location' => 'EDC',
+                'room_location' => "EDC {$i}",
                 'start_time' => '09:00:00',
                 'end_time' => '12:00:00',
                 'day_number' => $i,
@@ -40,12 +42,18 @@ class TrainingSeeder extends Seeder
             ]);
         }
 
-        $employees = User::where('role', 'employee')
-            ->inRandomOrder()
+        $employees = User::inRandomOrder()
             ->limit(5)
             ->get();
 
-        foreach ($training_session as $session) {
+        foreach ($employees as $employee) {
+            TrainingAssesment::create(attributes: [
+                'training_id' => $training->id,
+                'employee_id' => $employee->id,
+            ]);
+        }
+
+        foreach ($sessions as $session) {
             foreach ($employees as $employee) {
                 TrainingAttendance::create([
                     'session_id' => $session->id,

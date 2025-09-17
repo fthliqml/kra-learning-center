@@ -1,5 +1,4 @@
  <div>
-
      <!-- Month Navigation -->
 
      <div class="flex items-center justify-center mb-4">
@@ -40,8 +39,7 @@
              @foreach ($days as $day)
                  <div @class([
                      'border-b border-gray-200 relative flex flex-col border-r',
-                     'h-[65px] sm:h-[130px]' => $hasScrollableDay,
-                     'h-[60px] sm:h-[120px]' => !$hasScrollableDay,
+                     'h-[60px] sm:min-h-[200px]',
                      'bg-gray-50' => !$day['isCurrentMonth'],
                      'bg-white' => $day['isCurrentMonth'],
                  ])>
@@ -65,9 +63,8 @@
                                      'py-0.5 px-0.5 text-[7px] h-2.5 sm:py-1 sm:px-2 sm:text-xs sm:h-6 flex-shrink-0',
                                      'border-l-[1px] sm:border-l-4 border-tetriary rounded-sm sm:rounded-md',
                                  ])>
-                                     <!-- Hanya tampilkan nama training, dan hanya di hari start -->
                                      <div class="font-medium text-black leading-2 sm:leading-4 truncate">
-                                         {{ $training['title'] }}
+                                         {{ $training['name'] }}
                                      </div>
                                  </div>
                              @endforeach
@@ -82,13 +79,14 @@
          <!-- Modal for Event Details -->
          <x-modal wire:model="modal" icon='o-document-text' title="Training Details"
              subtitle="Information about training details" separator box-class="max-w-4xl h-fit">
-             <div class="grid grid-cols-2 gap-5 justify-items-center items-center border-b border-gray-400 pb-5">
+             <div
+                 class="grid grid-cols-1 sm:grid-cols-2 gap-5 justify-items-center items-center border-b border-gray-400 pb-5">
                  <x-card body-class="flex justify-center items-center gap-5"
                      class="shadow border border-gray-200 w-full border-l-[6px] border-l-[#FF6B6B]" separator>
                      <x-icon name="o-document-text" class="w-7 h-7 text-[#FF6B6B]" />
                      <div>
                          <span class="text-sm text-gray-700">Training Name</span>
-                         <h1 class="font-semibold">{{ $selectedEvent['title'] ?? false }}</h1>
+                         <h1 class="font-semibold">{{ $selectedEvent['name'] ?? false }}</h1>
                      </div>
                  </x-card>
                  <x-card body-class="flex justify-center items-center gap-5"
@@ -106,7 +104,7 @@
                      <x-icon name="o-document-text" class="w-7 h-7 text-[#6A4C93]" />
                      <div>
                          <span class="text-sm text-gray-700">Instructor</span>
-                         <h1 class="font-semibold">{{ $selectedEvent['instructor'] ?? false }}</h1>
+                         <h1 class="font-semibold">{{ $selectedEvent['instructor'] ?? 'Muhammad Fatihul Iqmal' }}</h1>
                      </div>
                  </x-card>
 
@@ -116,34 +114,32 @@
                      <div>
                          <span class="text-sm text-gray-700">Location</span>
                          <h1 class="font-semibold">
-                             {{ $selectedEvent['location'] }}</h1>
+                             {{ $this->currentSession['room_name'] ?? '' }} -
+                             {{ $this->currentSession['room_location'] ?? '' }}</h1>
                      </div>
                  </x-card>
              </div>
 
              <div class="mt-5">
-                 <div class="flex justify-between items-center mb-5">
-                     <h2 class="text-xl font-bold ">Attendance List</h2>
+                 <div class="flex justify-between flex-col md:flex-row items-start md:items-center gap-3 md:gap-0 mb-5">
+                     <h2 class="text-xl font-bold">Attendance List</h2>
                      <div class="flex gap-2">
-                         <x-ui.button variant="primary"> Update <x-icon name="o-pencil-square" class="w-5 h-5" />
+                         <x-ui.button variant="primary" wire:click="updateAttendance"> Update <x-icon name="o-pencil-square"
+                                 class="w-5 h-5" />
                          </x-ui.button>
-                         <x-select placeholder="06 May 2025" :options="[
-                             ['id' => '07 May 2025', 'name' => '07 May 2025'],
-                             ['id' => '08 May 2025', 'name' => '08 May 2025'],
-                         ]" />
-
+                         <x-select wire:model="dayNumber" wire:change="$refresh" :options="$trainingDates" />
                      </div>
                  </div>
 
                  <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
                      <x-table :headers="[
                          ['key' => 'no', 'label' => 'No', 'class' => 'text-center'],
-                         ['key' => 'nrp', 'label' => 'NRP', 'class' => 'text-center'],
-                         ['key' => 'name', 'label' => 'Name', 'class' => 'w-[100px] text-center'],
-                         ['key' => 'section', 'label' => 'Section'],
+                         ['key' => 'NRP', 'label' => 'NRP', 'class' => 'text-center'],
+                         ['key' => 'name', 'label' => 'Name', 'class' => 'w-[250px] text-center'],
+                         ['key' => 'section', 'label' => 'Section', 'class' => 'text-center'],
                          ['key' => 'attendance', 'label' => 'Attendance', 'class' => 'text-center'],
                          ['key' => 'remark', 'label' => 'Remark', 'class' => 'text-center'],
-                     ]" :rows="$rows" striped>
+                     ]" :rows="$employees" striped>
 
                          {{-- Custom cell No --}}
                          @scope('cell_no', $row)
@@ -152,15 +148,17 @@
 
                          {{-- Custom cell Attendance --}}
                          @scope('cell_attendance', $row)
-                             <x-select placeholder="Select" :options="[
-                                 ['id' => 'present', 'name' => 'Present'],
-                                 ['id' => 'absent', 'name' => 'Absent'],
-                             ]" class="!w-28 !h-8 text-sm" />
+                             <x-select wire:model="attendances.{{ $this->dayNumber }}.{{ $row->id }}.status"
+                                 placeholder="Select" :options="[
+                                     ['id' => 'present', 'name' => 'Present'],
+                                     ['id' => 'absent', 'name' => 'Absent'],
+                                 ]" class="!w-28 !h-8 text-sm" />
                          @endscope
 
                          {{-- Custom cell Remark --}}
                          @scope('cell_remark', $row)
-                             <x-input placeholder="" class="!w-40 !h-8 text-sm" />
+                             <x-input wire:model="attendances.{{ $this->dayNumber }}.{{ $row->id }}.remark"
+                                 placeholder="" class="!w-40 !h-8 text-sm" />
                          @endscope
 
                      </x-table>

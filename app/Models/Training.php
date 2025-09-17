@@ -18,4 +18,8 @@ class Training extends Model
     {
         return $this->hasMany(TrainingSession::class);
     }
+    public function assessments()
+    {
+        return $this->hasMany(TrainingAssesment::class);
+    }
 }

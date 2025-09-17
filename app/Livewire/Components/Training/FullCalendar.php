@@ -2,125 +2,50 @@
 
 namespace App\Livewire\Components\Training;
 
+use App\Models\Training;
+use App\Models\TrainingAssesment;
+use App\Models\TrainingAttendance;
+use App\Models\User;
 use Livewire\Component;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
+use Mary\Traits\Toast;
 
 class FullCalendar extends Component
 {
+    use Toast;
     public $currentMonth;
     public $currentYear;
     public $selectedEvent = null;
     public $modal = false;
-
-    // Sample training data
-    public $trainings = [
-        [
-            'id' => 1,
-            'title' => 'Training A',
-            'location' => 'Wakatobi Room - EDC',
-            'start_date' => '2025-09-06', // Mulai paling awal
-            'end_date' => '2025-09-09',
-            'description' => 'Advanced training program for team development',
-            'instructor' => 'John Doe',
-            'capacity' => 25,
-            'registered' => 18
-        ],
-        [
-            'id' => 2,
-            'title' => 'Workshop X',
-            'location' => 'Meeting Room 1',
-            'start_date' => '2025-09-07', // Overlap dengan Training A, mulai setelah Training A
-            'end_date' => '2025-09-10',
-            'description' => 'Quick workshop session',
-            'instructor' => 'Jane Smith',
-            'capacity' => 15,
-            'registered' => 10
-        ],
-        [
-            'id' => 3,
-            'title' => 'Seminar Y',
-            'location' => 'Hall A',
-            'start_date' => '2025-09-08', // Overlap dengan Training A dan Workshop X
-            'end_date' => '2025-09-09',
-            'description' => 'One day seminar',
-            'instructor' => 'Bob Wilson',
-            'capacity' => 50,
-            'registered' => 35
-        ],
-        [
-            'id' => 5,
-            'title' => 'Seminar Y',
-            'location' => 'Hall A',
-            'start_date' => '2025-09-08', // Overlap dengan Training A dan Workshop X
-            'end_date' => '2025-09-09',
-            'description' => 'One day seminar',
-            'instructor' => 'Bob Wilson',
-            'capacity' => 50,
-            'registered' => 35
-        ],
-        [
-            'id' => 19,
-            'title' => 'Seminar Y',
-            'location' => 'Hall A',
-            'start_date' => '2025-09-08', // Overlap dengan Training A dan Workshop X
-            'end_date' => '2025-09-09',
-            'description' => 'One day seminar',
-            'instructor' => 'Bob Wilson',
-            'capacity' => 50,
-            'registered' => 35
-        ],
-        [
-            'id' => 10,
-            'title' => 'Seminar O',
-            'location' => 'Hall A',
-            'start_date' => '2025-09-08', // Overlap dengan Training A dan Workshop X
-            'end_date' => '2025-09-09',
-            'description' => 'One day seminar',
-            'instructor' => 'Bob Wilson',
-            'capacity' => 50,
-            'registered' => 35
-        ],
-        [
-            'id' => 11,
-            'title' => 'Seminar Y',
-            'location' => 'Hall A',
-            'start_date' => '2025-09-08', // Overlap dengan Training A dan Workshop X
-            'end_date' => '2025-09-09',
-            'description' => 'One day seminar',
-            'instructor' => 'Bob Wilson',
-            'capacity' => 50,
-            'registered' => 35
-        ],
-        [
-            'id' => 4,
-            'title' => 'Training D',
-            'location' => 'Kakaban Room - EDC',
-            'start_date' => '2025-09-13',
-            'end_date' => '2025-09-16',
-            'description' => 'Digital transformation workshop',
-            'instructor' => 'Jane Smith',
-            'capacity' => 30,
-            'registered' => 22
-        ]
-    ];
-
-    public array $rows = [
-        [
-            'nrp' => '50*****',
-            'name' => 'Peserta 1',
-            'section' => 'DYNO AND COMPLETION, SUB ASSY 1 AND 2',
-        ],
-        [
-            'nrp' => '50*****',
-            'name' => 'Peserta 2',
-            'section' => 'ENGINE SHORT BLOCK LONG BLOCK AND MAIN ASSY',
-        ],
-    ];
+    public $dayNumber = 1;
+    public $attendances = [];
+    public $employees = [];
+    public $trainingId = 1;
+    public $sessions = [];
+    public $trainings = [];
 
     public function mount()
     {
         $this->currentMonth = Carbon::now()->month;
         $this->currentYear = Carbon::now()->year;
+        $this->trainings = Training::with('sessions')->get();
+
+        $training = Training::with(['sessions.attendances'])->find($this->trainingId);
+
+        if (!$training)
+            return;
+
+        $this->employees = $training->assessments->map(fn($a) => $a->employee)->unique('id')->values();
+
+        foreach ($training->sessions as $session) {
+            foreach ($session->attendances as $attendance) {
+                $this->attendances[$session->day_number][$attendance->employee_id] = [
+                    'status' => $attendance->status,
+                    'remark' => $attendance->notes,
+                ];
+            }
+        }
     }
 
     public function previousMonth()
@@ -146,6 +71,7 @@ class FullCalendar extends Component
     public function openEventModal($eventId)
     {
         $this->selectedEvent = collect($this->trainings)->firstWhere('id', $eventId);
+        $this->sessions = $this->selectedEvent->sessions;
         $this->modal = true;
     }
 
@@ -169,41 +95,85 @@ class FullCalendar extends Component
         return $layerMapping;
     }
 
-    public function hasMoreThanThreeEventsInAnyDay($days)
-    {
-        foreach ($days as $day) {
-            if (count($day['trainings'] ?? []) > 3) {
-                return true;
-            }
-        }
-        return false;
-    }
-
     public function getTrainingsForDate($date)
     {
         $layerMapping = $this->assignTrainingLayers();
 
-        return collect($this->trainings)->filter(function ($training) use ($date) {
-            $startDate = Carbon::parse($training['start_date']);
-            $endDate = Carbon::parse($training['end_date']);
-            $currentDate = Carbon::parse($date);
+        return collect($this->trainings) // sudah ada variabel trainings
+            ->filter(function ($training) use ($date) {
+                $startDate = Carbon::parse($training->start_date);
+                $endDate = Carbon::parse($training->end_date);
+                $currentDate = Carbon::parse($date);
 
-            return $currentDate->between($startDate, $endDate);
-        })->map(function ($training) use ($date, $layerMapping) {
-            $startDate = Carbon::parse($training['start_date']);
-            $endDate = Carbon::parse($training['end_date']);
-            $currentDate = Carbon::parse($date);
+                return $currentDate->between($startDate, $endDate);
+            })
+            ->map(function ($training) use ($date, $layerMapping) {
+                $startDate = Carbon::parse($training->start_date);
+                $endDate = Carbon::parse($training->end_date);
+                $currentDate = Carbon::parse($date);
 
-            return array_merge($training, [
-                'isStart' => $currentDate->isSameDay($startDate),
-                'isEnd' => $currentDate->isSameDay($endDate),
-                'isBetween' => !$currentDate->isSameDay($startDate) && !$currentDate->isSameDay($endDate),
-                'layer' => $layerMapping[$training['id']] ?? 0
-            ]);
-        })
+                return [
+                    'id' => $training->id,
+                    'name' => $training->name,
+                    'start_date' => $training->start_date,
+                    'end_date' => $training->end_date,
+                    'sessions' => $training->sessions,
+                    'isStart' => $currentDate->isSameDay($startDate),
+                    'isEnd' => $currentDate->isSameDay($endDate),
+                    'isBetween' => !$currentDate->isSameDay($startDate) && !$currentDate->isSameDay($endDate),
+                    'layer' => $layerMapping[$training->id] ?? 0,
+                ];
+            })
             ->sortBy('layer')
             ->values()
             ->toArray();
+    }
+
+    public function getCurrentSessionProperty()
+    {
+        return $this->sessions[(int) $this->dayNumber - 1] ?? null;
+    }
+
+
+    public function updateAttendance()
+    {
+        foreach ($this->employees as $employee) {
+            $data = $this->attendances[$this->dayNumber][$employee->id] ?? null;
+
+            if ($data) {
+                TrainingAttendance::updateOrCreate(
+                    [
+                        'session_id' => $this->sessions[$this->dayNumber - 1]->id,
+                        'employee_id' => $employee->id,
+                    ],
+                    [
+                        'status' => $data['status'],
+                        'notes' => $data['remark'],
+                    ]
+                );
+            }
+        }
+
+        $this->success('Berhasil memperbarui data!', position: 'toast-top toast-center');
+    }
+
+    public function trainingDates()
+    {
+        $training = Training::find(1);
+
+        if (!$training) {
+            return collect();
+        }
+
+        $period = CarbonPeriod::create($training->start_date, $training->end_date);
+
+        return collect($period)->map(function ($date, $index) {
+            $formatted = $date->format('d M Y');
+            return [
+                'id' => $index + 1,
+                'name' => $formatted,
+            ];
+        })->values();
     }
 
     public function render()
@@ -228,12 +198,11 @@ class FullCalendar extends Component
         }
 
         $monthName = $startOfMonth->format('F Y');
-        $hasScrollableDay = $this->hasMoreThanThreeEventsInAnyDay($days);
 
         return view('components.training.full-calendar', [
             'days' => $days,
             'monthName' => $monthName,
-            'hasScrollableDay' => $hasScrollableDay
+            'trainingDates' => $this->trainingDates()
         ]);
     }
 
