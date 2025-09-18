@@ -146,7 +146,7 @@ class Module extends Component
 
     public function modules()
     {
-        return TrainingModule::query()
+        $query = TrainingModule::query()
             ->when(
                 $this->search,
                 fn($q) =>
@@ -157,9 +157,15 @@ class Module extends Component
                 fn($q) =>
                 $q->where('group_comp', $this->filter)
             )
-            ->orderBy('created_at', 'asc')
-            ->paginate(10)
-            ->onEachSide(1);
+            ->orderBy('created_at', 'asc');
+
+        $paginator = $query->paginate(10)->onEachSide(1);
+
+        return $paginator->through(function ($modules, $index) use ($paginator) {
+            $start = $paginator->firstItem() ?? 0;
+            $modules->no = $start + $index;
+            return $modules;
+        });
     }
 
     public function export()

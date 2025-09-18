@@ -30,7 +30,7 @@
     <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
         <x-table :headers="$headers" :rows="$trainers" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
             with-pagination>
-            {{-- Custom cell untuk kolom Trainer Name --}}
+            {{-- Custom cell untuk kolom Nomor --}}
             @scope('cell_no', $trainer)
                 {{ $trainer->no ?? $loop->iteration }}
             @endscope
