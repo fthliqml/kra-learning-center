@@ -12,13 +12,27 @@
             <div class="flex items-center justify-center gap-2">
                 <x-dropdown no-x-anchor right>
                     <x-slot:trigger>
-                        <x-button icon="o-clipboard-document-list" class="btn-success h-9">Excel</x-button>
+                        <x-button class="btn-success h-10" wire:target="file" wire:loading.attr="disabled">
+                            <span class="flex items-center gap-2" wire:loading.remove wire:target="file">
+                                <x-icon name="o-clipboard-document-list" class="size-4" />
+                                Excel
+                            </span>
+                            <span class="flex items-center gap-2" wire:loading wire:target="file">
+                                <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                Mengimpor...
+                            </span>
+                        </x-button>
                     </x-slot:trigger>
 
-                    <x-menu-item title="Export" icon="o-arrow-down-on-square" wire:click.stop="export" spinner="export" />
+                    <x-menu-item title="Export" icon="o-arrow-down-on-square" wire:click.stop="export"
+                        spinner="export" />
 
-                    <label class="w-full cursor-pointer">
+                    <label class="w-full cursor-pointer relative" wire:loading.class="opacity-60 pointer-events-none"
+                        wire:target="file">
                         <x-menu-item title="Import" icon="o-arrow-up-on-square" />
+                        <div class="absolute right-2 top-2" wire:loading wire:target="file">
+                            <x-icon name="o-arrow-path" class="size-4 animate-spin text-gray-500" />
+                        </div>
                         <input type="file" wire:model="file" class="hidden" />
                     </label>
 
@@ -26,9 +40,12 @@
                         wire:click.stop="downloadTemplate" spinner="downloadTemplate" />
                 </x-dropdown>
 
-                <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal" class="h-9"
+
+
+                <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal" class="h-10"
                     wire:loading.attr="readonly">
-                    <span wire:loading.remove wire:target="openCreateModal" class="flex items-center gap-2">
+                    <span wire:loading.remove wire:target="openCreateModal" size="lg"
+                        class="flex items-center gap-2">
                         <x-icon name="o-plus" class="size-4" />
                         Add
                     </span>
@@ -100,10 +117,12 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-input label="Duration" type="number" wire:model.defer="formData.duration" placeholder="6 Hours"
-                    class="focus-within:border-0" min="1" step="0.5" :error="$errors->first('formData.duration')" :readonly="$mode === 'preview'" />
+                    class="focus-within:border-0" min="1" step="0.5" :error="$errors->first('formData.duration')"
+                    :readonly="$mode === 'preview'" />
 
-                <x-input label="Frequency" type="number" wire:model.defer="formData.frequency" placeholder="15 Days"
-                    class="focus-within:border-0" min="1" :error="$errors->first('formData.frequency')" :readonly="$mode === 'preview'" />
+                <x-input label="Frequency" type="number" wire:model.defer="formData.frequency"
+                    placeholder="15 Days" class="focus-within:border-0" min="1" :error="$errors->first('formData.frequency')"
+                    :readonly="$mode === 'preview'" />
             </div>
 
             {{-- Actions --}}

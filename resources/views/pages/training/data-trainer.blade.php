@@ -23,7 +23,7 @@
                 </x-ui.button>
             </div>
 
-            <x-search-input placeholder="Cari trainer..." class="max-w-md" wire:model.live="search" />
+            <x-search-input placeholder="Cari trainer..." class="max-w-72" wire:model.live="search" />
         </div>
     </div>
 

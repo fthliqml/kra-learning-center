@@ -110,7 +110,6 @@ class Module extends Component
         }
 
         $this->modal = false;
-
     }
 
     #[On('deleteModule')]
@@ -119,13 +118,12 @@ class Module extends Component
         TrainingModule::findOrFail($id)->delete();
 
         $this->error('Berhasil menghapus data', position: 'toast-top toast-center');
-
     }
 
     public function headers()
     {
         return [
-            ['key' => 'id', 'label' => 'No', 'class' => '!text-center'],
+            ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
             ['key' => 'title', 'label' => 'Module Title', 'class' => 'w-[300px]'],
             ['key' => 'group_comp', 'label' => 'Group Comp', 'class' => '!text-center'],
             [
@@ -200,6 +198,5 @@ class Module extends Component
             'modules' => $this->modules(),
             'headers' => $this->headers()
         ]);
-
     }
 }
