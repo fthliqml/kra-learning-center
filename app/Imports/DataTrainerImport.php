@@ -33,7 +33,8 @@ class DataTrainerImport implements ToCollection, WithHeadingRow, SkipsEmptyRows,
     {
         // Skip header row handled by WithHeadingRow
         foreach ($collection as $row) {
-            // Normalize row keys and values (Email is not used anymore)
+            // Normalize row keys and values
+            $trainerType = trim((string)($row['trainer_type'] ?? 'external'));
             $name = trim((string)($row['name'] ?? ''));
             $institution = trim((string)($row['institution'] ?? ''));
             $competenciesRaw = (string)($row['competencies'] ?? '');
@@ -51,20 +52,35 @@ class DataTrainerImport implements ToCollection, WithHeadingRow, SkipsEmptyRows,
                 ->values();
 
             try {
-                DB::transaction(function () use ($name, $institution, $competencyNames) {
-                    // Find existing user by exact name
-                    $users = User::where('name', $name)->get();
-                    if ($users->count() !== 1) {
-                        // Skip if not found or ambiguous
-                        throw new \RuntimeException('User not found or ambiguous for name: ' . $name);
-                    }
-                    $user = $users->first();
+                DB::transaction(function () use ($trainerType, $name, $institution, $competencyNames) {
+                    $isInternal = strtolower($trainerType) === 'internal';
 
-                    // Ensure trainer record exists for this user
-                    $trainer = Trainer::firstOrNew(['user_id' => $user->id]);
-                    $isNewTrainer = !$trainer->exists;
-                    $trainer->institution = $institution;
-                    $trainer->save();
+                    if ($isInternal) {
+                        // For internal trainer, find existing user by exact name
+                        $users = User::where('name', $name)->get();
+                        if ($users->count() !== 1) {
+                            // Skip if not found or ambiguous
+                            throw new \RuntimeException('User not found or ambiguous for name: ' . $name);
+                        }
+                        $user = $users->first();
+
+                        // Ensure trainer record exists for this user
+                        $trainer = Trainer::firstOrNew(['user_id' => $user->id]);
+                        $isNewTrainer = !$trainer->exists;
+                        $trainer->institution = $institution;
+                        $trainer->name = null; // Clear name field for internal trainer
+                        $trainer->save();
+                    } else {
+                        // For external trainer, find by name and null user_id
+                        $trainer = Trainer::firstOrNew([
+                            'name' => $name,
+                            'user_id' => null
+                        ]);
+                        $isNewTrainer = !$trainer->exists;
+                        $trainer->institution = $institution;
+                        $trainer->save();
+                    }
+
                     // Count per trainer-row created/updated
                     $isNewTrainer ? $this->created++ : $this->updated++;
 
@@ -93,6 +109,7 @@ class DataTrainerImport implements ToCollection, WithHeadingRow, SkipsEmptyRows,
     public function rules(): array
     {
         return [
+            'trainer_type' => ['required', 'string', 'in:internal,external,Internal,External'],
             'name' => ['required', 'string', 'max:255'],
             'institution' => ['nullable', 'string', 'max:255'],
             'competencies' => ['nullable', 'string'],

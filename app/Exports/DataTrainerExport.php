@@ -22,7 +22,11 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
             ->get();
 
         return $trainers->values()->map(function ($trainer, $index) {
-            $name = optional($trainer->user)->name;
+            // Handle trainer type and name
+            $trainerType = $trainer->user_id ? 'Internal' : 'External';
+            $name = $trainer->user_id ?
+                optional($trainer->user)->name : ($trainer->name ?? 'N/A');
+
             $institution = $trainer->institution;
             $competencies = $trainer->competencies
                 ->pluck('description')
@@ -31,6 +35,7 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
 
             return [
                 $index + 1,       // No
+                $trainerType,     // Trainer Type (Internal/External)
                 $name,            // Name
                 $institution,     // Institution
                 $competencies,    // Competencies (comma-separated)
@@ -43,13 +48,13 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
      */
     public function headings(): array
     {
-        return ['No', 'Name', 'Institution', 'Competencies'];
+        return ['No', 'Trainer Type', 'Name', 'Institution', 'Competencies'];
     }
 
     public function styles(Worksheet $sheet)
     {
         // Style header (row 1)
-        $sheet->getStyle('A1:D1')->applyFromArray([
+        $sheet->getStyle('A1:E1')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -61,10 +66,11 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
         ]);
 
         // Column widths
-        $sheet->getColumnDimension('A')->setWidth(6);
-        $sheet->getColumnDimension('B')->setWidth(30); // Name
-        $sheet->getColumnDimension('C')->setWidth(24); // Institution
-        $sheet->getColumnDimension('D')->setWidth(50); // Competencies
+        $sheet->getColumnDimension('A')->setWidth(6);   // No
+        $sheet->getColumnDimension('B')->setWidth(15);  // Trainer Type
+        $sheet->getColumnDimension('C')->setWidth(30);  // Name
+        $sheet->getColumnDimension('D')->setWidth(24);  // Institution
+        $sheet->getColumnDimension('E')->setWidth(50);  // Competencies
 
         // Style all cells
         $sheet->getStyle($sheet->calculateWorksheetDimension())->applyFromArray([
@@ -84,7 +90,7 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
         // Left align Institution and Competencies for readability
         $highestRow = $sheet->getHighestRow();
         if ($highestRow > 1) {
-            $sheet->getStyle('C2:D' . $highestRow)
+            $sheet->getStyle('D2:E' . $highestRow)
                 ->getAlignment()
                 ->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
         }

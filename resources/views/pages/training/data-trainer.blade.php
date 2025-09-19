@@ -114,25 +114,95 @@
                         option-value="value" option-label="label" placeholder="Select Type" :error="$errors->first('formData.trainer_type')" />
 
                     @if (($formData['trainer_type'] ?? 'internal') === 'internal')
-                        <x-choices label="Trainer Name" wire:model="formData.user_id" :options="$users"
-                            option-value="value" option-label="label" placeholder="Select Trainer" :error="$errors->first('formData.user_id')" />
+                        <div class="relative" x-data="{ showDropdown: @entangle('filteredUsers').live }" x-on:click.outside="$wire.filteredUsers = []">
+                            <x-input label="Trainer Name" placeholder="Type trainer name..."
+                                wire:model.live.debounce.300ms="trainerNameSearch" class="focus-within:border-0"
+                                :error="$errors->first('formData.user_id')" autocomplete="off" />
+
+                            @if (!empty($trainerNameSearch) && empty($formData['user_id']))
+                                <div
+                                    class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                    @if (!empty($filteredUsers))
+                                        @foreach ($filteredUsers as $user)
+                                            <div class="px-4 py-2 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150"
+                                                wire:click="selectTrainer({{ $user['value'] }}, '{{ addslashes($user['label']) }}')">
+                                                <span class="text-gray-900">{{ $user['label'] }}</span>
+                                            </div>
+                                        @endforeach
+                                    @else
+                                        <div class="px-4 py-2 text-gray-500 text-sm">
+                                            <div class="flex items-center mb-2">
+                                                <x-icon name="o-exclamation-circle"
+                                                    class="w-4 h-4 mr-2 text-amber-500" />
+                                                No trainers found with name "{{ $trainerNameSearch }}"
+                                            </div>
+                                            <div class="text-xs text-gray-400">
+                                                Try searching with different keywords or add as external trainer
+                                            </div>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endif
+                        </div>
                     @else
                         <x-input label="Trainer Name" placeholder="Name of the trainer..."
-                            wire:model.defer="formData.name" class="focus-within:border-0" :error="$errors->first('formData.name')" />
+                            wire:model.live.debounce.500ms="formData.name" class="focus-within:border-0"
+                            :error="$errors->first('formData.name')" />
                     @endif
                 </div>
             @elseif ($mode === 'edit')
                 @if (($formData['trainer_type'] ?? 'internal') === 'internal')
-                    <x-select label="Trainer Name" wire:model.defer="formData.user_id" :options="$users"
-                        option-value="value" option-label="label" placeholder="Select Trainer" :error="$errors->first('formData.user_id')" />
+                    <div class="relative" x-data="{ showDropdown: @entangle('filteredUsers').live }" x-on:click.outside="$wire.filteredUsers = []">
+                        <x-input label="Trainer Name" placeholder="Type trainer name..."
+                            wire:model.live.debounce.300ms="trainerNameSearch" class="focus-within:border-0"
+                            :error="$errors->first('formData.user_id')" autocomplete="off" />
+
+                        @if (!empty($trainerNameSearch) && empty($formData['user_id']))
+                            <div
+                                class="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto">
+                                @if (!empty($filteredUsers))
+                                    @foreach ($filteredUsers as $user)
+                                        <div class="px-4 py-2 cursor-pointer hover:bg-blue-50 border-b border-gray-100 last:border-b-0 transition-colors duration-150"
+                                            wire:click="selectTrainer({{ $user['value'] }}, '{{ addslashes($user['label']) }}')">
+                                            <span class="text-gray-900">{{ $user['label'] }}</span>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="px-4 py-2 text-gray-500 text-sm">
+                                        <div class="flex items-center mb-2">
+                                            <x-icon name="o-exclamation-circle" class="w-4 h-4 mr-2 text-amber-500" />
+                                            No trainers found with name "{{ $trainerNameSearch }}"
+                                        </div>
+                                        <div class="text-xs text-gray-400">
+                                            Try searching with different keywords or add as external trainer
+                                        </div>
+                                    </div>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
                 @else
-                    <x-input label="Trainer Name" placeholder="Name of the trainer..." wire:model.defer="formData.name"
-                        class="focus-within:border-0" :error="$errors->first('formData.name')" />
+                    <x-input label="Trainer Name" placeholder="Name of the trainer..."
+                        wire:model.live.debounce.500ms="formData.name" class="focus-within:border-0"
+                        :error="$errors->first('formData.name')" />
                 @endif
             @endif
 
             <x-input label="Institution" placeholder="Institution name..." wire:model.defer="formData.institution"
                 class="focus-within:border-0" :error="$errors->first('formData.institution')" :readonly="$mode === 'preview'" />
+
+            @if (!empty($duplicateWarning) && $mode === 'create')
+                <div class="bg-amber-50 border border-amber-200 rounded-md p-3">
+                    <div class="flex items-start">
+                        <x-icon name="o-exclamation-triangle"
+                            class="w-5 h-5 text-amber-500 mr-2 mt-0.5 flex-shrink-0" />
+                        <div>
+                            <p class="text-sm text-amber-800 font-medium">Trainer Sudah Terdaftar</p>
+                            <p class="text-xs text-amber-600 mt-1">{{ $duplicateWarning }}</p>
+                        </div>
+                    </div>
+                </div>
+            @endif
 
             <div class="space-y-3">
                 <label class="label p-0">
