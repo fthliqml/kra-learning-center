@@ -26,8 +26,12 @@
                     <x-menu-item title="Export" icon="o-arrow-down-on-square" wire:click.stop="export"
                         spinner="export" />
 
-                    <label class="w-full cursor-pointer">
+                    <label class="w-full cursor-pointer relative" wire:loading.class="opacity-60 pointer-events-none"
+                        wire:target="file">
                         <x-menu-item title="Import" icon="o-arrow-up-on-square" />
+                        <div class="absolute right-2 top-2" wire:loading wire:target="file">
+                            <x-icon name="o-arrow-path" class="size-4 animate-spin text-gray-500" />
+                        </div>
                         <input type="file" wire:model="file" class="hidden" />
                     </label>
 
@@ -35,9 +39,12 @@
                         wire:click.stop="downloadTemplate" spinner="downloadTemplate" />
                 </x-dropdown>
 
+
+
                 <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal" class="h-10"
                     wire:loading.attr="readonly">
-                    <span wire:loading.remove wire:target="openCreateModal" class="flex items-center gap-2">
+                    <span wire:loading.remove wire:target="openCreateModal" size="lg"
+                        class="flex items-center gap-2">
                         <x-icon name="o-plus" class="size-4" />
                         Add
                     </span>
@@ -59,7 +66,11 @@
     <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
         <x-table :headers="$headers" :rows="$modules" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
             with-pagination>
-            {{-- TODO : Custom cell no --}}
+            {{-- Custom cell untuk kolom Nomor --}}
+            @scope('cell_no', $module)
+                {{ $module->no ?? $loop->iteration }}
+            @endscope
+
             {{-- Custom cell untuk kolom Action --}}
             @scope('cell_action', $module)
                 <div class="flex gap-2 justify-center">
@@ -105,10 +116,12 @@
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-input label="Duration" type="number" wire:model.defer="formData.duration" placeholder="6 Hours"
-                    class="focus-within:border-0" min="1" step="0.5" :error="$errors->first('formData.duration')" :readonly="$mode === 'preview'" />
+                    class="focus-within:border-0" min="1" step="0.5" :error="$errors->first('formData.duration')"
+                    :readonly="$mode === 'preview'" />
 
-                <x-input label="Frequency" type="number" wire:model.defer="formData.frequency" placeholder="15 Days"
-                    class="focus-within:border-0" min="1" :error="$errors->first('formData.frequency')" :readonly="$mode === 'preview'" />
+                <x-input label="Frequency" type="number" wire:model.defer="formData.frequency"
+                    placeholder="15 Days" class="focus-within:border-0" min="1" :error="$errors->first('formData.frequency')"
+                    :readonly="$mode === 'preview'" />
             </div>
 
             {{-- Actions --}}

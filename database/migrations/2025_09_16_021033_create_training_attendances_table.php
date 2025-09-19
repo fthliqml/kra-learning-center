@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->unsignedBigInteger('employee_id');
 
             // Attendance data
-            $table->enum('status', ['present', 'absent', 'waiting'])->default('waiting');
+            $table->enum('status', ['present', 'absent', 'pending'])->default('pending');
             $table->string('notes')->nullable();
             $table->timestamp('recorded_at')->useCurrent();
 

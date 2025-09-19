@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Trainer;
 use App\Models\Training;
 use App\Models\TrainingAssesment;
 use App\Models\TrainingAttendance;
@@ -28,11 +29,30 @@ class TrainingSeeder extends Seeder
             'status' => "in_progress",
         ]);
 
+        // 2. Data Trainer
+        $trainer = Trainer::create([
+            'user_id' => 1,
+            'institution' => "KRA"
+
+        ]);
+
+        Trainer::create([
+            'user_id' => 5,
+            'institution' => "KRA"
+
+        ]);
+
+        Trainer::create([
+            'user_id' => 10,
+            'institution' => "KRA"
+
+        ]);
+
         $sessions = [];
         for ($i = 1; $i <= 4; $i++) {
             $sessions[] = TrainingSession::create([
                 'training_id' => $training->id,
-                'instructor_id' => 1,
+                'trainer_id' => $trainer->id,
                 'room_name' => 'Wakatobi',
                 'room_location' => "EDC {$i}",
                 'start_time' => '09:00:00',
@@ -58,7 +78,6 @@ class TrainingSeeder extends Seeder
                 TrainingAttendance::create([
                     'session_id' => $session->id,
                     'employee_id' => $employee->id,
-                    'status' => 'present',
                     'notes' => null,
                     'recorded_at' => Carbon::now(),
                 ]);

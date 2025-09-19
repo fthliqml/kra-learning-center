@@ -56,14 +56,14 @@
                     icon-right="o-funnel" />
             </div>
 
-            <x-search-input placeholder="Cari trainer..." class="max-w-md" wire:model.live="search" />
+            <x-search-input placeholder="Cari trainer..." class="max-w-72" wire:model.live="search" />
         </div>
     </div>
 
     <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
         <x-table :headers="$headers" :rows="$trainers" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
             with-pagination>
-            {{-- Custom cell untuk kolom Trainer Name --}}
+            {{-- Custom cell untuk kolom Nomor --}}
             @scope('cell_no', $trainer)
                 {{ $trainer->no ?? $loop->iteration }}
             @endscope
