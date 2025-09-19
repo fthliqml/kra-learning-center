@@ -19,7 +19,6 @@
                             </span>
                             <span class="flex items-center gap-2" wire:loading wire:target="file">
                                 <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                                Mengimpor...
                             </span>
                         </x-button>
                     </x-slot:trigger>
