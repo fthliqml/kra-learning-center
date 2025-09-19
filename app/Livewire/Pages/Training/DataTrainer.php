@@ -2,22 +2,28 @@
 
 namespace App\Livewire\Pages\Training;
 
+use App\Exports\DataTrainerExport;
+use App\Exports\DataTrainerTemplateExport;
+use App\Imports\DataTrainerImport;
 use App\Models\Competency;
 use App\Models\Trainer;
 use App\Models\User;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
+use Maatwebsite\Excel\Facades\Excel;
 use Mary\Traits\Toast;
 
 class DataTrainer extends Component
 {
-    use Toast, WithPagination;
+    use Toast, WithPagination, WithFileUploads;
     public $modal = false;
     public $selectedId = null;
     public $mode = 'create'; //  create | edit | preview
     public $search = '';
     public $users = [];
+    public $file;
 
     public function mount()
     {
@@ -201,6 +207,43 @@ class DataTrainer extends Component
             $trainer->no = $start + $index;
             return $trainer;
         });
+    }
+
+    public function export()
+    {
+        return Excel::download(new DataTrainerExport(), 'data_trainers.xlsx');
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(new DataTrainerTemplateExport(), 'data_trainer_template.xlsx');
+    }
+
+    public function updatedFile()
+    {
+        if (!$this->file)
+            return;
+
+        $this->validate([
+            'file' => 'required|mimes:xlsx,xls',
+        ]);
+
+        $import = new DataTrainerImport();
+        Excel::import($import, $this->file);
+
+        $parts = [];
+        if (!empty($import->created)) {
+            $parts[] = "{$import->created} data ditambahkan";
+        }
+        if (!empty($import->updated)) {
+            $parts[] = "{$import->updated} data diperbarui";
+        }
+        if (!empty($import->skipped)) {
+            $parts[] = "{$import->skipped} data gagal ditambahkan";
+        }
+        $summary = 'Import selesai.' . (count($parts) ? ' ' . implode(', ', $parts) . '.' : '');
+        $this->success($summary, position: 'toast-top toast-center');
+        $this->file = null;
     }
 
     public function render()

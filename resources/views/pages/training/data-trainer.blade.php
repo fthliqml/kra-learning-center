@@ -10,6 +10,34 @@
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
+                <x-dropdown no-x-anchor right>
+                    <x-slot:trigger>
+                        <x-button class="btn-success h-10" wire:target="file" wire:loading.attr="disabled">
+                            <span class="flex items-center gap-2" wire:loading.remove wire:target="file">
+                                <x-icon name="o-clipboard-document-list" class="size-4" />
+                                Excel
+                            </span>
+                            <span class="flex items-center gap-2" wire:loading wire:target="file">
+                                <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                            </span>
+                        </x-button>
+                    </x-slot:trigger>
+
+                    <x-menu-item title="Export" icon="o-arrow-down-on-square" wire:click.stop="export"
+                        spinner="export" />
+
+                    <label class="w-full cursor-pointer relative" wire:loading.class="opacity-60 pointer-events-none"
+                        wire:target="file">
+                        <x-menu-item title="Import" icon="o-arrow-up-on-square" />
+                        <div class="absolute right-2 top-2" wire:loading wire:target="file">
+                            <x-icon name="o-arrow-path" class="size-4 animate-spin text-gray-500" />
+                        </div>
+                        <input type="file" wire:model="file" class="hidden" />
+                    </label>
+
+                    <x-menu-item title="Download Template" icon="o-document-arrow-down"
+                        wire:click.stop="downloadTemplate" spinner="downloadTemplate" />
+                </x-dropdown>
 
                 <x-ui.button variant="primary" size="lg" wire:click="openCreateModal" wire:target="openCreateModal"
                     class="h-9" wire:loading.attr="readonly">
