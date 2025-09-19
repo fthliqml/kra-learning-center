@@ -39,8 +39,8 @@
                         wire:click.stop="downloadTemplate" spinner="downloadTemplate" />
                 </x-dropdown>
 
-                <x-ui.button variant="primary" size="lg" wire:click="openCreateModal" wire:target="openCreateModal"
-                    class="h-9" wire:loading.attr="readonly">
+                <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal" class="h-10"
+                    wire:loading.attr="readonly">
                     <span wire:loading.remove wire:target="openCreateModal" class="flex items-center gap-2">
                         <x-icon name="o-plus" class="size-4" />
                         Add
@@ -49,6 +49,11 @@
                         <x-icon name="o-arrow-path" class="size-4 animate-spin" />
                     </span>
                 </x-ui.button>
+
+                <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
+                    placeholder="Filter"
+                    class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer"
+                    icon-right="o-funnel" />
             </div>
 
             <x-search-input placeholder="Cari trainer..." class="max-w-md" wire:model.live="search" />
@@ -65,7 +70,7 @@
 
             {{-- Custom cell untuk kolom Trainer Name --}}
             @scope('cell_name', $trainer)
-                {{ $trainer->user->name }}
+                {{ optional($trainer->user)->name ?? $trainer->name }}
             @endscope
 
             {{-- Custom cell untuk kolom Action --}}
@@ -96,21 +101,43 @@
     <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Data Trainer' : ($mode === 'edit' ? 'Edit Data Trainer' : 'Preview Data Trainer')" separator box-class="max-w-3xl h-fit">
 
         <x-form wire:submit.prevent="save" no-separator>
-            {{-- Title --}}
-            @if ($mode !== 'create' && $mode !== 'edit')
+            {{-- Trainer Type & Name --}}
+            @if ($mode === 'preview')
                 <x-input label="Trainer Name" placeholder="Name of the trainer..." wire:model.defer="formData.name"
-                    class="focus-within:border-0" :error="$errors->first('formData.name')" :readonly="$mode === 'preview'" />
-            @else
-                <x-select label="Trainer Name" wire:model.defer="formData.user_id" :options="$users"
-                    option-value="value" option-label="label" placeholder="Select Trainer" :error="$errors->first('formData.user_id')"
-                    :disabled="$mode === 'preview'" />
+                    class="focus-within:border-0" :error="$errors->first('formData.name')" :readonly="true" />
+            @elseif ($mode === 'create')
+                <div class="grid gap-3 md:grid-cols-2">
+                    <x-select label="Trainer Type" wire:model.live="formData.trainer_type" :options="[
+                        ['value' => 'internal', 'label' => 'Internal'],
+                        ['value' => 'external', 'label' => 'External'],
+                    ]"
+                        option-value="value" option-label="label" placeholder="Select Type" :error="$errors->first('formData.trainer_type')" />
+
+                    @if (($formData['trainer_type'] ?? 'internal') === 'internal')
+                        <x-choices label="Trainer Name" wire:model="formData.user_id" :options="$users"
+                            option-value="value" option-label="label" placeholder="Select Trainer" :error="$errors->first('formData.user_id')" />
+                    @else
+                        <x-input label="Trainer Name" placeholder="Name of the trainer..."
+                            wire:model.defer="formData.name" class="focus-within:border-0" :error="$errors->first('formData.name')" />
+                    @endif
+                </div>
+            @elseif ($mode === 'edit')
+                @if (($formData['trainer_type'] ?? 'internal') === 'internal')
+                    <x-select label="Trainer Name" wire:model.defer="formData.user_id" :options="$users"
+                        option-value="value" option-label="label" placeholder="Select Trainer" :error="$errors->first('formData.user_id')" />
+                @else
+                    <x-input label="Trainer Name" placeholder="Name of the trainer..." wire:model.defer="formData.name"
+                        class="focus-within:border-0" :error="$errors->first('formData.name')" />
+                @endif
             @endif
 
             <x-input label="Institution" placeholder="Institution name..." wire:model.defer="formData.institution"
                 class="focus-within:border-0" :error="$errors->first('formData.institution')" :readonly="$mode === 'preview'" />
 
             <div class="space-y-3">
-                <label class="font-medium">Competency</label>
+                <label class="label p-0">
+                    <span class="label-text text-xs leading-[18px] font-semibold text-[#123456]">Competency</span>
+                </label>
                 @if ($mode === 'preview')
                     @foreach ($formData['competencies'] ?? [] as $i => $comp)
                         <x-input class="w-full" placeholder="Describe the competency..." :readonly="true"

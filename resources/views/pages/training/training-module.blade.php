@@ -35,7 +35,7 @@
                         wire:click.stop="downloadTemplate" spinner="downloadTemplate" />
                 </x-dropdown>
 
-                <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal" class="h-9"
+                <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal" class="h-10"
                     wire:loading.attr="readonly">
                     <span wire:loading.remove wire:target="openCreateModal" class="flex items-center gap-2">
                         <x-icon name="o-plus" class="size-4" />

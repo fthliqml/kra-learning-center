@@ -24,6 +24,7 @@ class DataTrainer extends Component
     public $search = '';
     public $users = [];
     public $file;
+    public $filter = '';
 
     public function mount()
     {
@@ -35,20 +36,33 @@ class DataTrainer extends Component
         })->toArray();
     }
 
+
+
+    public $groupOptions = [
+        ['value' => 'Internal', 'label' => 'Internal'],
+        ['value' => 'External', 'label' => 'External'],
+    ];
+
     public $formData = [
-        // 'name' => '',
+        'trainer_type' => '',
+        'name' => '',
         'user_id' => '',
         'institution' => '',
         'competencies' => [''],
     ];
 
-    protected $rules = [
-        // 'formData.name' => 'required|string|max:255',
-        'formData.user_id' => 'required',
-        'formData.institution' => 'required|string',
-        'formData.competencies' => 'required|array|min:1',
-        'formData.competencies.*' => 'nullable|string|max:255',
-    ];
+    protected function rules()
+    {
+        $isInternal = ($this->formData['trainer_type'] ?? 'internal') === 'internal';
+        return [
+            'formData.trainer_type' => 'required|in:internal,external',
+            'formData.user_id' => [$isInternal ? 'required' : 'nullable'],
+            'formData.name' => [$isInternal ? 'nullable' : 'required', 'string', 'max:255'],
+            'formData.institution' => 'required|string',
+            'formData.competencies' => 'required|array|min:1',
+            'formData.competencies.*' => 'nullable|string|max:255',
+        ];
+    }
 
     public function updated($property): void
     {
@@ -60,10 +74,31 @@ class DataTrainer extends Component
     public function openCreateModal()
     {
         $this->reset(['formData', 'selectedId']);
+        $this->formData = [
+            'trainer_type' => '',
+            'name' => '',
+            'user_id' => '',
+            'institution' => '',
+            'competencies' => [''],
+        ];
         $this->mode = 'create';
         $this->modal = true;
 
         $this->resetValidation();
+    }
+
+    // Auto-fill institution when switching to internal trainer type
+    public function updatedFormDataTrainerType($value): void
+    {
+        if ($value === 'internal') {
+            $this->formData['institution'] = 'PT Komatsu Remanufacturing Asia';
+            // Clear external-only field
+            $this->formData['name'] = '';
+        } else {
+            $this->formData['institution'] = '';
+            // Clear internal-only field
+            $this->formData['user_id'] = '';
+        }
     }
 
     public function openDetailModal($id)
@@ -74,8 +109,10 @@ class DataTrainer extends Component
         $competencyDescs = $trainer->competencies->pluck('description')->toArray();
 
         $this->selectedId = $id;
+        $isInternal = !is_null($trainer->user_id);
         $this->formData = [
-            'name' => $trainer->user->name ?? '',
+            'trainer_type' => $isInternal ? 'internal' : 'external',
+            'name' => $isInternal ? ($trainer->user->name ?? '') : ($trainer->name ?? ''),
             'user_id' => $trainer->user_id,
             'institution' => $trainer->institution,
             'competencies' => !empty($competencyDescs) ? $competencyDescs : [''],
@@ -95,7 +132,10 @@ class DataTrainer extends Component
         $competencyDescs = $trainer->competencies->pluck('description')->toArray();
 
         $this->selectedId = $id;
+        $isInternal = !is_null($trainer->user_id);
         $this->formData = [
+            'trainer_type' => $isInternal ? 'internal' : 'external',
+            'name' => $isInternal ? '' : ($trainer->name ?? ''),
             'user_id' => $trainer->user_id,
             'institution' => $trainer->institution,
             'competencies' => !empty($competencyDescs) ? $competencyDescs : [''],
@@ -128,9 +168,11 @@ class DataTrainer extends Component
             return Competency::firstOrCreate(['description' => $desc])->id;
         })->all();
 
-        // Simpan trainer
+        // Siapkan data trainer sesuai tipe
+        $isInternal = ($this->formData['trainer_type'] ?? 'internal') === 'internal';
         $trainerData = [
-            'user_id' => $this->formData['user_id'],
+            'user_id' => $isInternal ? $this->formData['user_id'] : null,
+            'name' => $isInternal ? null : ($this->formData['name'] ?? null),
             'institution' => $this->formData['institution'],
         ];
 
@@ -186,16 +228,23 @@ class DataTrainer extends Component
 
     public function trainers()
     {
+        $filter = strtolower($this->filter ?? '');
+
         $query = Trainer::query()
             ->when(
                 $this->search,
                 fn($q) =>
-                $q->whereHas('user', function ($query) {
-                    $query->where('name', 'like', '%' . $this->search . '%');
+                $q->where(function ($inner) {
+                    $inner->whereHas('user', function ($query) {
+                        $query->where('name', 'like', '%' . $this->search . '%');
+                    })
+                        ->orWhere('trainer.name', 'like', '%' . $this->search . '%')
+                        ->orWhere('institution', 'like', '%' . $this->search . '%');
                 })
-                    ->orWhere('institution', 'like', '%' . $this->search . '%')
             )
-            ->join('users', 'trainer.user_id', '=', 'users.id')
+            ->when($filter === 'internal', fn($q) => $q->whereNotNull('trainer.user_id'))
+            ->when($filter === 'external', fn($q) => $q->whereNull('trainer.user_id'))
+            ->leftJoin('users', 'trainer.user_id', '=', 'users.id')
             ->orderBy('created_at', 'asc')
             ->select('trainer.*');
 
