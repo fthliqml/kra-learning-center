@@ -15,7 +15,7 @@ return new class extends Migration {
 
             // Foreign Keys
             $table->unsignedBigInteger('training_id');
-            $table->unsignedBigInteger('instructor_id');
+            $table->unsignedBigInteger('trainer_id');
 
             // Session details
             $table->string('room_name')->nullable();
@@ -31,7 +31,7 @@ return new class extends Migration {
 
             // Constraints
             $table->foreign('training_id')->references('id')->on('trainings')->onDelete('cascade');
-            // $table->foreign('instructor_id')->references('id')->on('trainers')->onDelete('cascade');
+            $table->foreign('trainer_id')->references('id')->on('trainer')->onDelete('cascade');
         });
     }
 
