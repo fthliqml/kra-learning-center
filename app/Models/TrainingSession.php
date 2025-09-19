@@ -31,8 +31,8 @@ class TrainingSession extends Model
         return $this->hasMany(TrainingAttendance::class, 'session_id');
     }
 
-    // public function trainer()
-    // {
-    //     return $this->belongsTo(Trainer::class);
-    // }
+    public function trainer()
+    {
+        return $this->belongsTo(Trainer::class);
+    }
 }

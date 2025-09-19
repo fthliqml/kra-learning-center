@@ -3,3 +3,6 @@ import "./bootstrap";
 
 // window.Alpine = Alpine;
 // Alpine.start();
+
+import flatpickr from "flatpickr";
+import "flatpickr/dist/flatpickr.min.css";

@@ -2,13 +2,16 @@
 
 namespace App\Livewire\Components\Training;
 
+use App\Models\Trainer;
 use App\Models\Training;
 use App\Models\TrainingAssesment;
 use App\Models\TrainingAttendance;
+use App\Models\TrainingSession;
 use App\Models\User;
 use Livewire\Component;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
+use Maatwebsite\Excel\Concerns\ToArray;
 use Mary\Traits\Toast;
 
 class FullCalendar extends Component
@@ -17,35 +20,28 @@ class FullCalendar extends Component
     public $currentMonth;
     public $currentYear;
     public $selectedEvent = null;
+    public $trainingDateRange = null;
     public $modal = false;
     public $dayNumber = 1;
     public $attendances = [];
     public $employees = [];
-    public $trainingId = 1;
     public $sessions = [];
     public $trainings = [];
+    public $trainer = [];
+    public $trainers = [];
+    public $editModes = [
+        'training_name' => false,
+        'date' => false,
+        'location' => false,
+        'trainer' => false
+    ];
+
 
     public function mount()
     {
         $this->currentMonth = Carbon::now()->month;
         $this->currentYear = Carbon::now()->year;
         $this->trainings = Training::with('sessions')->get();
-
-        $training = Training::with(['sessions.attendances'])->find($this->trainingId);
-
-        if (!$training)
-            return;
-
-        $this->employees = $training->assessments->map(fn($a) => $a->employee)->unique('id')->values();
-
-        foreach ($training->sessions as $session) {
-            foreach ($session->attendances as $attendance) {
-                $this->attendances[$session->day_number][$attendance->employee_id] = [
-                    'status' => $attendance->status,
-                    'remark' => $attendance->notes,
-                ];
-            }
-        }
     }
 
     public function previousMonth()
@@ -70,9 +66,63 @@ class FullCalendar extends Component
 
     public function openEventModal($eventId)
     {
-        $this->selectedEvent = collect($this->trainings)->firstWhere('id', $eventId);
-        $this->sessions = $this->selectedEvent->sessions;
+        $this->resetEditModes();
+
+
+        $this->trainers = Trainer::with('user')
+            ->get()
+            ->map(fn($t) =>
+                [
+                    'id' => $t->id,
+                    'user' => ['name' => $t->user->name],
+                ])->toArray();
+
+        // Ambil data lengkap training
+        $trainings = Training::with(['sessions.attendances', 'sessions.trainer.user', 'assessments.employee'])
+            ->find($eventId);
+
+
+        if (!$trainings) {
+            return;
+        }
+
+        // Ambil daftar employees dari assessments
+        $this->employees = $trainings->assessments
+            ->map(fn($a) => $a->employee)
+            ->unique('id')
+            ->values();
+
+        // Mapping attendance per session & employee
+        foreach ($trainings->sessions as $session) {
+            foreach ($session->attendances as $attendance) {
+                $this->attendances[$session->day_number][$attendance->employee_id] = [
+                    'status' => $attendance->status,
+                    'remark' => $attendance->notes,
+                ];
+            }
+        }
+
+        // Ambil event dari daftar trainings yang sudah di-load sebelumnya
+        $event = collect($this->trainings)->firstWhere('id', $eventId);
+
+
+
+        if ($event) {
+            $this->sessions = $event->sessions->toArray();
+            $this->selectedEvent = $event->toArray();
+            $this->trainer = $event->sessions[$this->dayNumber - 1]->trainer->toArray();
+            $this->trainer["name"] = collect($this->trainers)
+                ->firstWhere('id', $this->trainer["id"])['user']['name'] ?? null;
+        }
+
+
         $this->modal = true;
+    }
+
+
+    public function resetEditModes()
+    {
+        $this->editModes = array_map(fn($v) => false, $this->editModes);
     }
 
     public function closeModal()
@@ -99,7 +149,7 @@ class FullCalendar extends Component
     {
         $layerMapping = $this->assignTrainingLayers();
 
-        return collect($this->trainings) // sudah ada variabel trainings
+        return collect($this->trainings)
             ->filter(function ($training) use ($date) {
                 $startDate = Carbon::parse($training->start_date);
                 $endDate = Carbon::parse($training->end_date);
@@ -134,16 +184,68 @@ class FullCalendar extends Component
         return $this->sessions[(int) $this->dayNumber - 1] ?? null;
     }
 
+    private function parseDateRange($dateRange): array
+    {
+        $dates = explode(' to ', $dateRange);
+
+        $start = $dates[0] ?? null;
+        $end = $dates[1] ?? $dates[0] ?? null;
+
+        return [
+            'start' => $start ? Carbon::parse($start)->format('Y-m-d') : null,
+            'end' => $end ? Carbon::parse($end)->format('Y-m-d') : null,
+        ];
+    }
+
+    public function updatedDayNumber()
+    {
+        $event = Training::with('sessions.trainer.user')->find($this->selectedEvent['id']);
+
+        if ($event && isset($event->sessions[$this->dayNumber - 1])) {
+            $trainer = $event->sessions[$this->dayNumber - 1]->trainer->toArray();
+            $trainer['name'] = $trainer['user']['name'] ?? null;
+
+
+            $this->trainer = $trainer;
+        }
+
+    }
 
     public function updateAttendance()
     {
+        $dates = $this->parseDateRange($this->trainingDateRange);
+
+
+        $startDate = $dates['start'];
+        $endDate = $dates['end'];
+
+        $updateData = [
+            'name' => $this->selectedEvent['name'] ?? null,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+        ];
+
+        // buang key yang nilainya null
+        $updateData = array_filter($updateData, fn($value) => !is_null($value));
+
+        Training::where('id', $this->selectedEvent['id'])
+            ->update($updateData);
+
+        if ($this->currentSession) {
+            TrainingSession::where('id', $this->currentSession['id'])->update([
+                'room_name' => $this->currentSession['room_name'] ?? null,
+                'room_location' => $this->currentSession['room_location'] ?? null,
+                'trainer_id' => $this->trainer['id'] ?? null,
+            ]);
+        }
+
         foreach ($this->employees as $employee) {
             $data = $this->attendances[$this->dayNumber][$employee->id] ?? null;
 
             if ($data) {
                 TrainingAttendance::updateOrCreate(
                     [
-                        'session_id' => $this->sessions[$this->dayNumber - 1]->id,
+                        'session_id' => $this->sessions[$this->dayNumber - 1]['id'],
                         'employee_id' => $employee->id,
                     ],
                     [
@@ -153,6 +255,10 @@ class FullCalendar extends Component
                 );
             }
         }
+
+        $this->trainings = Training::with('sessions')->get();
+
+        $this->modal = false;
 
         $this->success('Berhasil memperbarui data!', position: 'toast-top toast-center');
     }
