@@ -1,6 +1,5 @@
  <div>
      <!-- Month Navigation -->
-
      <div class="flex items-center justify-center mb-4">
          <button wire:click="previousMonth" class="p-2 hover:bg-gray-100 rounded-full cursor-pointer">
              <svg class="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
