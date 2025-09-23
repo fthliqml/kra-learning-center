@@ -38,10 +38,10 @@
              @foreach ($days as $day)
                  <div @class([
                      'border-b border-gray-200 relative flex flex-col border-r h-[60px] sm:min-h-[200px] hover:bg-gradient-to-br hover:from-gray-100 hover:to-gray-200
-                                                                                             hover:border-gray-300 hover:shadow-lg
-                                                                                                 transform hover:-translate-y-0.5
-                                                                                                 transition-all duration-200 ease-in-out
-                                                                                                 cursor-pointer',
+                                                                                                              hover:border-gray-300 hover:shadow-lg
+                                                                                                                  transform hover:-translate-y-0.5
+                                                                                                                  transition-all duration-200 ease-in-out
+                                                                                                                  cursor-pointer',
                      'bg-gray-50' => !$day['isCurrentMonth'],
                      'bg-white' => $day['isCurrentMonth'],
                  ]) wire:click="openAddTrainingModal('{{ $day['date'] }}')">
@@ -214,7 +214,7 @@
                      </div>
                  </div>
 
-                 <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-y-auto h-[300px]">
+                 <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-y-auto max-h-[300px]">
                      <x-table :headers="[
                          ['key' => 'no', 'label' => 'No', 'class' => 'text-center'],
                          ['key' => 'NRP', 'label' => 'NRP', 'class' => 'text-center'],

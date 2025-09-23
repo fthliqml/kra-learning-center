@@ -17,13 +17,13 @@
                         <x-input wire:model="training_name" label="Training Name" placeholder="Enter training name"
                             class="focus-within:border-0" />
 
-                        <!-- Date Range -->
-                        <x-datepicker wire:model.defer="date" placeholder="Select date range" icon="o-calendar"
-                            class="w-full" label="Training Date" :config="[
-                                'mode' => 'range',
-                                'altInput' => true,
-                                'altFormat' => 'd M Y',
-                            ]" />
+                        <!-- Trainer -->
+                        <x-choices label="Trainer" wire:model="trainerId" :options="$trainersSearchable"
+                            search-function="trainerSearch" debounce="300ms" option-value="id" option-label="name"
+                            placeholder="Search trainer name..." class="focus-within:border-0" min-chars=2
+                            hint="Type at least 2 chars" searchable single clearable>
+                        </x-choices>
+
 
                         <!-- Participants Section -->
                         <x-choices label="Select Participants" wire:model="participants" :options="$usersSearchable"
@@ -34,12 +34,13 @@
                 </x-tab>
 
                 <x-tab name="session" label="Session Config" icon="o-cog-6-tooth">
-                    <!-- Trainer -->
-                    <x-choices label="Trainer" wire:model="trainer" :options="$trainersSearchable" search-function="trainerSearch"
-                        debounce="300ms" option-value="id" option-label="name" placeholder="Search trainer name..."
-                        class="focus-within:border-0" min-chars=2 hint="Type at least 2 chars" searchable single
-                        clearable>
-                    </x-choices>
+                    <!-- Date Range -->
+                    <x-datepicker wire:model.defer="date" placeholder="Select date range" icon="o-calendar"
+                        class="w-full" label="Training Date" :config="[
+                            'mode' => 'range',
+                            'altInput' => true,
+                            'altFormat' => 'd M Y',
+                        ]" />
 
                     <div class="space-y-6 py-4">
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full">
@@ -47,6 +48,12 @@
                                 wire:model="room.name" />
                             <x-input label="Room Location/Office" placeholder="Room location"
                                 class="focus-within:border-0" wire:model="room.location" />
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full">
+                            <x-input type="time" label="Start Time" wire:model="start_time"
+                                class="focus-within:border-0" placeholder="HH:MM" />
+                            <x-input type="time" label="End Time" wire:model="end_time" class="focus-within:border-0"
+                                placeholder="HH:MM" />
                         </div>
                     </div>
                 </x-tab>
@@ -60,11 +67,4 @@
         </x-slot:actions>
     </x-modal>
 
-    <!-- Success Message -->
-    @if (session()->has('message'))
-        <div class="alert alert-success mt-4">
-            <x-icon name="o-check-circle" class="w-6 h-6" />
-            {{ session('message') }}
-        </div>
-    @endif
 </div>

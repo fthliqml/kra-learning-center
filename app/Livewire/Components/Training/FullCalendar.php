@@ -6,7 +6,6 @@ use App\Models\Trainer;
 use App\Models\Training;
 use App\Models\TrainingAttendance;
 use App\Models\TrainingSession;
-use App\Models\User;
 use Livewire\Component;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -34,6 +33,15 @@ class FullCalendar extends Component
         'trainer' => false
     ];
 
+
+    protected $listeners = [
+        'training-created' => 'refreshTrainings',
+    ];
+
+    public function refreshTrainings($payload = null)
+    {
+        $this->trainings = Training::with('sessions')->get();
+    }
 
     public function mount()
     {

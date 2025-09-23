@@ -11,10 +11,11 @@ class TrainingSession extends Model
 
     protected $fillable = [
         'training_id',
-        'instructor_id',
+        'trainer_id',
         'room_name',
         'room_location',
         'start_time',
+        'date',
         'end_time',
         'day_number',
         'status',
