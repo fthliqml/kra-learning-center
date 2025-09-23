@@ -37,11 +37,15 @@
          <div class="grid grid-cols-7">
              @foreach ($days as $day)
                  <div @class([
-                     'border-b border-gray-200 relative flex flex-col border-r',
-                     'h-[60px] sm:min-h-[200px]',
+                     'border-b border-gray-200 relative flex flex-col border-r h-[60px] sm:min-h-[200px] hover:bg-gradient-to-br hover:from-gray-100 hover:to-gray-200
+                                                                                             hover:border-gray-300 hover:shadow-lg
+                                                                                                 transform hover:-translate-y-0.5
+                                                                                                 transition-all duration-200 ease-in-out
+                                                                                                 cursor-pointer',
                      'bg-gray-50' => !$day['isCurrentMonth'],
                      'bg-white' => $day['isCurrentMonth'],
-                 ])>
+                 ]) wire:click="openAddTrainingModal('{{ $day['date'] }}')">
+
                      <!-- Date Number -->
                      <div class="flex justify-between items-start p-0.5 sm:p-2">
                          <span
@@ -57,11 +61,12 @@
                              'overflow-y-auto' => count($day['trainings']) > 5,
                          ])>
                              @foreach ($day['trainings'] as $training)
-                                 <div wire:click="openEventModal({{ $training['id'] }})" @class([
-                                     'bg-[#C0E4FF] hover:bg-[#A8D5FF] cursor-pointer transition-colors duration-200',
-                                     'py-0.5 px-0.5 text-[7px] h-2.5 sm:py-1 sm:px-2 sm:text-xs sm:h-6 flex-shrink-0',
-                                     'border-l-[1px] sm:border-l-4 border-tetriary rounded-sm sm:rounded-md',
-                                 ])>
+                                 <div wire:click.stop="openEventModal({{ $training['id'] }})"
+                                     @class([
+                                         'bg-[#C0E4FF] hover:bg-[#A8D5FF] cursor-pointer transition-colors duration-200',
+                                         'py-0.5 px-0.5 text-[7px] h-2.5 sm:py-1 sm:px-2 sm:text-xs sm:h-6 flex-shrink-0',
+                                         'border-l-[1px] sm:border-l-4 border-tetriary rounded-sm sm:rounded-md',
+                                     ])>
                                      <div class="font-medium text-black leading-2 sm:leading-4 truncate">
                                          {{ $training['name'] }}
                                      </div>
@@ -150,8 +155,8 @@
                          @if ($editModes['trainer'])
                              <div onclick="event.stopPropagation()">
 
-                                 <x-select wire:model="trainer.id" :options="$trainers" option-label="user.name"
-                                     option-value="id" class="w-full focus-within:outline-none" />
+                                 <x-select wire:model="trainer.id" :options="$trainers" option-label="name" option-value="id"
+                                     class="w-full focus-within:outline-none" />
                              </div>
                          @else
                              <h1 class="font-semibold">
