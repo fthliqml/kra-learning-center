@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TrainingSession extends Model
 {
@@ -11,7 +12,7 @@ class TrainingSession extends Model
 
     protected $fillable = [
         'training_id',
-        'instructor_id',
+        'trainer_id',
         'room_name',
         'room_location',
         'start_time',
@@ -20,19 +21,49 @@ class TrainingSession extends Model
         'status',
     ];
 
-    // Relationships
-    public function training()
+    protected $casts = [
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
+        'day_number' => 'integer',
+    ];
+
+    /**
+     * Get the training that owns the session.
+     */
+    public function training(): BelongsTo
     {
         return $this->belongsTo(Training::class);
     }
 
-    public function attendances()
+    /**
+     * Get the trainer that conducts the session.
+     */
+    public function trainer(): BelongsTo
+    {
+        return $this->belongsTo(Trainer::class);
+    }
+
+    /**
+     * Get the attendances for the session.
+     */
+    public function attendances(): HasMany
     {
         return $this->hasMany(TrainingAttendance::class, 'session_id');
     }
 
-    public function trainer()
+    /**
+     * Scope to get sessions by day number.
+     */
+    public function scopeByDay($query, $dayNumber)
     {
-        return $this->belongsTo(Trainer::class);
+        return $query->where('day_number', $dayNumber);
+    }
+
+    /**
+     * Scope to get sessions by status.
+     */
+    public function scopeByStatus($query, $status)
+    {
+        return $query->where('status', $status);
     }
 }
