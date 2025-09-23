@@ -60,10 +60,19 @@ class FullCalendar extends Component
         }
     }
 
-    public function openEventModal($eventId)
+    public function openEventModal($eventId, $clickedDate = null)
     {
         $payload = $this->loadTrainingDetail($eventId);
         if ($payload) {
+            if ($clickedDate) {
+                // Determine initial day number relative to training start
+                $start = Carbon::parse($payload['start_date']);
+                $target = Carbon::parse($clickedDate);
+                if ($target->between($start, Carbon::parse($payload['end_date']))) {
+                    $diff = $start->diffInDays($target) + 1; // day_number starts at 1
+                    $payload['initial_day_number'] = $diff;
+                }
+            }
             $this->dispatch('open-detail-training-modal', $payload);
         }
     }

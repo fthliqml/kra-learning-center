@@ -74,6 +74,11 @@ class DetailTrainingModal extends Component
 
         $this->sessions = $payload['sessions'] ?? [];
 
+        // If calendar provided a specific day to open, set it now (validate range later)
+        if (isset($payload['initial_day_number']) && is_numeric($payload['initial_day_number'])) {
+            $this->dayNumber = max(1, (int) $payload['initial_day_number']);
+        }
+
         // Normalize employees to objects with expected properties (id, NRP, name, section)
         $this->employees = collect($payload['employees'] ?? [])
             ->filter(fn($e) => isset($e['id']))
@@ -96,13 +101,21 @@ class DetailTrainingModal extends Component
             }
         }
 
-        $firstTrainer = $this->sessions[0]['trainer'] ?? null;
-        $this->trainer = $firstTrainer ? [
-            'id' => $firstTrainer['id'],
-            'name' => $firstTrainer['name']
+        // Set initial trainer based on chosen dayNumber (fallback day 1)
+        $initialIndex = max(0, $this->dayNumber - 1);
+        $initialTrainer = $this->sessions[$initialIndex]['trainer'] ?? ($this->sessions[0]['trainer'] ?? null);
+        $this->trainer = $initialTrainer ? [
+            'id' => $initialTrainer['id'],
+            'name' => $initialTrainer['name']
         ] : ['id' => null, 'name' => null];
 
         $this->modal = true;
+
+        // Ensure attendance for selected day is hydrated (mirrors updatedDayNumber logic without duplicate code)
+        $this->updatedDayNumber();
+
+        // Prefill date range input for edit mode convenience (flatpickr range expects 'Y-m-d to Y-m-d')
+        $this->trainingDateRange = $this->selectedEvent['start_date'] . ' to ' . $this->selectedEvent['end_date'];
     }
 
     public function resetModalState()
@@ -164,6 +177,18 @@ class DetailTrainingModal extends Component
             'start' => $start ? Carbon::parse($start)->format('Y-m-d') : null,
             'end' => $end ? Carbon::parse($end)->format('Y-m-d') : null,
         ];
+    }
+
+    // When user edits date range live (if not deferred) keep selectedEvent shadow in sync for display after toggle off
+    public function updatedTrainingDateRange($value)
+    {
+        if (!$value)
+            return;
+        $parsed = $this->parseDateRange($value);
+        if ($parsed['start'])
+            $this->selectedEvent['start_date'] = $parsed['start'];
+        if ($parsed['end'])
+            $this->selectedEvent['end_date'] = $parsed['end'];
     }
 
     public function update()
