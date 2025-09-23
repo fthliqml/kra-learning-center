@@ -9,5 +9,6 @@
     </div>
 
     <livewire:components.training.full-calendar />
+    <livewire:components.training.detail-training-modal />
 
 </div>

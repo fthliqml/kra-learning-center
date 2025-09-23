@@ -2,13 +2,9 @@
 
 namespace App\Livewire\Components\Training;
 
-use App\Models\Trainer;
 use App\Models\Training;
-use App\Models\TrainingAttendance;
-use App\Models\TrainingSession;
 use Livewire\Component;
 use Carbon\Carbon;
-use Carbon\CarbonPeriod;
 use Mary\Traits\Toast;
 
 class FullCalendar extends Component
@@ -16,38 +12,32 @@ class FullCalendar extends Component
     use Toast;
     public $currentMonth;
     public $currentYear;
-    public $selectedEvent = null;
-    public $trainingDateRange = null;
-    public $modal = false;
-    public $dayNumber = 1;
-    public $attendances = [];
-    public $employees = [];
-    public $sessions = [];
     public $trainings = [];
-    public $trainer = [];
-    public $trainers = [];
-    public $editModes = [
-        'training_name' => false,
-        'date' => false,
-        'location' => false,
-        'trainer' => false
-    ];
-
+    public $trainingDetails = []; // cache of detailed training payloads keyed by id
 
     protected $listeners = [
         'training-created' => 'refreshTrainings',
+        'training-updated' => 'applyTrainingUpdate',
     ];
 
     public function refreshTrainings($payload = null)
     {
-        $this->trainings = Training::with('sessions')->get();
+        [$startOfCalendar, $endOfCalendar] = $this->calendarRange();
+        $this->trainings = Training::with('sessions')
+            ->where(function ($q) use ($startOfCalendar, $endOfCalendar) {
+                $q->whereDate('start_date', '<=', $endOfCalendar)
+                    ->whereDate('end_date', '>=', $startOfCalendar);
+            })
+            ->get();
+        // Clear detail cache for consistency
+        $this->trainingDetails = [];
     }
 
     public function mount()
     {
         $this->currentMonth = Carbon::now()->month;
         $this->currentYear = Carbon::now()->year;
-        $this->trainings = Training::with('sessions')->get();
+        $this->refreshTrainings();
     }
 
     public function previousMonth()
@@ -72,69 +62,142 @@ class FullCalendar extends Component
 
     public function openEventModal($eventId)
     {
-        $this->resetEditModes();
+        $payload = $this->loadTrainingDetail($eventId);
+        if ($payload) {
+            $this->dispatch('open-detail-training-modal', $payload);
+        }
+    }
 
+    /**
+     * Build & cache a normalized training detail payload with minimal fields.
+     */
+    private function loadTrainingDetail(int $id): ?array
+    {
+        if (isset($this->trainingDetails[$id])) {
+            return $this->trainingDetails[$id];
+        }
 
-        $this->trainers = Trainer::with('user')
-            ->get()
-            ->map(fn($t) => [
-                'id' => $t->id,
-                'name' => $t->name ?: ($t->user->name ?? null), // unified display name
-                'user' => [
-                    'name' => $t->user->name ?? null,
-                ],
+        $training = Training::with([
+            'sessions.trainer.user',
+            'sessions.attendances',
+            'assessments.employee'
+        ])->find($id);
+
+        if (!$training) {
+            return null;
+        }
+
+        // Collect employees (unique) from assessments
+        $employees = $training->assessments
+            ->map(fn($a) => $a->employee)
+            ->filter()
+            ->unique('id')
+            ->values()
+            ->map(fn($e) => [
+                'id' => $e->id,
+                'NRP' => $e->nrp ?? null,
+                'name' => $e->name,
+                'section' => $e->section ?? null,
             ])->toArray();
 
-        // Retrieve complete training data
-        $trainings = Training::with(['sessions.attendances', 'sessions.trainer.user', 'assessments.employee'])
-            ->find($eventId);
+        // Sessions normalized
+        $sessions = $training->sessions->map(function ($s) {
+            return [
+                'id' => $s->id,
+                'day_number' => $s->day_number,
+                'date' => $s->date,
+                'room_name' => $s->room_name,
+                'room_location' => $s->room_location,
+                'trainer' => $s->trainer ? [
+                    'id' => $s->trainer->id,
+                    'name' => $s->trainer->name ?: ($s->trainer->user->name ?? null),
+                ] : null,
+                'attendances' => $s->attendances->map(fn($a) => [
+                    'employee_id' => $a->employee_id,
+                    'status' => $a->status,
+                    'remark' => $a->notes,
+                ])->toArray(),
+            ];
+        })->sortBy('day_number')->values()->toArray();
 
-        if (!$trainings) {
-            return;
+        $payload = [
+            'id' => $training->id,
+            'name' => $training->name,
+            'start_date' => $training->start_date,
+            'end_date' => $training->end_date,
+            'sessions' => $sessions,
+            'employees' => $employees,
+        ];
+
+        $this->trainingDetails[$id] = $payload;
+        return $payload;
+    }
+
+    /**
+     * Apply a minimal update payload to in-memory collections to avoid a full reload.
+     */
+    public function applyTrainingUpdate($payload)
+    {
+        if (!isset($payload['id'])) {
+            return; // fallback: full refresh
         }
-
-        // Get employees list from assessments
-        $this->employees = $trainings->assessments
-            ->map(fn($a) => $a->employee)
-            ->unique('id')
-            ->values();
-
-        // Map attendance per session & employee
-        foreach ($trainings->sessions as $session) {
-            foreach ($session->attendances as $attendance) {
-                $this->attendances[$session->day_number][$attendance->employee_id] = [
-                    'status' => $attendance->status,
-                    'remark' => $attendance->notes,
-                ];
+        // Update summary list
+        foreach ($this->trainings as $t) {
+            if ($t->id === $payload['id']) {
+                if (isset($payload['name']))
+                    $t->name = $payload['name'];
+                if (isset($payload['start_date']))
+                    $t->start_date = $payload['start_date'];
+                if (isset($payload['end_date']))
+                    $t->end_date = $payload['end_date'];
+                // Patch single session trainer/room if diff provided
+                if (isset($payload['session']) && $t->relationLoaded('sessions')) {
+                    $diff = $payload['session'];
+                    foreach ($t->sessions as $sess) {
+                        if ((int) $sess->id === (int) ($diff['id'] ?? 0)) {
+                            if (array_key_exists('room_name', $diff)) {
+                                $sess->room_name = $diff['room_name'];
+                            }
+                            if (array_key_exists('room_location', $diff)) {
+                                $sess->room_location = $diff['room_location'];
+                            }
+                            break;
+                        }
+                    }
+                }
             }
         }
-
-        // Get event from the previously loaded trainings list
-        $event = collect($this->trainings)->firstWhere('id', $eventId);
-
-        if ($event) {
-            $this->sessions = $event->sessions->toArray();
-            $this->selectedEvent = $event->toArray();
-            $sessionTrainer = $event->sessions[$this->dayNumber - 1]->trainer ?? null;
-            $this->trainer = [
-                'id' => $sessionTrainer?->id,
-                'name' => $sessionTrainer?->name ?: ($sessionTrainer?->user?->name ?? null),
-            ];
+        // Update cache detail if present
+        if (isset($this->trainingDetails[$payload['id']])) {
+            $cache =& $this->trainingDetails[$payload['id']];
+            foreach (['name', 'start_date', 'end_date'] as $field) {
+                if (isset($payload[$field]))
+                    $cache[$field] = $payload[$field];
+            }
+            if (isset($payload['session']) && isset($cache['sessions'])) {
+                $diff = $payload['session'];
+                foreach ($cache['sessions'] as &$sess) {
+                    if ((int) $sess['id'] === (int) ($diff['id'] ?? 0)) {
+                        foreach (['room_name', 'room_location', 'trainer'] as $f) {
+                            if (array_key_exists($f, $diff)) {
+                                $sess[$f] = $diff[$f];
+                            }
+                        }
+                        break;
+                    }
+                }
+                unset($sess);
+            }
         }
-
-        $this->modal = true;
     }
 
-
-    public function resetEditModes()
+    private function calendarRange(): array
     {
-        $this->editModes = array_map(fn($v) => false, $this->editModes);
-    }
-
-    public function closeModal()
-    {
-        $this->modal = false;
-        $this->selectedEvent = null;
+        $startOfMonth = Carbon::createFromDate($this->currentYear, $this->currentMonth, 1);
+        $endOfMonth = $startOfMonth->copy()->endOfMonth();
+        $startOfCalendar = $startOfMonth->copy()->startOfWeek(Carbon::MONDAY);
+        $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY);
+        return [$startOfCalendar->toDateString(), $endOfCalendar->toDateString()];
     }
 
     public function assignTrainingLayers()
@@ -185,122 +248,6 @@ class FullCalendar extends Component
             ->toArray();
     }
 
-    public function getCurrentSessionProperty()
-    {
-        return $this->sessions[(int) $this->dayNumber - 1] ?? null;
-    }
-
-    private function parseDateRange($dateRange): array
-    {
-        $dates = explode(' to ', $dateRange);
-
-        $start = $dates[0] ?? null;
-        $end = $dates[1] ?? $dates[0] ?? null;
-
-        return [
-            'start' => $start ? Carbon::parse($start)->format('Y-m-d') : null,
-            'end' => $end ? Carbon::parse($end)->format('Y-m-d') : null,
-        ];
-    }
-
-    public function updatedDayNumber()
-    {
-        $event = Training::with('sessions.trainer.user')->find($this->selectedEvent['id']);
-
-        if ($event && isset($event->sessions[$this->dayNumber - 1])) {
-            $sessionTrainer = $event->sessions[$this->dayNumber - 1]->trainer;
-            $this->trainer = [
-                'id' => $sessionTrainer?->id,
-                'name' => $sessionTrainer?->name ?: ($sessionTrainer?->user?->name ?? null),
-            ];
-        }
-
-    }
-
-    public function updatedTrainerId($value)
-    {
-        $found = collect($this->trainers)->firstWhere('id', (int) $value);
-        if ($found) {
-            $this->trainer = [
-                'id' => $found['id'],
-                'name' => $found['name'],
-            ];
-        } else {
-            $this->trainer = ['id' => null, 'name' => null];
-        }
-    }
-
-    public function updateAttendance()
-    {
-        $dates = $this->parseDateRange($this->trainingDateRange);
-
-
-        $startDate = $dates['start'];
-        $endDate = $dates['end'];
-
-        $updateData = [
-            'name' => $this->selectedEvent['name'] ?? null,
-            'start_date' => $startDate,
-            'end_date' => $endDate,
-        ];
-
-        // remove keys with null value
-        $updateData = array_filter($updateData, fn($value) => !is_null($value));
-
-        Training::where('id', $this->selectedEvent['id'])
-            ->update($updateData);
-
-        if ($this->currentSession) {
-            TrainingSession::where('id', $this->currentSession['id'])->update([
-                'room_name' => $this->currentSession['room_name'] ?? null,
-                'room_location' => $this->currentSession['room_location'] ?? null,
-                'trainer_id' => $this->trainer['id'] ?? null,
-            ]);
-        }
-
-        foreach ($this->employees as $employee) {
-            $data = $this->attendances[$this->dayNumber][$employee->id] ?? null;
-
-            if ($data) {
-                TrainingAttendance::updateOrCreate(
-                    [
-                        'session_id' => $this->sessions[$this->dayNumber - 1]['id'],
-                        'employee_id' => $employee->id,
-                    ],
-                    [
-                        'status' => $data['status'],
-                        'notes' => $data['remark'],
-                    ]
-                );
-            }
-        }
-
-        $this->trainings = Training::with('sessions')->get();
-
-        $this->modal = false;
-
-        $this->success('Successfully updated data!', position: 'toast-top toast-center');
-    }
-
-    public function trainingDates()
-    {
-        $training = Training::find(1);
-
-        if (!$training) {
-            return collect();
-        }
-
-        $period = CarbonPeriod::create($training->start_date, $training->end_date);
-
-        return collect($period)->map(function ($date, $index) {
-            $formatted = $date->format('d M Y');
-            return [
-                'id' => $index + 1,
-                'name' => $formatted,
-            ];
-        })->values();
-    }
-
     public function openAddTrainingModal($date)
     {
         // Dispatch event to open add training modal
@@ -311,7 +258,6 @@ class FullCalendar extends Component
     {
         $startOfMonth = Carbon::createFromDate($this->currentYear, $this->currentMonth, 1);
         $endOfMonth = $startOfMonth->copy()->endOfMonth();
-
         $startOfCalendar = $startOfMonth->copy()->startOfWeek(Carbon::MONDAY);
         $endOfCalendar = $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY);
 
@@ -333,7 +279,6 @@ class FullCalendar extends Component
         return view('components.training.full-calendar', [
             'days' => $days,
             'monthName' => $monthName,
-            'trainingDates' => $this->trainingDates()
         ]);
     }
 
