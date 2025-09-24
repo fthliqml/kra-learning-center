@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
-     * Run the migrations.
+     * Membuat tabel training_assesments (catatan nilai & status kelulusan). Ejaan 'assesments' dibiarkan untuk kompatibilitas.
      */
     public function up(): void
     {
@@ -14,25 +14,24 @@ return new class extends Migration {
             $table->id();
 
             // Foreign Keys
-            $table->unsignedBigInteger('training_id');
-            $table->unsignedBigInteger('employee_id');
+            $table->foreignId('training_id')->constrained('trainings')->cascadeOnDelete();
+            $table->foreignId('employee_id')->constrained('users')->cascadeOnDelete();
 
-            // Attendance data
+            // Core Fields
             $table->double('pretest_score')->nullable();
             $table->double('posttest_score')->nullable();
             $table->double('practical_score')->nullable();
-            $table->enum('status', ['passed', 'failed', "in_progress"])->default('in_progress');
 
+            // Status Fields
+            $table->enum('status', ['passed', 'failed', 'in_progress'])->default('in_progress');
+
+            // Meta
             $table->timestamps();
-
-            // Constraints
-            $table->foreign('training_id')->references('id')->on('trainings')->onDelete('cascade');
-            $table->foreign('employee_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Menghapus tabel training_assesments.
      */
     public function down(): void
     {

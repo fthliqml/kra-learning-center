@@ -4,24 +4,29 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
-     * Run the migrations.
+     * Membuat tabel profil trainer (penyimpan data instruktur eksternal / internal).
      */
     public function up(): void
     {
         Schema::create('trainer', function (Blueprint $table) {
             $table->id();
+
+            // Foreign Keys
             $table->foreignId('user_id')->nullable()->constrained('users')->nullOnDelete();
+
+            // Core Fields
             $table->string('name')->nullable();
             $table->string('institution');
+
+            // Meta
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Menghapus tabel trainer.
      */
     public function down(): void
     {

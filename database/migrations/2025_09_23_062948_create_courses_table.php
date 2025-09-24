@@ -4,18 +4,21 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
-     * Run the migrations.
+     * Membuat tabel courses (konten pembelajaran turunan dari training).
      */
     public function up(): void
     {
         Schema::create('courses', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('created_by')->constrained('users')->onDelete('cascade');
-            $table->foreignId('edited_by')->constrained('users')->onDelete('cascade');
-            $table->foreignId('training_id')->constrained('trainings')->onDelete('cascade');
+
+            // Foreign Keys (auditing & linkage)
+            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('edited_by')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('training_id')->constrained('trainings')->cascadeOnDelete();
+
+            // Core Fields
             $table->string('title');
             $table->string('code');
             $table->text('description');
@@ -23,13 +26,17 @@ return new class extends Migration
             $table->string('thumbnail_url');
             $table->integer('duration');
             $table->integer('frequency');
+
+            // Status Fields
             $table->enum('status', ['active', 'inactive']);
+
+            // Meta
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Menghapus tabel courses.
      */
     public function down(): void
     {

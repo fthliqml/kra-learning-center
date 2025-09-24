@@ -6,12 +6,14 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
-     * Run the migrations.
+     * Membuat tabel training_modules (template materi pelatihan generik, bukan instance).
      */
     public function up(): void
     {
         Schema::create('training_modules', function (Blueprint $table) {
             $table->id();
+
+            // Core Fields
             $table->string('title');
             $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
             $table->text('objective');
@@ -19,12 +21,14 @@ return new class extends Migration {
             $table->string('method');
             $table->integer('duration');
             $table->integer('frequency');
+
+            // Meta
             $table->timestamps();
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Menghapus tabel training_modules.
      */
     public function down(): void
     {
