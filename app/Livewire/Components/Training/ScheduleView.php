@@ -69,6 +69,13 @@ class ScheduleView extends Component
         $this->stopGlobalOverlay();
     }
 
+    public function setMonth(int $month): void
+    {
+        if ($month < 1 || $month > 12) return;
+        $this->currentMonth = $month;
+        $this->refreshTrainings();
+    }
+
     public function refreshTrainings(): void
     {
         [$start, $end] = $this->calendarRange();
