@@ -28,6 +28,7 @@
 
     <livewire:components.training.schedule-view />
     <livewire:components.training.detail-training-modal />
+    <livewire:components.confirm-dialog />
 
     <!-- Global overlay for training detail loading -->
     <div x-show="loadingDetail" x-cloak

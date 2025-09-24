@@ -106,7 +106,7 @@
                             wire:change="$refresh" />
                     </div>
                 </div>
-                <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-y-auto max-h-[300px]">
+                <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-y-auto max-h-[230px]">
                     <x-table :headers="[
                         ['key' => 'no', 'label' => 'No', 'class' => 'text-center'],
                         ['key' => 'NRP', 'label' => 'NRP', 'class' => 'text-center'],
@@ -133,9 +133,18 @@
                     </x-table>
                 </div>
                 <div class="flex justify-between items-center mt-5">
-                    <x-button wire:click="closeModal" class="btn btn-error bg-white hover:bg-error">Cancel</x-button>
-                    <x-button wire:click="update" icon="o-bookmark" class="btn btn-success"
-                        spinner="update">Save</x-button>
+                    <x-button wire:click="closeModal"
+                        class="btn btn-error bg-white hover:bg-red-100 hover:opacity-80">Cancel</x-button>
+                    <div class="flex items-center justify-center gap-5">
+                        <x-button wire:click="requestDeleteConfirm" class="btn-error"
+                            spinner="requestDeleteConfirm">Delete
+                            Training</x-button>
+                        <x-button wire:click="update" icon="o-bookmark" class="btn btn-success"
+                            spinner="update">Save</x-button>
+
+                    </div>
+                </div>
+                <div class="mt-4 text-xs text-gray-500">Deleting will remove all days, sessions, and attendances.
                 </div>
             </div>
         </x-modal>

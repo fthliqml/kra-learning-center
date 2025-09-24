@@ -25,6 +25,7 @@ class ScheduleView extends Component
     protected $listeners = [
         'training-created' => 'refreshTrainings',
         'training-updated' => 'applyTrainingUpdate',
+        'training-deleted' => 'removeTraining',
         'fullcalendar-open-event' => 'openEventModal',
     ];
 
@@ -94,8 +95,10 @@ class ScheduleView extends Component
                 foreach (['name', 'start_date', 'end_date'] as $f)
                     if (isset($payload[$f]))
                         $t->$f = $payload[$f];
-                if (isset($payload['start_date']) && $payload['start_date'] !== $origStart) $dateChanged = true;
-                if (isset($payload['end_date']) && $payload['end_date'] !== $origEnd) $dateChanged = true;
+                if (isset($payload['start_date']) && $payload['start_date'] !== $origStart)
+                    $dateChanged = true;
+                if (isset($payload['end_date']) && $payload['end_date'] !== $origEnd)
+                    $dateChanged = true;
                 if ($dateChanged) {
                     // Recompute and re-query trainings so sessions include new days
                     $this->refreshTrainings();
@@ -201,6 +204,20 @@ class ScheduleView extends Component
             }
         }
         $this->dispatch('open-detail-training-modal', $payload);
+    }
+
+    public function removeTraining($payload): void
+    {
+        if (!isset($payload['id']))
+            return;
+        $id = $payload['id'];
+        if ($this->trainings) {
+            $this->trainings = $this->trainings->reject(fn($t) => $t->id == $id)->values();
+        }
+        // clear cached detail
+        unset($this->trainingDetails[$id]);
+        $this->recomputeDays();
+        $this->calendarVersion++;
     }
 
     private function loadTrainingDetail(int $id): ?array

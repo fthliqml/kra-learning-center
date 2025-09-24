@@ -10,6 +10,7 @@ use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use Illuminate\Support\Facades\DB;
 
 class DetailTrainingModal extends Component
 {
@@ -34,6 +35,7 @@ class DetailTrainingModal extends Component
 
     protected $listeners = [
         'open-detail-training-modal' => 'open',
+        'confirm-delete-training' => 'onConfirmDelete',
     ];
 
     public function getCurrentSessionProperty()
@@ -354,5 +356,58 @@ class DetailTrainingModal extends Component
         return view('components.training.detail-training-modal', [
             'trainingDates' => $this->trainingDates(),
         ]);
+    }
+
+    public function requestDeleteConfirm(): void
+    {
+        $id = $this->selectedEvent['id'] ?? null;
+        // Dispatch Livewire event to global ConfirmDialog component (positional arguments)
+        $this->dispatch('confirm', 'Delete Confirmation', 'Are you sure you want to delete this training along with all sessions and attendance?', 'confirm-delete-training', $id);
+    }
+
+    public function onConfirmDelete($id = null): void
+    {
+        // Ensure the confirmation corresponds to the currently opened training (if id is passed)
+        if ($id && isset($this->selectedEvent['id']) && (int) $id !== (int) $this->selectedEvent['id']) {
+            return;
+        }
+        $this->deleteTraining();
+    }
+
+    public function deleteTraining()
+    {
+        if (!$this->selectedEvent || !isset($this->selectedEvent['id'])) {
+            return;
+        }
+        $id = $this->selectedEvent['id'];
+        try {
+            DB::transaction(function () use ($id) {
+                // Load training with sessions to collect session IDs
+                $training = Training::with('sessions')->find($id);
+                if (!$training)
+                    return;
+
+                $sessionIds = $training->sessions->pluck('id')->all();
+                if (!empty($sessionIds)) {
+                    // Delete attendances under sessions
+                    TrainingAttendance::whereIn('session_id', $sessionIds)->delete();
+                }
+                // Delete sessions
+                \App\Models\TrainingSession::where('training_id', $id)->delete();
+                // Delete assessments if relationship exists on table (best effort)
+                if (method_exists($training, 'assessments')) {
+                    $training->assessments()->delete();
+                }
+                // Finally delete training
+                $training->delete();
+            });
+
+            // Notify parent and close
+            $this->dispatch('training-deleted', ['id' => $id]);
+            $this->success('Training deleted.', position: 'toast-top toast-center');
+            $this->modal = false;
+        } catch (\Throwable $e) {
+            $this->error('Failed to delete training.');
+        }
     }
 }
