@@ -25,7 +25,7 @@
                         </svg>
                     </button>
                     <div x-show="open" x-cloak @click.away="open=false"
-                        class="absolute z-20 mt-1 bg-white border border-gray-200 rounded shadow p-2 grid grid-cols-3 gap-1 w-56">
+                        class="absolute z-20 mt-1 bg-white border border-gray-200 rounded shadow p-2 grid grid-cols-3 gap-1 w-56 left-[-10rem] right-auto sm:left-auto sm:right-0">
                         @php $months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; @endphp
                         @foreach ($months as $idx => $label)
                             <button

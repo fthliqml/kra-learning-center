@@ -2,7 +2,7 @@
     <!-- Trigger Button -->
     <x-ui.button wire:click="openModal" variant="primary">
         <x-icon name="o-plus" class="w-5 h-5" />
-        Add New Training
+        Add <span class="hidden sm:block">New Training</span>
     </x-ui.button>
 
     <!-- Modal -->
