@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
-     * Run the migrations.
+     * Membuat tabel training_sessions (jadwal per hari untuk sebuah training).
      */
     public function up(): void
     {
@@ -14,29 +14,26 @@ return new class extends Migration {
             $table->id();
 
             // Foreign Keys
-            $table->unsignedBigInteger('training_id');
-            $table->unsignedBigInteger('trainer_id');
+            $table->foreignId('training_id')->constrained('trainings')->cascadeOnDelete();
+            $table->foreignId('trainer_id')->constrained('trainer')->cascadeOnDelete();
 
-            // Session details
+            // Session Details
             $table->string('room_name')->nullable();
             $table->string('room_location')->nullable();
             $table->time('start_time');
             $table->time('end_time');
             $table->integer('day_number');
 
-            // Status
+            // Status Fields
             $table->enum('status', ['cancelled', 'in_progress', 'done'])->default('in_progress');
 
+            // Meta
             $table->timestamps();
-
-            // Constraints
-            $table->foreign('training_id')->references('id')->on('trainings')->onDelete('cascade');
-            $table->foreign('trainer_id')->references('id')->on('trainer')->onDelete('cascade');
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Menghapus tabel training_sessions.
      */
     public function down(): void
     {

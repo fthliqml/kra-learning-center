@@ -3,6 +3,9 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 class Trainer extends Model
 {
@@ -14,21 +17,43 @@ class Trainer extends Model
         'institution',
     ];
 
-    // Relasi ke User
-    public function user()
+    /**
+     * Get the user that owns the trainer profile.
+     */
+    public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
     }
 
-    // Relasi ke tabel trainer_competency
-    public function trainerCompetencies()
+    /**
+     * Get the trainer competencies for the trainer.
+     */
+    public function trainerCompetencies(): HasMany
     {
         return $this->hasMany(TrainerCompetency::class, 'trainer_id');
     }
 
-    // Relasi ke tabel competency melalui trainer_competency
-    public function competencies()
+    /**
+     * Get the competencies for the trainer.
+     */
+    public function competencies(): BelongsToMany
     {
         return $this->belongsToMany(Competency::class, 'trainer_competency', 'trainer_id', 'competency_id');
+    }
+
+    /**
+     * Get the training sessions conducted by the trainer.
+     */
+    public function trainingSessions(): HasMany
+    {
+        return $this->hasMany(TrainingSession::class, 'trainer_id');
+    }
+
+    /**
+     * Get the course assignments for the trainer.
+     */
+    public function courseAssignments(): HasMany
+    {
+        return $this->hasMany(CourseAssignment::class, 'trainer_id');
     }
 }

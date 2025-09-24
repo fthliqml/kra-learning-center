@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
-     * Run the migrations.
+     * Membuat tabel training_attendances (kehadiran peserta per session).
      */
     public function up(): void
     {
@@ -14,24 +14,21 @@ return new class extends Migration {
             $table->id();
 
             // Foreign Keys
-            $table->unsignedBigInteger('session_id');
-            $table->unsignedBigInteger('employee_id');
+            $table->foreignId('session_id')->constrained('training_sessions')->cascadeOnDelete();
+            $table->foreignId('employee_id')->constrained('users')->cascadeOnDelete();
 
-            // Attendance data
+            // Core Fields
             $table->enum('status', ['present', 'absent', 'pending'])->default('pending');
             $table->string('notes')->nullable();
             $table->timestamp('recorded_at')->useCurrent();
 
+            // Meta
             $table->timestamps();
-
-            // Constraints
-            $table->foreign('session_id')->references('id')->on('training_sessions')->onDelete('cascade');
-            $table->foreign('employee_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 
     /**
-     * Reverse the migrations.
+     * Menghapus tabel training_attendances.
      */
     public function down(): void
     {
