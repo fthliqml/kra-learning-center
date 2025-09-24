@@ -8,11 +8,11 @@
     <!-- Modal -->
     <x-modal wire:model="showModal" title="New Training" subtitle="Creating a new training"
         box-class="backdrop-blur max-w-4xl">
-        <div class="space-y-6 h-[400px]">
+        <div class="space-y-6 md:h-[400px]">
             <!-- Tabs Navigation -->
             <x-tabs wire:model="activeTab">
                 <x-tab name="training" label="Training Config" icon="o-academic-cap">
-                    <div class="space-y-6">
+                    <div class="{{ $errors->any() ? 'space-y-1' : 'space-y-6' }}">
                         <!-- Training Name -->
                         <x-input wire:model="training_name" label="Training Name" placeholder="Enter training name"
                             class="focus-within:border-0" />

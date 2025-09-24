@@ -93,10 +93,14 @@ class DetailTrainingModal extends Component
             ->values();
 
         foreach ($this->sessions as $session) {
+            if (!isset($session['attendances']) || !is_array($session['attendances']))
+                continue;
             foreach ($session['attendances'] as $attendance) {
+                if (!isset($attendance['employee_id']))
+                    continue;
                 $this->attendances[$session['day_number']][$attendance['employee_id']] = [
-                    'status' => $attendance['status'],
-                    'remark' => $attendance['remark'],
+                    'status' => $attendance['status'] ?? null,
+                    'remark' => $attendance['remark'] ?? null,
                 ];
             }
         }
@@ -116,6 +120,15 @@ class DetailTrainingModal extends Component
 
         // Prefill date range input for edit mode convenience (flatpickr range expects 'Y-m-d to Y-m-d')
         $this->trainingDateRange = $this->selectedEvent['start_date'] . ' to ' . $this->selectedEvent['end_date'];
+
+        // Notify front-end that detail is ready (browser event). Fallback approach without dispatchBrowserEvent helper.
+        if (method_exists($this, 'dispatchBrowserEvent')) {
+            // Livewire v2 style
+            $this->dispatchBrowserEvent('training-detail-ready');
+        } else {
+            // Livewire v3: emit to JS via dispatch + window listener (listen on 'training-detail-ready')
+            $this->dispatch('training-detail-ready');
+        }
     }
 
     public function resetModalState()
