@@ -3,6 +3,7 @@
 namespace App\Livewire\Components\Training;
 
 use App\Models\Training;
+use App\Models\Trainer;
 use Carbon\Carbon;
 use Livewire\Component;
 
@@ -15,6 +16,7 @@ class ScheduleView extends Component
     public string $activeView = 'month';
     public int $currentMonth;
     public int $currentYear;
+    public int $calendarVersion = 0;
 
     /** @var \Illuminate\Support\Collection<int,\App\Models\Training> */
     public $trainings;
@@ -51,6 +53,7 @@ class ScheduleView extends Component
             $this->currentMonth--;
         }
         $this->recomputeDays();
+        $this->stopGlobalOverlay();
     }
 
     public function nextMonth(): void
@@ -62,6 +65,7 @@ class ScheduleView extends Component
             $this->currentMonth++;
         }
         $this->recomputeDays();
+        $this->stopGlobalOverlay();
     }
 
     public function refreshTrainings(): void
@@ -73,6 +77,8 @@ class ScheduleView extends Component
             })->get();
         $this->recomputeDays();
         $this->trainingDetails = []; // reset cache
+        $this->calendarVersion++;
+        $this->stopGlobalOverlay();
     }
 
     public function applyTrainingUpdate($payload): void
@@ -91,6 +97,19 @@ class ScheduleView extends Component
                             foreach (['room_name', 'room_location'] as $sf)
                                 if (array_key_exists($sf, $diff))
                                     $sess->$sf = $diff[$sf];
+                            // Update in-memory trainer relation so UI reflects instantly
+                            if (array_key_exists('trainer', $diff)) {
+                                $newTrainer = $diff['trainer'];
+                                if ($newTrainer && isset($newTrainer['id'])) {
+                                    $trainerModel = new Trainer([
+                                        'id' => $newTrainer['id'],
+                                        'name' => $newTrainer['name'] ?? null,
+                                    ]);
+                                    $sess->setRelation('trainer', $trainerModel);
+                                } else {
+                                    $sess->unsetRelation('trainer');
+                                }
+                            }
                             break;
                         }
                     }
@@ -107,6 +126,7 @@ class ScheduleView extends Component
                 if (isset($payload[$f]))
                     $cache[$f] = $payload[$f];
         }
+        $this->calendarVersion++;
     }
 
     private function calendarRange(): array
@@ -180,7 +200,12 @@ class ScheduleView extends Component
         if (!$training)
             return null;
         $employees = $training->assessments->map(fn($a) => $a->employee)->filter()->unique('id')->values()
-            ->map(fn($e) => ['id' => $e->id, 'NRP' => $e->nrp ?? null, 'name' => $e->name, 'section' => $e->section ?? null])->toArray();
+            ->map(fn($e) => [
+                'id' => $e->id,
+                'NRP' => $e->nrp ?? $e->NRP ?? null,
+                'name' => $e->name,
+                'section' => $e->section ?? null,
+            ])->toArray();
         $sessions = $training->sessions->map(function ($s) {
             return [
                 'id' => $s->id,
@@ -217,5 +242,17 @@ class ScheduleView extends Component
     public function render()
     {
         return view('components.training.schedule-view');
+    }
+
+    private function stopGlobalOverlay(): void
+    {
+        if (method_exists($this, 'dispatch')) {
+            $this->dispatch('global-overlay-stop');
+            return;
+        }
+        if (method_exists($this, 'dispatchBrowserEvent')) {
+            $this->dispatchBrowserEvent('global-overlay-stop');
+            return;
+        }
     }
 }

@@ -4,7 +4,12 @@
         <div class="text-center text-gray-500 text-sm py-8">No trainings scheduled this month.</div>
     @else
         @foreach ($items as $item)
-            @php $firstSession = $item['sessions']->first(); @endphp
+            @php
+                // Pick the session that matches this agenda item's date; fallback to the earliest by day_number
+$sessionForDay =
+    $item['sessions']->firstWhere('iso_date', $item['iso']) ??
+    $item['sessions']->sortBy('day_number')->first();
+            @endphp
             <div x-on:click="$dispatch('detail-loading-start')"
                 class="bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex gap-4 items-start hover:border-primary/40 transition cursor-pointer"
                 wire:click="open({{ $item['id'] }}, '{{ $item['iso'] }}')">
@@ -20,20 +25,20 @@
                         <span class="inline-block w-2 h-2 rounded-full bg-primary"></span>
                         <h3 class="font-semibold text-sm sm:text-base leading-snug truncate">{{ $item['name'] }}</h3>
                     </div>
-                    @if ($firstSession && $firstSession->trainer)
+                    @if ($sessionForDay && ($sessionForDay->trainer || $sessionForDay->trainer_display_name))
+                        @php $trainerName = $sessionForDay->trainer_display_name ?? ($sessionForDay->trainer->name ?? ($sessionForDay->trainer->user->name ?? '')); @endphp
                         <div class="text-[11px] sm:text-xs text-gray-600 flex items-center gap-1">
                             <span
                                 class="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-primary text-[10px] sm:text-[11px] font-semibold">
-                                {{ Str::of($firstSession->trainer->name ?? ($firstSession->trainer->user->name ?? ''))->explode(' ')->map(fn($p) => Str::substr($p, 0, 1))->take(2)->implode('') }}
+                                {{ $sessionForDay->trainer_initials ?? Str::of($trainerName)->explode(' ')->map(fn($p) => Str::substr($p, 0, 1))->take(2)->implode('') }}
                             </span>
-                            <span
-                                class="truncate max-w-[150px] sm:max-w-[260px]">{{ $firstSession->trainer->name ?? ($firstSession->trainer->user->name ?? '') }}</span>
+                            <span class="truncate max-w-[150px] sm:max-w-[260px]">{{ $trainerName }}</span>
                         </div>
                     @endif
-                    @if ($firstSession)
+                    @if ($sessionForDay)
                         <div class="text-[10px] sm:text-[11px] text-gray-500 mt-1">
-                            Day 1 • {{ $firstSession->room_name ?? '-' }}
-                            {{ $firstSession->room_location ? '(' . $firstSession->room_location . ')' : '' }}
+                            Day {{ $sessionForDay->day_number ?? '-' }} • {{ $sessionForDay->room_name ?? '-' }}
+                            {{ $sessionForDay->room_location ? '(' . $sessionForDay->room_location . ')' : '' }}
                         </div>
                     @endif
                 </div>
