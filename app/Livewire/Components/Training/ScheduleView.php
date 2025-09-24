@@ -116,7 +116,7 @@ class ScheduleView extends Component
                     $diff = $payload['session'];
                     foreach ($t->sessions as $sess) {
                         if ($sess->id == ($diff['id'] ?? null)) {
-                            foreach (['room_name', 'room_location'] as $sf)
+                            foreach (['room_name', 'room_location', 'start_time', 'end_time'] as $sf)
                                 if (array_key_exists($sf, $diff))
                                     $sess->$sf = $diff[$sf];
                             // Update in-memory trainer relation so UI reflects instantly
@@ -147,6 +147,22 @@ class ScheduleView extends Component
             foreach (['name', 'start_date', 'end_date'] as $f)
                 if (isset($payload[$f]))
                     $cache[$f] = $payload[$f];
+            if (isset($payload['session']) && isset($cache['sessions']) && is_array($cache['sessions'])) {
+                foreach ($cache['sessions'] as &$cs) {
+                    if (($cs['id'] ?? null) == ($payload['session']['id'] ?? null)) {
+                        foreach (['room_name', 'room_location', 'start_time', 'end_time'] as $sf) {
+                            if (array_key_exists($sf, $payload['session'])) {
+                                $cs[$sf] = $payload['session'][$sf];
+                            }
+                        }
+                        if (array_key_exists('trainer', $payload['session'])) {
+                            $cs['trainer'] = $payload['session']['trainer'] ?? null;
+                        }
+                        break;
+                    }
+                }
+                unset($cs);
+            }
         }
         $this->calendarVersion++;
     }

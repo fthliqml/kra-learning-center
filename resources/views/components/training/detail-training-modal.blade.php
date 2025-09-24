@@ -1,9 +1,10 @@
 <div>
     @if ($selectedEvent)
         <x-modal wire:model="modal" icon='o-document-text' title="Training Details"
-            subtitle="Information about training details" separator box-class="max-w-4xl h-fit">
+            subtitle="Information about training details" separator
+            box-class="w-[calc(100vw-2rem)] max-w-full sm:max-w-4xl h-fit">
             <div
-                class="grid grid-cols-1 sm:grid-cols-2 gap-5 justify-items-center items-center border-b border-gray-400 pb-5">
+                class="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-5 justify-items-stretch items-stretch border-b border-gray-400 pb-5">
                 {{-- Training Name Card --}}
                 <x-card body-class="flex justify-center items-center gap-5 relative group"
                     class="shadow border border-gray-200 w-full border-l-[6px] border-l-[#FF6B6B] hover:bg-gray-100 cursor-pointer transition-colors"
@@ -99,49 +100,79 @@
 
             {{-- Attendance Section --}}
             <div class="mt-5">
-                <div class="flex justify-between flex-col md:flex-row items-start md:items-center gap-3 md:gap-0 mb-5">
+                <div
+                    class="flex justify-between flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5 w-full">
                     <h2 class="text-xl font-bold">Attendance List</h2>
-                    <div class="flex gap-2">
+                    <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
+                        <div class="w-full sm:w-fit flex items-center gap-2 p-[9px] rounded-lg border border-gray-300">
+                            <span class="text-sm text-gray-700">Time</span>
+                            @if (!$editModes['time'])
+                                @php
+                                    $st = $this->currentSession['start_time'] ?? null;
+                                    $et = $this->currentSession['end_time'] ?? null;
+                                    $st = $st ? substr($st, 0, 5) : null;
+                                    $et = $et ? substr($et, 0, 5) : null;
+                                @endphp
+                                <button type="button"
+                                    class="text-sm font-medium text-gray-800 hover:underline focus-within:outline-none cursor-pointer"
+                                    wire:click="$toggle('editModes.time')">
+                                    {{ $st && $et ? $st . ' - ' . $et : '-' }}
+                                </button>
+                            @else
+                                <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                                    <x-input type="time" wire:model="sessions.{{ $dayNumber - 1 }}.start_time"
+                                        class="!w-28 !h-8 text-sm" />
+                                    <span>-</span>
+                                    <x-input type="time" wire:model="sessions.{{ $dayNumber - 1 }}.end_time"
+                                        class="!w-28 !h-8 text-sm" />
+                                    <x-icon name="o-check" class="w-5 h-5 text-gray-500 cursor-pointer"
+                                        wire:click="$toggle('editModes.time')" />
+                                </div>
+                            @endif
+                        </div>
                         <x-select wire:model="dayNumber" :options="$trainingDates" option-label="name" option-value="id"
-                            wire:change="$refresh" />
+                            wire:change="$refresh" class="w-full sm:w-auto" />
                     </div>
                 </div>
-                <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-y-auto max-h-[230px]">
-                    <x-table :headers="[
-                        ['key' => 'no', 'label' => 'No', 'class' => 'text-center'],
-                        ['key' => 'NRP', 'label' => 'NRP', 'class' => 'text-center'],
-                        ['key' => 'name', 'label' => 'Name', 'class' => 'w-[250px] text-center'],
-                        ['key' => 'section', 'label' => 'Section', 'class' => 'text-center'],
-                        ['key' => 'attendance', 'label' => 'Attendance', 'class' => 'text-center'],
-                        ['key' => 'remark', 'label' => 'Remark', 'class' => 'text-center'],
-                    ]" :rows="$employees" striped>
-                        @scope('cell_no', $row)
-                            {{ $loop->iteration }}
-                        @endscope
-                        @scope('cell_attendance', $row)
-                            <x-select wire:model="attendances.{{ $this->dayNumber }}.{{ $row->id }}.status"
-                                :options="[
-                                    ['id' => 'present', 'name' => 'Present'],
-                                    ['id' => 'absent', 'name' => 'Absent'],
-                                    ['id' => 'pending', 'name' => 'Pending'],
-                                ]" class="!w-28 !h-8 text-sm" />
-                        @endscope
-                        @scope('cell_remark', $row)
-                            <x-input wire:model="attendances.{{ $this->dayNumber }}.{{ $row->id }}.remark"
-                                placeholder="" class="!w-40 !h-8 text-sm" />
-                        @endscope
-                    </x-table>
+                <div
+                    class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto overflow-y-auto max-h-[230px]">
+                    <div class="min-w-[720px]">
+                        <x-table :headers="[
+                            ['key' => 'no', 'label' => 'No', 'class' => 'text-center'],
+                            ['key' => 'NRP', 'label' => 'NRP', 'class' => 'text-center'],
+                            ['key' => 'name', 'label' => 'Name', 'class' => 'w-[250px] text-center'],
+                            ['key' => 'section', 'label' => 'Section', 'class' => 'text-center'],
+                            ['key' => 'attendance', 'label' => 'Attendance', 'class' => 'text-center'],
+                            ['key' => 'remark', 'label' => 'Remark', 'class' => 'text-center'],
+                        ]" :rows="$employees" striped>
+                            @scope('cell_no', $row)
+                                {{ $loop->iteration }}
+                            @endscope
+                            @scope('cell_attendance', $row)
+                                <x-select wire:model="attendances.{{ $this->dayNumber }}.{{ $row->id }}.status"
+                                    :options="[
+                                        ['id' => 'present', 'name' => 'Present'],
+                                        ['id' => 'absent', 'name' => 'Absent'],
+                                        ['id' => 'pending', 'name' => 'Pending'],
+                                    ]" class="!w-28 !h-8 text-sm" />
+                            @endscope
+                            @scope('cell_remark', $row)
+                                <x-input wire:model="attendances.{{ $this->dayNumber }}.{{ $row->id }}.remark"
+                                    placeholder="" class="!w-40 !h-8 text-sm" />
+                            @endscope
+                        </x-table>
+                    </div>
                 </div>
-                <div class="flex justify-between items-center mt-5">
+                <div
+                    class="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-5">
                     <x-button wire:click="closeModal"
-                        class="btn btn-error bg-white hover:bg-red-100 hover:opacity-80">Cancel</x-button>
-                    <div class="flex items-center justify-center gap-5">
-                        <x-button wire:click="requestDeleteConfirm" class="btn-error"
-                            spinner="requestDeleteConfirm">Delete
-                            Training</x-button>
-                        <x-button wire:click="update" icon="o-bookmark" class="btn btn-success"
-                            spinner="update">Save</x-button>
-
+                        class="btn btn-error bg-white hover:bg-red-100 hover:opacity-80 w-full sm:w-auto">Cancel</x-button>
+                    <div class="flex items-center sm:items-center justify-center gap-3 w-full sm:w-auto">
+                        <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto"
+                            spinner="requestDeleteConfirm"><x-icon name="o-trash" /><span
+                                class="">Delete</span></x-button>
+                        <x-button wire:click="update" class="btn btn-success w-fit sm:w-auto"
+                            spinner="update"><x-icon name="o-bookmark" /><span class="">Save</span></x-button>
                     </div>
                 </div>
                 <div class="mt-4 text-xs text-gray-500">Deleting will remove all days, sessions, and attendances.
