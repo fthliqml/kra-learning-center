@@ -71,7 +71,8 @@ class ScheduleView extends Component
 
     public function setMonth(int $month): void
     {
-        if ($month < 1 || $month > 12) return;
+        if ($month < 1 || $month > 12)
+            return;
         $this->currentMonth = $month;
         $this->refreshTrainings();
     }

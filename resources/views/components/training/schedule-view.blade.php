@@ -18,18 +18,19 @@
             </button>
             <div class="flex items-center gap-2">
                 <h2 class="text-lg sm:text-xl font-semibold text-gray-800">{{ $this->monthName }}</h2>
-                <div class="relative" x-data="{ open:false }">
+                <div class="relative" x-data="{ open: false }">
                     <button @click="open=!open" class="p-1 rounded hover:bg-gray-200" aria-label="Jump to month">
                         <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
                     </button>
                     <div x-show="open" x-cloak @click.away="open=false"
-                         class="absolute z-20 mt-1 bg-white border border-gray-200 rounded shadow p-2 grid grid-cols-3 gap-1 w-56">
+                        class="absolute z-20 mt-1 bg-white border border-gray-200 rounded shadow p-2 grid grid-cols-3 gap-1 w-56">
                         @php $months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; @endphp
-                        @foreach($months as $idx => $label)
-                            <button @click="$wire.setMonth({{ $idx+1 }}); open=false; $dispatch('global-overlay-start', { message: 'Loading calendar...' })"
-                                    class="text-xs px-2 py-1 rounded hover:bg-gray-100 {{ $currentMonth === ($idx+1) ? 'bg-primary/10 text-primary' : 'text-gray-700' }}">
+                        @foreach ($months as $idx => $label)
+                            <button
+                                @click="$wire.setMonth({{ $idx + 1 }}); open=false; $dispatch('global-overlay-start', { message: 'Loading calendar...' })"
+                                class="text-xs px-2 py-1 rounded hover:bg-gray-100 {{ $currentMonth === $idx + 1 ? 'bg-primary/10 text-primary' : 'text-gray-700' }}">
                                 {{ $label }}
                             </button>
                         @endforeach
