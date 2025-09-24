@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -31,11 +32,32 @@ class Course extends Model
     ];
 
     /**
+     * Boot the model and set auditing fields automatically.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($model) {
+            if (Auth::check()) {
+                $model->created_by = $model->created_by ?? Auth::id();
+                $model->edited_by = $model->edited_by ?? Auth::id();
+            }
+        });
+
+        static::updating(function ($model) {
+            if (Auth::check()) {
+                $model->edited_by = Auth::id();
+            }
+        });
+    }
+
+    /**
      * Get the user who created the course.
      */
     public function creator(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'created_by');
+        return $this->belongsTo(User::class, 'created_by', 'id');
     }
 
     /**
@@ -43,7 +65,7 @@ class Course extends Model
      */
     public function editor(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'edited_by');
+        return $this->belongsTo(User::class, 'edited_by', 'id');
     }
 
     /**
@@ -83,22 +105,6 @@ class Course extends Model
      */
     public function users(): BelongsToMany
     {
-        return $this->belongsToMany(User::class, 'user_courses');
-    }
-
-    /**
-     * Scope to get active courses.
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('status', 'active');
-    }
-
-    /**
-     * Scope to get courses by group competency.
-     */
-    public function scopeByGroup($query, $group)
-    {
-        return $query->where('group_comp', $group);
+        return $this->belongsToMany(User::class, 'user_courses', 'course_id', 'user_id');
     }
 }

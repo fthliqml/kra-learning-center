@@ -58,36 +58,4 @@ class TrainingAssesment extends Model
             }
         );
     }
-
-    /**
-     * Scope to get assessments by status.
-     */
-    public function scopeByStatus($query, $status)
-    {
-        return $query->where('status', $status);
-    }
-
-    /**
-     * Scope to get assessments for a specific employee.
-     */
-    public function scopeForEmployee($query, $employeeId)
-    {
-        return $query->where('employee_id', $employeeId);
-    }
-
-    /**
-     * Scope to get passed assessments.
-     */
-    public function scopePassed($query)
-    {
-        return $query->where('status', 'passed');
-    }
-
-    /**
-     * Scope to get failed assessments.
-     */
-    public function scopeFailed($query)
-    {
-        return $query->where('status', 'failed');
-    }
 }

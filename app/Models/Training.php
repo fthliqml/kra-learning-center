@@ -41,9 +41,16 @@ class Training extends Model
     /**
      * Get the attendances through sessions.
      */
-    public function attendances(): HasMany
+    public function attendances()
     {
-        return $this->hasMany(TrainingAttendance::class, 'session_id');
+        return $this->hasManyThrough(
+            TrainingAttendance::class,
+            TrainingSession::class,
+            'training_id',   // FK di training_sessions yang menunjuk trainings
+            'session_id',    // FK di training_attendances yang menunjuk training_sessions
+            'id',            // PK di trainings
+            'id'             // PK di training_sessions
+        );
     }
 
     /**
@@ -67,21 +74,5 @@ class Training extends Model
                 return 1;
             }
         );
-    }
-
-    /**
-     * Scope to get trainings by status.
-     */
-    public function scopeByStatus($query, $status)
-    {
-        return $query->where('status', $status);
-    }
-
-    /**
-     * Scope to get trainings by type.
-     */
-    public function scopeByType($query, $type)
-    {
-        return $query->where('type', $type);
     }
 }

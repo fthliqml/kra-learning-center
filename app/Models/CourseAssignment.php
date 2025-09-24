@@ -61,20 +61,4 @@ class CourseAssignment extends Model
     {
         return $this->hasMany(UserCourse::class, 'assignment_id');
     }
-
-    /**
-     * Scope to get assignments for a specific employee.
-     */
-    public function scopeForEmployee($query, $employeeId)
-    {
-        return $query->where('employee_id', $employeeId);
-    }
-
-    /**
-     * Scope to get assignments by trainer.
-     */
-    public function scopeByTrainer($query, $trainerId)
-    {
-        return $query->where('trainer_id', $trainerId);
-    }
 }

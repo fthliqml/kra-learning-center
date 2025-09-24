@@ -29,28 +29,4 @@ class LearningModule extends Model
     {
         return $this->belongsTo(Course::class, 'course_id');
     }
-
-    /**
-     * Scope to get video modules.
-     */
-    public function scopeVideo($query)
-    {
-        return $query->where('content_type', 'video');
-    }
-
-    /**
-     * Scope to get PDF modules.
-     */
-    public function scopePdf($query)
-    {
-        return $query->where('content_type', 'pdf');
-    }
-
-    /**
-     * Scope to get completed modules.
-     */
-    public function scopeCompleted($query)
-    {
-        return $query->where('is_completed', true);
-    }
 }

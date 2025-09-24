@@ -52,18 +52,10 @@ class TrainingSession extends Model
     }
 
     /**
-     * Scope to get sessions by day number.
+     * Get the course assignments for the session.
      */
-    public function scopeByDay($query, $dayNumber)
+    public function courseAssignments(): HasMany
     {
-        return $query->where('day_number', $dayNumber);
-    }
-
-    /**
-     * Scope to get sessions by status.
-     */
-    public function scopeByStatus($query, $status)
-    {
-        return $query->where('status', $status);
+        return $this->hasMany(CourseAssignment::class, 'training_session_id');
     }
 }

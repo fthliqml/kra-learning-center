@@ -50,10 +50,10 @@ class Trainer extends Model
     }
 
     /**
-     * Get the trainings conducted by the trainer through sessions.
+     * Get the course assignments for the trainer.
      */
-    public function trainings(): HasMany
+    public function courseAssignments(): HasMany
     {
-        return $this->hasMany(Training::class, 'trainer_id');
+        return $this->hasMany(CourseAssignment::class, 'trainer_id');
     }
 }

@@ -58,36 +58,4 @@ class UserCourse extends Model
             }
         );
     }
-
-    /**
-     * Scope to get courses by status.
-     */
-    public function scopeByStatus($query, $status)
-    {
-        return $query->where('status', $status);
-    }
-
-    /**
-     * Scope to get completed courses.
-     */
-    public function scopeCompleted($query)
-    {
-        return $query->where('status', 'completed');
-    }
-
-    /**
-     * Scope to get in-progress courses.
-     */
-    public function scopeInProgress($query)
-    {
-        return $query->where('status', 'in_progress');
-    }
-
-    /**
-     * Scope to get not started courses.
-     */
-    public function scopeNotStarted($query)
-    {
-        return $query->where('status', 'not_started');
-    }
 }

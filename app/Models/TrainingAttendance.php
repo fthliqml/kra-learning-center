@@ -38,26 +38,10 @@ class TrainingAttendance extends Model
     }
 
     /**
-     * Get the training through the session.
+     * Access the training through the session (convenience accessor, not a direct relation).
      */
-    public function training(): BelongsTo
+    public function getTrainingAttribute()
     {
-        return $this->session()->training();
-    }
-
-    /**
-     * Scope to get attendances by status.
-     */
-    public function scopeByStatus($query, $status)
-    {
-        return $query->where('status', $status);
-    }
-
-    /**
-     * Scope to get attendances for a specific employee.
-     */
-    public function scopeForEmployee($query, $employeeId)
-    {
-        return $query->where('employee_id', $employeeId);
+        return $this->session?->training;
     }
 }
