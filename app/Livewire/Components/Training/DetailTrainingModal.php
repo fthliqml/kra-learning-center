@@ -249,6 +249,55 @@ class DetailTrainingModal extends Component
             ];
         }
 
+        // If date range increased, create missing sessions by cloning last session's room/location/trainer
+        // Calculate desired number of days based on new range
+        $newDays = null;
+        if ($startDate && $endDate) {
+            try {
+                $newDays = Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate)) + 1;
+            } catch (\Throwable $e) {
+                $newDays = null;
+            }
+        }
+        $existingCount = count($this->sessions);
+        if ($newDays && $newDays > $existingCount) {
+            $last = $existingCount > 0 ? $this->sessions[$existingCount - 1] : null;
+            $seedRoom = $last['room_name'] ?? null;
+            $seedLocation = $last['room_location'] ?? null;
+            $seedTrainerId = $last['trainer']['id'] ?? null;
+            $seedTrainerName = $last['trainer']['name'] ?? null;
+            $seedStartTime = $last['start_time'] ?? null;
+            $seedEndTime = $last['end_time'] ?? null;
+            $base = Carbon::parse($startDate);
+            for ($i = $existingCount + 1; $i <= $newDays; $i++) {
+                $sessionDate = $base->copy()->addDays($i - 1)->format('Y-m-d');
+                $created = TrainingSession::create([
+                    'training_id' => $this->selectedEvent['id'],
+                    'day_number' => $i,
+                    'date' => $sessionDate,
+                    'start_time' => $seedStartTime,
+                    'end_time' => $seedEndTime,
+                    'room_name' => $seedRoom,
+                    'room_location' => $seedLocation,
+                    'trainer_id' => $seedTrainerId,
+                ]);
+                $this->sessions[] = [
+                    'id' => $created->id,
+                    'day_number' => $i,
+                    'date' => $sessionDate,
+                    'start_time' => $seedStartTime,
+                    'end_time' => $seedEndTime,
+                    'room_name' => $seedRoom,
+                    'room_location' => $seedLocation,
+                    'trainer' => $seedTrainerId ? [
+                        'id' => $seedTrainerId,
+                        'name' => $seedTrainerName,
+                    ] : null,
+                    'attendances' => [],
+                ];
+            }
+        }
+
         $currentSessionId = $this->sessions[$this->dayNumber - 1]['id'] ?? null;
         if ($currentSessionId) {
             foreach ($this->employees as $employee) {
@@ -270,7 +319,7 @@ class DetailTrainingModal extends Component
             }
         }
 
-        // Emit minimal update payload so calendar can update locally
+        // Emit minimal update payload so calendar can update locally; parent may trigger full refresh on date change
         $this->dispatch('training-updated', [
             'id' => $this->selectedEvent['id'],
             'name' => $this->selectedEvent['name'],

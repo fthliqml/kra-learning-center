@@ -17,6 +17,7 @@ class TrainingSession extends Model
         'room_name',
         'room_location',
         'start_time',
+        'end_time',
         'date',
         'end_time',
         'day_number',

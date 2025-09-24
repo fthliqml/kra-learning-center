@@ -87,9 +87,20 @@ class ScheduleView extends Component
             return;
         foreach ($this->trainings as $t) {
             if ($t->id == $payload['id']) {
+                // If date range changed, perform a full refresh to pull newly created sessions
+                $dateChanged = false;
+                $origStart = $t->start_date;
+                $origEnd = $t->end_date;
                 foreach (['name', 'start_date', 'end_date'] as $f)
                     if (isset($payload[$f]))
                         $t->$f = $payload[$f];
+                if (isset($payload['start_date']) && $payload['start_date'] !== $origStart) $dateChanged = true;
+                if (isset($payload['end_date']) && $payload['end_date'] !== $origEnd) $dateChanged = true;
+                if ($dateChanged) {
+                    // Recompute and re-query trainings so sessions include new days
+                    $this->refreshTrainings();
+                    return;
+                }
                 if (isset($payload['session']) && $t->relationLoaded('sessions')) {
                     $diff = $payload['session'];
                     foreach ($t->sessions as $sess) {
@@ -211,6 +222,8 @@ class ScheduleView extends Component
                 'id' => $s->id,
                 'day_number' => $s->day_number,
                 'date' => $s->date,
+                'start_time' => $s->start_time,
+                'end_time' => $s->end_time,
                 'room_name' => $s->room_name,
                 'room_location' => $s->room_location,
                 'trainer' => $s->trainer ? ['id' => $s->trainer->id, 'name' => $s->trainer->name ?? ($s->trainer->user->name ?? null)] : null,
