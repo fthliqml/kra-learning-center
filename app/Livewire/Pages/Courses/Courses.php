@@ -37,6 +37,7 @@ class Courses extends Component
     public function courses()
     {
         $query = Course::query()
+            ->with('training')
             ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
             ->when($this->filter, fn($q) => $q->where('group_comp', $this->filter))
             ->orderBy('created_at', 'desc');

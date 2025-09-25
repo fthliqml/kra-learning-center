@@ -1,7 +1,6 @@
-<div>
+<div x-data="{ mode: (localStorage.getItem('coursesViewMode') ?? 'grid') }" x-init="$watch('mode', v => localStorage.setItem('coursesViewMode', v))" x-cloak>
     {{-- Header --}}
-    <div class="w-full grid gap-6 lg:gap-5 mb-5 lg:mb-9 grid-cols-1 lg:grid-cols-2" x-data="{ mode: (localStorage.getItem('coursesViewMode') ?? 'grid') }"
-        x-init="$watch('mode', v => localStorage.setItem('coursesViewMode', v))">
+    <div class="w-full grid gap-6 lg:gap-5 mb-5 lg:mb-9 grid-cols-1 lg:grid-cols-2">
         {{-- Title --}}
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start lg:col-span-2 lg:mb-4">
             Courses
@@ -62,21 +61,52 @@
     @endphp
 
     @if ($hasItems)
-        <div :class="mode === 'grid' ? 'grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6' : 'grid grid-cols-1 gap-4'"
-            class="mt-4">
+        {{-- GRID MODE --}}
+        <div x-show="mode === 'grid'" class="mt-4 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-6">
             @foreach ($courses as $course)
                 <div
                     class="bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition">
                     @if (!empty($course->thumbnail_url))
-                        <img src="{{ $course->thumbnail_url }}" alt="{{ $course->title }}"
+                        <img src="{{ Storage::url($course->thumbnail_url) }}" alt="{{ $course->title }}"
                             class="w-full h-40 object-cover" loading="lazy" />
                     @else
                         <div class="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200"></div>
                     @endif
                     <div class="p-4">
-                        <div class="text-xs text-gray-500 mb-1">{{ $course->group_comp ?? 'General' }}</div>
+                        <div class="text-xs text-gray-500 mb-1">{{ $course->training->group_comp }}</div>
                         <div class="font-semibold text-gray-900 line-clamp-2">{{ $course->title }}</div>
-                        <div class="mt-3 text-sm text-gray-500">Course Overview →</div>
+                        <div class="mt-5 text-xs text-gray-500 justify-content-end">Course Overview →</div>
+                    </div>
+                </div>
+            @endforeach
+        </div>
+
+        {{-- LIST MODE --}}
+        <div x-show="mode === 'list'" class="mt-4 grid grid-cols-1 gap-4">
+            @foreach ($courses as $course)
+                <div
+                    class="rounded-2xl shadow-sm border border-gray-200 overflow-hidden hover:shadow-md transition bg-gradient-to-r from-[#5aa7ff1a] to-white">
+                    <div class="flex items-stretch gap-4 p-4">
+                        {{-- Thumbnail --}}
+                        <div class="shrink-0">
+                            @if (!empty($course->thumbnail_url))
+                                <img src="{{ Storage::url($course->thumbnail_url) }}" alt="{{ $course->title }}"
+                                    class="w-52 h-40 object-cover rounded-xl" loading="lazy" />
+                            @else
+                                <div class="w-52 h-40 bg-gradient-to-br from-gray-100 to-gray-200 rounded-xl"></div>
+                            @endif
+                        </div>
+                        {{-- Content --}}
+                        <div class="flex-1 flex items-center">
+                            <div>
+                                <div class="text-sm text-gray-500 mb-1">{{ $course->training->group_comp }}</div>
+                                <div class="text-2xl font-semibold text-gray-900">{{ $course->title }}</div>
+                            </div>
+                        </div>
+                        {{-- Action --}}
+                        <div class="flex items-center justify-end min-w-40">
+                            <div class="text-sm text-gray-600">Course Overview →</div>
+                        </div>
                     </div>
                 </div>
             @endforeach
