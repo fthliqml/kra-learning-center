@@ -4,11 +4,12 @@ namespace Database\Seeders;
 
 use App\Models\Trainer;
 use App\Models\Training;
-use App\Models\TrainingAssesment;
+use App\Models\TrainingAssessment;
 use App\Models\TrainingAttendance;
 use App\Models\TrainingSession;
 use App\Models\User;
 use Carbon\Carbon;
+use Carbon\CarbonPeriod;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -48,18 +49,22 @@ class TrainingSeeder extends Seeder
 
         ]);
 
+        // 3. Create Sessions (one per day in the training date range)
         $sessions = [];
-        for ($i = 1; $i <= 4; $i++) {
+        $dayNumber = 1;
+        foreach (CarbonPeriod::create($training->start_date, $training->end_date) as $date) {
             $sessions[] = TrainingSession::create([
                 'training_id' => $training->id,
                 'trainer_id' => $trainer->id,
                 'room_name' => 'Wakatobi',
-                'room_location' => "EDC {$i}",
+                'date' => $date->toDateString(),
+                'room_location' => "EDC {$dayNumber}",
                 'start_time' => '09:00:00',
                 'end_time' => '12:00:00',
-                'day_number' => $i,
+                'day_number' => $dayNumber,
                 'status' => 'in_progress',
             ]);
+            $dayNumber++;
         }
 
         $employees = User::inRandomOrder()
@@ -67,7 +72,7 @@ class TrainingSeeder extends Seeder
             ->get();
 
         foreach ($employees as $employee) {
-            TrainingAssesment::create(attributes: [
+            TrainingAssessment::create(attributes: [
                 'training_id' => $training->id,
                 'employee_id' => $employee->id,
             ]);

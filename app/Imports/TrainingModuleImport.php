@@ -5,8 +5,9 @@ namespace App\Imports;
 use App\Models\TrainingModule;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
+use Maatwebsite\Excel\Concerns\WithValidation;
 
-class TrainingModuleImport implements ToModel, WithHeadingRow
+class TrainingModuleImport implements ToModel, WithHeadingRow, WithValidation
 {
     /**
      * @param array $row
@@ -24,5 +25,23 @@ class TrainingModuleImport implements ToModel, WithHeadingRow
             'duration' => $row['duration_hours'],
             'frequency' => $row['frequency_days'],
         ]);
+    }
+
+    /**
+     * Rules untuk validasi setiap kolom
+     *
+     * @return array
+     */
+    public function rules(): array
+    {
+        return [
+            'module_title' => 'required|string',
+            'group_competency' => 'required|string',
+            'objective' => 'nullable|string',
+            'training_content' => 'nullable|string',
+            'method' => 'nullable|string',
+            'duration_hours' => 'required|numeric',
+            'frequency_days' => 'required|numeric',
+        ];
     }
 }

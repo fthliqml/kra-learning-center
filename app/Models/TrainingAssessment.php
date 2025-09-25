@@ -6,9 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
-class TrainingAssesment extends Model
+class TrainingAssessment extends Model
 {
-    protected $table = 'training_assesments';
+    protected $table = 'training_assessments';
 
     protected $fillable = [
         'training_id',
