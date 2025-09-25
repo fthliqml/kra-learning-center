@@ -17,6 +17,10 @@ class DatabaseSeeder extends Seeder
         $this->call(UserSeeder::class);
         $this->call(TrainingModuleSeeder::class);
         $this->call(TrainingSeeder::class);
+<<<<<<< Updated upstream
         $this->call(CoursesSeeder::class);
+=======
+        $this->call(CourseSeeder::class);
+>>>>>>> Stashed changes
     }
 }
