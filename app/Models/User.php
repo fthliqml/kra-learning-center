@@ -97,36 +97,4 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserCourse::class);
     }
-
-    /**
-     * Get the courses the user is enrolled in.
-     */
-    public function courses(): BelongsToMany
-    {
-        return $this->belongsToMany(Course::class, 'user_courses', 'user_id', 'course_id');
-    }
-
-    /**
-     * Get the courses created by the user.
-     */
-    public function createdCourses(): HasMany
-    {
-        return $this->hasMany(Course::class, 'created_by');
-    }
-
-    /**
-     * Get the courses last edited by the user.
-     */
-    public function editedCourses(): HasMany
-    {
-        return $this->hasMany(Course::class, 'edited_by');
-    }
-
-    /**
-     * Get the course assignments for the user (as employee).
-     */
-    public function courseAssignments(): HasMany
-    {
-        return $this->hasMany(CourseAssignment::class, 'employee_id');
-    }
 }

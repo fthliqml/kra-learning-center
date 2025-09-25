@@ -27,8 +27,6 @@ class TrainingSession extends Model
     ];
 
     protected $casts = [
-        'start_time' => 'datetime:H:i',
-        'end_time' => 'datetime:H:i',
         'day_number' => 'integer',
         'date' => 'date',
     ];
@@ -55,14 +53,6 @@ class TrainingSession extends Model
     public function attendances(): HasMany
     {
         return $this->hasMany(TrainingAttendance::class, 'session_id');
-    }
-
-    /**
-     * Get the course assignments for the session.
-     */
-    public function courseAssignments(): HasMany
-    {
-        return $this->hasMany(CourseAssignment::class, 'training_session_id');
     }
 
     /**
@@ -121,6 +111,4 @@ class TrainingSession extends Model
             }
         );
     }
-
-
 }

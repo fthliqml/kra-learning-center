@@ -14,18 +14,12 @@ return new class extends Migration {
             $table->id();
 
             // Foreign Keys (auditing & linkage)
-            $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('edited_by')->constrained('users')->cascadeOnDelete();
             $table->foreignId('training_id')->constrained('trainings')->cascadeOnDelete();
 
             // Core Fields
-            $table->string('title');
-            $table->string('code');
+            $table->string('title')->nullable();
             $table->text('description');
-            $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
             $table->string('thumbnail_url');
-            $table->integer('duration');
-            $table->integer('frequency');
 
             // Status Fields
             $table->enum('status', ['active', 'inactive']);

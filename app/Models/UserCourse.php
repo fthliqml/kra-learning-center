@@ -13,7 +13,6 @@ class UserCourse extends Model
     protected $fillable = [
         'user_id',
         'course_id',
-        'assignment_id',
         'current_step',
         'status',
     ];
@@ -36,14 +35,6 @@ class UserCourse extends Model
     public function course(): BelongsTo
     {
         return $this->belongsTo(Course::class, 'course_id');
-    }
-
-    /**
-     * Get the course assignment for the enrollment.
-     */
-    public function assignment(): BelongsTo
-    {
-        return $this->belongsTo(CourseAssignment::class, 'assignment_id');
     }
 
     /**

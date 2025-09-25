@@ -16,7 +16,6 @@ return new class extends Migration {
             // Foreign Keys
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('course_id')->constrained('courses')->cascadeOnDelete();
-            $table->foreignId('assignment_id')->constrained('course_assignments')->cascadeOnDelete();
 
             // Progress Fields
             $table->integer('current_step');
