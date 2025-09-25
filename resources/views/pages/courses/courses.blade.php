@@ -73,11 +73,7 @@
                         <div class="w-full h-40 bg-gradient-to-br from-gray-100 to-gray-200"></div>
                     @endif
                     <div class="p-4">
-<<<<<<< Updated upstream
                         <div class="text-xs text-gray-500 mb-1">{{ $course->training->group_comp }}</div>
-=======
-                        <div class="text-xs text-gray-500 mb-1">{{ $course->training->name ?? 'General' }}</div>
->>>>>>> Stashed changes
                         <div class="font-semibold text-gray-900 line-clamp-2">{{ $course->title }}</div>
                         <div class="mt-5 text-xs text-gray-500 justify-content-end">Course Overview →</div>
                     </div>
@@ -102,28 +98,23 @@
                         </div>
                         {{-- Content --}}
                         <div class="flex-1 flex items-center">
-                            <div>
-<<<<<<< Updated upstream
-                                <div class="text-sm text-gray-500 mb-1">{{ $course->training->group_comp }}</div>
-=======
-                                <div class="text-sm text-gray-500 mb-1">{{ $course->training->name ?? 'General' }}</div>
->>>>>>> Stashed changes
-                                <div class="text-2xl font-semibold text-gray-900">{{ $course->title }}</div>
-                            </div>
-                        </div>
-                        {{-- Action --}}
-                        <div class="flex items-center justify-end min-w-40">
-                            <div class="text-sm text-gray-600">Course Overview →</div>
+                            <div class="text-sm text-gray-500 mb-1">{{ $course->training->group_comp }}</div>
+                            <div class="text-2xl font-semibold text-gray-900">{{ $course->title }}</div>
                         </div>
                     </div>
+                    {{-- Action --}}
+                    <div class="flex items-center justify-end min-w-40">
+                        <div class="text-sm text-gray-600">Course Overview →</div>
+                    </div>
                 </div>
-            @endforeach
         </div>
+    @endforeach
+</div>
 
-        @if ($isPaginator)
-            <div class="mt-6">{{ $courses->links() }}</div>
-        @endif
-    @else
-        <div class="mt-8 text-center text-gray-500">No courses found.</div>
-    @endif
+@if ($isPaginator)
+    <div class="mt-6">{{ $courses->links() }}</div>
+@endif
+@else
+<div class="mt-8 text-center text-gray-500">No courses found.</div>
+@endif
 </div>
