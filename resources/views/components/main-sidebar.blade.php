@@ -9,9 +9,6 @@
             'href' => '#',
             'submenu' => [
                 ['label' => 'Training History', 'href' => url('/history/training')],
-                ['label' => 'Training Module', 'href' => url('/training/module')],
-                ['label' => 'Training Schedule', 'href' => url('/training/schedule')],
-                ['label' => 'Data Trainer', 'href' => url('/training/trainer')],
                 ['label' => 'Certification History', 'href' => url('/history/certification')],
             ],
         ],
@@ -33,6 +30,18 @@
             'href' => '/courses/management',
         ],
         ['id' => 'development', 'label' => 'Development', 'icon' => 'trophy', 'href' => url('/development')],
+        [
+            'id' => 'training',
+            'label' => 'Training',
+            'icon' => 'academic-cap',
+            'href' => '#',
+            'submenu' => [
+                ['label' => 'Training History', 'href' => url('/history/training')],
+                ['label' => 'Training Module', 'href' => url('/training/module')],
+                ['label' => 'Training Schedule', 'href' => url('/training/schedule')],
+                ['label' => 'Data Trainer', 'href' => url('/training/trainer')],
+            ],
+        ],
     ];
 
     $firstSegment = '/' . (request()->segment(1) ?? '');
