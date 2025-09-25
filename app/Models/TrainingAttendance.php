@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TrainingAttendance extends Model
 {
@@ -17,14 +17,31 @@ class TrainingAttendance extends Model
         'recorded_at',
     ];
 
-    // Relationships
-    public function session()
+    protected $casts = [
+        'recorded_at' => 'datetime',
+    ];
+
+    /**
+     * Get the training session for the attendance.
+     */
+    public function session(): BelongsTo
     {
         return $this->belongsTo(TrainingSession::class, 'session_id');
     }
 
-    public function employee()
+    /**
+     * Get the employee for the attendance.
+     */
+    public function employee(): BelongsTo
     {
         return $this->belongsTo(User::class, 'employee_id');
+    }
+
+    /**
+     * Access the training through the session (convenience accessor, not a direct relation).
+     */
+    public function getTrainingAttribute()
+    {
+        return $this->session?->training;
     }
 }

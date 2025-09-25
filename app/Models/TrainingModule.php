@@ -17,4 +17,9 @@ class TrainingModule extends Model
         'duration',
         'frequency',
     ];
+
+    protected $casts = [
+        'duration' => 'integer',
+        'frequency' => 'integer',
+    ];
 }

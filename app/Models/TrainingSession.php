@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class TrainingSession extends Model
 {
@@ -13,6 +14,7 @@ class TrainingSession extends Model
 
     protected $fillable = [
         'training_id',
+        'trainer_id',
         'trainer_id',
         'room_name',
         'room_location',
@@ -25,23 +27,42 @@ class TrainingSession extends Model
     ];
 
     protected $casts = [
+        'start_time' => 'datetime:H:i',
+        'end_time' => 'datetime:H:i',
+        'day_number' => 'integer',
         'date' => 'date',
     ];
 
-    // Relationships
-    public function training()
+    /**
+     * Get the training that owns the session.
+     */
+    public function training(): BelongsTo
     {
         return $this->belongsTo(Training::class);
     }
 
-    public function attendances()
+    /**
+     * Get the trainer that conducts the session.
+     */
+    public function trainer(): BelongsTo
+    {
+        return $this->belongsTo(Trainer::class);
+    }
+
+    /**
+     * Get the attendances for the session.
+     */
+    public function attendances(): HasMany
     {
         return $this->hasMany(TrainingAttendance::class, 'session_id');
     }
 
-    public function trainer()
+    /**
+     * Get the course assignments for the session.
+     */
+    public function courseAssignments(): HasMany
     {
-        return $this->belongsTo(Trainer::class);
+        return $this->hasMany(CourseAssignment::class, 'training_session_id');
     }
 
     /**
@@ -100,4 +121,6 @@ class TrainingSession extends Model
             }
         );
     }
+
+
 }
