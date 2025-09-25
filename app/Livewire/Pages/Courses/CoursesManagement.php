@@ -1,0 +1,57 @@
+<?php
+
+namespace App\Livewire\Pages\Courses;
+
+use App\Models\Course;
+use Livewire\Attributes\On;
+use Livewire\Component;
+use Livewire\WithPagination;
+use Mary\Traits\Toast;
+
+class CoursesManagement extends Component
+{
+    use Toast, WithPagination;
+
+    public string $search = '';
+
+    public function updated($property): void
+    {
+        if (!is_array($property) && $property !== '') {
+            $this->resetPage();
+        }
+    }
+
+    public function headers(): array
+    {
+        return [
+            ['key' => 'title', 'label' => 'Title', 'class' => 'w-[300px]'],
+            ['key' => 'group_comp', 'label' => 'Group Comp', 'class' => '!text-center'],
+            ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
+            ['key' => 'action', 'label' => 'Action', 'class' => '!text-center'],
+        ];
+    }
+
+    public function courses()
+    {
+        $query = Course::with('training')
+            ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
+            ->orderBy('created_at', 'desc');
+
+        return $query->paginate(10)->onEachSide(1);
+    }
+
+    #[On('deleteCourse')]
+    public function deleteCourse($id): void
+    {
+        Course::findOrFail($id)->delete();
+        $this->error('Course deleted', position: 'toast-top toast-center');
+    }
+
+    public function render()
+    {
+        return view('pages.courses.courses-management', [
+            'courses' => $this->courses(),
+            'headers' => $this->headers(),
+        ]);
+    }
+}

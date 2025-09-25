@@ -8,15 +8,16 @@ use Illuminate\Database\Seeder;
 
 class DatabaseSeeder extends Seeder
 {
-    /**
-     * Seed the application's database.
-     */
-    public function run(): void
-    {
-        User::factory()->count(10)->create();
-        $this->call(UserSeeder::class);
-        $this->call(TrainingModuleSeeder::class);
-        $this->call(TrainingSeeder::class);
+  /**
+   * Seed the application's database.
+   */
+  public function run(): void
+  {
+    User::factory()->count(10)->create();
+    $this->call(UserSeeder::class);
+    $this->call(TrainingModuleSeeder::class);
+    $this->call(TrainingSeeder::class);
+    $this->call(CoursesSeeder::class);
 
-    }
+  }
 }
