@@ -3,11 +3,11 @@
     <div class="w-full grid gap-6 lg:gap-5 mb-5 lg:mb-9 grid-cols-1 lg:grid-cols-2" x-data="{ mode: (localStorage.getItem('coursesViewMode') ?? 'grid') }"
         x-init="$watch('mode', v => localStorage.setItem('coursesViewMode', v))">
         {{-- Title --}}
-        <h1 class="text-primary text-4xl font-bold text-center lg:text-start lg:col-span-2">
+        <h1 class="text-primary text-4xl font-bold text-center lg:text-start lg:col-span-2 lg:mb-4">
             Courses
         </h1>
 
-        <div class="flex items-center gap-4 justify-center lg:justify-start order-2 lg:order-1 mt-3 lg:mt-0">
+        <div class="flex items-center gap-4 justify-center lg:justify-start order-2 lg:order-1">
             {{-- Toggle Buttons --}}
             <div
                 class="relative inline-flex items-center rounded-full p-0.5 bg-gradient-to-tr from-[#1F2E5C] to-[#3F63A5] shadow-sm overflow-hidden select-none">
@@ -18,7 +18,7 @@
 
                 {{-- Grid Button --}}
                 <button type="button"
-                    class="relative z-10 h-9 w-24 px-3 flex items-center justify-center gap-2 transition-colors"
+                    class="relative z-10 h-10 w-24 px-3 flex items-center justify-center gap-2 transition-colors"
                     :class="mode === 'grid' ? '!text-[#123456]' : '!text-white/85'" @click="mode='grid'"
                     role="button" :aria-pressed="mode === 'grid'">
                     <x-icon name="o-squares-2x2" class="size-4 text-current transition-colors" />
@@ -27,7 +27,7 @@
 
                 {{-- List Button --}}
                 <button type="button"
-                    class="relative z-10 h-9 w-24 px-3 flex items-center justify-center gap-2 transition-colors"
+                    class="relative z-10 h-10 w-24 px-3 flex items-center justify-center gap-2 transition-colors"
                     :class="mode === 'list' ? '!text-[#123456]' : '!text-white/85'" @click="mode='list'"
                     role="button" :aria-pressed="mode === 'list'">
                     <x-icon name="o-bars-3" class="size-4 text-current transition-colors" />

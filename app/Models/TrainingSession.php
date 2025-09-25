@@ -58,14 +58,6 @@ class TrainingSession extends Model
     }
 
     /**
-     * Get the course assignments for the session.
-     */
-    public function courseAssignments(): HasMany
-    {
-        return $this->hasMany(CourseAssignment::class, 'training_session_id');
-    }
-
-    /**
      * Normalized 'Y-m-d' date string for easy comparisons.
      */
     protected function isoDate(): Attribute
@@ -121,6 +113,4 @@ class TrainingSession extends Model
             }
         );
     }
-
-
 }

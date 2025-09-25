@@ -48,12 +48,4 @@ class Trainer extends Model
     {
         return $this->hasMany(TrainingSession::class, 'trainer_id');
     }
-
-    /**
-     * Get the course assignments for the trainer.
-     */
-    public function courseAssignments(): HasMany
-    {
-        return $this->hasMany(CourseAssignment::class, 'trainer_id');
-    }
 }
