@@ -1,6 +1,7 @@
 <div>
     @livewire('components.confirm-dialog')
 
+    {{-- Header --}}
     <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
                 grid-cols-1 lg:grid-cols-2 items-center">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
@@ -53,14 +54,15 @@
 
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
                     placeholder="Filter"
-                    class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer"
+                    class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                     icon-right="o-funnel" />
             </div>
 
-            <x-search-input placeholder="Cari modul..." class="max-w-md" wire:model.live="search" />
+            <x-search-input placeholder="Search..." class="max-w-md" wire:model.live="search" />
         </div>
     </div>
 
+    {{-- Table --}}
     <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
         <x-table :headers="$headers" :rows="$modules" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
             with-pagination>
@@ -87,10 +89,10 @@
                         })" />
                 </div>
             @endscope
-
         </x-table>
     </div>
 
+    {{-- Modal --}}
     <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Training Module' : ($mode === 'edit' ? 'Edit Training Module' : 'Preview Training Module')" separator box-class="max-w-3xl h-fit">
 
         <x-form wire:submit.prevent="save" no-separator>
@@ -136,6 +138,4 @@
             </x-slot:actions>
         </x-form>
     </x-modal>
-
-
 </div>
