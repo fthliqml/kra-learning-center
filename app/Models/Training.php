@@ -12,6 +12,7 @@ class Training extends Model
     protected $fillable = [
         'name',
         'type',
+        'group_comp',
         'start_date',
         'end_date',
         'status',

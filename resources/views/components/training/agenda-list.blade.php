@@ -10,6 +10,18 @@ $sessionForDay =
     $item['sessions']->firstWhere('iso_date', $item['iso']) ??
     $item['sessions']->sortBy('day_number')->first();
             @endphp
+            @php
+                $type = strtoupper($item['type'] ?? '');
+                $colorClasses = match ($type) {
+                    'IN' => ['dot' => 'bg-green-500', 'badge' => 'border-green-500 bg-green-50'],
+                    'OUT' => ['dot' => 'bg-amber-500', 'badge' => 'border-amber-500 bg-amber-50'],
+                    'K-LEARN', 'KLEARN', 'KLEARNING' => [
+                        'dot' => 'bg-indigo-500',
+                        'badge' => 'border-indigo-500 bg-indigo-50',
+                    ],
+                    default => ['dot' => 'bg-primary', 'badge' => 'border-primary bg-[#E4F3FF]'],
+                };
+            @endphp
             <div x-on:click="$dispatch('detail-loading-start')"
                 class="bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex gap-4 items-start hover:border-primary/40 transition cursor-pointer"
                 wire:click="open({{ $item['id'] }}, '{{ $item['iso'] }}')">
@@ -22,8 +34,14 @@ $sessionForDay =
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
-                        <span class="inline-block w-2 h-2 rounded-full bg-primary"></span>
-                        <h3 class="font-semibold text-sm sm:text-base leading-snug truncate">{{ $item['name'] }}</h3>
+                        <span class="inline-block w-2 h-2 rounded-full {{ $colorClasses['dot'] }}"></span>
+                        <h3 class="font-semibold text-sm sm:text-base leading-snug truncate flex items-center gap-2">
+                            @if ($type)
+                                <span
+                                    class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] bg-white/70 border {{ $colorClasses['badge'] }}">{{ $type }}</span>
+                            @endif
+                            <span class="truncate">{{ $item['name'] }}</span>
+                        </h3>
                     </div>
                     @if ($sessionForDay && ($sessionForDay->trainer || $sessionForDay->trainer_display_name))
                         @php $trainerName = $sessionForDay->trainer_display_name ?? ($sessionForDay->trainer->name ?? ($sessionForDay->trainer->user->name ?? '')); @endphp

@@ -17,6 +17,12 @@ class ScheduleView extends Component
     public int $currentMonth;
     public int $currentYear;
     public int $calendarVersion = 0;
+    /** Counts of trainings per month for the current year (1..12) */
+    public array $monthlyTrainingCounts = [];
+    /** Counts for navigation badges */
+    public int $prevMonthCount = 0;
+    public int $nextMonthCount = 0;
+    public int $currentMonthCount = 0;
 
     /** @var \Illuminate\Support\Collection<int,\App\Models\Training> */
     public $trainings;
@@ -53,8 +59,8 @@ class ScheduleView extends Component
         } else {
             $this->currentMonth--;
         }
-        $this->recomputeDays();
-        $this->stopGlobalOverlay();
+        // Re-query trainings for the new visible month so data is up-to-date
+        $this->refreshTrainings();
     }
 
     public function nextMonth(): void
@@ -65,8 +71,8 @@ class ScheduleView extends Component
         } else {
             $this->currentMonth++;
         }
-        $this->recomputeDays();
-        $this->stopGlobalOverlay();
+        // Re-query trainings for the new visible month so data is up-to-date
+        $this->refreshTrainings();
     }
 
     public function setMonth(int $month): void
@@ -85,8 +91,13 @@ class ScheduleView extends Component
                 $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
             })->get();
         $this->recomputeDays();
+        $this->computeMonthNavCounts();
         $this->trainingDetails = []; // reset cache
         $this->calendarVersion++;
+        // Broadcast current month context so other components (e.g., AddTrainingModal) can align default datepicker month
+        if (method_exists($this, 'dispatch')) {
+            $this->dispatch('schedule-month-context', year: $this->currentYear, month: $this->currentMonth);
+        }
         $this->stopGlobalOverlay();
     }
 
@@ -197,6 +208,68 @@ class ScheduleView extends Component
         $this->days = $days;
     }
 
+    /**
+     * Build counts per month for current year and compute prev/next/current counts for navigation badges.
+     */
+    private function computeMonthNavCounts(): void
+    {
+        $this->monthlyTrainingCounts = $this->buildYearCounts($this->currentYear);
+        $this->currentMonthCount = $this->monthlyTrainingCounts[$this->currentMonth] ?? 0;
+
+        // Previous month (handle year wrap)
+        $prevMonth = $this->currentMonth === 1 ? 12 : $this->currentMonth - 1;
+        $prevYear = $this->currentMonth === 1 ? $this->currentYear - 1 : $this->currentYear;
+        $this->prevMonthCount = $prevYear === $this->currentYear
+            ? ($this->monthlyTrainingCounts[$prevMonth] ?? 0)
+            : $this->countForMonth($prevYear, $prevMonth);
+
+        // Next month (handle year wrap)
+        $nextMonth = $this->currentMonth === 12 ? 1 : $this->currentMonth + 1;
+        $nextYear = $this->currentMonth === 12 ? $this->currentYear + 1 : $this->currentYear;
+        $this->nextMonthCount = $nextYear === $this->currentYear
+            ? ($this->monthlyTrainingCounts[$nextMonth] ?? 0)
+            : $this->countForMonth($nextYear, $nextMonth);
+    }
+
+    /**
+     * Count trainings per month for a given year. Each training counts once per overlapped month.
+     */
+    private function buildYearCounts(int $year): array
+    {
+        $counts = array_fill(1, 12, 0);
+        $yearStart = Carbon::createFromDate($year, 1, 1)->startOfDay();
+        $yearEnd = Carbon::createFromDate($year, 12, 31)->endOfDay();
+
+        $trainings = Training::select('id', 'start_date', 'end_date')
+            ->whereDate('start_date', '<=', $yearEnd)
+            ->whereDate('end_date', '>=', $yearStart)
+            ->get();
+
+        foreach ($trainings as $t) {
+            $ts = Carbon::parse($t->start_date);
+            $te = Carbon::parse($t->end_date);
+            $startMonth = $ts->year < $year ? 1 : $ts->month;
+            $endMonth = $te->year > $year ? 12 : $te->month;
+            for ($m = max(1, $startMonth); $m <= min(12, $endMonth); $m++) {
+                $counts[$m]++;
+            }
+        }
+        return $counts;
+    }
+
+    /**
+     * Count trainings that overlap a specific month/year. Each training counted once if overlapping.
+     */
+    private function countForMonth(int $year, int $month): int
+    {
+        $start = Carbon::createFromDate($year, $month, 1)->startOfDay();
+        $end = (clone $start)->endOfMonth()->endOfDay();
+        return Training::whereDate('start_date', '<=', $end)
+            ->whereDate('end_date', '>=', $start)
+            ->distinct('id')
+            ->count('id');
+    }
+
     private function trainingsForDate(string $iso): array
     {
         $c = Carbon::parse($iso);
@@ -204,6 +277,7 @@ class ScheduleView extends Component
             ->values()->map(fn($t) => [
                 'id' => $t->id,
                 'name' => $t->name,
+                'type' => $t->type ?? null,
                 'start_date' => $t->start_date,
                 'end_date' => $t->end_date,
                 'sessions' => $t->sessions,

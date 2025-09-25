@@ -22,6 +22,8 @@ class AddTrainingModal extends Component
 
     // Form fields
     public $training_name = '';
+    public $training_type = 'IN';
+    public $group_comp = 'BMC';
     public $date = '';
     public $start_time = '';
     public $end_time = '';
@@ -41,8 +43,25 @@ class AddTrainingModal extends Component
     public Collection $usersSearchable;
     public Collection $trainersSearchable;
 
+    public $trainingTypeOptions = [
+        ['id' => 'IN', 'name' => 'In-House'],
+        ['id' => 'OUT', 'name' => 'Out-House'],
+        ['id' => 'K-LEARN', 'name' => 'K-Learn']
+    ];
+
+    public $groupCompOptions = [
+        ['id' => 'BMC', 'name' => 'BMC'],
+        ['id' => 'BC', 'name' => 'BC'],
+        ['id' => 'MMP', 'name' => 'MMP'],
+        ['id' => 'LC', 'name' => 'LC'],
+        ['id' => 'MDP', 'name' => 'MDP'],
+        ['id' => 'TOC', 'name' => 'TOC'],
+    ];
+
     protected $rules = [
         'training_name' => 'required|string|min:3',
+        'training_type' => 'required',
+        'group_comp' => 'required',
         'date' => 'required|string|min:10',
         'trainerId' => 'required|integer|exists:trainer,id',
         'room.name' => 'required|string|max:100',
@@ -55,6 +74,8 @@ class AddTrainingModal extends Component
 
     protected $messages = [
         'training_name.required' => 'Training name is required.',
+        'training_type.required' => 'Training type is required.',
+        'group_comp.required' => 'Group competency is required.',
         'training_name.min' => 'Training name must be at least 3 characters.',
         'date.required' => 'Training date range is required.',
         'date.min' => 'Training date range format is invalid.',
@@ -74,7 +95,8 @@ class AddTrainingModal extends Component
     ];
 
     protected $listeners = [
-        'open-add-training-modal' => 'openModalWithDate'
+        'open-add-training-modal' => 'openModalWithDate',
+        'schedule-month-context' => 'setDefaultMonth'
     ];
 
     public function mount()
@@ -101,16 +123,40 @@ class AddTrainingModal extends Component
     public function openModalWithDate($data)
     {
         $this->resetForm();
-        $this->date = $data['date'];
+        // If caller passes a specific date, keep it; otherwise default to October 1st
+        if (!empty($data['date'])) {
+            $this->date = $data['date'];
+        } else {
+            // Use last known context month if available; fallback to October
+            $year = $this->contextYear ?? Carbon::now()->year;
+            $month = $this->contextMonth ?? 10;
+            $first = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
+            $this->date = $first . ' to ' . $first;
+        }
         $this->showModal = true;
 
     }
 
+    // Hold last known schedule context
+    public ?int $contextYear = null;
+    public ?int $contextMonth = null;
+
+    public function setDefaultMonth(int $year, int $month): void
+    {
+        $this->contextYear = $year;
+        $this->contextMonth = $month;
+    }
+
     public function openModal()
     {
-        $this->showModal = true;
-        $this->activeTab = 'training';
+        // Reset form and default date picker to the current schedule month (fallback to current month)
         $this->resetForm();
+        $this->activeTab = 'training';
+        $year = $this->contextYear ?? Carbon::now()->year;
+        $month = $this->contextMonth ?? Carbon::now()->month;
+        $first = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
+        $this->date = $first . ' to ' . $first;
+        $this->showModal = true;
     }
 
     public function closeModal()
@@ -123,6 +169,8 @@ class AddTrainingModal extends Component
     public function resetForm()
     {
         $this->training_name = '';
+        $this->training_type = 'IN';
+        $this->group_comp = 'BMC';
         $this->date = '';
         $this->activeTab = 'training';
         $this->trainerId = null;
@@ -133,6 +181,7 @@ class AddTrainingModal extends Component
         $this->participants = [];
         $this->usersSearchable = collect([]);
         $this->trainersSearchable = collect([]);
+        $this->resetErrorBag();
     }
 
     public function userSearch(string $value = '')
@@ -220,7 +269,8 @@ class AddTrainingModal extends Component
 
         $training = Training::create([
             "name" => $this->training_name,
-            "type" => "in",
+            "type" => $this->training_type,
+            "group_comp" => $this->group_comp,
             "start_date" => $startDate,
             "end_date" => $endDate,
         ]);

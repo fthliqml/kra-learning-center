@@ -8,11 +8,11 @@
     <!-- Modal -->
     <x-modal wire:model="showModal" title="New Training" subtitle="Creating a new training"
         box-class="backdrop-blur max-w-4xl">
-        <div class="space-y-6 md:h-[400px]">
+        <div class="space-y-6 md:h-[450px]">
             <!-- Tabs Navigation -->
             <x-tabs wire:model="activeTab">
                 <x-tab name="training" label="Training Config" icon="o-academic-cap">
-                    <div class="{{ $errors->any() ? 'space-y-1' : 'space-y-6' }}">
+                    <div class="{{ $errors->any() ? 'space-y-1' : 'space-y-4' }}">
                         <!-- Training Name -->
                         <x-input wire:model="training_name" label="Training Name" placeholder="Enter training name"
                             class="focus-within:border-0" />
@@ -34,22 +34,29 @@
                 </x-tab>
 
                 <x-tab name="session" label="Session Config" icon="o-cog-6-tooth">
-                    <!-- Date Range -->
-                    <x-datepicker wire:model.defer="date" placeholder="Select date range" icon="o-calendar"
-                        class="w-full" label="Training Date" :config="[
-                            'mode' => 'range',
-                            'altInput' => true,
-                            'altFormat' => 'd M Y',
-                        ]" />
-
-                    <div class="space-y-6 py-4">
+                    <div class="{{ $errors->any() ? 'space-y-1' : 'space-y-4' }}">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full">
+                            <!-- Type -->
+                            <x-select label="Training Type" wire:model="training_type" :options="$trainingTypeOptions"
+                                option-value="id" option-label="name" icon="o-book-open" />
+                            <!-- Group Comp -->
+                            <x-select label="Group Competency" wire:model="group_comp" :options="$groupCompOptions"
+                                option-value="id" option-label="name" icon="o-clipboard-document" />
+                        </div>
+                        <!-- Date Range -->
+                        <x-datepicker wire:model.defer="date" placeholder="Select date range" icon="o-calendar"
+                            class="w-full" label="Training Date" :config="[
+                                'mode' => 'range',
+                                'altInput' => true,
+                                'altFormat' => 'd M Y',
+                            ]" />
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full">
                             <x-input label="Room Name" placeholder="Room name" class="focus-within:border-0"
                                 wire:model="room.name" />
                             <x-input label="Room Location/Office" placeholder="Room location"
                                 class="focus-within:border-0" wire:model="room.location" />
                         </div>
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full">
+                        <div class="grid grid-cols-2 gap-5 items-center w-full">
                             <x-input type="time" label="Start Time" wire:model="start_time"
                                 class="focus-within:border-0" placeholder="HH:MM" />
                             <x-input type="time" label="End Time" wire:model="end_time" class="focus-within:border-0"

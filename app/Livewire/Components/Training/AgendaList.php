@@ -20,6 +20,7 @@ class AgendaList extends Component
         'isToday' => $d['isToday'],
         'name' => $t['name'],
         'id' => $t['id'],
+        'type' => $t['type'] ?? null,
         'sessions' => $t['sessions'],
       ]))
       ->flatten(1)

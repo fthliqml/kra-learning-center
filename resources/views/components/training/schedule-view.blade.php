@@ -30,8 +30,12 @@
                         @foreach ($months as $idx => $label)
                             <button
                                 @click="$wire.setMonth({{ $idx + 1 }}); open=false; $dispatch('global-overlay-start', { message: 'Loading calendar...' })"
-                                class="text-xs px-2 py-1 rounded hover:bg-gray-100 {{ $currentMonth === $idx + 1 ? 'bg-primary/10 text-primary' : 'text-gray-700' }}">
-                                {{ $label }}
+                                class="text-xs px-2 py-1 rounded hover:bg-gray-100 flex items-center justify-between gap-2 {{ $currentMonth === $idx + 1 ? 'bg-primary/10 text-primary' : 'text-gray-700' }}">
+                                <span>{{ $label }}</span>
+                                @php $cnt = $monthlyTrainingCounts[$idx+1] ?? 0; @endphp
+                                @if ($cnt > 0)
+                                    <x-badge value="{{ $cnt }}" class="badge-neutral badge-xs" />
+                                @endif
                             </button>
                         @endforeach
                     </div>
