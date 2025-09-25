@@ -26,6 +26,12 @@
                 ['label' => 'Survey 3', 'href' => url('/survey/3')],
             ],
         ],
+        [
+            'id' => 'k-learn',
+            'label' => 'K-Learn',
+            'icon' => 'folder-open',
+            'href' => '/courses/management',
+        ],
         ['id' => 'development', 'label' => 'Development', 'icon' => 'trophy', 'href' => url('/development')],
     ];
 
@@ -70,12 +76,12 @@
         :class="isOpen
             ?
             'w-64 h-[85vh] top-[15vh] translate-x-0' :
-            'w-23 h-80 top-[15vh] rounded-br-[60px] !rounded-tr-[60px] -translate-x-full md:translate-x-0'">
+            'w-23 h-fit top-[15vh] rounded-br-[60px] !rounded-tr-[60px] -translate-x-full md:translate-x-0'">
         <div class="flex flex-col h-full p-4 pr-[24px]" :class="!isOpen && 'pl-[10px] pr-[30px]'">
 
             <!-- Nav -->
             <nav class="flex-1 space-y-2 transition-all duration-1000 ease-out"
-                :class="isOpen ? 'mt-[15px]' : 'mt-6 space-y-3'">
+                :class="isOpen ? 'mt-[15px]' : 'space-y-3'">
 
                 @foreach ($menuItems as $item)
                     @php

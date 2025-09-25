@@ -35,7 +35,7 @@ class Training extends Model
      */
     public function assessments(): HasMany
     {
-        return $this->hasMany(TrainingAssesment::class);
+        return $this->hasMany(TrainingAssessment::class);
     }
 
     /**
