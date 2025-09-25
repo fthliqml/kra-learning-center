@@ -22,6 +22,7 @@ return new class extends Migration {
             $table->string('room_location')->nullable();
             $table->time('start_time');
             $table->time('end_time');
+            $table->date('date');
             $table->integer('day_number');
 
             // Status Fields
