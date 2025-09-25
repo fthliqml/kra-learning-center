@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Training\TrainingModuleController;
 use App\Livewire\Pages\Courses\Courses;
 use App\Livewire\Pages\Training\DataTrainer;
@@ -10,6 +11,9 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', function () {
     return view('pages.dashboard');
 });
+
+Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+Route::post('/login', [AuthController::class, 'login']);
 
 Route::get('/training/module', Module::class)->name('training-module.index');
 Route::post('/training/module', [TrainingModuleController::class, 'store'])->name('training-module.store');
