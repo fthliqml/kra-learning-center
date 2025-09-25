@@ -54,6 +54,19 @@ class User extends Authenticatable
     }
 
     /**
+     * Normalize NRP casing so $user->nrp works even if DB column is 'NRP'.
+     */
+    protected function nrp(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                // Support both 'NRP' and 'nrp' DB column names
+                return $this->attributes['nrp'] ?? $this->attributes['NRP'] ?? null;
+            },
+        );
+    }
+
+    /**
      * Get the trainer profile for the user.
      */
     public function trainer(): HasOne
@@ -66,7 +79,7 @@ class User extends Authenticatable
      */
     public function trainingAssessments(): HasMany
     {
-        return $this->hasMany(TrainingAssesment::class, 'employee_id');
+        return $this->hasMany(TrainingAssessment::class, 'employee_id');
     }
 
     /**

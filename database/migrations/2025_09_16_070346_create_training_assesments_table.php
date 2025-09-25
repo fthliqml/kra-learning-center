@@ -10,7 +10,7 @@ return new class extends Migration {
      */
     public function up(): void
     {
-        Schema::create('training_assesments', function (Blueprint $table) {
+        Schema::create('training_assessments', function (Blueprint $table) {
             $table->id();
 
             // Foreign Keys
@@ -25,9 +25,6 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            // Constraints
-            $table->foreign('training_id')->references('id')->on('trainings')->onDelete('cascade');
-            $table->foreign('employee_id')->references('id')->on('users')->onDelete('cascade');
         });
     }
 
@@ -36,6 +33,6 @@ return new class extends Migration {
      */
     public function down(): void
     {
-        Schema::dropIfExists('training_assesments');
+        Schema::dropIfExists('training_assessments');
     }
 };
