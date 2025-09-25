@@ -6,35 +6,33 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
     /**
-     * Membuat tabel training_assesments (catatan nilai & status kelulusan). Ejaan 'assesments' dibiarkan untuk kompatibilitas.
+     * Run the migrations.
      */
     public function up(): void
     {
-        Schema::create('training_assesments', function (Blueprint $table) {
+        Schema::create('training_assessments', function (Blueprint $table) {
             $table->id();
 
             // Foreign Keys
             $table->foreignId('training_id')->constrained('trainings')->cascadeOnDelete();
             $table->foreignId('employee_id')->constrained('users')->cascadeOnDelete();
 
-            // Core Fields
+            // Attendance data
             $table->double('pretest_score')->nullable();
             $table->double('posttest_score')->nullable();
             $table->double('practical_score')->nullable();
+            $table->enum('status', ['passed', 'failed', "in_progress"])->default('in_progress');
 
-            // Status Fields
-            $table->enum('status', ['passed', 'failed', 'in_progress'])->default('in_progress');
-
-            // Meta
             $table->timestamps();
+
         });
     }
 
     /**
-     * Menghapus tabel training_assesments.
+     * Reverse the migrations.
      */
     public function down(): void
     {
-        Schema::dropIfExists('training_assesments');
+        Schema::dropIfExists('training_assessments');
     }
 };

@@ -185,11 +185,28 @@ class Module extends Component
             'file' => 'required|mimes:xlsx,xls',
         ]);
 
-        Excel::import(new TrainingModuleImport, $this->file);
+        try {
+            Excel::import(new TrainingModuleImport, $this->file);
 
-        $this->success('Berhasil menambah data', position: 'toast-top toast-center');
-        $this->file = null;
+            $this->success('Berhasil menambah data', position: 'toast-top toast-center');
+        } catch (\Maatwebsite\Excel\Validators\ValidationException $e) {
+            $failures = collect($e->failures());
+            $errors = $failures->map(function ($f) {
+                return "Baris {$f->row()}: " . implode(', ', $f->errors());
+            });
+
+            if ($errors->count() === 1) {
+                $this->error($errors->first(), position: 'toast-top toast-center');
+            } else {
+                $list = $errors->map(fn($err) => "<li>{$err}</li>")->implode('');
+                $this->error("<ul class='list-disc pl-5'>{$list}</ul>", position: 'toast-top toast-center', timeout: 5000);
+            }
+        } finally {
+            $this->file = null;
+        }
     }
+
+
 
     public function render()
     {
