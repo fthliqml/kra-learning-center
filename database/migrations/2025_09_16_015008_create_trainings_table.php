@@ -15,7 +15,7 @@ return new class extends Migration {
 
             // Core Fields
             $table->string('name');
-            $table->enum('type', ['IN', 'OUT']);
+            $table->enum('type', ['IN', 'OUT', 'K-LEARN']);
             $table->date('start_date');
             $table->date('end_date')->nullable();
 

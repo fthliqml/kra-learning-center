@@ -27,8 +27,6 @@ class TrainingSession extends Model
     ];
 
     protected $casts = [
-        'start_time' => 'datetime:H:i',
-        'end_time' => 'datetime:H:i',
         'day_number' => 'integer',
         'date' => 'date',
     ];
