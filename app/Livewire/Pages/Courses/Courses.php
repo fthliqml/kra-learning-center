@@ -6,6 +6,7 @@ use App\Models\Course;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\Auth;
 
 class Courses extends Component
 {
@@ -13,7 +14,9 @@ class Courses extends Component
 
     // Filters/search bound from the view
     public string $search = '';
-    public ?string $filter = null; // group_comp value
+    public ?string $filter = null;
+    public int $perPage = 12;
+    public bool $demoMode = false; // hanya untuk keperluan demo
 
     // Options for the filter dropdown
     public $groupOptions = [
@@ -33,22 +36,62 @@ class Courses extends Component
         }
     }
 
+    // hanya untuk keperluan demo
+    public function mount(): void
+    {
+        // Enable demo mode with /courses?demo=1, default ON in local environment for convenience
+        $this->demoMode = request()->has('demo')
+            ? request()->boolean('demo')
+            : app()->environment('local');
+    }
+
     #[Computed]
     public function courses()
     {
+        // Simple per-request cache to avoid duplicate queries (courses() + resultsText())
+        static $cached;
+        if ($cached) {
+            return $cached;
+        }
+        $userId = Auth::id();
+
         $query = Course::query()
-            ->with('training')
-            ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
-            ->when($this->filter, fn($q) => $q->where('group_comp', $this->filter))
+            ->with([
+                'training',
+                // Load only the current user's assignment record (if any)
+                'userCourses' => function ($q) use ($userId) {
+                    if ($userId) {
+                        $q->where('user_id', $userId)->select(['id', 'user_id', 'course_id', 'current_step', 'status']);
+                    } else {
+                        $q->whereRaw('1 = 0');
+                    }
+                },
+            ])
+            // Provide counts for UI metadata
+            ->withCount(['learningModules as learning_modules_count', 'users'])
+            ->when($this->search, function ($q) {
+                $term = trim($this->search);
+                if ($term !== '') {
+                    $q->where('title', 'like', "%{$term}%");
+                }
+            })
+            // Filter by related training group_comp
+            ->when($this->filter, function ($q) {
+                $value = trim((string) $this->filter);
+                if ($value !== '') {
+                    $q->whereHas('training', fn($t) => $t->where('group_comp', $value));
+                }
+            })
             ->orderBy('created_at', 'desc');
 
-        return $query->paginate(12)->onEachSide(1);
+        $cached = $query->paginate($this->perPage)->onEachSide(1);
+        return $cached;
     }
 
     #[Computed]
     public function resultsText(): string
     {
-        $courses = $this->courses();
+        $courses = $this->courses(); // will hit cache after first call
 
         // Support both paginator and collection just in case of future changes
         $hasPaginator = is_object($courses) && method_exists($courses, 'total');
@@ -64,6 +107,7 @@ class Courses extends Component
         return view('pages.courses.courses', [
             'courses' => $this->courses(),
             'resultsText' => $this->resultsText(),
+            'demoMode' => $this->demoMode, // hanya untuk keperluan demo
         ]);
     }
 }

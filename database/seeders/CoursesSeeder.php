@@ -3,7 +3,10 @@
 namespace Database\Seeders;
 
 use App\Models\Course;
+use App\Models\LearningModule;
 use App\Models\Training;
+use App\Models\User;
+use App\Models\UserCourse;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
@@ -23,6 +26,15 @@ class CoursesSeeder extends Seeder
                 'start_date' => Carbon::now()->toDateString(),
                 'end_date' => Carbon::now()->addDays(2)->toDateString(),
                 'status' => 'in_progress',
+            ]);
+        }
+
+        // Ambil satu user untuk assignment progress; buat jika belum ada
+        $user = User::query()->first();
+        if (!$user) {
+            $user = User::factory()->create([
+                'name' => 'Sample User',
+                'email' => 'sample.user@example.com',
             ]);
         }
 
@@ -141,8 +153,45 @@ class CoursesSeeder extends Seeder
             ],
         ];
 
-        foreach ($data as $item) {
-            Course::create($item);
+        foreach (array_values($data) as $index => $item) {
+            $course = Course::create($item);
+
+            // Pastikan course punya beberapa module untuk perhitungan progress
+            $existing = $course->learningModules()->count();
+            $targetModules = max($existing, random_int(4, 8));
+            if ($existing < $targetModules) {
+                for ($i = $existing + 1; $i <= $targetModules; $i++) {
+                    LearningModule::create([
+                        'course_id' => $course->id,
+                        'title' => "Module {$i} of {$course->title}",
+                        'description' => 'Auto-seeded module for demo progress.',
+                        'content_type' => 'video',
+                        'url' => '#',
+                        'is_completed' => false,
+                    ]);
+                }
+            }
+
+            // Hitung progress & buat assignment untuk user
+            $total = max(1, $course->learningModules()->count());
+            if ($index === 0) {
+                $currentStep = $total; // 100%
+                $status = 'completed';
+            } else {
+                $currentStep = random_int(1, max(1, $total - 1));
+                $status = 'in_progress';
+            }
+
+            UserCourse::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'course_id' => $course->id,
+                ],
+                [
+                    'current_step' => $currentStep,
+                    'status' => $status,
+                ]
+            );
         }
     }
 }
