@@ -5,6 +5,8 @@ use App\Http\Controllers\Training\TrainingModuleController;
 use App\Livewire\Pages\Courses\Courses;
 use App\Livewire\Pages\Courses\CoursesManagement;
 use App\Livewire\Pages\Courses\EditCourse;
+use App\Livewire\Pages\Courses\Overview;
+use App\Models\Course;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\Schedule;
@@ -27,5 +29,6 @@ Route::get('/training/schedule', Schedule::class)->name('training-schedule.index
 Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
 
 Route::get('/courses', Courses::class)->name('courses.index');
+Route::get('/courses/{course}/overview', Overview::class)->name('courses-overview.show');
 Route::get('/courses/management', CoursesManagement::class)->name('courses-management.index');
 Route::get('/courses/{id}/edit', EditCourse::class)->name('edit-course.index');

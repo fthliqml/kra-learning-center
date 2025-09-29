@@ -68,7 +68,8 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
             <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 lg:gap-6">
                 @foreach ($courses as $course)
                     <div wire:key="course-{{ $course->id }}"
-                        class="group bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden hover:shadow-md hover:border-primary/20 focus-within:ring-2 ring-primary/20 transition">
+                        x-on:click="if(!$event.target.closest('[data-card-action]')) { (window.Livewire && Livewire.navigate) ? Livewire.navigate('{{ route('courses-overview.show', $course) }}') : window.location.assign('{{ route('courses-overview.show', $course) }}'); }"
+                        class="group cursor-pointer bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden hover:shadow-md hover:border-primary/20 focus-within:ring-2 ring-primary/20 transition">
                         <div class="px-3 sm:px-4 pt-3 sm:pt-4">
                             <div class="w-full aspect-[16/9] bg-gray-100 overflow-hidden rounded-lg">
                                 @if (!empty($course->thumbnail_url))
@@ -89,21 +90,19 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                             </div>
                             <div class="font-semibold text-gray-900 line-clamp-2 min-h-[2.75rem]">{{ $course->title }}
                             </div>
-                            <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-gray-600">
-                                <span class="inline-flex items-center gap-1">
-                                    <x-icon name="o-book-open" class="size-4 text-gray-500" />
-                                    <span>{{ $course->learning_modules_count ?? 0 }} modules</span>
+                            <div class="mt-2 grid grid-cols-3 gap-2 text-[11px] sm:text-[12px] text-gray-600">
+                                <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
+                                    <x-icon name="o-book-open" class="size-4 text-gray-500 shrink-0" />
+                                    <span class="truncate">{{ $course->learning_modules_count ?? 0 }} modules</span>
                                 </span>
-                                <span class="inline-flex items-center gap-1">
-                                    <x-icon name="o-user-group" class="size-4 text-gray-500" />
-                                    <span>{{ $course->users_count ?? 0 }} learners</span>
+                                <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
+                                    <x-icon name="o-user-group" class="size-4 text-gray-500 shrink-0" />
+                                    <span class="truncate">{{ $course->users_count ?? 0 }} learners</span>
                                 </span>
-                                @if ($course->training?->duration)
-                                    <span class="inline-flex items-center gap-1">
-                                        <x-icon name="o-clock" class="size-4 text-gray-500" />
-                                        <span>{{ $course->training->duration }} days</span>
-                                    </span>
-                                @endif
+                                <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
+                                    <x-icon name="o-clock" class="size-4 text-gray-500 shrink-0" />
+                                    <span class="truncate">{{ $course->training->duration }} days</span>
+                                </span>
                             </div>
                             @php
                                 $assignment = $course->userCourses->first() ?? null;
@@ -136,11 +135,12 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                                     </div>
                                 </div>
                             @endif
-                            <button type="button"
-                                class="mt-3 w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-primary/90 hover:text-primary border border-primary/20 rounded-full px-3 py-2">
+                            <a wire:navigate href="{{ route('courses-overview.show', $course) }}" data-card-action
+                                class="mt-3 w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-primary/90 hover:text-primary border border-primary/20 rounded-full px-3 py-2"
+                                aria-label="Go to course overview" @click.stop>
                                 <span>Course Overview</span>
                                 <span aria-hidden="true">→</span>
-                            </button>
+                            </a>
                         </div>
                     </div>
                 @endforeach
@@ -169,7 +169,8 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
             <div class="mt-4 grid grid-cols-1 gap-4">
                 @foreach ($courses as $course)
                     <div wire:key="course-list-{{ $course->id }}"
-                        class="group rounded-xl border border-gray-200/80 shadow-sm overflow-hidden hover:shadow-md transition bg-white">
+                        x-on:click="if(!$event.target.closest('[data-card-action]')) { (window.Livewire && Livewire.navigate) ? Livewire.navigate('{{ route('courses-overview.show', $course) }}') : window.location.assign('{{ route('courses-overview.show', $course) }}'); }"
+                        class="group cursor-pointer rounded-xl border border-gray-200/80 shadow-sm overflow-hidden hover:shadow-md transition bg-white">
                         @php
                             $assignment = $course->userCourses->first() ?? null;
                             $steps = max(1, (int) ($course->learning_modules_count ?? 0));
@@ -245,12 +246,14 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                                     </div>
 
                                     {{-- Mobile CTA --}}
-                                    <div class="mt-3 sm:hidden">
-                                        <button type="button"
-                                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-primary/90 hover:text-primary border border-primary/20 rounded-full px-3 py-2">
+                                    <div class="mt-5 sm:hidden">
+                                        <a wire:navigate href="{{ route('courses-overview.show', $course) }}"
+                                            data-card-action
+                                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-primary/90 hover:text-primary border border-primary/20 rounded-full px-3 py-2"
+                                            aria-label="Go to course overview" @click.stop>
                                             <span>Course Overview</span>
                                             <span aria-hidden="true">→</span>
-                                        </button>
+                                        </a>
                                     </div>
                                 </div>
                             </div>
@@ -258,11 +261,12 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                             {{-- Action (desktop) --}}
                             <div
                                 class="hidden sm:flex items-end justify-end self-stretch min-w-40 pr-1 sm:pr-2 md:pr-3">
-                                <button type="button"
-                                    class="inline-flex items-center gap-2 text-sm font-medium text-primary/90 hover:text-primary px-3 py-2 rounded-full border border-primary/20">
+                                <a wire:navigate href="{{ route('courses-overview.show', $course) }}" data-card-action
+                                    class="inline-flex items-center gap-2 text-sm font-medium text-primary/90 hover:text-primary px-3 py-2 rounded-full border border-primary/20"
+                                    aria-label="Go to course overview" @click.stop>
                                     <span>Course Overview</span>
                                     <span aria-hidden="true">→</span>
-                                </button>
+                                </a>
                             </div>
                         </div>
                     </div>
@@ -286,6 +290,6 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
     </div>
 
     @if ($hasItems && $isPaginator)
-        <div class="mt-6">{{ $courses->links() }}</div>
+        <div class="mt-10">{{ $courses->links() }}</div>
     @endif
 </div>
