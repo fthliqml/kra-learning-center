@@ -13,6 +13,16 @@ class CoursesManagement extends Component
     use Toast, WithPagination;
 
     public string $search = '';
+    public ?string $filter = null; // filter by related training group_comp
+
+    public $groupOptions = [
+        ['value' => 'BMC', 'label' => 'BMC'],
+        ['value' => 'BC', 'label' => 'BC'],
+        ['value' => 'MMP', 'label' => 'MMP'],
+        ['value' => 'LC', 'label' => 'LC'],
+        ['value' => 'MDP', 'label' => 'MDP'],
+        ['value' => 'TOC', 'label' => 'TOC'],
+    ];
 
     public function updated($property): void
     {
@@ -24,6 +34,7 @@ class CoursesManagement extends Component
     public function headers(): array
     {
         return [
+            ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
             ['key' => 'title', 'label' => 'Title', 'class' => 'w-[300px]'],
             ['key' => 'group_comp', 'label' => 'Group Comp', 'class' => '!text-center'],
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
@@ -35,9 +46,20 @@ class CoursesManagement extends Component
     {
         $query = Course::with('training')
             ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
+            ->when($this->filter, function ($q) {
+                $q->whereHas('training', function ($t) {
+                    $t->where('group_comp', $this->filter);
+                });
+            })
             ->orderBy('created_at', 'desc');
 
-        return $query->paginate(10)->onEachSide(1);
+        $paginator = $query->paginate(10)->onEachSide(1);
+
+        return $paginator->through(function ($course, $index) use ($paginator) {
+            $start = $paginator->firstItem() ?? 0;
+            $course->no = $start + $index;
+            return $course;
+        });
     }
 
     #[On('deleteCourse')]
