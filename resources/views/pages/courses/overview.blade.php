@@ -108,7 +108,7 @@
                 </div>
 
                 {{-- Course Info --}}
-                <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-sm">
+                {{-- <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-sm">
                     <h3 class="text-sm font-semibold mb-3">Course Info</h3>
                     <ul class="space-y-2">
                         <li class="flex justify-between"><span class="text-gray-500">Group</span><span
@@ -120,7 +120,7 @@
                         <li class="flex justify-between"><span class="text-gray-500">Chapter</span><span
                                 class="font-medium">{{ $modulesCount }}</span></li>
                     </ul>
-                </div>
+                </div> --}}
             </aside>
         </div>
     </div>

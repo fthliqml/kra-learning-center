@@ -16,7 +16,6 @@ class Courses extends Component
     public string $search = '';
     public ?string $filter = null;
     public int $perPage = 12;
-    public bool $demoMode = false; // hanya untuk keperluan demo
 
     // Options for the filter dropdown
     public $groupOptions = [
@@ -34,15 +33,6 @@ class Courses extends Component
         if (!is_array($property) && $property !== '') {
             $this->resetPage();
         }
-    }
-
-    // hanya untuk keperluan demo
-    public function mount(): void
-    {
-        // Enable demo mode with /courses?demo=1, default ON in local environment for convenience
-        $this->demoMode = request()->has('demo')
-            ? request()->boolean('demo')
-            : app()->environment('local');
     }
 
     #[Computed]
@@ -69,6 +59,10 @@ class Courses extends Component
             ])
             // Provide counts for UI metadata
             ->withCount(['learningModules as learning_modules_count', 'users'])
+            // Only courses assigned to the logged-in user
+            ->when($userId, function ($q) use ($userId) {
+                $q->whereHas('userCourses', fn($uc) => $uc->where('user_id', $userId));
+            })
             ->when($this->search, function ($q) {
                 $term = trim($this->search);
                 if ($term !== '') {
@@ -91,9 +85,8 @@ class Courses extends Component
     #[Computed]
     public function resultsText(): string
     {
-        $courses = $this->courses(); // will hit cache after first call
+        $courses = $this->courses();
 
-        // Support both paginator and collection just in case of future changes
         $hasPaginator = is_object($courses) && method_exists($courses, 'total');
         $total = $hasPaginator ? $courses->total() : (is_countable($courses) ? count($courses) : 0);
         $from = $hasPaginator ? ($total ? ($courses->firstItem() ?? 0) : 0) : ($total ? 1 : 0);
@@ -107,7 +100,6 @@ class Courses extends Component
         return view('pages.courses.courses', [
             'courses' => $this->courses(),
             'resultsText' => $this->resultsText(),
-            'demoMode' => $this->demoMode, // hanya untuk keperluan demo
         ]);
     }
 }

@@ -50,4 +50,16 @@ class Course extends Model
     {
         return $this->belongsToMany(User::class, 'user_courses', 'course_id', 'user_id');
     }
+
+    /**
+     * Scope: only courses assigned to a given user id.
+     */
+    public function scopeAssignedToUser($query, $userId)
+    {
+        if (!$userId) {
+            // If no user, return empty result intentionally
+            return $query->whereRaw('1 = 0');
+        }
+        return $query->whereHas('userCourses', fn($q) => $q->where('user_id', $userId));
+    }
 }

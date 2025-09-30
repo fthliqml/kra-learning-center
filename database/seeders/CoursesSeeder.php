@@ -17,26 +17,32 @@ class CoursesSeeder extends Seeder
      */
     public function run(): void
     {
-        // Pastikan ada training dengan ID 1; jika belum ada, buat satu.
-        $training = Training::first();
-        if (!$training) {
-            $training = Training::create([
-                'name' => 'Onboarding Training',
+        $training = Training::query()->firstOrCreate(
+            ['name' => 'Onboarding Training'],
+            [
                 'type' => 'IN',
+                'group_comp' => 'BMC',
                 'start_date' => Carbon::now()->toDateString(),
                 'end_date' => Carbon::now()->addDays(2)->toDateString(),
                 'status' => 'in_progress',
-            ]);
-        }
+            ]
+        );
 
-        // Ambil satu user untuk assignment progress; buat jika belum ada
-        $user = User::query()->first();
-        if (!$user) {
-            $user = User::factory()->create([
-                'name' => 'Sample User',
-                'email' => 'sample.user@example.com',
-            ]);
+        // Pastikan ada minimal beberapa employee.
+        if (User::where('role', 'employee')->count() === 0) {
+            // Buat 5 sample employees
+            for ($i = 1; $i <= 5; $i++) {
+                User::query()->create([
+                    'name' => "Employee Seed {$i}",
+                    'email' => "employee{$i}@example.com",
+                    'password' => 'password',
+                    'section' => 'General',
+                    'NRP' => 100100 + $i,
+                    'role' => 'employee',
+                ]);
+            }
         }
+        $employees = User::where('role', 'employee')->get();
 
         $data = [
             [
@@ -153,45 +159,81 @@ class CoursesSeeder extends Seeder
             ],
         ];
 
+        $createdCourses = [];
         foreach (array_values($data) as $index => $item) {
-            $course = Course::create($item);
+            // 3. Course idempotent: berdasarkan title + training.
+            $course = Course::query()->firstOrCreate(
+                ['training_id' => $item['training_id'], 'title' => $item['title']],
+                [
+                    'description' => $item['description'],
+                    'thumbnail_url' => $item['thumbnail_url'],
+                    'status' => $item['status'],
+                ]
+            );
 
-            // Pastikan course punya beberapa module untuk perhitungan progress
             $existing = $course->learningModules()->count();
-            $targetModules = max($existing, random_int(4, 8));
+            $targetModules = max($existing, 6);
             if ($existing < $targetModules) {
                 for ($i = $existing + 1; $i <= $targetModules; $i++) {
+                    $type = $i % 2 === 0 ? 'pdf' : 'video';
                     LearningModule::create([
                         'course_id' => $course->id,
-                        'title' => "Module {$i} of {$course->title}",
-                        'description' => 'Auto-seeded module for demo progress.',
-                        'content_type' => 'video',
-                        'url' => '#',
+                        'title' => "Module {$i} - {$course->title}",
+                        'description' => 'Seeded learning module for demo & progress.',
+                        'content_type' => $type,
+                        'url' => $type === 'video' ? 'https://example.com/video.mp4' : 'https://example.com/doc.pdf',
                         'is_completed' => false,
                     ]);
                 }
             }
 
-            // Hitung progress & buat assignment untuk user
-            $total = max(1, $course->learningModules()->count());
-            if ($index === 0) {
-                $currentStep = $total; // 100%
-                $status = 'completed';
-            } else {
-                $currentStep = random_int(1, max(1, $total - 1));
-                $status = 'in_progress';
-            }
+            $createdCourses[] = $course;
+        }
 
-            UserCourse::updateOrCreate(
-                [
-                    'user_id' => $user->id,
+        // ===== Assignment fase 2: per-employee pilih subset course =====
+        $totalCourses = count($createdCourses);
+        if ($totalCourses === 0 || $employees->count() === 0) {
+            return; // nothing to assign
+        }
+
+        foreach ($employees as $empIndex => $employee) {
+            // Tentukan target jumlah course per employee (misal 50-60% dari total)
+            $min = (int) max(1, floor($totalCourses * 0.5));
+            $max = (int) max($min, ceil($totalCourses * 0.6));
+            // Gunakan hash deterministik agar konsisten antar seed ulang
+            $seed = crc32('emp-' . $employee->id . '-courses');
+            $range = $max - $min;
+            $countForEmployee = $min + ($range > 0 ? ($seed % ($range + 1)) : 0);
+
+            // Shuffle deterministik: sort by hash value
+            $shuffled = collect($createdCourses)->sortBy(function ($c) use ($employee) {
+                return crc32($employee->id . '-' . $c->id);
+            })->values();
+
+            $selected = $shuffled->take($countForEmployee);
+
+            foreach ($selected as $course) {
+                $total = max(1, $course->learningModules()->count());
+                $progressSeed = crc32('p-' . $employee->id . '-' . $course->id);
+                $ratio = (($progressSeed % 75) + 10) / 100; // 10% - 84%
+                $currentStep = (int) max(1, floor($total * $ratio));
+                $status = 'in_progress';
+                // 1 dari 12 kemungkinan jadi completed jika ratio > 70%
+                if ($currentStep >= $total - 1 && ($progressSeed % 12) === 0) {
+                    $currentStep = $total;
+                    $status = 'completed';
+                } elseif ($currentStep >= $total) {
+                    $currentStep = $total - 1;
+                }
+
+                UserCourse::updateOrCreate([
+                    'user_id' => $employee->id,
                     'course_id' => $course->id,
-                ],
-                [
+                ], [
                     'current_step' => $currentStep,
                     'status' => $status,
-                ]
-            );
+                ]);
+            }
         }
     }
 }

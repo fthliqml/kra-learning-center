@@ -90,10 +90,11 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                             </div>
                             <div class="font-semibold text-gray-900 line-clamp-2 min-h-[2.75rem]">{{ $course->title }}
                             </div>
-                            <div class="mt-2 grid grid-cols-3 gap-2 text-[11px] sm:text-[12px] text-gray-600">
+                            <div
+                                class="mt-2 grid text-[11px] sm:text-[12px] text-gray-600 [grid-template-columns:1.1fr_1fr_1fr]">
                                 <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
                                     <x-icon name="o-book-open" class="size-4 text-gray-500 shrink-0" />
-                                    <span class="truncate">{{ $course->learning_modules_count ?? 0 }} modules</span>
+                                    <span class="truncate">{{ $course->learning_modules_count ?? 0 }} chapters</span>
                                 </span>
                                 <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
                                     <x-icon name="o-user-group" class="size-4 text-gray-500 shrink-0" />
@@ -109,17 +110,8 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                                 $steps = max(1, (int) ($course->learning_modules_count ?? 0));
                                 $current = (int) ($assignment->current_step ?? 0);
                                 $progress = $steps > 0 ? min(100, max(0, (int) floor(($current / $steps) * 100))) : 0;
-
-                                // hanya untuk keperluan demo
-                                $showDemo = empty($assignment) && !empty($demoMode);
-                                if ($showDemo) {
-                                    // Synthetic progress for demo mode (variasi berdasarkan ID)
-                                    $progress = min(95, max(10, (int) (((($course->id ?? 1) * 37) % 86) + 10)));
-                                }
-
                             @endphp
-                            @if ($assignment || $showDemo)
-                                <!-- $showDemo hanya untuk keperluan demo -->
+                            @if ($assignment)
                                 <div class="mt-3">
                                     <div class="h-2 w-full rounded-full bg-gray-200/80 overflow-hidden"
                                         role="progressbar" aria-label="Course progress" aria-valuemin="0"
@@ -129,8 +121,7 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                                             style="width: {{ $progress }}%"></div>
                                     </div>
                                     <div class="mt-1 text-xs text-gray-600 flex justify-between">
-                                        <!-- $showDemo hanya untuk keperluan demo -->
-                                        <span>{{ $showDemo ? 'Demo progress' : 'Progress' }}</span>
+                                        <span>{{ $progress !== 100 ? 'In Progress' : 'Completed' }}</span>
                                         <span>{{ $progress }}%</span>
                                     </div>
                                 </div>
@@ -176,11 +167,7 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                             $steps = max(1, (int) ($course->learning_modules_count ?? 0));
                             $current = (int) ($assignment->current_step ?? 0);
                             $progress = $steps > 0 ? min(100, max(0, (int) floor(($current / $steps) * 100))) : 0;
-                            $showDemo = empty($assignment) && !empty($demoMode);
-                            if ($showDemo) {
-                                $progress = min(95, max(10, (int) (((($course->id ?? 1) * 37) % 86) + 10)));
-                            }
-                            $hasProgress = $assignment || $showDemo;
+                            $hasProgress = $assignment && $assignment->status === 'in_progress';
                         @endphp
                         <div class="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 p-3 sm:p-4">
                             {{-- Thumbnail --}}
@@ -212,7 +199,7 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                                             class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-gray-600">
                                             <span class="inline-flex items-center gap-1">
                                                 <x-icon name="o-book-open" class="size-4 text-gray-500" />
-                                                <span>{{ $course->learning_modules_count ?? 0 }} modules</span>
+                                                <span>{{ $course->learning_modules_count ?? 0 }} chapters</span>
                                             </span>
                                             <span class="inline-flex items-center gap-1">
                                                 <x-icon name="o-user-group" class="size-4 text-gray-500" />
@@ -226,8 +213,7 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                                             @endif
                                         </div>
 
-                                        @if ($assignment || $showDemo)
-                                            {{-- $showDemo hanya untuk keperluan demo --}}
+                                        @if ($assignment)
                                             <div class="mt-3">
                                                 <div class="h-2 w-full rounded-full bg-gray-200/80 overflow-hidden"
                                                     role="progressbar" aria-label="Course progress" aria-valuemin="0"
@@ -237,8 +223,7 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                                                         style="width: {{ $progress }}%"></div>
                                                 </div>
                                                 <div class="mt-1 text-xs text-gray-600 flex justify-between">
-                                                    {{-- $showDemo hanya untuk keperluan demo --}}
-                                                    <span>{{ $showDemo ? 'Demo progress' : 'Progress' }}</span>
+                                                    <span>{{ $progress !== 100 ? 'In Progress' : 'Completed' }}</span>
                                                     <span>{{ $progress }}%</span>
                                                 </div>
                                             </div>
