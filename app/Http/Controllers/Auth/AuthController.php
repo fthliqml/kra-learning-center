@@ -43,12 +43,14 @@ class AuthController extends Controller
         ])->onlyInput('email');
     }
 
-    // Optional: add logout for future use (no route wired yet)
-    // public function logout(Request $request)
-    // {
-    //     Auth::logout();
-    //     $request->session()->invalidate();
-    //     $request->session()->regenerateToken();
-    //     return redirect()->route('login');
-    // }
+    /**
+     * Log the user out and invalidate session.
+     */
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+        return redirect()->route('login');
+    }
 }

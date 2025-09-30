@@ -160,6 +160,18 @@
                 @endforeach
 
             </nav>
+            @auth
+                <div class="mt-4 pt-4 border-t border-white/20" x-show="isOpen" x-transition>
+                    <form method="POST" action="{{ route('logout') }}" class="w-full">
+                        @csrf
+                        <button type="submit"
+                            class="group flex items-center gap-3 w-full px-3 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white text-sm transition-all">
+                            <x-icon name="o-arrow-left-on-rectangle" class="w-[20px] h-[20px]" />
+                            <span x-show="isOpen" x-transition>Logout</span>
+                        </button>
+                    </form>
+                </div>
+            @endauth
         </div>
     </div>
 
