@@ -106,21 +106,6 @@
                         Start Course
                     </button>
                 </div>
-
-                {{-- Course Info --}}
-                {{-- <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5 text-sm">
-                    <h3 class="text-sm font-semibold mb-3">Course Info</h3>
-                    <ul class="space-y-2">
-                        <li class="flex justify-between"><span class="text-gray-500">Group</span><span
-                                class="font-medium">{{ $course->training->group_comp }}</span></li>
-                        <li class="flex justify-between"><span class="text-gray-500">Duration</span><span
-                                class="font-medium">{{ $durationDays }} days</span></li>
-                        <li class="flex justify-between"><span class="text-gray-500">Learners</span><span
-                                class="font-medium">{{ $assignUsers }}</span></li>
-                        <li class="flex justify-between"><span class="text-gray-500">Chapter</span><span
-                                class="font-medium">{{ $modulesCount }}</span></li>
-                    </ul>
-                </div> --}}
             </aside>
         </div>
     </div>
