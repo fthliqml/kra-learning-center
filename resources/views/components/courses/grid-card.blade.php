@@ -21,7 +21,7 @@
         </div>
         <div class="font-semibold text-gray-900 line-clamp-2 min-h-[2.75rem]">{{ $course->title }}
         </div>
-        <div class="mt-2 grid text-[11px] sm:text-[12px] text-gray-600 [grid-template-columns:1.1fr_1fr_1fr]">
+        <div class="mt-2 grid text-[11px] sm:text-[12px] text-gray-600 [grid-template-columns:1.2fr_1.15fr_1fr]">
             <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
                 <x-icon name="o-book-open" class="size-4 text-gray-500 shrink-0" />
                 <span class="truncate">{{ $course->learning_modules_count ?? 0 }} chapters</span>
