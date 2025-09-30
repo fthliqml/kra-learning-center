@@ -73,6 +73,30 @@ class LearningModules extends Component
                 ],
             ];
         }
+
+        // Normalize existing pdf resources from ['type'=>'pdf','file'=>...] to ['type'=>'pdf','url'=>''] if needed
+        foreach ($this->topics as &$topic) {
+            if (!isset($topic['sections']) || !is_array($topic['sections']))
+                continue;
+            foreach ($topic['sections'] as &$section) {
+                if (!isset($section['resources']) || !is_array($section['resources']))
+                    continue;
+                foreach ($section['resources'] as &$res) {
+                    if (($res['type'] ?? null) === 'pdf') {
+                        // If it has 'file' key but no 'url', convert placeholder to empty url
+                        if (isset($res['file']) && !isset($res['url'])) {
+                            $res['url'] = '';
+                        }
+                        // Remove file key to unify shape
+                        if (isset($res['file']))
+                            unset($res['file']);
+                    }
+                }
+                unset($res);
+            }
+            unset($section);
+        }
+        unset($topic);
     }
 
     private function makeQuestion(string $type = 'multiple'): array
@@ -137,7 +161,7 @@ class LearningModules extends Component
         if (!isset($this->topics[$topicIndex]['sections'][$sectionIndex]))
             return;
         if ($type === 'pdf') {
-            $this->topics[$topicIndex]['sections'][$sectionIndex]['resources'][] = ['type' => 'pdf', 'file' => null];
+            $this->topics[$topicIndex]['sections'][$sectionIndex]['resources'][] = ['type' => 'pdf', 'file' => null, 'url' => ''];
         } elseif ($type === 'youtube') {
             $this->topics[$topicIndex]['sections'][$sectionIndex]['resources'][] = ['type' => 'youtube', 'url' => ''];
         }
@@ -206,10 +230,28 @@ class LearningModules extends Component
                 $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'] = [''];
             }
         }
+
+        // Handle PDF upload -> store -> set public URL
+        if (!is_array($prop) && preg_match('/^topics\.(\d+)\.sections\.(\d+)\.resources\.(\d+)\.file$/', $prop, $m2)) {
+            $t = (int) $m2[1];
+            $s = (int) $m2[2];
+            $r = (int) $m2[3];
+            $res =& $this->topics[$t]['sections'][$s]['resources'][$r];
+            if (($res['type'] ?? null) === 'pdf' && isset($res['file']) && $res['file']) {
+                try {
+                    $storedPath = $res['file']->store('modules/pdf', 'public');
+                    $res['url'] = storage_path('app/public/' . $storedPath) ? asset('storage/' . $storedPath) : '';
+                } catch (\Throwable $e) {
+                    // Reset on failure
+                    $res['url'] = '';
+                }
+            }
+        }
     }
 
     public function goNext(): void
     {
+        dump($this->topics);
         $this->dispatch('setTab', 'post-test');
     }
     public function goBack(): void

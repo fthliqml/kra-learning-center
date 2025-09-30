@@ -9,7 +9,6 @@ class PostTestQuestions extends Component
 {
     public array $questions = [];
 
-    // We will invoke reorderByIds() directly from JS using $wire; no listeners required.
     protected $listeners = [];
 
     public function mount(): void

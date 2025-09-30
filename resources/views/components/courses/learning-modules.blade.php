@@ -68,9 +68,17 @@
                                                         <input type="file" accept="application/pdf"
                                                             wire:model="topics.{{ $ti }}.sections.{{ $si }}.resources.{{ $ri }}.file"
                                                             class="file-input file-input-bordered file-input-sm w-full max-w-md" />
-                                                        @if (isset($res['file']) && $res['file'])
-                                                            <p class="text-[11px] text-success">File ready:
-                                                                {{ $res['file']->getClientOriginalName() }}</p>
+                                                        @php($pdfUrl = $res['url'] ?? '')
+                                                        @if ($pdfUrl)
+                                                            <a href="{{ $pdfUrl }}" target="_blank"
+                                                                class="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline">
+                                                                <x-icon name="o-arrow-top-right-on-square"
+                                                                    class="size-3" />
+                                                                <span>Open PDF</span>
+                                                            </a>
+                                                        @else
+                                                            <p class="text-[11px] text-gray-400">No file uploaded yet.
+                                                            </p>
                                                         @endif
                                                     </div>
                                                 @elseif(($res['type'] ?? '') === 'youtube')
