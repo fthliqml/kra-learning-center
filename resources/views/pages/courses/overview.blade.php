@@ -101,10 +101,10 @@
                             <span class="w-6 text-xs font-medium text-gray-500">4.</span><span>Result</span>
                         </li>
                     </ol>
-                    <button type="button"
+                    <a type="button" href="{{ route('courses-pretest.index', $course) }}"
                         class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary">
                         Start Course
-                    </button>
+                    </a>
                 </div>
             </aside>
         </div>
