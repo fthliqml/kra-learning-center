@@ -13,8 +13,8 @@
         @forelse ($questions as $i => $q)
             <div class="border rounded-xl p-3 pr-10 bg-base-100 question-card relative" data-id="{{ $q['id'] }}"
                 wire:key="pre-q-{{ $q['id'] }}">
-                <button type="button"
-                    class="drag-handle absolute top-1/2 -translate-y-1/2 right-2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-primary z-10"
+                <button type="button" data-tip="drag"
+                    class="drag-handle tooltip absolute top-1/2 -translate-y-1/2 right-2 cursor-grab active:cursor-grabbing text-gray-400 hover:text-primary z-10"
                     title="Drag to reorder">
                     <x-icon name="o-bars-3" class="size-5" />
                 </button>
