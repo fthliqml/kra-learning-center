@@ -249,9 +249,51 @@ class LearningModules extends Component
         }
     }
 
+    /* Reordering */
+    public function reorderTopics(array $orderedIds): void
+    {
+        if (empty($orderedIds))
+            return;
+        $map = [];
+        foreach ($this->topics as $t) {
+            $map[$t['id']] = $t;
+        }
+        $new = [];
+        foreach ($orderedIds as $id) {
+            if (isset($map[$id])) {
+                $new[] = $map[$id];
+                unset($map[$id]);
+            }
+        }
+        // append leftovers (if any)
+        foreach ($map as $left)
+            $new[] = $left;
+        $this->topics = $new;
+    }
+
+    public function reorderSections(int $topicIndex, array $orderedIds): void
+    {
+        if (!isset($this->topics[$topicIndex]) || empty($orderedIds))
+            return;
+        $sections = $this->topics[$topicIndex]['sections'] ?? [];
+        $map = [];
+        foreach ($sections as $sec) {
+            $map[$sec['id']] = $sec;
+        }
+        $new = [];
+        foreach ($orderedIds as $id) {
+            if (isset($map[$id])) {
+                $new[] = $map[$id];
+                unset($map[$id]);
+            }
+        }
+        foreach ($map as $left)
+            $new[] = $left;
+        $this->topics[$topicIndex]['sections'] = $new;
+    }
+
     public function goNext(): void
     {
-        dump($this->topics);
         $this->dispatch('setTab', 'post-test');
     }
     public function goBack(): void
