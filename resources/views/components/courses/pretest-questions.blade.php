@@ -10,7 +10,7 @@
             }
         });
     })()">
-        @foreach ($questions as $i => $q)
+        @forelse ($questions as $i => $q)
             <div class="border rounded-xl p-3 pr-10 bg-base-100 question-card relative" data-id="{{ $q['id'] }}"
                 wire:key="pre-q-{{ $q['id'] }}">
                 <button type="button"
@@ -25,7 +25,7 @@
                         ['value' => 'multiple', 'label' => 'Multiple Choice'],
                         ['value' => 'essay', 'label' => 'Essay'],
                     ]" option-value="value" option-label="label" class="w-52"
-                        wire:model="questions.{{ $i }}.type" wire:click="$refresh" />
+                        wire:model="questions.{{ $i }}.type" wire:change="$refresh" />
                     <div class="flex-1 relative">
                         <x-input class="w-full pr-10 focus-within:border-0" placeholder="Write the question"
                             wire:model.defer="questions.{{ $i }}.question" />
@@ -52,7 +52,11 @@
                     </div>
                 @endif
             </div>
-        @endforeach
+        @empty
+            <div class="rounded-xl border border-dashed p-8 text-center text-sm text-gray-500 bg-white/50">
+                No questions yet. Click <span class="font-medium">Add Question</span> to create the first one.
+            </div>
+        @endforelse
     </div>
     <x-button type="button" variant="primary" outline icon="o-plus" wire:click="addQuestion"
         class="border-gray-400">Add Question</x-button>
