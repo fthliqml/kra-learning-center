@@ -28,6 +28,8 @@ class LearningModules extends Component
      *   ], ...]
      */
     public array $topics = [];
+    // Track collapsed topic IDs (UI state persist across requests)
+    public array $collapsedTopicIds = [];
 
     public function mount(): void
     {
@@ -129,9 +131,30 @@ class LearningModules extends Component
     public function removeTopic(int $index): void
     {
         if (isset($this->topics[$index])) {
+            $removedId = $this->topics[$index]['id'] ?? null;
             unset($this->topics[$index]);
             $this->topics = array_values($this->topics);
+            if ($removedId) {
+                $this->collapsedTopicIds = array_values(array_filter($this->collapsedTopicIds, fn ($id) => $id !== $removedId));
+            }
         }
+    }
+
+    /** Persist collapsed/expanded state from front-end */
+    public function setCollapsedTopic(string $topicId, bool $collapsed): void
+    {
+        if ($collapsed) {
+            if (!in_array($topicId, $this->collapsedTopicIds, true)) {
+                $this->collapsedTopicIds[] = $topicId;
+            }
+        } else {
+            $this->collapsedTopicIds = array_values(array_filter($this->collapsedTopicIds, fn ($id) => $id !== $topicId));
+        }
+    }
+
+    public function isTopicCollapsed(string $topicId): bool
+    {
+        return in_array($topicId, $this->collapsedTopicIds, true);
     }
 
     /* Sections CRUD */

@@ -20,6 +20,7 @@
         }
     })()">
         @forelse($topics as $ti => $topic)
+            @php($collapsed = in_array($topic['id'], $collapsedTopicIds ?? []))
             <div class="rounded-xl p-5 bg-base-100 shadow ring-1 ring-base-300/50 border border-gray-400 space-y-5 topic-card relative"
                 data-id="{{ $topic['id'] }}" wire:key="topic-{{ $topic['id'] }}">
                 <div class="flex items-start gap-3">
@@ -31,6 +32,11 @@
                             <x-button type="button" size="xs" icon="o-plus"
                                 wire:click="addSection({{ $ti }})" outline class="border-gray-400">Add Sub
                                 Topic</x-button>
+                            <x-button type="button" size="xs" :icon="$collapsed ? 'o-chevron-down' : 'o-chevron-up'"
+                                wire:click="setCollapsedTopic('{{ $topic['id'] }}', {{ $collapsed ? 'false' : 'true' }})"
+                                outline class="border-gray-400">
+                                {{ $collapsed ? 'Expand' : 'Collapse' }}
+                            </x-button>
                         </div>
                     </div>
                     <div class="flex items-center gap-1 self-start ml-2">
@@ -42,8 +48,7 @@
                             wire:click="removeTopic({{ $ti }})" />
                     </div>
                 </div>
-
-                @if (!empty($topic['sections']))
+                @if (!$collapsed && !empty($topic['sections']))
                     <div
                         class="divide-y divide-base-300/60 border border-base-300/40 rounded-md bg-base-200/30 overflow-hidden sections-container">
                         @foreach ($topic['sections'] as $si => $section)
@@ -106,52 +111,73 @@
                                 </div>
 
                                 @if (!empty($section['resources']))
-                                    <div class="flex flex-col gap-2">
-                                        @foreach ($section['resources'] as $ri => $res)
-                                            <div
-                                                class="flex items-start gap-3 rounded-md bg-base-100/70 px-3 py-2 shadow-sm ring-1 ring-base-300/40 hover:ring-base-300 transition">
-                                                <div class="flex-1 space-y-2">
-                                                    @if (($res['type'] ?? '') === 'pdf')
-                                                        <div class="space-y-1">
-                                                            <label class="text-xs font-medium">PDF Module</label>
-                                                            <input type="file" accept="application/pdf"
-                                                                wire:model="topics.{{ $ti }}.sections.{{ $si }}.resources.{{ $ri }}.file"
-                                                                class="file-input file-input-bordered file-input-sm w-full max-w-md" />
-                                                            @php($pdfUrl = $res['url'] ?? '')
-                                                            @if ($pdfUrl)
-                                                                <a href="{{ $pdfUrl }}" target="_blank"
-                                                                    class="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline">
-                                                                    <x-icon name="o-arrow-top-right-on-square"
-                                                                        class="size-3" />
-                                                                    <span>Open PDF</span>
-                                                                </a>
-                                                            @else
-                                                                <p class="text-[11px] text-gray-400">No file uploaded
-                                                                    yet.
-                                                                </p>
-                                                            @endif
-                                                        </div>
-                                                    @elseif(($res['type'] ?? '') === 'youtube')
-                                                        <div class="space-y-1">
-                                                            <label class="text-xs font-medium">YouTube URL</label>
-                                                            <x-input placeholder="https://www.youtube.com/watch?v=..."
-                                                                wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.resources.{{ $ri }}.url"
-                                                                wire:change="$refresh" />
-                                                            @php($yt = $res['url'] ?? '')
-                                                            @if ($yt && preg_match('/v=([\w-]+)/', $yt, $m))
-                                                                <iframe
-                                                                    class="w-full max-w-md aspect-video rounded-md ring-1 ring-base-300/50"
-                                                                    src="https://www.youtube.com/embed/{{ $m[1] }}"
-                                                                    allowfullscreen></iframe>
-                                                            @endif
+                                    @php($ytExists = collect($section['resources'])->contains(fn($r) => ($r['type'] ?? '') === 'youtube'))
+                                    @php($pdfExists = collect($section['resources'])->contains(fn($r) => ($r['type'] ?? '') === 'pdf'))
+                                    <div class="flex flex-col gap-4">
+                                        @if ($ytExists)
+                                            <div class="space-y-2">
+                                                <p
+                                                    class="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
+                                                    YouTube Videos</p>
+                                                @foreach ($section['resources'] as $ri => $res)
+                                                    @if (($res['type'] ?? '') === 'youtube')
+                                                        <div
+                                                            class="flex items-start gap-3 rounded-md bg-base-100/70 px-3 py-2 shadow-sm ring-1 ring-base-300/40 border border-base-300/40 hover:ring-base-300 transition">
+                                                            <div class="flex-1 space-y-1">
+                                                                <x-input
+                                                                    placeholder="https://www.youtube.com/watch?v=..."
+                                                                    wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.resources.{{ $ri }}.url"
+                                                                    wire:change="$refresh" />
+                                                                @php($yt = $res['url'] ?? '')
+                                                                @if ($yt && preg_match('/v=([\w-]+)/', $yt, $m))
+                                                                    <iframe
+                                                                        class="w-full max-w-md aspect-video rounded-md ring-1 ring-base-300/50"
+                                                                        src="https://www.youtube.com/embed/{{ $m[1] }}"
+                                                                        allowfullscreen></iframe>
+                                                                @endif
+                                                            </div>
+                                                            <x-button type="button" icon="o-x-mark"
+                                                                class="btn-ghost text-error" title="Delete"
+                                                                wire:click="removeSectionResource({{ $ti }}, {{ $si }}, {{ $ri }})" />
                                                         </div>
                                                     @endif
-                                                </div>
-                                                <x-button type="button" icon="o-x-mark" class="btn-ghost text-error"
-                                                    title="Delete"
-                                                    wire:click="removeSectionResource({{ $ti }}, {{ $si }}, {{ $ri }})" />
+                                                @endforeach
                                             </div>
-                                        @endforeach
+                                        @endif
+                                        @if ($pdfExists)
+                                            <div class="space-y-2">
+                                                <p
+                                                    class="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
+                                                    PDF Modules</p>
+                                                @foreach ($section['resources'] as $ri => $res)
+                                                    @if (($res['type'] ?? '') === 'pdf')
+                                                        <div
+                                                            class="flex items-start gap-3 rounded-md bg-base-100/70 px-3 py-2 shadow-sm ring-1 ring-base-300/40 border border-base-300/40 hover:ring-base-300 transition">
+                                                            <div class="flex-1 space-y-1">
+                                                                <input type="file" accept="application/pdf"
+                                                                    wire:model="topics.{{ $ti }}.sections.{{ $si }}.resources.{{ $ri }}.file"
+                                                                    class="file-input file-input-bordered file-input-sm w-full max-w-md" />
+                                                                @php($pdfUrl = $res['url'] ?? '')
+                                                                @if ($pdfUrl)
+                                                                    <a href="{{ $pdfUrl }}" target="_blank"
+                                                                        class="mt-1 inline-flex items-center gap-1 text-[11px] text-primary hover:underline">
+                                                                        <x-icon name="o-arrow-top-right-on-square"
+                                                                            class="size-3" />
+                                                                        <span>Open PDF</span>
+                                                                    </a>
+                                                                @else
+                                                                    <p class="text-[11px] text-gray-400">No file
+                                                                        uploaded yet.</p>
+                                                                @endif
+                                                            </div>
+                                                            <x-button type="button" icon="o-x-mark"
+                                                                class="btn-ghost text-error" title="Delete"
+                                                                wire:click="removeSectionResource({{ $ti }}, {{ $si }}, {{ $ri }})" />
+                                                        </div>
+                                                    @endif
+                                                @endforeach
+                                            </div>
+                                        @endif
                                     </div>
                                 @else
                                     <p class="text-[11px] italic text-base-content/50">No resources added yet.</p>
@@ -169,40 +195,49 @@
                                         </div>
                                         <div class="flex flex-col gap-2">
                                             @forelse ($section['quiz']['questions'] ?? [] as $qi => $qq)
-                                                <div
-                                                    class="relative rounded-md p-3 bg-base-100/70 ring-1 ring-base-300/40">
+                                                <div class="relative rounded-md p-3 pr-10 bg-base-100/70 ring-1 ring-base-300/40 question-card"
+                                                    wire:key="sec-q-{{ $section['id'] }}-{{ $qq['id'] }}">
                                                     <span
                                                         class="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-info/60 to-info/10"></span>
-                                                    <div class="flex items-center gap-2 mb-2">
+                                                    <div class="flex items-center gap-3 mb-3">
+                                                        <span
+                                                            class="inline-flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-info/10 text-info text-xs font-semibold">{{ $loop->iteration }}</span>
                                                         <x-select :options="[
                                                             ['value' => 'multiple', 'label' => 'Multiple'],
                                                             ['value' => 'essay', 'label' => 'Essay'],
                                                         ]" option-value="value"
                                                             option-label="label" class="w-40"
                                                             wire:model="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.type"
-                                                            wire:click="$refresh" />
-                                                        <x-input class="flex-1" placeholder="Write the question"
-                                                            wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.question" />
-                                                        <x-button type="button" icon="o-trash"
-                                                            class="btn-ghost text-error" title="Delete Question"
-                                                            wire:click="removeSectionQuizQuestion({{ $ti }}, {{ $si }}, {{ $qi }})" />
+                                                            wire:change="$refresh" />
+                                                        <div class="flex-1 relative">
+                                                            <x-input class="w-full pr-10 focus-within:border-0"
+                                                                placeholder="Write the question"
+                                                                wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.question" />
+                                                            <button type="button" title="Delete question"
+                                                                class="absolute inset-y-0 right-0 my-[3px] mr-1 flex items-center justify-center h-8 w-8 rounded-md text-red-500 border border-transparent hover:bg-red-50"
+                                                                wire:click="removeSectionQuizQuestion({{ $ti }}, {{ $si }}, {{ $qi }})">
+                                                                <x-icon name="o-trash" class="size-4" />
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                     @if (($qq['type'] ?? '') === 'multiple')
                                                         <div class="space-y-2">
                                                             @foreach ($qq['options'] ?? [] as $oi => $opt)
-                                                                <div class="flex items-center gap-2">
-                                                                    <x-input class="flex-1" placeholder="Option"
+                                                                <div class="flex items-center gap-2"
+                                                                    wire:key="sec-q-{{ $qq['id'] }}-opt-{{ $oi }}">
+                                                                    <x-input class="flex-1 pr-10 focus-within:border-0"
+                                                                        placeholder="Option"
                                                                         wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.options.{{ $oi }}" />
-                                                                    <x-button type="button" icon="o-x-mark"
+                                                                    <x-button icon="o-x-mark"
                                                                         class="btn-ghost text-error"
-                                                                        title="Remove Option"
+                                                                        title="Remove option"
                                                                         wire:click="removeSectionQuizOption({{ $ti }}, {{ $si }}, {{ $qi }}, {{ $oi }})" />
                                                                 </div>
                                                             @endforeach
-                                                            <x-button type="button" size="xs" icon="o-plus"
-                                                                outline
-                                                                wire:click="addSectionQuizOption({{ $ti }}, {{ $si }}, {{ $qi }})"
-                                                                class="border-gray-400">Add Option</x-button>
+                                                            <x-button type="button" size="xs"
+                                                                class="border-gray-400" outline icon="o-plus"
+                                                                wire:click="addSectionQuizOption({{ $ti }}, {{ $si }}, {{ $qi }})">Add
+                                                                Option</x-button>
                                                         </div>
                                                     @endif
                                                 </div>
@@ -216,7 +251,7 @@
                             </div>
                         @endforeach
                     </div>
-                @else
+                @elseif(!$collapsed)
                     <p class="text-xs italic text-base-content/50">No sub topics yet.</p>
                 @endif
             </div>
