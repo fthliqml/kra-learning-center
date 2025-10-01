@@ -2,16 +2,23 @@
     @livewire('components.confirm-dialog')
 
     {{-- Header --}}
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9 grid-cols-1 lg:grid-cols-2 items-center">
-        <h1 class="text-primary text-4xl font-bold text-center lg:text-start">K-Learn Management</h1>
-        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
-            <div class="flex items-center justify-center gap-2">
-                <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
-                    placeholder="Filter"
-                    class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
-                    icon-right="o-funnel" />
+    <div class="w-full flex flex-col lg:flex-row gap-6 lg:gap-5 mb-5 lg:mb-9 items-start lg:items-center">
+        <h1 class="text-primary text-4xl font-bold text-center lg:text-start w-fit shrink-0">K-Learn Management</h1>
+        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row flex-1">
+            <div class="flex items-center gap-2">
+                <x-button type="button" icon="o-funnel" class="btn-outline" wire:click="openFilters">Filters</x-button>
+                <div class="flex flex-wrap justify-center gap-1">
+                    @if ($filterGroup)
+                        <span class="badge badge-primary badge-soft text-xs">Group: {{ $filterGroup }}</span>
+                    @endif
+                    @if ($filterStatus)
+                        <span class="badge badge-warning badge-soft text-xs">Status: {{ ucfirst($filterStatus) }}</span>
+                    @endif
+                    @if (!$filterGroup && !$filterStatus)
+                        <span class="text-[11px] italic text-gray-400">No filters applied</span>
+                    @endif
+                </div>
             </div>
-
             <x-search-input placeholder="Search..." class="max-w-md" wire:model.live="search" />
         </div>
     </div>
@@ -63,5 +70,44 @@
             @endscope
         </x-table>
     </div>
-    {{-- No modal/edit for now --}}
+    {{-- Filter Modal --}}
+    @if ($showFilterModal)
+        <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 p-4"
+            wire:keydown.escape="closeFilters">
+            <div class="bg-base-100 w-full max-w-md rounded-lg shadow-xl ring-1 ring-base-300/50 p-6 space-y-5"
+                wire:click.outside="closeFilters">
+                <div class="flex items-start justify-between">
+                    <h2 class="text-lg font-semibold">Filters</h2>
+                    <button type="button" class="btn btn-sm btn-ghost" wire:click="closeFilters"><x-icon
+                            name="o-x-mark" class="size-5" /></button>
+                </div>
+                <div class="space-y-4">
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold tracking-wide uppercase text-base-content/60">Group
+                            Comp</label>
+                        <x-select wire:model="filterGroup" :options="$groupOptions" option-value="value" option-label="label"
+                            placeholder="All Groups" />
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-xs font-semibold tracking-wide uppercase text-base-content/60">Status</label>
+                        <x-select wire:model="filterStatus" :options="[
+                            ['value' => 'draft', 'label' => 'Draft'],
+                            ['value' => 'inactive', 'label' => 'Inactive'],
+                            ['value' => 'assigned', 'label' => 'Assigned'],
+                        ]" option-value="value" option-label="label"
+                            placeholder="All Statuses" />
+                    </div>
+                </div>
+                <div class="flex items-center justify-between pt-2">
+                    <x-button type="button" class="btn-ghost text-error" wire:click="clearFilters"
+                        icon="o-arrow-path">Reset</x-button>
+                    <div class="flex gap-2">
+                        <x-button type="button" class="btn-ghost" wire:click="closeFilters">Cancel</x-button>
+                        <x-button type="button" class="btn-primary" wire:click="applyFilters"
+                            icon="o-check">Apply</x-button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

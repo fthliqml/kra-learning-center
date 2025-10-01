@@ -14,6 +14,9 @@ class CoursesManagement extends Component
 
     public string $search = '';
     public ?string $filter = null; // filter by related training group_comp
+    public ?string $filterGroup = null; // new group filter (replacing $filter gradually)
+    public ?string $filterStatus = null; // status filter
+    public bool $showFilterModal = false;
 
     public $groupOptions = [
         ['value' => 'BMC', 'label' => 'BMC'],
@@ -31,6 +34,33 @@ class CoursesManagement extends Component
         }
     }
 
+    public function openFilters(): void
+    {
+        $this->showFilterModal = true;
+    }
+
+    public function closeFilters(): void
+    {
+        $this->showFilterModal = false;
+    }
+
+    public function clearFilters(): void
+    {
+        $this->filterGroup = null;
+        $this->filterStatus = null;
+        $this->filter = null; // legacy
+        $this->resetPage();
+        $this->showFilterModal = false;
+    }
+
+    public function applyFilters(): void
+    {
+        // Nothing special here; reactive properties already used in query
+        $this->filter = $this->filterGroup; // keep backward compatibility if blade still references $filter
+        $this->resetPage();
+        $this->showFilterModal = false;
+    }
+
     public function headers(): array
     {
         return [
@@ -46,7 +76,8 @@ class CoursesManagement extends Component
     {
         $query = Course::query()
             ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
-            ->when($this->filter, fn($q) => $q->where('group_comp', $this->filter))
+            ->when($this->filterGroup ?? $this->filter, fn($q, $group) => $q->where('group_comp', $group))
+            ->when($this->filterStatus, fn($q, $status) => $q->where('status', $status))
             ->orderBy('created_at', 'desc');
 
         $paginator = $query->paginate(10)->onEachSide(1);
