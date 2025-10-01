@@ -2,12 +2,14 @@
 
 namespace App\Livewire\Pages\EditCourse;
 
+use App\Models\Course;
 use Livewire\Component;
 use Livewire\WithFileUploads;
 
 class EditCourse extends Component
 {
     use WithFileUploads;
+    public $course;
 
     /**
      * Active tab slug.
@@ -21,8 +23,11 @@ class EditCourse extends Component
         'setTab' => 'setTab', // children can request tab change
     ];
 
-    public function mount(): void
+    public function mount(Course $course): void
     {
+        if ($course) {
+            $this->course = $course;
+        }
     }
 
     public function goNextTab(string $to): void

@@ -2,7 +2,7 @@
     <x-tabs wire:model="activeTab" class="bg-base-100 p-3 rounded-box shadow-sm">
         {{-- TAB: Course Info --}}
         <x-tab name="course-info" label="Course Info" icon="m-document-text">
-            <livewire:components.edit-course.course-info lazy />
+            <livewire:components.edit-course.course-info :courseId="$course->id" lazy />
         </x-tab>
 
         {{-- TAB: Pretest --}}

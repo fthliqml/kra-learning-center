@@ -4,17 +4,21 @@ namespace App\Livewire\Components\EditCourse;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use App\Models\Course;
+use Mary\Traits\Toast;
 
 class CourseInfo extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, Toast;
 
     public array $course = [
         'title' => '',
-        'about' => '',
+        'about' => '', // maps to description
         'group_comp' => '',
         'thumbnail_url' => '',
     ];
+
+    public ?int $courseId = null; // existing course id if editing
 
     protected string $originalHash = '';
     public bool $isDirty = false;
@@ -63,27 +67,56 @@ class CourseInfo extends Component
     public function saveDraft(): void
     {
         $this->validate();
-        // Persist minimal data (stub) - replace with actual model logic later
-        // Example: Course::updateOrCreate(['id' => $this->courseId], [...$this->course])
-        $this->dispatch('notify', type: 'success', message: 'Draft saved');
+
+        // Map local state to DB fields
+        $payload = [
+            'title' => $this->course['title'],
+            'description' => $this->course['about'],
+            'group_comp' => $this->course['group_comp'],
+            'thumbnail_url' => $this->course['thumbnail_url'] ?: '',
+            'status' => 'draft',
+        ];
+
+        $course = Course::updateOrCreate(
+            ['id' => $this->courseId],
+            $payload
+        );
+
+        if (!$this->courseId) {
+            $this->courseId = $course->id;
+        }
+
+        $this->success('Successfully updated course info!', position: 'toast-top toast-center');
+
+
         $this->snapshot();
         $this->hasEverSaved = true;
         $this->persisted = true;
     }
 
-    public function saveAndNext(): void
+    public function goManagement(): mixed
     {
-        $this->validate();
-        dump($this->course);
-        // TODO: persist full data (e.g. Course::updateOrCreate(...)) including thumbnail_url
-        $this->dispatch('setTab', 'pretest');
-        $this->snapshot();
-        $this->hasEverSaved = true;
-        $this->persisted = true;
+        // Full HTTP redirect (refresh) to courses management page
+        return redirect()->route('courses-management.index');
+        // Jika ingin SPA style (tanpa full refresh) di Livewire v3 bisa pakai:
+        // return $this->redirectRoute('courses-management.index', navigate: true);
     }
 
     public function mount(): void
     {
+        // If editing existing course, hydrate
+        if ($this->courseId) {
+            if ($model = Course::find($this->courseId)) {
+                $this->course = [
+                    'title' => $model->title,
+                    'about' => $model->description,
+                    'group_comp' => $model->group_comp,
+                    'thumbnail_url' => $model->thumbnail_url,
+                ];
+                $this->hasEverSaved = true;
+                $this->persisted = true;
+            }
+        }
         $this->snapshot();
     }
 

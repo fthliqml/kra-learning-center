@@ -16,7 +16,7 @@ return new class extends Migration {
             // Core Fields
             $table->string('title');
             $table->text('description');
-            $table->string('thumbnail_url');
+            $table->string('thumbnail_url')->nullable();
             $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
 
             // Status Fields

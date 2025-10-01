@@ -57,7 +57,7 @@
                 <div class="flex gap-2 justify-center">
                     <!-- Edit -->
                     <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary hover:opacity-85" spinner
-                        wire:navigate href="{{ route('edit-course.index', ['id' => $course->id]) }}" />
+                        wire:navigate href="{{ route('edit-course.index', ['course' => $course->id]) }}" />
                     <!-- Delete -->
                     <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
                         wire:click="$dispatch('confirm', {
@@ -70,6 +70,7 @@
             @endscope
         </x-table>
     </div>
+
     {{-- Filter Modal --}}
     @if ($showFilterModal)
         <div class="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 p-4"

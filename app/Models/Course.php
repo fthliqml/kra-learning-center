@@ -16,6 +16,7 @@ class Course extends Model
         'title',
         'description',
         'thumbnail_url',
+        'group_comp',
         'status',
     ];
 

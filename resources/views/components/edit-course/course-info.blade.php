@@ -37,11 +37,12 @@
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <x-ui.save-draft-status action="saveDraft" :dirty="$isDirty" :ever="$hasEverSaved" :persisted="$persisted" />
+        <x-ui.save-draft-status label="Save" action="saveDraft" :dirty="$isDirty" :ever="$hasEverSaved"
+            :persisted="$persisted" />
         <div class="flex gap-2">
-            <x-ui.button type="button" variant="primary" class="gap-2" onclick="history.back()">
+            <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goManagement">
                 <x-icon name="o-arrow-left" class="size-4" />
-                <span>Back</span>
+                <span>Back To Management</span>
             </x-ui.button>
             <x-ui.button type="button" variant="primary" class="gap-2" wire:click="saveAndNext">
                 <span>Next</span>
