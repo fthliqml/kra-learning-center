@@ -12,7 +12,7 @@
 
         {{-- TAB: Learning Module --}}
         <x-tab name="learning-module" label="Learning Module" icon="m-academic-cap">
-            <livewire:components.edit-course.learning-modules lazy />
+            <livewire:components.edit-course.learning-modules :courseId="$course->id" lazy />
         </x-tab>
 
         {{-- TAB: Post Test --}}

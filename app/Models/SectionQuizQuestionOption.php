@@ -9,7 +9,7 @@ class SectionQuizQuestionOption extends Model
 {
     protected $fillable = [
         'question_id',
-        'option_text',
+        'option',
         'is_correct',
         'order',
     ];

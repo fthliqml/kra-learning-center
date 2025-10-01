@@ -10,13 +10,13 @@ class SectionQuizAttemptAnswer extends Model
     use HasFactory;
 
     protected $fillable = [
-        'section_quiz_attempt_id',
-        'section_quiz_question_id',
+        'quiz_attempt_id',
+        'quiz_question_id',
         'selected_option_id',
         'answer_text',
         'is_correct',
         'points_awarded',
-        'order_index',
+        'order',
         'answered_at',
     ];
 
