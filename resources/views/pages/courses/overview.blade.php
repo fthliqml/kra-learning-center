@@ -4,7 +4,7 @@
         <nav class="text-xs mb-4 text-gray-500 flex items-center gap-1" aria-label="Breadcrumb">
             <a wire:navigate href="{{ route('courses.index') }}" class="hover:text-primary">Courses</a>
             <span>/</span>
-            <span class="text-gray-500 line-clamp-1">{{ $course->training->group_comp }}</span>
+            <span class="text-gray-500 line-clamp-1">{{ $course->group_comp }}</span>
             <span>/</span>
             <span class="text-gray-700 font-medium line-clamp-1">{{ $course->title }}</span>
         </nav>
@@ -47,7 +47,6 @@
                 <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-base md:text-lg font-semibold">Learning Module</h2>
-                        <span class="text-xs text-gray-500">Duration: {{ $durationDays }} days</span>
                     </div>
                     <ul class="divide-y divide-gray-200">
                         @forelse ($modules as $index => $module)
@@ -56,7 +55,7 @@
                                     class="mt-1 w-2 h-2 rounded-full bg-primary/60 flex-shrink-0 translate-y-1"></span>
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-medium text-gray-800">
-                                        Chapter {{ $loop->iteration }}: {{ $module->title }}
+                                        {{ $module->title }}
                                     </p>
                                     <p class="text-xs text-gray-500 line-clamp-2 mt-1 flex items-center gap-4">
                                         <span class="inline-flex items-center gap-1">

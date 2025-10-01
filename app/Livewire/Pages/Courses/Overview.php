@@ -19,13 +19,11 @@ class Overview extends Component
             'learningModules' => function ($q) {
                 $q->orderBy('id');
             },
-            'training'
         ]);
 
         $this->modules = $this->course->learningModules;
         $this->modulesCount = $this->modules?->count() ?? 0;
         $this->assignUsers = $this->course->users()->count();
-        $this->durationDays = (int) ($this->course->training?->duration ?? 0);
     }
 
     public function render()

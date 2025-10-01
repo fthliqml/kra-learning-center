@@ -29,14 +29,19 @@
         </div>
 
         {{-- Details --}}
-        <div class="mt-2 grid text-[11px] sm:text-[12px] text-gray-600 [grid-template-columns:1.2fr_1.15fr_1fr]">
-            <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
+        @php
+            $modulesCount = (int) ($course->learning_modules_count ?? 0);
+            $usersCount = (int) ($course->users_count ?? 0);
+        @endphp
+        <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] sm:text-[12px] text-gray-600">
+            <span class="inline-flex items-center gap-1 min-w-0">
                 <x-icon name="o-book-open" class="size-4 text-gray-500 shrink-0" />
-                <span class="truncate">{{ $course->learning_modules_count ?? 0 }} chapters</span>
+                <span>{{ $modulesCount }} {{ Str::plural('chapter', $modulesCount) }}</span>
             </span>
-            <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
+            <span class="hidden sm:inline h-3 w-px bg-gray-300/60"></span>
+            <span class="inline-flex items-center gap-1 min-w-0">
                 <x-icon name="o-user-group" class="size-4 text-gray-500 shrink-0" />
-                <span class="truncate">{{ $course->users_count ?? 0 }} learners</span>
+                <span>{{ $usersCount }} {{ Str::plural('learner', $usersCount) }}</span>
             </span>
         </div>
 
@@ -45,9 +50,8 @@
             $assignment = $course->userCourses->first();
             $progress = (int) ($course->progress_percent ?? 0);
         @endphp
-
-        @if ($assignment)
-            <div class="mt-3">
+        @if ($assignment ?? false)
+            <div class="mt-3" x-data>
                 <div class="h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
                     aria-label="Course progress" aria-valuemin="0" aria-valuemax="100"
                     aria-valuenow="{{ $progress }}" aria-valuetext="{{ $progress }} percent">

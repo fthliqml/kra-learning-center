@@ -42,23 +42,24 @@
                 @endphp
 
                 <div class="mt-auto @if ($hasProgress) mb-0 @else mb-3 @endif">
+                    @php
+                        $modulesCount = (int) ($course->learning_modules_count ?? 0);
+                        $usersCount = (int) ($course->users_count ?? 0);
+                        $progress = (int) ($course->progress_percent ?? 0);
+                    @endphp
                     <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-gray-600">
-                        <span class="inline-flex items-center gap-1">
+                        <span class="inline-flex items-center gap-1 min-w-0">
                             <x-icon name="o-book-open" class="size-4 text-gray-500" />
-                            <span>{{ $course->learning_modules_count ?? 0 }} chapters</span>
+                            <span>{{ $modulesCount }} {{ Str::plural('chapter', $modulesCount) }}</span>
                         </span>
-                        <span class="inline-flex items-center gap-1">
+                        <span class="hidden md:inline h-3 w-px bg-gray-300/60"></span>
+                        <span class="inline-flex items-center gap-1 min-w-0">
                             <x-icon name="o-user-group" class="size-4 text-gray-500" />
-                            <span>{{ $course->users_count ?? 0 }} learners</span>
+                            <span>{{ $usersCount }} {{ Str::plural('learner', $usersCount) }}</span>
                         </span>
                     </div>
 
                     {{-- Progress --}}
-                    @php
-                        $assignment = $course->userCourses->first();
-                        $progress = (int) ($course->progress_percent ?? 0);
-                    @endphp
-
                     @if ($assignment)
                         <div class="mt-3">
                             <div class="h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
