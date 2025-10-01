@@ -60,14 +60,19 @@
     </div>
     <x-button type="button" variant="primary" outline icon="o-plus" wire:click="addQuestion"
         class="border-gray-400">Add Question</x-button>
-    <div class="flex items-center justify-between pt-2">
-        <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goBack">
-            <x-icon name="o-arrow-left" class="size-4" />
-            <span>Back</span>
-        </x-ui.button>
-        <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goNext">
-            <span>Next</span>
-            <x-icon name="o-arrow-right" class="size-4" />
-        </x-ui.button>
+    <div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-base-300/50 mt-4">
+        <div class="flex items-center gap-4">
+            <x-ui.save-draft-status action="saveDraft" :dirty="false" :ever="$hasEverSaved ?? false" :persisted="$persisted ?? false" />
+        </div>
+        <div class="flex gap-2 ml-auto">
+            <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goBack">
+                <x-icon name="o-arrow-left" class="size-4" />
+                <span>Back</span>
+            </x-ui.button>
+            <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goNext">
+                <span>Next</span>
+                <x-icon name="o-arrow-right" class="size-4" />
+            </x-ui.button>
+        </div>
     </div>
 </div>

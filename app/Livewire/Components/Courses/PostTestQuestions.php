@@ -8,6 +8,8 @@ use Livewire\Component;
 class PostTestQuestions extends Component
 {
     public array $questions = [];
+    public bool $hasEverSaved = false;
+    public bool $persisted = false; // mimic persistence success
 
     protected $listeners = [];
 
@@ -106,6 +108,13 @@ class PostTestQuestions extends Component
     {   // TODO: persist all sections
         // After save redirect or show success message
         session()->flash('saved', 'Course content saved (placeholder).');
+    }
+
+    public function saveDraft(): void
+    {
+        $this->persisted = true;
+        $this->hasEverSaved = true;
+        session()->flash('saved', 'Post test questions saved (draft).');
     }
 
     public function goBack(): void
