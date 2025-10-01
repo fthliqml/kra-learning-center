@@ -6,13 +6,13 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Support\Facades\Auth;
 
 class Course extends Model
 {
     protected $table = 'courses';
 
     protected $fillable = [
-        'training_id',
         'title',
         'description',
         'thumbnail_url',
@@ -20,13 +20,6 @@ class Course extends Model
         'status',
     ];
 
-    /**
-     * Get the training associated with the course.
-     */
-    public function training(): BelongsTo
-    {
-        return $this->belongsTo(Training::class, 'training_id');
-    }
 
     /**
      * Get the learning modules for the course.
@@ -62,5 +55,43 @@ class Course extends Model
             return $query->whereRaw('1 = 0');
         }
         return $query->whereHas('userCourses', fn($q) => $q->where('user_id', $userId));
+    }
+
+    /**
+     * Compute progress percentage for a specific user (or current auth user).
+     * Relies on eager loaded: userCourses (filtered to user) + learning_modules_count (withCount) OR learningModules relation.
+     */
+    public function progressForUser(?\App\Models\User $user = null): int
+    {
+        $user = $user ?: Auth::user();
+        if (!$user) {
+            return 0;
+        }
+
+        // Expect userCourses filtered; fallback search by user id.
+        $assignment = $this->relationLoaded('userCourses')
+            ? $this->userCourses->firstWhere('user_id', $user->id)
+            : $this->userCourses()->where('user_id', $user->id)->select(['id', 'user_id', 'course_id', 'current_step'])->first();
+
+        if (!$assignment) {
+            return 0;
+        }
+
+        // Prefer pre-counted attribute
+        $modules = null;
+        if (isset($this->learning_modules_count)) {
+            $modules = (int) $this->learning_modules_count;
+        } elseif ($this->relationLoaded('learningModules')) {
+            $modules = $this->learningModules->count();
+        } else {
+            $modules = $this->learningModules()->count();
+        }
+
+        if ($modules <= 0) {
+            return 0;
+        }
+
+        $current = (int) ($assignment->current_step ?? 0);
+        return min(100, max(0, (int) floor(($current / max(1, $modules)) * 100)));
     }
 }

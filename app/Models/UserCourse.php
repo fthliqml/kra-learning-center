@@ -44,8 +44,12 @@ class UserCourse extends Model
     {
         return Attribute::make(
             get: function () {
-                $totalModules = $this->course?->learningModules()->count() ?? 1;
-                return ($this->current_step / $totalModules) * 100;
+                $totalModules = $this->course?->learningModules()->count() ?? 0;
+                if ($totalModules <= 0) {
+                    return 0;
+                }
+                $raw = ($this->current_step / $totalModules) * 100;
+                return min(100, max(0, (int) round($raw)));
             }
         );
     }

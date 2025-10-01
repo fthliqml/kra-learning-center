@@ -47,7 +47,6 @@ class Courses extends Component
 
         $query = Course::query()
             ->with([
-                'training',
                 // Load only the current user's assignment record (if any)
                 'userCourses' => function ($q) use ($userId) {
                     if ($userId) {
@@ -69,16 +68,23 @@ class Courses extends Component
                     $q->where('title', 'like', "%{$term}%");
                 }
             })
-            // Filter by related training group_comp
+            // Filter by course group_comp directly (no training relation)
             ->when($this->filter, function ($q) {
                 $value = trim((string) $this->filter);
                 if ($value !== '') {
-                    $q->whereHas('training', fn($t) => $t->where('group_comp', $value));
+                    $q->where('group_comp', $value);
                 }
             })
             ->orderBy('created_at', 'desc');
 
         $cached = $query->paginate($this->perPage)->onEachSide(1);
+
+        // Map each course to add a computed progress_percent for current user using model method
+        $user = Auth::user();
+        $cached->getCollection()->transform(function ($course) use ($user) {
+            $course->progress_percent = $course->progressForUser($user);
+            return $course;
+        });
         return $cached;
     }
 

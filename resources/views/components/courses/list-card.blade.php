@@ -1,14 +1,13 @@
+@php
+    if (!isset($course) || $course === null) {
+        return;
+    }
+@endphp
 <div wire:key="course-list-{{ $course->id }}"
     x-on:click="if(!$event.target.closest('[data-card-action]')) { (window.Livewire && Livewire.navigate) ? Livewire.navigate('{{ route('courses-overview.show', $course) }}') : window.location.assign('{{ route('courses-overview.show', $course) }}'); }"
     class="group cursor-pointer rounded-xl border border-gray-200/80 shadow-sm overflow-hidden hover:shadow-md transition bg-white">
-    @php
-        $assignment = $course->userCourses->first() ?? null;
-        $steps = max(1, (int) ($course->learning_modules_count ?? 0));
-        $current = (int) ($assignment->current_step ?? 0);
-        $progress = $steps > 0 ? min(100, max(0, (int) floor(($current / $steps) * 100))) : 0;
-        $hasProgress = $assignment && $assignment->status === 'in_progress';
-    @endphp
     <div class="flex flex-col sm:flex-row items-stretch gap-3 sm:gap-4 p-3 sm:p-4">
+
         {{-- Thumbnail --}}
         <div
             class="sm:shrink-0 w-full sm:w-44 md:w-56 aspect-[16/9] sm:aspect-[4/3] overflow-hidden rounded-lg bg-gray-100">
@@ -24,14 +23,24 @@
         {{-- Content --}}
         <div class="flex-1 min-w-0 sm:min-w-[16rem] flex">
             <div class="w-full h-full flex flex-col ms-3">
+                {{-- Title --}}
                 <div class="mb-1 flex items-center gap-2 mt-3">
                     <span
                         class="inline-flex items-center gap-1 rounded-full bg-primary/5 text-primary px-2 py-0.5 text-[11px] font-medium">
-                        {{ $course->training->group_comp }}
+                        {{ $course->group_comp }}
                     </span>
                 </div>
+
                 <div class="text-base sm:text-lg md:text-xl font-semibold text-gray-900 line-clamp-2">
-                    {{ $course->title }}</div>
+                    {{ $course->title }}
+                </div>
+
+                {{-- Details --}}
+                @php
+                    $assignment = $course->userCourses->first() ?? null;
+                    $hasProgress = $assignment && $assignment->status === 'in_progress';
+                @endphp
+
                 <div class="mt-auto @if ($hasProgress) mb-0 @else mb-3 @endif">
                     <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-gray-600">
                         <span class="inline-flex items-center gap-1">
@@ -42,13 +51,13 @@
                             <x-icon name="o-user-group" class="size-4 text-gray-500" />
                             <span>{{ $course->users_count ?? 0 }} learners</span>
                         </span>
-                        @if ($course->training?->duration)
-                            <span class="inline-flex items-center gap-1">
-                                <x-icon name="o-clock" class="size-4 text-gray-500" />
-                                <span>{{ $course->training->duration }} days</span>
-                            </span>
-                        @endif
                     </div>
+
+                    {{-- Progress --}}
+                    @php
+                        $assignment = $course->userCourses->first();
+                        $progress = (int) ($course->progress_percent ?? 0);
+                    @endphp
 
                     @if ($assignment)
                         <div class="mt-3">
@@ -66,7 +75,7 @@
                     @endif
                 </div>
 
-                {{-- Mobile CTA --}}
+                {{-- Action (Mobile) --}}
                 <div class="mt-5 sm:hidden">
                     <a wire:navigate href="{{ route('courses-overview.show', $course) }}" data-card-action
                         class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-primary/90 hover:text-primary border border-primary/20 rounded-full px-3 py-2"

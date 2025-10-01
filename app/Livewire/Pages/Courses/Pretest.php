@@ -18,7 +18,10 @@ class Pretest extends Component
             abort(403, 'You are not assigned to this course.');
         }
 
-        $this->course = $course->load(['training']);
+        // Eager load learning modules for sidebar listing (training relation removed)
+        $this->course = $course->load(['learningModules' => function ($q) {
+            $q->orderBy('id');
+        }]);
     }
 
     public function render()
@@ -27,8 +30,9 @@ class Pretest extends Component
             ->layout('layouts.livewire.course', [
                 'courseTitle' => $this->course->title,
                 'stage' => 'pretest',
-                'progress' => 0,
+                'progress' => $this->course->progressForUser(),
                 'stages' => ['pretest', 'module', 'posttest', 'result'],
+                'modules' => $this->course->learningModules,
             ]);
     }
 }

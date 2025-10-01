@@ -97,4 +97,13 @@ class User extends Authenticatable
     {
         return $this->hasMany(UserCourse::class);
     }
+
+    /**
+     * Direct many-to-many courses via user_courses pivot.
+     */
+    public function courses(): BelongsToMany
+    {
+        return $this->belongsToMany(Course::class, 'user_courses', 'user_id', 'course_id')
+            ->withTimestamps();
+    }
 }

@@ -13,6 +13,9 @@ return new class extends Migration {
         Schema::create('trainings', function (Blueprint $table) {
             $table->id();
 
+            // Foreign Keys
+            $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
+
             // Core Fields
             $table->string('name');
             $table->enum('type', ['IN', 'OUT', 'K-LEARN']);

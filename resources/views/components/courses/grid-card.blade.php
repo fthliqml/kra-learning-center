@@ -1,6 +1,8 @@
 <div wire:key="course-{{ $course->id }}"
     x-on:click="if(!$event.target.closest('[data-card-action]')) { (window.Livewire && Livewire.navigate) ? Livewire.navigate('{{ route('courses-overview.show', $course) }}') : window.location.assign('{{ route('courses-overview.show', $course) }}'); }"
     class="group cursor-pointer bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden hover:shadow-md hover:border-primary/20 focus-within:ring-2 ring-primary/20 transition">
+
+    {{-- Thumbnail --}}
     <div class="px-3 sm:px-4 pt-3 sm:pt-4">
         <div class="w-full aspect-[16/9] bg-gray-100 overflow-hidden rounded-lg">
             @if (!empty($course->thumbnail_url))
@@ -12,15 +14,21 @@
             @endif
         </div>
     </div>
+
+    {{-- Content --}}
     <div class="p-3 sm:p-4">
+        {{-- Title --}}
         <div class="mb-1 flex items-center gap-2">
             <span
                 class="inline-flex items-center gap-1 rounded-full bg-primary/5 text-primary px-2 py-0.5 text-[11px] font-medium">
-                {{ $course->training->group_comp }}
+                {{ $course->group_comp ?? '—' }}
             </span>
         </div>
-        <div class="font-semibold text-gray-900 line-clamp-2 min-h-[2.75rem]">{{ $course->title }}
+        <div class="font-semibold text-gray-900 line-clamp-2 min-h-[2.75rem]">
+            {{ $course->title }}
         </div>
+
+        {{-- Details --}}
         <div class="mt-2 grid text-[11px] sm:text-[12px] text-gray-600 [grid-template-columns:1.2fr_1.15fr_1fr]">
             <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
                 <x-icon name="o-book-open" class="size-4 text-gray-500 shrink-0" />
@@ -30,17 +38,14 @@
                 <x-icon name="o-user-group" class="size-4 text-gray-500 shrink-0" />
                 <span class="truncate">{{ $course->users_count ?? 0 }} learners</span>
             </span>
-            <span class="flex items-center gap-1 min-w-0 whitespace-nowrap">
-                <x-icon name="o-clock" class="size-4 text-gray-500 shrink-0" />
-                <span class="truncate">{{ $course->training->duration }} days</span>
-            </span>
         </div>
+
+        {{-- Progress --}}
         @php
-            $assignment = $course->userCourses->first() ?? null;
-            $steps = max(1, (int) ($course->learning_modules_count ?? 0));
-            $current = (int) ($assignment->current_step ?? 0);
-            $progress = $steps > 0 ? min(100, max(0, (int) floor(($current / $steps) * 100))) : 0;
+            $assignment = $course->userCourses->first();
+            $progress = (int) ($course->progress_percent ?? 0);
         @endphp
+
         @if ($assignment)
             <div class="mt-3">
                 <div class="h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
@@ -55,6 +60,8 @@
                 </div>
             </div>
         @endif
+
+        {{-- Action --}}
         <a wire:navigate href="{{ route('courses-overview.show', $course) }}" data-card-action
             class="mt-3 w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-primary/90 hover:text-primary border border-primary/20 rounded-full px-3 py-2"
             aria-label="Go to course overview" @click.stop>
