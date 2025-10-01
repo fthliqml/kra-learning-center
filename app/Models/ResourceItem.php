@@ -1,0 +1,22 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class ResourceItem extends Model
+{
+    protected $table = 'resources';
+
+    protected $fillable = [
+        'section_id',
+        'content_type',
+        'url',
+    ];
+
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(Section::class);
+    }
+}

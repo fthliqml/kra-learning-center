@@ -223,9 +223,39 @@
                                                     </div>
                                                     @if (($qq['type'] ?? '') === 'multiple')
                                                         <div class="space-y-2">
+                                                            @php($answerIndex = $qq['answer'] ?? null)
+                                                            @php($answerNonce = $qq['answer_nonce'] ?? 0)
+                                                            <div class="flex items-center gap-2 mb-1 -mt-1">
+                                                                <span
+                                                                    class="text-[10px] uppercase tracking-wide text-base-content/50">Mark
+                                                                    Correct Answer</span>
+                                                                @if (!is_null($answerIndex) && isset($qq['options'][$answerIndex]))
+                                                                    <span class="badge badge-success badge-sm">Current:
+                                                                        {{ chr(65 + $answerIndex) }}</span>
+                                                                    <button type="button"
+                                                                        class="btn btn-ghost btn-xs text-error"
+                                                                        wire:click="setCorrectAnswer({{ $ti }}, {{ $si }}, {{ $qi }}, {{ $answerIndex }})">Unset</button>
+                                                                @else
+                                                                    <span class="text-[10px] text-gray-400">None
+                                                                        selected</span>
+                                                                @endif
+                                                            </div>
                                                             @foreach ($qq['options'] ?? [] as $oi => $opt)
                                                                 <div class="flex items-center gap-2"
-                                                                    wire:key="sec-q-{{ $qq['id'] }}-opt-{{ $oi }}">
+                                                                    wire:key="sec-q-{{ $qq['id'] }}-opt-{{ $oi }}-n{{ $answerNonce }}-{{ substr(md5($qq['id'] . '|' . $oi . '|' . $opt), 0, 6) }}">
+                                                                    <label
+                                                                        class="flex items-center gap-1 cursor-pointer select-none">
+                                                                        <input type="radio"
+                                                                            name="answer-{{ $qq['id'] }}-{{ $answerNonce }}"
+                                                                            value="{{ $oi }}"
+                                                                            @if (!is_null($answerIndex) && $answerIndex === $oi) checked @endif
+                                                                            class="radio radio-success radio-xs"
+                                                                            wire:click="setCorrectAnswer({{ $ti }}, {{ $si }}, {{ $qi }}, {{ $oi }})" />
+                                                                        <span
+                                                                            class="text-[11px] font-medium {{ $answerIndex === $oi ? 'text-success' : 'text-gray-500' }}">
+                                                                            {{ chr(65 + $oi) }}
+                                                                        </span>
+                                                                    </label>
                                                                     <x-input class="flex-1 pr-10 focus-within:border-0"
                                                                         placeholder="Option"
                                                                         wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.options.{{ $oi }}" />

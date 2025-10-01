@@ -42,4 +42,5 @@ Route::middleware('auth')->group(function () {
     Route::get('/courses/{course}/pretest', Pretest::class)->name('courses-pretest.index');
     Route::get('/courses/management', CoursesManagement::class)->name('courses-management.index');
     Route::get('/courses/{course}/edit', EditCourse::class)->name('edit-course.index');
+    Route::get('/courses/add', EditCourse::class)->name('add-course.index');
 });
