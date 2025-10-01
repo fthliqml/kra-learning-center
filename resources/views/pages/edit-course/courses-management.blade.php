@@ -27,16 +27,22 @@
 
             {{-- Group Comp from related training --}}
             @scope('cell_group_comp', $course)
-                {{ optional($course->training)->group_comp ?? '-' }}
+                {{ $course->group_comp ?? '-' }}
             @endscope
 
             {{-- Status badge --}}
             @scope('cell_status', $course)
                 @php
                     $status = $course->status ?? 'inactive';
-                    $variant = $status === 'active' ? 'success' : 'neutral';
+                    // Map to badge classes (no variant prop)
+                    $badgeClass = match ($status) {
+                        'draft' => 'badge-warning',
+                        'assigned' => 'badge-primary badge-soft',
+                        'inactive' => 'badge-neutral',
+                        default => 'badge-neutral',
+                    };
                 @endphp
-                <x-badge :value="str($status)->title()" :class="'badge-' . $variant" />
+                <x-badge :value="str($status)->title()" :class="$badgeClass" />
             @endscope
 
             {{-- Custom cell untuk kolom Action --}}

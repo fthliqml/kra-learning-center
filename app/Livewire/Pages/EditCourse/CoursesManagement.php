@@ -44,13 +44,9 @@ class CoursesManagement extends Component
 
     public function courses()
     {
-        $query = Course::with('training')
+        $query = Course::query()
             ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
-            ->when($this->filter, function ($q) {
-                $q->whereHas('training', function ($t) {
-                    $t->where('group_comp', $this->filter);
-                });
-            })
+            ->when($this->filter, fn($q) => $q->where('group_comp', $this->filter))
             ->orderBy('created_at', 'desc');
 
         $paginator = $query->paginate(10)->onEachSide(1);
