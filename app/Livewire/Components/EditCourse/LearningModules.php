@@ -5,6 +5,12 @@ namespace App\Livewire\Components\EditCourse;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithFileUploads;
+use Illuminate\Support\Facades\DB;
+use App\Models\Topic;
+use App\Models\Section;
+use App\Models\ResourceItem;
+use App\Models\SectionQuizQuestion;
+use App\Models\SectionQuizQuestionOption;
 
 class LearningModules extends Component
 {
@@ -28,6 +34,7 @@ class LearningModules extends Component
      *   ], ...]
      */
     public array $topics = [];
+    public ?int $courseId = null; // Expect parent to pass course id
     // Track collapsed topic IDs (UI state persist across requests)
     public array $collapsedTopicIds = [];
 
@@ -37,8 +44,11 @@ class LearningModules extends Component
     public bool $hasEverSaved = false; // at least one successful save
     public bool $persisted = false;    // reflects last known DB persistence state
 
-    public function mount(): void
+    public function mount(?int $courseId = null): void
     {
+        if ($courseId) {
+            $this->courseId = $courseId;
+        }
         // Backward compatibility / migration: older shape had topics as what are now sections
         // Detect old shape: topic has 'resources' key directly
         if (!empty($this->topics) && isset($this->topics[0]['resources'])) {
@@ -117,6 +127,8 @@ class LearningModules extends Component
             'type' => $type,
             'question' => '',
             'options' => $type === 'multiple' ? [''] : [],
+            'answer' => null, // index of correct option (for multiple)
+            'answer_nonce' => 0, // bump to force radio group remount when answer reset
         ];
     }
 
@@ -256,8 +268,44 @@ class LearningModules extends Component
         if (isset($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'][$o])) {
             unset($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'][$o]);
             $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'] = array_values($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options']);
+            // Adjust answer index if needed
+            $answer =& $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer'];
+            if (!isset($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer_nonce'])) {
+                $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer_nonce'] = 0;
+            }
+            $nonce =& $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer_nonce'];
+            if ($answer !== null) {
+                // Reset ANY time the removed index is the answer OR shifts ordering before it
+                if ($answer >= $o) {
+                    $answer = null; // force user to re-confirm correct answer after structural change
+                    $nonce++; // force radios remount
+                }
+            }
             $this->computeDirty();
         }
+    }
+
+    public function setCorrectAnswer(int $t, int $s, int $q, int $o): void
+    {
+        if (!isset($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]))
+            return;
+        $question =& $this->topics[$t]['sections'][$s]['quiz']['questions'][$q];
+        if (($question['type'] ?? '') !== 'multiple')
+            return;
+        if (!isset($question['options'][$o]))
+            return;
+        $current = $question['answer'] ?? null;
+        // Toggle behavior: click again to unset
+        $newAnswer = ($current === $o) ? null : $o;
+        $question['answer'] = $newAnswer;
+        if (!isset($question['answer_nonce'])) {
+            $question['answer_nonce'] = 0;
+        }
+        if ($newAnswer === null) {
+            // bump nonce so blade radio name/key changes -> browser clears checked state
+            $question['answer_nonce']++;
+        }
+        $this->computeDirty();
     }
 
     public function updated($prop): void
@@ -269,8 +317,10 @@ class LearningModules extends Component
             $type = $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['type'] ?? null;
             if ($type === 'essay') {
                 $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'] = [];
+                $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer'] = null;
             } elseif ($type === 'multiple' && empty($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'])) {
                 $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'] = [''];
+                $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer'] = null;
             }
             $this->computeDirty();
         }
@@ -387,7 +437,93 @@ class LearningModules extends Component
 
     public function saveDraft(): void
     {
-        // TODO: persist modules to DB (e.g., related tables) - stub for now
+        if (!$this->courseId) {
+            $this->dispatch('notify', type: 'error', message: 'Course ID tidak ditemukan');
+            return;
+        }
+
+        // Basic trimming (optional)
+        foreach ($this->topics as &$t) {
+            $t['title'] = trim($t['title']);
+            foreach (($t['sections'] ?? []) as &$sec) {
+                $sec['title'] = trim($sec['title']);
+                if (($sec['quiz']['enabled'] ?? false) && isset($sec['quiz']['questions'])) {
+                    foreach ($sec['quiz']['questions'] as &$qq) {
+                        $qq['question'] = trim($qq['question']);
+                        if (($qq['type'] ?? '') === 'multiple') {
+                            $qq['options'] = array_map(fn($o) => trim($o), $qq['options'] ?? []);
+                        }
+                    }
+                    unset($qq);
+                }
+            }
+            unset($sec);
+        }
+        unset($t);
+
+        DB::transaction(function () {
+            // Strategy: wipe & recreate (simpler for draft). Could be optimized later for diffing.
+            Topic::where('course_id', $this->courseId)->delete();
+
+            foreach ($this->topics as $topicOrder => $t) {
+                $topicModel = Topic::create([
+                    'course_id' => $this->courseId,
+                    'title' => $t['title'] ?: 'Untitled Topic',
+                ]);
+
+                foreach (($t['sections'] ?? []) as $sectionOrder => $sec) {
+                    $sectionModel = Section::create([
+                        'topic_id' => $topicModel->id,
+                        'title' => $sec['title'] ?: 'Untitled Section',
+                        'is_quiz_on' => (bool) ($sec['quiz']['enabled'] ?? false),
+                    ]);
+
+                    // Resources
+                    foreach (($sec['resources'] ?? []) as $resOrder => $res) {
+                        $type = $res['type'] ?? null;
+                        if (!$type)
+                            continue;
+                        $contentType = $type === 'youtube' ? 'yt' : $type; // map to enum in DB
+                        $url = $res['url'] ?? '';
+                        if ($contentType === 'pdf' && !$url) {
+                            // skip empty pdf placeholder
+                            continue;
+                        }
+                        ResourceItem::create([
+                            'section_id' => $sectionModel->id,
+                            'content_type' => $contentType,
+                            'url' => $url,
+                        ]);
+                    }
+
+                    // Quiz
+                    if (($sec['quiz']['enabled'] ?? false) && !empty($sec['quiz']['questions'])) {
+                        foreach ($sec['quiz']['questions'] as $qOrder => $qq) {
+                            $questionModel = SectionQuizQuestion::create([
+                                'section_id' => $sectionModel->id,
+                                'type' => in_array($qq['type'] ?? '', ['multiple', 'essay']) ? $qq['type'] : 'multiple',
+                                'question' => $qq['question'] ?: 'Untitled Question',
+                                'order' => $qOrder,
+                            ]);
+                            if (($qq['type'] ?? '') === 'multiple') {
+                                $answerIndex = $qq['answer'] ?? null;
+                                foreach (($qq['options'] ?? []) as $optIndex => $optText) {
+                                    if ($optText === '')
+                                        continue; // skip empty
+                                    SectionQuizQuestionOption::create([
+                                        'question_id' => $questionModel->id,
+                                        'option_text' => $optText,
+                                        'is_correct' => ($answerIndex !== null && $answerIndex == $optIndex),
+                                        'order' => $optIndex,
+                                    ]);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
         $this->dispatch('notify', type: 'success', message: 'Modules draft saved');
         $this->snapshot();
         $this->hasEverSaved = true;

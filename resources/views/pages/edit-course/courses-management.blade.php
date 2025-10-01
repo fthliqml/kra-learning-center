@@ -6,7 +6,23 @@
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start w-fit shrink-0">K-Learn Management</h1>
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row flex-1">
             <div class="flex items-center gap-2">
-                <x-button type="button" icon="o-funnel" class="btn-outline" wire:click="openFilters">Filters</x-button>
+                <x-button icon="o-plus" :link="route('add-course.index')"
+                    class="btn-primary relative overflow-hidden !bg-gradient-to-r from-primary via-primary/90 to-primary/70 hover:from-primary/95 hover:via-primary/80 hover:to-primary/55 transition-all duration-200 ease-out shadow-all-sm hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0 ring-1 ring-primary/25 hover:ring-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60 group">
+                    <span class="relative z-10 flex items-center gap-1">
+                        Add
+                        <span class="h-1 w-1 rounded-full bg-primary-foreground/70 animate-pulse"></span>
+                    </span>
+                    <!-- Soft sheen effect -->
+                    <span
+                        class="pointer-events-none absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+                        <span
+                            class="absolute -inset-8 bg-gradient-to-br from-white/15 via-white/5 to-transparent rotate-6"></span>
+                    </span>
+                </x-button>
+                <x-button type="button" icon="o-funnel" wire:click="openFilters"
+                    class="btn-outline hover:border-primary transition-all duration-200 ease-out hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 active:translate-y-0">
+                    Filters
+                </x-button>
                 <div class="flex flex-wrap justify-center gap-1">
                     @if ($filterGroup)
                         <span class="badge badge-primary badge-soft text-xs">Group: {{ $filterGroup }}</span>
@@ -44,9 +60,8 @@
                     // Map to badge classes (no variant prop)
                     $badgeClass = match ($status) {
                         'draft' => 'badge-warning',
-                        'assigned' => 'badge-primary badge-soft',
-                        'inactive' => 'badge-neutral',
-                        default => 'badge-neutral',
+                        'assigned' => 'badge-primary bg-primary/95',
+                        'inactive' => ' badge primary badge-soft',
                     };
                 @endphp
                 <x-badge :value="str($status)->title()" :class="$badgeClass" />
