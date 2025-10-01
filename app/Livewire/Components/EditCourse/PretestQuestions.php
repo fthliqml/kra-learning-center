@@ -1,13 +1,14 @@
 <?php
 
-namespace App\Livewire\Components\Courses;
+namespace App\Livewire\Components\EditCourse;
 
 use Illuminate\Support\Str;
 use Livewire\Component;
 
-class PostTestQuestions extends Component
+class PretestQuestions extends Component
 {
     public array $questions = [];
+    // Simple save draft flags (no dirty tracking to avoid overhead with large arrays)
     public bool $hasEverSaved = false;
     public bool $persisted = false; // mimic persistence success
 
@@ -22,7 +23,12 @@ class PostTestQuestions extends Component
 
     private function makeQuestion(string $type = 'multiple'): array
     {
-        return ['id' => Str::uuid()->toString(), 'type' => $type, 'question' => '', 'options' => $type === 'multiple' ? [''] : []];
+        return [
+            'id' => Str::uuid()->toString(),
+            'type' => $type,
+            'question' => '',
+            'options' => $type === 'multiple' ? [''] : [],
+        ];
     }
 
     public function addQuestion(): void
@@ -55,12 +61,12 @@ class PostTestQuestions extends Component
 
     public function updated($prop): void
     {
-        if (!is_array($prop) && preg_match('/^questions\.(\d+)\.type$/', $prop, $m)) {
+        if (!is_array($prop) && preg_match('/^questions\\.(\d+)\\.type$/', $prop, $m)) {
             $i = (int) $m[1];
-            $t = $this->questions[$i]['type'] ?? null;
-            if ($t === 'essay') {
+            $type = $this->questions[$i]['type'] ?? null;
+            if ($type === 'essay') {
                 $this->questions[$i]['options'] = [];
-            } elseif ($t === 'multiple' && empty($this->questions[$i]['options'])) {
+            } elseif ($type === 'multiple' && empty($this->questions[$i]['options'])) {
                 $this->questions[$i]['options'] = [''];
             }
         }
@@ -75,25 +81,24 @@ class PostTestQuestions extends Component
         if ($current === $orderedIds) {
             return; // no change
         }
-        $map = [];
+        $lookup = [];
         foreach ($this->questions as $q) {
-            $map[$q['id']] = $q;
+            $lookup[$q['id']] = $q;
         }
         $new = [];
         foreach ($orderedIds as $id) {
-            if (isset($map[$id])) {
-                $item = $map[$id];
-                // normalize by type safety
+            if (isset($lookup[$id])) {
+                $item = $lookup[$id];
                 if ($item['type'] === 'essay') {
                     $item['options'] = [];
                 } elseif ($item['type'] === 'multiple' && empty($item['options'])) {
                     $item['options'] = [''];
                 }
                 $new[] = $item;
-                unset($map[$id]);
+                unset($lookup[$id]);
             }
         }
-        foreach ($map as $left) { // append any leftovers (shouldn't normally happen)
+        foreach ($lookup as $left) {
             if ($left['type'] === 'essay') {
                 $left['options'] = [];
             } elseif ($left['type'] === 'multiple' && empty($left['options'])) {
@@ -104,30 +109,25 @@ class PostTestQuestions extends Component
         $this->questions = $new;
     }
 
-    public function finish(): void
-    {   // TODO: persist all sections
-        // After save redirect or show success message
-        session()->flash('saved', 'Course content saved (placeholder).');
+    public function goNext(): void
+    {
+        $this->dispatch('setTab', 'learning-module');
+    }
+    public function goBack(): void
+    {
+        $this->dispatch('setTab', 'course-info');
     }
 
     public function saveDraft(): void
     {
+        // Placeholder: Here you'd persist $this->questions (e.g., to course pretest table)
+        // We only toggle flags & flash for now
         $this->persisted = true;
         $this->hasEverSaved = true;
-        session()->flash('saved', 'Post test questions saved (draft).');
+        session()->flash('saved', 'Pretest questions saved (draft).');
     }
 
-    public function goBack(): void
-    {
-        $this->dispatch('setTab', 'learning-module');
-    }
-
-    public function render()
-    {
-        return view('components.courses.post-test-questions');
-    }
-
-    public function placeholder(): string
+    public function placeholder()
     {
         return <<<'HTML'
         <div class="p-6 space-y-4 animate-pulse">
@@ -150,5 +150,10 @@ class PostTestQuestions extends Component
             <div class="h-10 w-40 bg-gray-200 dark:bg-gray-700 rounded"></div>
         </div>
         HTML;
+    }
+
+    public function render()
+    {
+        return view('components.edit-course.pretest-questions');
     }
 }

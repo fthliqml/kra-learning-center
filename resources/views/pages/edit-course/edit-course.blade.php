@@ -2,22 +2,22 @@
     <x-tabs wire:model="activeTab" class="bg-base-100 p-3 rounded-box shadow-sm">
         {{-- TAB: Course Info --}}
         <x-tab name="course-info" label="Course Info" icon="m-document-text">
-            <livewire:components.courses.course-info lazy />
+            <livewire:components.edit-course.course-info lazy />
         </x-tab>
 
         {{-- TAB: Pretest --}}
         <x-tab name="pretest" label="Pretest" icon="m-clipboard-document-list">
-            <livewire:components.courses.pretest-questions lazy />
+            <livewire:components.edit-course.pretest-questions lazy />
         </x-tab>
 
         {{-- TAB: Learning Module --}}
         <x-tab name="learning-module" label="Learning Module" icon="m-academic-cap">
-            <livewire:components.courses.learning-modules lazy />
+            <livewire:components.edit-course.learning-modules lazy />
         </x-tab>
 
         {{-- TAB: Post Test --}}
         <x-tab name="post-test" label="Post Test" icon="m-check-badge">
-            <livewire:components.courses.post-test-questions lazy />
+            <livewire:components.edit-course.post-test-questions lazy />
         </x-tab>
     </x-tabs>
 

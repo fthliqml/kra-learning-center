@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Pages\Courses;
+namespace App\Livewire\Pages\EditCourse;
 
 use App\Models\Course;
 use Livewire\Attributes\On;
@@ -71,7 +71,7 @@ class CoursesManagement extends Component
 
     public function render()
     {
-        return view('pages.courses.courses-management', [
+        return view('pages.edit-course.courses-management', [
             'courses' => $this->courses(),
             'headers' => $this->headers(),
         ]);

@@ -3,10 +3,10 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\Training\TrainingModuleController;
 use App\Livewire\Pages\Courses\Courses;
-use App\Livewire\Pages\Courses\CoursesManagement;
-use App\Livewire\Pages\Courses\EditCourse;
 use App\Livewire\Pages\Courses\Overview;
 use App\Livewire\Pages\Courses\Pretest;
+use App\Livewire\Pages\EditCourse\CoursesManagement;
+use App\Livewire\Pages\EditCourse\EditCourse;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\Schedule;

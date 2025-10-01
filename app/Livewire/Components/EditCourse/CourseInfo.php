@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Courses;
+namespace App\Livewire\Components\EditCourse;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -132,7 +132,7 @@ class CourseInfo extends Component
 
     public function render()
     {
-        return view('components.courses.course-info');
+        return view('components.edit-course.course-info');
     }
 
     public function placeholder(): string
