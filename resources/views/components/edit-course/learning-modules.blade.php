@@ -22,7 +22,8 @@
     })()">
         @forelse($topics as $ti => $topic)
             @php($collapsed = in_array($topic['id'], $collapsedTopicIds ?? []))
-            <div class="rounded-xl p-5 bg-base-100 shadow ring-1 ring-base-300/50 border border-gray-400 space-y-5 topic-card relative"
+            @php($topicErr = in_array('t' . $ti, $errorTopicKeys ?? []))
+            <div class="rounded-xl p-5 bg-base-100 shadow ring-1 space-y-5 topic-card relative {{ $topicErr ? 'ring-error/70 border border-error/70 bg-error/5' : 'ring-base-300/50 border border-gray-400' }}"
                 data-id="{{ $topic['id'] }}" wire:key="topic-{{ $topic['id'] }}">
                 <div class="flex items-start gap-3">
                     <span
@@ -53,7 +54,9 @@
                     <div
                         class="divide-y divide-base-300/60 border border-base-300/40 rounded-md bg-base-200/30 overflow-hidden sections-container">
                         @foreach ($topic['sections'] as $si => $section)
-                            <div class="relative group px-4 py-4 space-y-4 section-card" data-id="{{ $section['id'] }}"
+                            @php($sectionErr = in_array('t' . $ti . '-s' . $si, $errorSectionKeys ?? []))
+                            <div class="relative group px-4 py-4 space-y-4 section-card rounded-md {{ $sectionErr ? 'ring-1 ring-error/60 border border-error/60 bg-error/5' : '' }}"
+                                data-id="{{ $section['id'] }}"
                                 wire:key="topic-{{ $topic['id'] }}-section-{{ $section['id'] }}"
                                 x-init="(() => {
                                     // Initialize Sortable for sections container once (on parent) not each item
@@ -122,8 +125,9 @@
                                                     YouTube Videos</p>
                                                 @foreach ($section['resources'] as $ri => $res)
                                                     @if (($res['type'] ?? '') === 'youtube')
+                                                        @php($resKey = 't' . $ti . '-s' . $si . '-r' . $ri)
                                                         <div
-                                                            class="flex items-start gap-3 rounded-md bg-base-100/70 px-3 py-2 shadow-sm ring-1 ring-base-300/40 border border-base-300/40 hover:ring-base-300 transition">
+                                                            class="flex items-start gap-3 rounded-md px-3 py-2 shadow-sm ring-1 transition bg-base-100/70 hover:ring-base-300 {{ in_array($resKey, $errorResourceKeys ?? []) ? 'ring-error/60 border border-error/60 bg-error/5' : 'ring-base-300/40 border border-base-300/40' }}">
                                                             <div class="flex-1 space-y-1">
                                                                 <x-input
                                                                     placeholder="https://www.youtube.com/watch?v=..."
@@ -152,8 +156,9 @@
                                                     PDF Modules</p>
                                                 @foreach ($section['resources'] as $ri => $res)
                                                     @if (($res['type'] ?? '') === 'pdf')
+                                                        @php($resKey = 't' . $ti . '-s' . $si . '-r' . $ri)
                                                         <div
-                                                            class="flex items-start gap-3 rounded-md bg-base-100/70 px-3 py-2 shadow-sm ring-1 ring-base-300/40 border border-base-300/40 hover:ring-base-300 transition">
+                                                            class="flex items-start gap-3 rounded-md px-3 py-2 shadow-sm ring-1 transition bg-base-100/70 hover:ring-base-300 {{ in_array($resKey, $errorResourceKeys ?? []) ? 'ring-error/60 border border-error/60 bg-error/5' : 'ring-base-300/40 border border-base-300/40' }}">
                                                             <div class="flex-1 space-y-1">
                                                                 <input type="file" accept="application/pdf"
                                                                     wire:model="topics.{{ $ti }}.sections.{{ $si }}.resources.{{ $ri }}.file"
@@ -196,11 +201,14 @@
                                         </div>
                                         <div class="flex flex-col gap-2">
                                             @forelse ($section['quiz']['questions'] ?? [] as $qi => $qq)
-                                                <div class="relative rounded-md p-3 pr-10 bg-base-100/70 ring-1 ring-base-300/40 question-card"
+                                                @php($qKey = 't' . $ti . '-s' . $si . '-q' . $qi)
+                                                <div class="relative rounded-md p-3 pr-10 bg-base-100/70 ring-1 question-card transition {{ in_array($qKey, $errorQuestionKeys ?? []) ? 'ring-error/70 border border-error/60 bg-error/5' : 'ring-base-300/40' }}"
                                                     wire:key="sec-q-{{ $section['id'] }}-{{ $qq['id'] }}">
-                                                    <span
-                                                        class="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-info/60 to-info/10"></span>
-                                                    <div class="flex items-center gap-3 mb-3">
+                                                    @if (!in_array($qKey, $errorQuestionKeys ?? []))
+                                                        <span
+                                                            class="absolute left-0 top-0 h-full w-1 bg-gradient-to-b from-info/60 to-info/10"></span>
+                                                    @endif
+                                                    <div class="flex items-center gap-3">
                                                         <span
                                                             class="inline-flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-info/10 text-info text-xs font-semibold">{{ $loop->iteration }}</span>
                                                         <x-select :options="[
@@ -225,7 +233,7 @@
                                                         <div class="space-y-2">
                                                             @php($answerIndex = $qq['answer'] ?? null)
                                                             @php($answerNonce = $qq['answer_nonce'] ?? 0)
-                                                            <div class="flex items-center gap-2 mb-1 -mt-1">
+                                                            <div class="flex items-center gap-2 mb-1 mt-3">
                                                                 <span
                                                                     class="text-[10px] uppercase tracking-wide text-base-content/50">Mark
                                                                     Correct Answer</span>
@@ -256,7 +264,8 @@
                                                                             {{ chr(65 + $oi) }}
                                                                         </span>
                                                                     </label>
-                                                                    <x-input class="flex-1 pr-10 focus-within:border-0"
+                                                                    <x-input
+                                                                        class="flex-1 pr-10 focus-within:border-0 {{ $answerIndex === null && count(array_filter($qq['options'] ?? [], fn($x) => trim($x) !== '')) >= 2 && $oi === 0 && in_array($qKey, $errorQuestionKeys ?? []) ? 'border-error/60' : '' }}"
                                                                         placeholder="Option"
                                                                         wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.options.{{ $oi }}" />
                                                                     <x-button icon="o-x-mark"
@@ -293,7 +302,8 @@
 
     <div class="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-base-300/50 mt-4">
         <div class="flex items-center gap-4">
-            <x-ui.save-draft-status action="saveDraft" :dirty="$isDirty" :ever="$hasEverSaved" :persisted="$persisted" />
+            <x-ui.save-draft-status label="Save" action="saveDraft" :dirty="$isDirty" :ever="$hasEverSaved"
+                :persisted="$persisted" />
         </div>
         <div class="flex gap-2 ml-auto">
             <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goBack"

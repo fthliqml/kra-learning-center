@@ -11,10 +11,12 @@ use App\Models\Section;
 use App\Models\ResourceItem;
 use App\Models\SectionQuizQuestion;
 use App\Models\SectionQuizQuestionOption;
+use Mary\Traits\Toast;
+use App\Services\LearningModulesValidator;
 
 class LearningModules extends Component
 {
-    use WithFileUploads;
+    use WithFileUploads, Toast;
 
     /**
      * Data structure (new):
@@ -43,12 +45,14 @@ class LearningModules extends Component
     public bool $isDirty = false;
     public bool $hasEverSaved = false; // at least one successful save
     public bool $persisted = false;    // reflects last known DB persistence state
+    // UI error highlighting (populated during validation when save fails)
+    public array $errorQuestionKeys = []; // keys like t0-s1-q2
+    public array $errorResourceKeys = []; // keys like t0-s1-r3
+    public array $errorSectionKeys = [];  // keys like t0-s1
+    public array $errorTopicKeys = [];    // keys like t0
 
-    public function mount(?int $courseId = null): void
+    public function mount(): void
     {
-        if ($courseId) {
-            $this->courseId = $courseId;
-        }
         // Backward compatibility / migration: older shape had topics as what are now sections
         // Detect old shape: topic has 'resources' key directly
         if (!empty($this->topics) && isset($this->topics[0]['resources'])) {
@@ -438,7 +442,69 @@ class LearningModules extends Component
     public function saveDraft(): void
     {
         if (!$this->courseId) {
-            $this->dispatch('notify', type: 'error', message: 'Course ID tidak ditemukan');
+            $this->error(
+                'Course ID not found',
+                timeout: 5000,
+                position: 'toast-top toast-center'
+            );
+            return;
+        }
+
+        // Structural validation via external service (no in-place pruning; errors surfaced with highlight arrays)
+        $validator = new LearningModulesValidator();
+        $result = $validator->validate($this->topics);
+        $errors = $result['errors'];
+        $this->errorTopicKeys = $result['errorTopicKeys'];
+        $this->errorSectionKeys = $result['errorSectionKeys'];
+        $this->errorResourceKeys = $result['errorResourceKeys'];
+        $this->errorQuestionKeys = $result['errorQuestionKeys'];
+
+        if (!empty($errors)) {
+            // Build bullet list, limit to 6 then append summary line
+            $bulletLines = collect($errors)->take(6)->map(fn($e) => '• ' . $e);
+            $display = $bulletLines->implode("\n");
+            if (count($errors) > 6) {
+                $display .= "\n..." . (count($errors) - 6) . " more errors";
+            }
+
+            // Wrap in a div that enforces preserved newlines (Toast should allow simple HTML)
+            $htmlMessage = "<div style=\"white-space:pre-line; text-align:left\"><strong>Validation failed:</strong>\n" . e($display) . '</div>';
+
+            // Some toast implementations escape content; if so line breaks will be lost. We attempt HTML first, fallback plain.
+            $this->error(
+                $htmlMessage,
+                timeout: 10000,
+                position: 'toast-top toast-center'
+            );
+            return;
+        }
+
+        // After pruning, if absolutely nothing remains, block save (avoid silently "successful" empty draft)
+        if (empty($this->topics)) {
+            $this->error(
+                'Cannot save empty modules. Please add at least one topic, section, resource or quiz question before saving.',
+                timeout: 6000,
+                position: 'toast-top toast-center'
+            );
+            // Rehydrate a minimal blank structure so UI still has something to render
+            $this->topics = [
+                [
+                    'id' => Str::uuid()->toString(),
+                    'title' => '',
+                    'sections' => [
+                        [
+                            'id' => Str::uuid()->toString(),
+                            'title' => '',
+                            'resources' => [],
+                            'quiz' => [
+                                'enabled' => false,
+                                'questions' => [],
+                            ],
+                        ],
+                    ],
+                ],
+            ];
+            // Do not snapshot; keep dirty so user can start filling content
             return;
         }
 
@@ -512,7 +578,7 @@ class LearningModules extends Component
                                         continue; // skip empty
                                     SectionQuizQuestionOption::create([
                                         'question_id' => $questionModel->id,
-                                        'option_text' => $optText,
+                                        'option' => $optText,
                                         'is_correct' => ($answerIndex !== null && $answerIndex == $optIndex),
                                         'order' => $optIndex,
                                     ]);
@@ -524,7 +590,11 @@ class LearningModules extends Component
             }
         });
 
-        $this->dispatch('notify', type: 'success', message: 'Modules draft saved');
+        $this->success(
+            'Modules draft saved successfully',
+            timeout: 4000,
+            position: 'toast-top toast-center'
+        );
         $this->snapshot();
         $this->hasEverSaved = true;
         $this->persisted = true;
@@ -532,16 +602,12 @@ class LearningModules extends Component
 
     public function goNext(): void
     {
+        dump($this->topics);
         $this->dispatch('setTab', 'post-test');
     }
     public function goBack(): void
     {
         $this->dispatch('setTab', 'pretest');
-    }
-
-    public function render()
-    {
-        return view('components.edit-course.learning-modules');
     }
 
     public function placeholder(): string
@@ -571,4 +637,10 @@ class LearningModules extends Component
         </div>
         HTML;
     }
+
+    public function render()
+    {
+        return view('components.edit-course.learning-modules');
+    }
+
 }
