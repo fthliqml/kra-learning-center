@@ -59,29 +59,17 @@ class LearningModules extends Component
 
     public function mount(): void
     {
-        // Backward compatibility / migration: older shape had topics as what are now sections
-        // Detect old shape: topic has 'resources' key directly
-        if (!empty($this->topics) && isset($this->topics[0]['resources'])) {
-            $this->topics = [
-                [
-                    'id' => Str::uuid()->toString(),
-                    'title' => '',
-                    'sections' => array_map(function ($oldSection) {
-                        // Ensure quiz structure completeness
-                        $quiz = $oldSection['quiz'] ?? ['enabled' => false, 'questions' => []];
-                        $quiz['enabled'] = (bool) ($quiz['enabled'] ?? false);
-                        $quiz['questions'] = $quiz['questions'] ?? [];
-                        return [
-                            'id' => Str::uuid()->toString(),
-                            'title' => $oldSection['title'] ?? '',
-                            'resources' => $oldSection['resources'] ?? [],
-                            'quiz' => $quiz,
-                        ];
-                    }, $this->topics),
-                ],
-            ];
+        // If courseId is provided, hydrate from database (overrides any pre-bound $topics)
+        if ($this->courseId) {
+            $this->hydrateFromCourse();
         }
 
+        // Backward compatibility only if NOT hydrated and old flat shape supplied
+        if (empty($this->topics) && !empty($this->topics) && isset($this->topics[0]['resources'])) {
+            // (Edge: this block is effectively unreachable now because condition is contradictory; retained for reference)
+        }
+
+        // If still empty (no course data), bootstrap a minimal blank structure
         if (empty($this->topics)) {
             $this->topics = [
                 [
@@ -102,7 +90,15 @@ class LearningModules extends Component
             ];
         }
 
-        // Normalize existing pdf resources from ['type'=>'pdf','file'=>...] to ['type'=>'pdf','url'=>''] if needed
+        $this->normalizePdfResources();
+        $this->snapshot();
+    }
+
+    /**
+     * Normalize pdf resource shape to always have ['type'=>'pdf','url'=>''] (remove transient 'file').
+     */
+    protected function normalizePdfResources(): void
+    {
         foreach ($this->topics as &$topic) {
             if (!isset($topic['sections']) || !is_array($topic['sections']))
                 continue;
@@ -111,11 +107,9 @@ class LearningModules extends Component
                     continue;
                 foreach ($section['resources'] as &$res) {
                     if (($res['type'] ?? null) === 'pdf') {
-                        // If it has 'file' key but no 'url', convert placeholder to empty url
                         if (isset($res['file']) && !isset($res['url'])) {
                             $res['url'] = '';
                         }
-                        // Remove file key to unify shape
                         if (isset($res['file']))
                             unset($res['file']);
                     }
@@ -125,9 +119,86 @@ class LearningModules extends Component
             unset($section);
         }
         unset($topic);
+    }
 
-        // Take initial snapshot for dirty tracking
-        $this->snapshot();
+    /**
+     * Hydrate $topics structure from database for the given courseId.
+     * Shape is aligned with in-memory editing format.
+     */
+    protected function hydrateFromCourse(): void
+    {
+        $loaded = [];
+        $topicModels = Topic::where('course_id', $this->courseId)->orderBy('id')->get();
+        if ($topicModels->isEmpty()) {
+            $this->topics = [];
+            return; // leave empty -> mount() will fill default
+        }
+
+        // Preload sections grouped by topic
+        $topicIds = $topicModels->pluck('id')->all();
+        $sectionModels = Section::whereIn('topic_id', $topicIds)->orderBy('id')->get()->groupBy('topic_id');
+        $sectionIds = $sectionModels->flatten()->pluck('id')->all();
+        $resourceModels = ResourceItem::whereIn('section_id', $sectionIds)->orderBy('id')->get()->groupBy('section_id');
+        $questionModels = SectionQuizQuestion::whereIn('section_id', $sectionIds)->orderBy('order')->orderBy('id')->get()->groupBy('section_id');
+        $questionIds = $questionModels->flatten()->pluck('id')->all();
+        $optionModels = SectionQuizQuestionOption::whereIn('question_id', $questionIds)->orderBy('order')->orderBy('id')->get()->groupBy('question_id');
+
+        foreach ($topicModels as $tModel) {
+            $topicSections = [];
+            /** @var \Illuminate\Support\Collection $sectionsForTopic */
+            $sectionsForTopic = $sectionModels->get($tModel->id, collect());
+            foreach ($sectionsForTopic as $sModel) {
+                $resArray = [];
+                $resourcesForSection = $resourceModels->get($sModel->id, collect());
+                foreach ($resourcesForSection as $rModel) {
+                    $type = $rModel->content_type === 'yt' ? 'youtube' : $rModel->content_type; // map back
+                    $resArray[] = [
+                        'type' => $type,
+                        'url' => $rModel->url ?? '',
+                    ];
+                }
+
+                // Quiz questions
+                $qArray = [];
+                $questionsForSection = $questionModels->get($sModel->id, collect());
+                foreach ($questionsForSection as $qModel) {
+                    $opts = [];
+                    $answerIndex = null;
+                    $optionsForQuestion = $optionModels->get($qModel->id, collect());
+                    foreach ($optionsForQuestion as $idx => $optModel) {
+                        $opts[] = $optModel->option;
+                        if ($answerIndex === null && $optModel->is_correct) {
+                            $answerIndex = $idx; // first correct option
+                        }
+                    }
+                    $qArray[] = [
+                        'id' => (string) $qModel->id, // keep as string for consistency with uuid style
+                        'type' => $qModel->type ?? 'multiple',
+                        'question' => $qModel->question ?? '',
+                        'options' => $qModel->type === 'multiple' ? $opts : [],
+                        'answer' => $qModel->type === 'multiple' ? $answerIndex : null,
+                        'answer_nonce' => 0,
+                    ];
+                }
+
+                $topicSections[] = [
+                    'id' => (string) $sModel->id,
+                    'title' => $sModel->title ?? '',
+                    'resources' => $resArray,
+                    'quiz' => [
+                        'enabled' => (bool) ($sModel->is_quiz_on || count($qArray) > 0),
+                        'questions' => $qArray,
+                    ],
+                ];
+            }
+            $loaded[] = [
+                'id' => (string) $tModel->id,
+                'title' => $tModel->title ?? '',
+                'sections' => $topicSections,
+            ];
+        }
+
+        $this->topics = $loaded;
     }
 
     private function makeQuestion(string $type = 'multiple'): array
