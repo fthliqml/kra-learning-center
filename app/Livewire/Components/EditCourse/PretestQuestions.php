@@ -4,13 +4,17 @@ namespace App\Livewire\Components\EditCourse;
 
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Mary\Traits\Toast;
 
 class PretestQuestions extends Component
 {
+    use Toast;
     public array $questions = [];
     // Simple save draft flags (no dirty tracking to avoid overhead with large arrays)
     public bool $hasEverSaved = false;
     public bool $persisted = false; // mimic persistence success
+    // Error highlighting: indexes of invalid questions
+    public array $errorQuestionIndexes = [];
 
     protected $listeners = [];
 
@@ -120,11 +124,60 @@ class PretestQuestions extends Component
 
     public function saveDraft(): void
     {
-        // Placeholder: Here you'd persist $this->questions (e.g., to course pretest table)
-        // We only toggle flags & flash for now
+        // Reset previous errors
+        $this->errorQuestionIndexes = [];
+
+        // Validate structure via service (mirrors LearningModules style)
+        $validator = new \App\Services\PretestQuestionsValidator();
+        $result = $validator->validate($this->questions);
+        $errors = $result['errors'];
+        $this->errorQuestionIndexes = $result['errorQuestionIndexes'];
+
+        if (!empty($errors)) {
+            $bulletLines = collect($errors)->take(6)->map(fn($e) => '• ' . $e);
+            $display = $bulletLines->implode("\n");
+            if (count($errors) > 6) {
+                $display .= "\n..." . (count($errors) - 6) . " more errors";
+            }
+            $htmlMessage = "<div style=\"white-space:pre-line; text-align:left\"><strong>Validation failed:</strong>\n" . e($display) . '</div>';
+            $this->error(
+                $htmlMessage,
+                timeout: 10000,
+                position: 'toast-top toast-center'
+            );
+            return;
+        }
+
+        // If all questions removed somehow (should be caught earlier) block save
+        if (empty($this->questions)) {
+            $this->error(
+                'Cannot save empty pretest. Add at least one question.',
+                timeout: 6000,
+                position: 'toast-top toast-center'
+            );
+            return;
+        }
+
+        // Trim question & option texts before persistence
+        foreach ($this->questions as &$q) {
+            $q['question'] = trim($q['question'] ?? '');
+            if (($q['type'] ?? '') === 'multiple') {
+                $q['options'] = array_map(fn($o) => trim($o), $q['options'] ?? []);
+            } else {
+                $q['options'] = []; // ensure essay has no options
+            }
+        }
+        unset($q);
+
+        // TODO: Persist to DB (no schema shown). For now we mimic success.
         $this->persisted = true;
         $this->hasEverSaved = true;
-        session()->flash('saved', 'Pretest questions saved (draft).');
+        $this->errorQuestionIndexes = []; // clear highlights on success
+        $this->success(
+            'Pretest questions saved successfully',
+            timeout: 4000,
+            position: 'toast-top toast-center'
+        );
     }
 
     public function placeholder()
