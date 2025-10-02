@@ -37,17 +37,42 @@
                     </div>
                 </div>
                 @if (($q['type'] ?? '') === 'multiple')
+                    @php($answerIndex = $q['answer'] ?? null)
+                    @php($answerNonce = $q['answer_nonce'] ?? 0)
                     <div class="space-y-2">
+                        <div class="flex items-center gap-2 mb-1 mt-2">
+                            <span class="text-[10px] uppercase tracking-wide text-base-content/50">Mark Correct
+                                Answer</span>
+                            @if (!is_null($answerIndex) && isset(($q['options'] ?? [])[$answerIndex]))
+                                <span class="badge badge-success badge-sm">Current: {{ chr(65 + $answerIndex) }}</span>
+                                <button type="button" class="btn btn-ghost btn-xs text-error"
+                                    wire:click="setCorrectAnswer({{ $i }}, {{ $answerIndex }})">Unset</button>
+                            @else
+                                <span class="text-[10px] text-gray-400">None selected</span>
+                            @endif
+                        </div>
                         @foreach ($q['options'] ?? [] as $oi => $opt)
                             <div class="flex items-center gap-2"
-                                wire:key="pre-q-{{ $q['id'] }}-opt-{{ $oi }}">
-                                <x-input class="flex-1 pr-10 focus-within:border-0" placeholder="Option text"
+                                wire:key="pre-q-{{ $q['id'] }}-opt-{{ $oi }}-n{{ $answerNonce }}-{{ substr(md5($q['id'] . '|' . $oi . '|' . $opt), 0, 6) }}">
+                                <label class="flex items-center gap-1 cursor-pointer select-none">
+                                    <input type="radio" name="pre-answer-{{ $q['id'] }}-{{ $answerNonce }}"
+                                        value="{{ $oi }}" @if (!is_null($answerIndex) && $answerIndex === $oi) checked @endif
+                                        class="radio radio-success radio-xs"
+                                        wire:click="setCorrectAnswer({{ $i }}, {{ $oi }})" />
+                                    <span
+                                        class="text-[11px] font-medium {{ $answerIndex === $oi ? 'text-success' : 'text-gray-500' }}">
+                                        {{ chr(65 + $oi) }}
+                                    </span>
+                                </label>
+                                <x-input
+                                    class="flex-1 pr-10 focus-within:border-0 {{ $answerIndex === null && count(array_filter($q['options'] ?? [], fn($x) => trim($x) !== '')) >= 2 && $oi === 0 && in_array($i, $errorQuestionIndexes ?? []) ? 'border-error/60' : '' }}"
+                                    placeholder="Option"
                                     wire:model.defer="questions.{{ $i }}.options.{{ $oi }}" />
-                                <x-button icon="o-trash" class="btn-ghost text-red-500" title="Remove option"
+                                <x-button icon="o-x-mark" class="btn-ghost text-error" title="Remove option"
                                     wire:click="removeOption({{ $i }}, {{ $oi }})" />
                             </div>
                         @endforeach
-                        <x-button type="button" size="sm" class="border-gray-400" outline icon="o-plus"
+                        <x-button type="button" size="xs" class="border-gray-400" outline icon="o-plus"
                             wire:click="addOption({{ $i }})">Add Option</x-button>
                     </div>
                 @endif

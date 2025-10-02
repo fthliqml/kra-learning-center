@@ -11,7 +11,6 @@ class Test extends Model
   protected $fillable = [
     'course_id',
     'type',
-    'description',
     'passing_score',
     'time_limit',
     'max_attempts',

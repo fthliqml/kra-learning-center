@@ -64,6 +64,24 @@ class PretestQuestionsValidator
                         $errors[] = 'Multiple choice question #' . ($i + 1) . ' has duplicate option texts.';
                         $errorQuestionIndexes[] = $i;
                     }
+                    // Validate answer index if provided
+                    $answer = $q['answer'] ?? null;
+                    if ($answer === null) {
+                        $errors[] = 'Multiple choice question #' . ($i + 1) . ' requires a correct answer selection.';
+                        $errorQuestionIndexes[] = $i;
+                    } else {
+                        // Ensure mapping from original options to non-empty indices is consistent
+                        // Build mapping of original indices of nonEmpty list
+                        $mapped = [];
+                        foreach ($opts as $origIdx => $txt) {
+                            if (trim($txt) !== '')
+                                $mapped[] = $origIdx; // keep original index positions
+                        }
+                        if (!in_array($answer, $mapped, true)) {
+                            $errors[] = 'Multiple choice question #' . ($i + 1) . ' selected answer is invalid after changes.';
+                            $errorQuestionIndexes[] = $i;
+                        }
+                    }
                 }
             }
         }

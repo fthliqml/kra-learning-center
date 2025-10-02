@@ -7,7 +7,7 @@
 
         {{-- TAB: Pretest --}}
         <x-tab name="pretest" label="Pretest" icon="m-clipboard-document-list">
-            <livewire:components.edit-course.pretest-questions lazy />
+            <livewire:components.edit-course.pretest-questions :courseId="$course->id" lazy />
         </x-tab>
 
         {{-- TAB: Learning Module --}}
@@ -17,7 +17,7 @@
 
         {{-- TAB: Post Test --}}
         <x-tab name="post-test" label="Post Test" icon="m-check-badge">
-            <livewire:components.edit-course.post-test-questions lazy />
+            <livewire:components.edit-course.post-test-questions :courseId="$course->id" lazy />
         </x-tab>
     </x-tabs>
 

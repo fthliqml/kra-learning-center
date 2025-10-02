@@ -11,7 +11,6 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
             $table->enum('type', ['pretest', 'posttest']);
-            $table->text('description')->nullable();
             // passing_score: treat as percentage 0-100
             $table->unsignedSmallInteger('passing_score');
             // time limit in minutes (nullable => unlimited)

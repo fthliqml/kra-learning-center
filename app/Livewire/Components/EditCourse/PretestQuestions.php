@@ -5,11 +5,17 @@ namespace App\Livewire\Components\EditCourse;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use Illuminate\Support\Facades\DB;
+use App\Models\Test;
+use App\Models\TestQuestion;
+use App\Models\TestQuestionOption;
 
 class PretestQuestions extends Component
 {
     use Toast;
     public array $questions = [];
+    // Parent should pass course id to enable persistence (same pattern as LearningModules)
+    public ?int $courseId = null;
     // Simple save draft flags (no dirty tracking to avoid overhead with large arrays)
     public bool $hasEverSaved = false;
     public bool $persisted = false; // mimic persistence success
@@ -20,9 +26,48 @@ class PretestQuestions extends Component
 
     public function mount(): void
     {
+        if ($this->courseId) {
+            $this->hydrateFromCourse();
+        }
         if (empty($this->questions)) {
             $this->questions = [$this->makeQuestion()];
         }
+    }
+
+    /**
+     * Hydrate existing pretest (type=pretest) into in-memory questions array structure.
+     */
+    protected function hydrateFromCourse(): void
+    {
+        $existingTest = Test::where('course_id', $this->courseId)
+            ->where('type', 'pretest')
+            ->first();
+        if (!$existingTest) {
+            $this->questions = [];
+            return;
+        }
+        $loaded = [];
+        $existingTest->load(['questions.options']);
+        foreach ($existingTest->questions->sortBy('order')->values() as $qModel) {
+            $options = $qModel->options->sortBy('order')->values();
+            $opts = $options->map(fn($o) => $o->text)->all();
+            $answerIndex = null;
+            foreach ($options as $idx => $opt) {
+                if ($opt->is_correct) {
+                    $answerIndex = $idx;
+                    break; // first correct (only one expected)
+                }
+            }
+            $loaded[] = [
+                'id' => (string) $qModel->id,
+                'type' => $qModel->question_type ?? 'multiple',
+                'question' => $qModel->text ?? '',
+                'options' => ($qModel->question_type === 'multiple') ? $opts : [],
+                'answer' => ($qModel->question_type === 'multiple') ? $answerIndex : null,
+                'answer_nonce' => 0,
+            ];
+        }
+        $this->questions = $loaded;
     }
 
     private function makeQuestion(string $type = 'multiple'): array
@@ -32,6 +77,8 @@ class PretestQuestions extends Component
             'type' => $type,
             'question' => '',
             'options' => $type === 'multiple' ? [''] : [],
+            'answer' => null, // index of correct option (multiple only)
+            'answer_nonce' => 0, // forces radio group remount on reset
         ];
     }
 
@@ -60,6 +107,21 @@ class PretestQuestions extends Component
         if (isset($this->questions[$qIndex]['options'][$oIndex])) {
             unset($this->questions[$qIndex]['options'][$oIndex]);
             $this->questions[$qIndex]['options'] = array_values($this->questions[$qIndex]['options']);
+            if (($this->questions[$qIndex]['type'] ?? '') === 'multiple') {
+                // adjust answer index
+                if (!isset($this->questions[$qIndex]['answer_nonce'])) {
+                    $this->questions[$qIndex]['answer_nonce'] = 0;
+                }
+                $ans =& $this->questions[$qIndex]['answer'];
+                if ($ans !== null) {
+                    if ($ans == $oIndex) { // removed the selected answer
+                        $ans = null;
+                        $this->questions[$qIndex]['answer_nonce']++;
+                    } elseif ($ans > $oIndex) {
+                        $ans -= 1; // shift left
+                    }
+                }
+            }
         }
     }
 
@@ -70,9 +132,30 @@ class PretestQuestions extends Component
             $type = $this->questions[$i]['type'] ?? null;
             if ($type === 'essay') {
                 $this->questions[$i]['options'] = [];
+                $this->questions[$i]['answer'] = null;
             } elseif ($type === 'multiple' && empty($this->questions[$i]['options'])) {
                 $this->questions[$i]['options'] = [''];
+                $this->questions[$i]['answer'] = null;
             }
+        }
+    }
+
+    public function setCorrectAnswer(int $qIndex, int $oIndex): void
+    {
+        if (!isset($this->questions[$qIndex]))
+            return;
+        $q =& $this->questions[$qIndex];
+        if (($q['type'] ?? '') !== 'multiple')
+            return;
+        if (!isset($q['options'][$oIndex]))
+            return;
+        $current = $q['answer'] ?? null;
+        $new = ($current === $oIndex) ? null : $oIndex; // toggle
+        $q['answer'] = $new;
+        if (!isset($q['answer_nonce']))
+            $q['answer_nonce'] = 0;
+        if ($new === null) {
+            $q['answer_nonce']++;
         }
     }
 
@@ -127,6 +210,15 @@ class PretestQuestions extends Component
         // Reset previous errors
         $this->errorQuestionIndexes = [];
 
+        if (!$this->courseId) {
+            $this->error(
+                'Course ID not found',
+                timeout: 5000,
+                position: 'toast-top toast-center'
+            );
+            return;
+        }
+
         // Validate structure via service (mirrors LearningModules style)
         $validator = new \App\Services\PretestQuestionsValidator();
         $result = $validator->validate($this->questions);
@@ -169,7 +261,51 @@ class PretestQuestions extends Component
         }
         unset($q);
 
-        // TODO: Persist to DB (no schema shown). For now we mimic success.
+        DB::transaction(function () {
+            // Fetch or create the pretest container row
+            $test = Test::firstOrCreate(
+                [
+                    'course_id' => $this->courseId,
+                    'type' => 'pretest',
+                ],
+                [
+                    'passing_score' => 0, // default; can be updated via separate UI later
+                    'time_limit' => null,
+                    'max_attempts' => null,
+                    'randomize_question' => false,
+                    'is_active' => true,
+                ]
+            );
+
+            // Wipe existing questions (cascade deletes options)
+            $test->questions()->delete();
+
+            foreach ($this->questions as $qOrder => $q) {
+                $questionModel = TestQuestion::create([
+                    'test_id' => $test->id,
+                    'question_type' => in_array($q['type'] ?? '', ['multiple', 'essay']) ? $q['type'] : 'multiple',
+                    'text' => $q['question'] ?: 'Untitled Question',
+                    'order' => $qOrder,
+                    'max_points' => 1,
+                ]);
+
+                if (($q['type'] ?? '') === 'multiple') {
+                    $answerIndex = $q['answer'] ?? null;
+                    foreach (($q['options'] ?? []) as $optIndex => $optText) {
+                        $optText = trim($optText);
+                        if ($optText === '')
+                            continue; // skip empty placeholder
+                        TestQuestionOption::create([
+                            'question_id' => $questionModel->id,
+                            'text' => $optText,
+                            'order' => $optIndex,
+                            'is_correct' => ($answerIndex !== null && $answerIndex === $optIndex),
+                        ]);
+                    }
+                }
+            }
+        });
+
         $this->persisted = true;
         $this->hasEverSaved = true;
         $this->errorQuestionIndexes = []; // clear highlights on success
