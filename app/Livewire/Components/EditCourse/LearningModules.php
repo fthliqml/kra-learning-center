@@ -18,24 +18,30 @@ class LearningModules extends Component
 {
     use WithFileUploads, Toast;
 
-    /**
-     * Data structure (new):
-     * $topics = [
-     *   [
-     *     'id' => uuid,
-     *     'title' => string,
-     *     'sections' => [
-     *        [
-     *          'id' => uuid,
-     *          'title' => string,
-     *          'resources' => [ ['type'=>'pdf','file'=>UploadedFile|null], ['type'=>'youtube','url'=>''] ],
-     *          'quiz' => ['enabled'=>bool,'questions'=>[ ['id'=>uuid,'type'=>'multiple|essay','question'=>'','options'=>[]] ]]
-     *        ],
-     *        ...
-     *     ]
-     *   ], ...]
-     */
     public array $topics = [];
+    /**
+     * View / partial iteration helper variable legend (used inside Blade partials):
+     *  $ti  : topic index (0-based)
+     *  $topic : current topic array ['id','title','sections'=>[]]
+     *  $si  : section index within current topic (0-based)
+     *  $section : current section array ['id','title','resources'=>[],'quiz'=>['enabled'=>bool,'questions'=>[]]]
+     *  $ri  : resource index within current section (0-based)
+     *  $res : current resource array ['type'=>'pdf|youtube','url'=>string]
+     *  $qi  : quiz question index within section (0-based)
+     *  $qq  : current quiz question array ['id','type','question','options'=>[], 'answer'=>int|null, 'answer_nonce'=>int]
+     *  $answerIndex : selected correct option index for multiple-choice question
+     *  $answerNonce : integer incremented to force radio group remount after structural changes (option removed / answer unset)
+     *
+     * Error highlight key schemes (mirrors validator output):
+     *  Topic key    => t{ti}
+     *  Section key  => t{ti}-s{si}
+     *  Resource key => t{ti}-s{si}-r{ri}
+     *  Question key => t{ti}-s{si}-q{qi}
+     * These keys are collected into $errorTopicKeys, $errorSectionKeys, $errorResourceKeys, $errorQuestionKeys arrays
+     * for conditional CSS classes in Blade.
+     *
+     * Note: Indices remain 0-based in data/state; UI adds +1 where human-readable numbering is displayed.
+     */
     public ?int $courseId = null; // Expect parent to pass course id
     // Track collapsed topic IDs (UI state persist across requests)
     public array $collapsedTopicIds = [];
