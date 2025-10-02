@@ -7,16 +7,17 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ResourceItem extends Model
 {
-    protected $table = 'resources';
+  protected $table = 'resources';
 
-    protected $fillable = [
-        'section_id',
-        'content_type',
-        'url',
-    ];
+  protected $fillable = [
+    'section_id',
+    'content_type',
+    'url',
+    'filename',
+  ];
 
-    public function section(): BelongsTo
-    {
-        return $this->belongsTo(Section::class);
-    }
+  public function section(): BelongsTo
+  {
+    return $this->belongsTo(Section::class);
+  }
 }

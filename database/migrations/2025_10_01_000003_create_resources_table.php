@@ -5,19 +5,20 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
-  public function up(): void
-  {
-    Schema::create('resources', function (Blueprint $table) {
-      $table->id();
-      $table->foreignId('section_id')->constrained('sections')->cascadeOnDelete();
-      $table->enum('content_type', ['pdf', 'yt']);
-      $table->string('url');
-      $table->timestamps();
-    });
-  }
+    public function up(): void
+    {
+        Schema::create('resources', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('section_id')->constrained('sections')->cascadeOnDelete();
+            $table->enum('content_type', ['pdf', 'yt']);
+            $table->string('url');
+            $table->string('filename')->nullable();
+            $table->timestamps();
+        });
+    }
 
-  public function down(): void
-  {
-    Schema::dropIfExists('resources');
-  }
+    public function down(): void
+    {
+        Schema::dropIfExists('resources');
+    }
 };

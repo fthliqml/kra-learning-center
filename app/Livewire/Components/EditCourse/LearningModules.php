@@ -110,6 +110,17 @@ class LearningModules extends Component
                         if (isset($res['file']) && !isset($res['url'])) {
                             $res['url'] = '';
                         }
+                        if (!isset($res['filename']) || !is_string($res['filename']) || $res['filename'] === '') {
+                            // derive from URL if possible
+                            $res['filename'] = '';
+                            if (!empty($res['url'])) {
+                                $parts = explode('/', parse_url($res['url'], PHP_URL_PATH) ?? '');
+                                $last = end($parts);
+                                if (is_string($last) && str_contains($last, '.')) {
+                                    $res['filename'] = $last;
+                                }
+                            }
+                        }
                         if (isset($res['file']))
                             unset($res['file']);
                     }
@@ -152,9 +163,23 @@ class LearningModules extends Component
                 $resourcesForSection = $resourceModels->get($sModel->id, collect());
                 foreach ($resourcesForSection as $rModel) {
                     $type = $rModel->content_type === 'yt' ? 'youtube' : $rModel->content_type; // map back
+                    $url = $rModel->url ?? '';
+                    $filename = '';
+                    if ($type === 'pdf') {
+                        if (!empty($rModel->filename)) {
+                            $filename = $rModel->filename;
+                        } elseif ($url) {
+                            $parts = explode('/', parse_url($url, PHP_URL_PATH) ?? '');
+                            $last = end($parts);
+                            if (is_string($last) && str_contains($last, '.')) {
+                                $filename = $last;
+                            }
+                        }
+                    }
                     $resArray[] = [
                         'type' => $type,
-                        'url' => $rModel->url ?? '',
+                        'url' => $url,
+                        'filename' => $filename,
                     ];
                 }
 
@@ -416,9 +441,22 @@ class LearningModules extends Component
                 try {
                     $storedPath = $res['file']->store('modules/pdf', 'public');
                     $res['url'] = storage_path('app/public/' . $storedPath) ? asset('storage/' . $storedPath) : '';
+                    // Preserve original client filename
+                    try {
+                        $originalName = method_exists($res['file'], 'getClientOriginalName') ? $res['file']->getClientOriginalName() : null;
+                        if ($originalName) {
+                            $res['filename'] = $originalName;
+                        } else {
+                            // Fallback derive from stored path
+                            $res['filename'] = basename($storedPath);
+                        }
+                    } catch (\Throwable $e) {
+                        $res['filename'] = basename($storedPath);
+                    }
                 } catch (\Throwable $e) {
                     // Reset on failure
                     $res['url'] = '';
+                    $res['filename'] = '';
                 }
                 // Remove the file key after storing to keep hash stable
                 unset($res['file']);
@@ -636,6 +674,7 @@ class LearningModules extends Component
                             'section_id' => $sectionModel->id,
                             'content_type' => $contentType,
                             'url' => $url,
+                            'filename' => $contentType === 'pdf' ? ($res['filename'] ?? ($url ? basename(parse_url($url, PHP_URL_PATH)) : null)) : null,
                         ]);
                     }
 

@@ -8,9 +8,17 @@
                 <div
                     class="flex items-start gap-3 rounded-md px-3 py-2 shadow-sm ring-1 transition bg-base-100/70 hover:ring-base-300 {{ in_array($resKey, $errorResourceKeys ?? []) ? 'ring-error/60 border border-error/60 bg-error/5' : 'ring-base-300/40 border border-base-300/40' }}">
                     <div class="flex-1 space-y-1">
-                        <input type="file" accept="application/pdf"
-                            wire:model="topics.{{ $ti }}.sections.{{ $si }}.resources.{{ $ri }}.file"
-                            class="file-input file-input-bordered file-input-sm w-full max-w-md" />
+                        <div class="flex items-center gap-3 flex-wrap">
+                            <input type="file" accept="application/pdf"
+                                wire:model="topics.{{ $ti }}.sections.{{ $si }}.resources.{{ $ri }}.file"
+                                class="file-input file-input-bordered file-input-sm w-full max-w-md" />
+                            @php($filename = $res['filename'] ?? '')
+                            @if ($filename)
+                                <span class="text-[11px] text-base-content/70 inline-flex items-center gap-1">
+                                    <x-icon name="o-document" class="size-3" /> {{ $filename }}
+                                </span>
+                            @endif
+                        </div>
                         @php($pdfUrl = $res['url'] ?? '')
                         @if ($pdfUrl)
                             <a href="{{ $pdfUrl }}" target="_blank"
