@@ -46,39 +46,111 @@
                 {{-- Modules List --}}
                 <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                     <div class="flex items-center justify-between mb-4">
-                        <h2 class="text-base md:text-lg font-semibold">Learning Module</h2>
+                        <h2 class="text-base md:text-lg font-semibold">Learning Modules</h2>
                     </div>
-                    <ul class="divide-y divide-gray-200">
-                        @forelse ($modules as $index => $module)
-                            <li class="py-3 flex items-start gap-3">
-                                <span
-                                    class="mt-1 w-2 h-2 rounded-full bg-primary/60 flex-shrink-0 translate-y-1"></span>
-                                <div class="flex-1 min-w-0">
-                                    <p class="text-sm font-medium text-gray-800">
-                                        {{ $module->title }}
-                                    </p>
-                                    <p class="text-xs text-gray-500 line-clamp-2 mt-1 flex items-center gap-4">
-                                        <span class="inline-flex items-center gap-1">
-                                            <x-icon name="o-play-circle" class="size-3 text-gray-400" />
-                                            <span>1 Video</span>
-                                        </span>
-                                        <span class="inline-flex items-center gap-1">
-                                            <x-icon name="o-book-open" class="size-3 text-gray-400" />
-                                            <span>2 Modules</span>
-                                        </span>
-                                    </p>
-                                </div>
-                                @if ($module->is_completed)
-                                    <span
-                                        class="inline-flex items-center gap-1 text-[10px] font-medium text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5">
-                                        Done
-                                    </span>
-                                @endif
-                            </li>
-                        @empty
-                            <li class="py-6 text-center text-sm text-gray-500">No learning modules yet.</li>
-                        @endforelse
-                    </ul>
+                    @if ($modulesCount === 0)
+                        <div class="py-6 text-center text-sm text-gray-500">No learning modules yet.</div>
+                    @else
+                        <x-accordion wire:model="accordion">
+                            @foreach ($modules as $module)
+                                @php
+                                    $sectionCount = $module->derived_section_count ?? 0;
+                                    $videoCount = $module->derived_video_count ?? 0;
+                                    $readingCount = $module->derived_reading_count ?? 0;
+                                    $counts = $module->formatted_counts ?? [];
+                                @endphp
+                                <x-collapse name="module-{{ $module->id }}" no-icon separator
+                                    class="border rounded-lg mb-2 overflow-hidden">
+                                    <x-slot:heading
+                                        class="flex flex-col gap-2 px-4 pt-7 pb-0 md:flex-row md:items-start md:justify-between">
+                                        <div class="flex items-start gap-2 min-w-0">
+                                            <span
+                                                class="text-sm font-medium text-gray-800 break-words">{{ $module->title }}</span>
+                                            @if ($module->is_completed ?? false)
+                                                <span
+                                                    class="inline-flex items-center gap-1 text-[10px] font-medium text-green-600 bg-green-50 border border-green-200 rounded-full px-2 py-0.5 whitespace-nowrap">Done</span>
+                                            @endif
+                                        </div>
+                                        <div
+                                            class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-gray-500 leading-none">
+                                            <span class="inline-flex items-center gap-1 whitespace-nowrap">
+                                                <x-icon name="o-folder" class="size-3 text-gray-400 relative top-px" />
+                                                <span class="align-middle pt-1">{{ $sectionCount }}
+                                                    {{ Str::plural('Section', $sectionCount) }}</span>
+                                            </span>
+                                            @if ($videoCount > 0)
+                                                <span class="text-gray-300">•</span>
+                                                <span class="inline-flex items-center gap-1 whitespace-nowrap">
+                                                    <x-icon name="o-play-circle"
+                                                        class="size-3 text-gray-400 relative top-px" />
+                                                    <span class="align-middle pt-1">{{ $videoCount }}
+                                                        {{ Str::plural('Video', $videoCount) }}</span>
+                                                </span>
+                                            @endif
+                                            @if ($readingCount > 0)
+                                                <span class="text-gray-300">•</span>
+                                                <span class="inline-flex items-center gap-1 whitespace-nowrap">
+                                                    <x-icon name="o-book-open"
+                                                        class="size-3 text-gray-400 relative top-px" />
+                                                    <span class="align-middle pt-1">{{ $readingCount }}
+                                                        {{ Str::plural('Reading', $readingCount) }}</span>
+                                                </span>
+                                            @endif
+                                        </div>
+                                    </x-slot:heading>
+                                    <x-slot:content class="bg-white px-4 pt-3 pb-4 text-xs text-gray-600 space-y-3">
+                                        @if (($module->sections?->count() ?? 0) === 0)
+                                            <p class="text-gray-400 italic">No sections in this module.</p>
+                                        @else
+                                            <ol class="space-y-5">
+                                                @foreach ($module->sections as $sec)
+                                                    @php
+                                                        $resources = $sec->resources ?? collect();
+                                                        $videoCount = $resources->where('content_type', 'yt')->count();
+                                                        $readingCount = $resources
+                                                            ->where('content_type', 'pdf')
+                                                            ->count();
+                                                    @endphp
+                                                    <li class="flex items-start gap-2">
+                                                        <x-icon name="o-folder-open"
+                                                            class="size-4 mt-0.5 text-primary/60" />
+                                                        <div class="min-w-0 flex-1 space-y-0.5">
+                                                            <p class="font-medium text-gray-800 truncate">
+                                                                {{ $sec->title }}</p>
+                                                            <div
+                                                                class="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-gray-500 leading-tight">
+                                                                @if ($videoCount > 0)
+                                                                    <span
+                                                                        class="inline-flex items-center gap-1 whitespace-nowrap">
+                                                                        {{ $videoCount }}
+                                                                        {{ Str::plural('Video', $videoCount) }}
+                                                                    </span>
+                                                                @endif
+                                                                @if ($readingCount > 0)
+                                                                    @if ($videoCount > 0)
+                                                                        <span class="text-gray-300">•</span>
+                                                                    @endif
+                                                                    <span
+                                                                        class="inline-flex items-center gap-1 whitespace-nowrap">
+                                                                        {{ $readingCount }}
+                                                                        {{ Str::plural('Reading', $readingCount) }}
+                                                                    </span>
+                                                                @endif
+                                                            </div>
+                                                        </div>
+                                                        @if ($sec->is_quiz_on)
+                                                            <span
+                                                                class="text-[10px] inline-flex items-center gap-1 text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-full px-2 py-0.5">Quiz</span>
+                                                        @endif
+                                                    </li>
+                                                @endforeach
+                                            </ol>
+                                        @endif
+                                    </x-slot:content>
+                                </x-collapse>
+                            @endforeach
+                        </x-accordion>
+                    @endif
                 </section>
             </div>
 

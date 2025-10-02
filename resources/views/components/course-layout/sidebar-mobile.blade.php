@@ -60,35 +60,39 @@
         <nav class="flex-1 overflow-y-auto p-4">
             <ol class="space-y-3 text-sm">
                 @foreach ($stages as $s)
-                    <li class="group border-b last:border-b-0 border-gray-300/30 pb-3">
-                        <div class="flex items-center justify-between w-full px-1"
-                            :class="stage === '{{ $s }}' ? 'text-primary font-semibold' : 'text-gray-700'">
-                            <div class="flex items-center gap-2">
-                                <span class="capitalize">
-                                    {{ $s === 'module' ? 'Learning Module' : ucfirst($s) }}
+                    @if ($s === 'module')
+                        @if ($modules->count())
+                            <li class="group border-b last:border-b-0 border-gray-300/30 pb-2">
+                                <ul class="ml-1 space-y-1">
+                                    @foreach ($modules as $m)
+                                        <li class="flex items-center gap-2 text-[13px] text-gray-600"
+                                            :class="stage === 'module' ? 'text-primary' : ''">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
+                                            <span class="truncate"
+                                                title="{{ $m->title }}">{{ Str::limit($m->title, 44) }}</span>
+                                        </li>
+                                    @endforeach
+                                </ul>
+                            </li>
+                        @endif
+                    @else
+                        <li class="group border-b last:border-b-0 border-gray-300/30 pb-3">
+                            <div class="flex items-center justify-between w-full px-1"
+                                :class="stage === '{{ $s }}' ? 'text-primary font-semibold' : 'text-gray-700'">
+                                <div class="flex items-center gap-2">
+                                    <span class="capitalize">{{ ucfirst($s) }}</span>
+                                </div>
+                                <span class="relative w-4 h-4 flex items-center justify-center">
+                                    <span x-show="stage !== '{{ $s }}'" x-cloak
+                                        class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
+                                    <span x-show="stage === '{{ $s }}'" x-cloak
+                                        class="absolute inset-0 rounded-full bg-primary"></span>
+                                    <span x-show="stage === '{{ $s }}'" x-cloak
+                                        class="absolute rounded-full bg-white" style="inset:4px"></span>
                                 </span>
                             </div>
-                            <span class="relative w-4 h-4 flex items-center justify-center">
-                                <span x-show="stage !== '{{ $s }}'" x-cloak
-                                    class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
-                                <span x-show="stage === '{{ $s }}'" x-cloak
-                                    class="absolute inset-0 rounded-full bg-primary"></span>
-                                <span x-show="stage === '{{ $s }}'" x-cloak
-                                    class="absolute rounded-full bg-white" style="inset:4px"></span>
-                            </span>
-                        </div>
-                        @if ($s === 'module' && $modules->count())
-                            <ul class="mt-2 ml-4 space-y-1">
-                                @foreach ($modules as $m)
-                                    <li class="flex items-center gap-2 text-[13px] text-gray-600">
-                                        <span class="w-1.5 h-1.5 rounded-full bg-gray-300"></span>
-                                        <span class="truncate"
-                                            title="{{ $m->title }}">{{ Str::limit($m->title, 40) }}</span>
-                                    </li>
-                                @endforeach
-                            </ul>
-                        @endif
-                    </li>
+                        </li>
+                    @endif
                 @endforeach
             </ol>
         </nav>

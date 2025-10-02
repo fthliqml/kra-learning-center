@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Auth;
@@ -19,15 +18,6 @@ class Course extends Model
         'group_comp',
         'status',
     ];
-
-
-    /**
-     * Get the learning modules for the course.
-     */
-    public function learningModules(): HasMany
-    {
-        return $this->hasMany(LearningModule::class, 'course_id');
-    }
 
     /**
      * Get the user courses for the course.
@@ -46,6 +36,22 @@ class Course extends Model
     }
 
     /**
+     * Get the topics for the course.
+     */
+    public function topics(): HasMany
+    {
+        return $this->hasMany(Topic::class, 'course_id');
+    }
+
+    /**
+     * Alias: treat topics as learning modules for progress logic.
+     */
+    public function learningModules(): HasMany
+    {
+        return $this->hasMany(Topic::class, 'course_id');
+    }
+
+    /**
      * Scope: only courses assigned to a given user id.
      */
     public function scopeAssignedToUser($query, $userId)
@@ -59,9 +65,8 @@ class Course extends Model
 
     /**
      * Compute progress percentage for a specific user (or current auth user).
-     * Relies on eager loaded: userCourses (filtered to user) + learning_modules_count (withCount) OR learningModules relation.
      */
-    public function progressForUser(?\App\Models\User $user = null): int
+    public function progressForUser(?User $user = null): int
     {
         $user = $user ?: Auth::user();
         if (!$user) {

@@ -10,6 +10,7 @@ use Carbon\Carbon;
 class Training extends Model
 {
     protected $fillable = [
+        'course_id',
         'name',
         'type',
         'group_comp',
@@ -55,11 +56,11 @@ class Training extends Model
     }
 
     /**
-     * Get the courses associated with the training.
+     * Link to an optional primary course (nullable FK in migration).
      */
-    public function courses(): HasMany
+    public function course()
     {
-        return $this->hasMany(Course::class, 'training_id');
+        return $this->belongsTo(Course::class, 'course_id');
     }
 
     /**

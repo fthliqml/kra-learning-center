@@ -21,6 +21,8 @@ class SectionQuizAttempt extends Model
   ];
 
   protected $casts = [
+    'score' => 'integer',
+    'total_questions' => 'integer',
     'started_at' => 'datetime',
     'completed_at' => 'datetime',
     'passed' => 'boolean',

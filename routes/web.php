@@ -5,6 +5,7 @@ use App\Http\Controllers\Training\TrainingModuleController;
 use App\Livewire\Pages\Courses\Courses;
 use App\Livewire\Pages\Courses\Overview;
 use App\Livewire\Pages\Courses\Pretest;
+use App\Livewire\Pages\Courses\ModulePage;
 use App\Livewire\Pages\EditCourse\CoursesManagement;
 use App\Livewire\Pages\EditCourse\EditCourse;
 use App\Livewire\Pages\Training\DataTrainer;
@@ -40,6 +41,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/courses', Courses::class)->name('courses.index');
     Route::get('/courses/{course}/overview', Overview::class)->name('courses-overview.show');
     Route::get('/courses/{course}/pretest', Pretest::class)->name('courses-pretest.index');
+    Route::get('/courses/{course}/modules', ModulePage::class)->name('courses-modules.index');
     Route::get('/courses/management', CoursesManagement::class)->name('courses-management.index');
     Route::get('/courses/{course}/edit', EditCourse::class)->name('edit-course.index');
     Route::get('/courses/add', EditCourse::class)->name('add-course.index');

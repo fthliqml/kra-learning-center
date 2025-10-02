@@ -36,12 +36,12 @@
         <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] sm:text-[12px] text-gray-600">
             <span class="inline-flex items-center gap-1 min-w-0">
                 <x-icon name="o-book-open" class="size-4 text-gray-500 shrink-0" />
-                <span>{{ $modulesCount }} {{ Str::plural('chapter', $modulesCount) }}</span>
+                <span>{{ $modulesCount }} {{ Str::plural('Topic', $modulesCount) }}</span>
             </span>
             <span class="hidden sm:inline h-3 w-px bg-gray-300/60"></span>
             <span class="inline-flex items-center gap-1 min-w-0">
                 <x-icon name="o-user-group" class="size-4 text-gray-500 shrink-0" />
-                <span>{{ $usersCount }} {{ Str::plural('learner', $usersCount) }}</span>
+                <span>{{ $usersCount }} {{ Str::plural('Learner', $usersCount) }}</span>
             </span>
         </div>
 

@@ -27,12 +27,12 @@ class SectionQuizAttemptAnswer extends Model
 
     public function attempt()
     {
-        return $this->belongsTo(SectionQuizAttempt::class, 'section_quiz_attempt_id');
+        return $this->belongsTo(SectionQuizAttempt::class, 'quiz_attempt_id');
     }
 
     public function question()
     {
-        return $this->belongsTo(SectionQuizQuestion::class, 'section_quiz_question_id');
+        return $this->belongsTo(SectionQuizQuestion::class, 'quiz_question_id');
     }
 
     public function selectedOption()
