@@ -438,27 +438,40 @@ class LearningModules extends Component
             $r = (int) $m2[3];
             $res =& $this->topics[$t]['sections'][$s]['resources'][$r];
             if (($res['type'] ?? null) === 'pdf' && isset($res['file']) && $res['file']) {
+                $file = $res['file'];
                 try {
-                    $storedPath = $res['file']->store('modules/pdf', 'public');
-                    $res['url'] = storage_path('app/public/' . $storedPath) ? asset('storage/' . $storedPath) : '';
-                    // Preserve original client filename
-                    try {
-                        $originalName = method_exists($res['file'], 'getClientOriginalName') ? $res['file']->getClientOriginalName() : null;
-                        if ($originalName) {
-                            $res['filename'] = $originalName;
-                        } else {
-                            // Fallback derive from stored path
-                            $res['filename'] = basename($storedPath);
-                        }
-                    } catch (\Throwable $e) {
-                        $res['filename'] = basename($storedPath);
+                    $mime = method_exists($file, 'getMimeType') ? $file->getMimeType() : null;
+                    if ($mime && !in_array($mime, ['application/pdf', 'application/x-pdf'])) {
+                        $res['url'] = '';
+                        $res['filename'] = '';
+                        unset($res['file']);
+                        $this->error('PDF upload rejected: File must be a PDF (mime: ' . e($mime) . ').', timeout: 6000, position: 'toast-top toast-center');
+                        return;
                     }
+                    $originalName = method_exists($file, 'getClientOriginalName') ? $file->getClientOriginalName() : null;
+                    if ($originalName && !preg_match('/\.pdf$/i', $originalName)) {
+                        $res['url'] = '';
+                        $res['filename'] = '';
+                        unset($res['file']);
+                        $this->error('PDF upload rejected: Extension must be .pdf', timeout: 6000, position: 'toast-top toast-center');
+                        return;
+                    }
+                    $size = method_exists($file, 'getSize') ? $file->getSize() : null;
+                    if ($size !== null && $size > 15 * 1024 * 1024) {
+                        $res['url'] = '';
+                        $res['filename'] = '';
+                        unset($res['file']);
+                        $this->error('PDF upload rejected: File too large (max 15MB).', timeout: 6000, position: 'toast-top toast-center');
+                        return;
+                    }
+                    $storedPath = $file->store('modules/pdf', 'public');
+                    $res['url'] = storage_path('app/public/' . $storedPath) ? asset('storage/' . $storedPath) : '';
+                    $res['filename'] = $originalName ?: basename($storedPath);
                 } catch (\Throwable $e) {
-                    // Reset on failure
                     $res['url'] = '';
                     $res['filename'] = '';
+                    $this->error('PDF upload failed: ' . $e->getMessage(), timeout: 6000, position: 'toast-top toast-center');
                 }
-                // Remove the file key after storing to keep hash stable
                 unset($res['file']);
                 $this->computeDirty();
             }
