@@ -198,6 +198,12 @@ class PostTestQuestions extends Component
         $this->dispatch('setTab', 'course-info');
     }
 
+    public function goNext(): void
+    {
+        // Navigate to test configuration tab after post test
+        $this->dispatch('setTab', 'test-config');
+    }
+
     public function saveDraft(): void
     {
         $this->errorQuestionIndexes = [];
@@ -241,7 +247,6 @@ class PostTestQuestions extends Component
                     'max_attempts' => null,
                     'randomize_question' => false,
                     'show_result_immediately' => true,
-                    'is_active' => true,
                 ]
             );
             $test->questions()->delete();

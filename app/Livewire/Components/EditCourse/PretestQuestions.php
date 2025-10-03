@@ -276,7 +276,6 @@ class PretestQuestions extends Component
                     'max_attempts' => null,
                     'randomize_question' => false,
                     'show_result_immediately' => true,
-                    'is_active' => true,
                 ]
             );
 

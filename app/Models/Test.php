@@ -15,7 +15,6 @@ class Test extends Model
         'max_attempts',
         'show_result_immediately',
         'randomize_question',
-        'is_active',
     ];
 
     protected $casts = [
@@ -23,7 +22,6 @@ class Test extends Model
         'max_attempts' => 'integer',
         'randomize_question' => 'boolean',
         'show_result_immediately' => 'boolean',
-        'is_active' => 'boolean',
     ];
 
     public function course(): BelongsTo
