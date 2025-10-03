@@ -40,10 +40,11 @@
     </div>
 
     <div class="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-base-300/50 mt-4">
-        <div class="flex items-center gap-4">
-            <x-ui.save-draft-status label="Save" action="saveDraft" :dirty="$isDirty" :ever="$hasEverSaved"
-                :persisted="$persisted" />
-        </div>
+        <x-ui.button type="button" variant="secondary" class="border-gray-300" wire:click="saveDraft"
+            wire:loading.attr="disabled" wire:target="saveDraft" spinner="saveDraft">
+            <x-icon name="o-bookmark" class="size-4" />
+            <span>Save Draft</span>
+        </x-ui.button>
         <div class="flex gap-2 ml-auto">
             <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goBack"
                 title="Go to previous step">

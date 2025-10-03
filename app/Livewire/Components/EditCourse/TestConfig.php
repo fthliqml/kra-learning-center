@@ -13,6 +13,19 @@ class TestConfig extends Component
 
     public ?int $courseId = null;
 
+    // Allow this tab to be opened before the first Course Info save
+    protected $listeners = [
+        'courseCreated' => 'onCourseCreated',
+    ];
+
+    public function onCourseCreated(int $newCourseId): void
+    {
+        if (!$this->courseId) {
+            $this->courseId = $newCourseId;
+            $this->hydrateFromCourse();
+        }
+    }
+
     // Pretest settings
     public $pretest_passing_score = 75; // 0-100 (business rule: must be >=20 to save)
     public $pretest_max_attempts = null; // null => unlimited
@@ -96,7 +109,7 @@ class TestConfig extends Component
     public function saveDraft(): void
     {
         if (!$this->courseId) {
-            $this->error('Course ID missing', timeout: 5000, position: 'toast-top toast-center');
+            $this->error('Please save the Course Info tab first to generate a Course ID before configuring test settings.', timeout: 6000, position: 'toast-top toast-center');
             return;
         }
 

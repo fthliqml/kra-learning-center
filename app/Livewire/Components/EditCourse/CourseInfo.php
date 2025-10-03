@@ -95,7 +95,8 @@ class CourseInfo extends Component
 
         // Broadcast courseCreated so other components (e.g., Pretest) can latch onto the ID
         if ($this->courseId) {
-            $this->dispatch('courseCreated', id: $this->courseId);
+            // Dispatch with positional argument so listener method signature (int $newCourseId) receives it correctly
+            $this->dispatch('courseCreated', $this->courseId);
         }
     }
 

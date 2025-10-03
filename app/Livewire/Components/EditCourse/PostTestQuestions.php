@@ -19,7 +19,21 @@ class PostTestQuestions extends Component
     public bool $persisted = false;
     public array $errorQuestionIndexes = [];
 
-    protected $listeners = [];
+    // Listen for new course draft creation so we can attach and persist
+    protected $listeners = [
+        'courseCreated' => 'onCourseCreated',
+    ];
+
+    public function onCourseCreated(int $newCourseId): void
+    {
+        if (!$this->courseId) {
+            $this->courseId = $newCourseId;
+            $this->hydrateFromCourse();
+            if (empty($this->questions)) {
+                $this->questions = [$this->makeQuestion()];
+            }
+        }
+    }
 
     public function mount(): void
     {
@@ -203,7 +217,7 @@ class PostTestQuestions extends Component
     {
         $this->errorQuestionIndexes = [];
         if (!$this->courseId) {
-            $this->error('Course ID not found', timeout: 5000, position: 'toast-top toast-center');
+            $this->error('Please save the Course Info tab first to create the course before adding post test questions.', timeout: 6000, position: 'toast-top toast-center');
             return;
         }
         $validator = new \App\Services\PostTestQuestionsValidator();
