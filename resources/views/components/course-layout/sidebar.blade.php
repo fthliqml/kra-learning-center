@@ -18,7 +18,7 @@
 
         {{-- Progress Bar --}}
         @isset($progress)
-            <div class="space-y-2.5 px-5 pt-5 pb-6 border-b" :class="openSidebar ? 'block' : 'hidden'">
+            <div class="space-y-2 px-5 pt-5 pb-6 border-b" :class="openSidebar ? 'block' : 'hidden'">
                 <div class="flex items-center justify-between">
                     <span class="text-[10px] font-semibold tracking-wide text-gray-500 uppercase">Progress</span>
                     <span class="text-[11px] font-medium text-gray-800">{{ $progress }}%</span>
@@ -43,12 +43,10 @@
         <nav class="flex-1 overflow-y-auto px-3 py-4" :class="openSidebar ? 'block' : 'hidden'">
             <ol class="space-y-0.5 text-[13px] font-medium">
                 @foreach ($stages as $s)
+                    {{-- Learning Module --}}
                     @if ($s === 'module')
                         @if ($modules->count())
                             <li class="mt-2 mb-2" x-data="{ openModule: '{{ $activeModuleId ?? '' }}' }">
-                                <p class="px-3 pt-2 text-[11px] font-semibold tracking-wide text-gray-400 uppercase">
-                                    Modules
-                                </p>
                                 <ul class="space-y-1" role="list">
                                     @foreach ($modules as $m)
                                         @php
@@ -58,73 +56,91 @@
                                                 ? 'text-primary'
                                                 : 'text-gray-700 hover:text-gray-900';
                                         @endphp
-                                        <li class="border border-transparent rounded-md transition-colors bg-white"
+                                        <li class="group relative border border-transparent rounded-md bg-white transition-colors"
                                             :class="openModule === 'module-{{ $m->id }}' ?
-                                                'border-primary/30 bg-primary/5' :
-                                                'hover:border-primary/10 hover:bg-gray-50'"
+                                                'border-primary/40 bg-primary/5 shadow-sm' :
+                                                'hover:border-primary/20 hover:bg-gray-50'"
                                             x-data="{ id: 'module-{{ $m->id }}' }">
-                                            <!-- Header button -->
                                             <button type="button" @click="openModule = openModule === id ? '' : id"
-                                                class="w-full flex items-center gap-2 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md group"
+                                                class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md"
                                                 :aria-expanded="openModule === id" :aria-controls="id + '-panel'"
-                                                :class="openModule === id ? 'font-semibold' : 'font-medium'">
-                                                <span class="relative w-4 h-4 flex items-center justify-center">
+                                                :class="openModule === id ? 'font-semibold text-primary' :
+                                                    'font-medium text-gray-700'">
+
+                                                {{-- Topic Title (Sidebar Open) --}}
+                                                <span class="flex-1 truncate text-left leading-tight"
+                                                    x-show="openSidebar" x-transition.opacity.duration.200ms
+                                                    title="{{ $m->title }}">
+                                                    <span class="block">{{ Str::limit($m->title, 60) }}</span>
+                                                </span>
+
+                                                {{-- Topic Title (Sidebar Close) --}}
+                                                <span class="truncate" x-show="!openSidebar" x-transition.opacity
+                                                    title="{{ $m->title }}">
+                                                    {{ Str::limit($m->title, 1) }}
+                                                </span>
+
+                                                {{-- Topic Indicator --}}
+                                                <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
                                                     @if ($isCompleted)
-                                                        <x-icon name="o-check-circle" class="size-4 text-green-500" />
+                                                        <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                                    @elseif($isActive)
+                                                        <span class="absolute inset-0 rounded-full bg-primary"></span>
+                                                        <span class="absolute rounded-full bg-white"
+                                                            style="inset:5px"></span>
                                                     @else
-                                                        <span
-                                                            class="w-2 h-2 rounded-full {{ $isActive ? 'bg-primary' : 'bg-gray-300 group-hover:bg-primary/50' }}"></span>
+                                                        <svg class="w-5 h-5 text-gray-400 group-hover:text-primary transition"
+                                                            viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                                                            <circle cx="10" cy="10" r="8"
+                                                                stroke="currentColor" stroke-width="1.5" />
+                                                            <path d="M10 6v8M6 10h8" stroke="currentColor"
+                                                                stroke-width="1.5" stroke-linecap="round" />
+                                                        </svg>
                                                     @endif
                                                 </span>
-                                                <span class="flex-1 truncate text-left" x-show="openSidebar"
-                                                    x-transition.opacity.duration.200ms
-                                                    title="{{ $m->title }}">{{ Str::limit($m->title, 60) }}</span>
-                                                @if ($isActive)
-                                                    <x-icon name="o-play-circle" class="size-4 text-primary" />
-                                                @elseif($isCompleted)
-                                                    <span
-                                                        class="text-[10px] px-1.5 py-0.5 rounded bg-green-50 text-green-600 font-medium"
-                                                        x-show="openSidebar" x-transition.opacity>Done</span>
-                                                @endif
-                                                <svg class="w-3.5 h-3.5 text-gray-400 transition-transform duration-300"
-                                                    :class="openModule === id ? 'rotate-180' : 'rotate-0'"
-                                                    viewBox="0 0 20 20" fill="none" stroke="currentColor"
-                                                    stroke-width="2">
-                                                    <path d="M6 8l4 4 4-4" stroke-linecap="round"
-                                                        stroke-linejoin="round" />
-                                                </svg>
                                             </button>
-                                            <!-- Panel -->
+
+                                            <!-- Sections -->
                                             <div x-show="openModule === id" x-collapse x-cloak :id="id + '-panel'"
-                                                class="px-3 pb-3 text-[11px] text-gray-600 space-y-2"
+                                                class="pl-7 pr-4 pb-3 text-[11px] text-gray-600 space-y-2"
                                                 @keydown.escape.stop="openModule = ''">
-                                                <div class="flex items-center gap-3 flex-wrap" x-show="openSidebar"
-                                                    x-transition.opacity.duration.200ms>
-                                                    @php
-                                                        $sectionCount =
-                                                            $m->derived_section_count ?? ($m->sections->count() ?? 0);
-                                                        $videoCount = $m->derived_video_count ?? 0;
-                                                        $readingCount = $m->derived_reading_count ?? 0;
-                                                    @endphp
-                                                    <span class="inline-flex items-center gap-1 text-gray-500"><x-icon
-                                                            name="o-document-text"
-                                                            class="size-3 text-gray-400" />{{ $sectionCount }}
-                                                        {{ Str::plural('Section', $sectionCount) }}</span>
-                                                    @if (($videoCount ?? 0) > 0)
-                                                        <span
-                                                            class="inline-flex items-center gap-1 text-gray-500"><x-icon
-                                                                name="o-play-circle"
-                                                                class="size-3 text-gray-400" />{{ $videoCount }}
-                                                            {{ Str::plural('Video', $videoCount) }}</span>
-                                                    @endif
-                                                    @if (($readingCount ?? 0) > 0)
-                                                        <span
-                                                            class="inline-flex items-center gap-1 text-gray-500"><x-icon
-                                                                name="o-book-open"
-                                                                class="size-3 text-gray-400" />{{ $readingCount }}
-                                                            {{ Str::plural('Reading', $readingCount) }}</span>
-                                                    @endif
-                                                </div>
+                                                @php
+                                                    $sections = $m->sections ?? collect();
+                                                @endphp
+                                                @if ($sections->count())
+                                                    <ul class="space-y-1.5" x-show="openSidebar"
+                                                        x-transition.opacity.duration.200ms>
+                                                        @foreach ($sections as $index => $sec)
+                                                            @php
+                                                                $sectionCompleted = isset($sec->is_completed)
+                                                                    ? (bool) $sec->is_completed
+                                                                    : false;
+                                                            @endphp
+                                                            <li class="flex items-start gap-2 group/section">
+                                                                {{-- Section Indicator --}}
+                                                                <span
+                                                                    class="mt-1 w-3.5 h-3.5 flex items-center justify-center">
+                                                                    @if ($sectionCompleted)
+                                                                        <x-icon name="o-check"
+                                                                            class="size-3 text-green-600" />
+                                                                    @else
+                                                                        <span
+                                                                            class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover/section:bg-primary/60 transition"></span>
+                                                                    @endif
+                                                                </span>
+
+                                                                {{-- Section Title --}}
+                                                                <span
+                                                                    class="flex-1 pt-1 text-[11px] leading-snug text-gray-600 group-hover/section:text-gray-800 truncate"
+                                                                    title="{{ $sec->title ?? 'Section ' . ($index + 1) }}">
+                                                                    {{ Str::limit($sec->title ?? 'Section ' . ($index + 1), 70) }}
+                                                                </span>
+                                                            </li>
+                                                        @endforeach
+                                                    </ul>
+                                                @endif
+
+                                                {{-- Module Link --}}
                                                 @if ($moduleRouteName)
                                                     <a wire:navigate
                                                         href="{{ route($moduleRouteName, [$course->id ?? null]) }}"
@@ -138,27 +154,45 @@
                             </li>
                         @endif
                     @else
-                        @php $isStageActive = $stage === $s; @endphp
-                        <li class="group">
+                        @php
+                            $isStageActive = $stage === $s;
+                            $stageOrder = array_values($stages);
+                            $currentIndex = array_search($stage, $stageOrder, true);
+                            $thisIndex = array_search($s, $stageOrder, true);
+                            $isCompletedStage =
+                                $thisIndex !== false && $currentIndex !== false && $thisIndex < $currentIndex;
+                        @endphp
+
+                        {{-- Stages --}}
+                        <li class="group relative border border-transparent rounded-md bg-white transition-colors"
+                            :class="stage === '{{ $s }}' ? 'border-primary/40 bg-primary/5 shadow-sm' :
+                                'hover:border-primary/20 hover:bg-gray-50'">
                             <button type="button"
-                                class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors focus:outline-none focus:ring-2 focus:ring-primary/30"
-                                :class="stage === '{{ $s }}' ? 'bg-primary/5 text-primary font-semibold' :
-                                    'text-gray-600 hover:bg-gray-50'">
-                                <span class="flex items-center gap-2 truncate"
-                                    :class="!openSidebar && 'justify-center w-full'">
-                                    <span class="capitalize" x-show="openSidebar"
-                                        x-transition.opacity>{{ ucfirst($s) }}</span>
-                                    <span class="capitalize" x-show="!openSidebar" x-transition.opacity>
-                                        {{ strtoupper(substr($s, 0, 1)) }}
-                                    </span>
+                                class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md"
+                                :class="stage === '{{ $s }}' ? 'font-semibold text-primary' :
+                                    'font-medium text-gray-700'">
+
+                                {{-- Stage Name (Sidebar Open) --}}
+                                <span class="flex-1 truncate capitalize" x-show="openSidebar" x-transition.opacity>
+                                    {{ ucfirst($s) }}
                                 </span>
-                                <span class="relative w-4 h-4 flex items-center justify-center">
-                                    <span x-show="stage !== '{{ $s }}'" x-cloak
-                                        class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
-                                    <span x-show="stage === '{{ $s }}'" x-cloak
-                                        class="absolute inset-0 rounded-full bg-primary"></span>
-                                    <span x-show="stage === '{{ $s }}'" x-cloak
-                                        class="absolute rounded-full bg-white" style="inset:4px"></span>
+
+                                {{-- Stage Initial (Sidebar Close) --}}
+                                <span class="capitalize" x-show="!openSidebar" x-transition.opacity>
+                                    {{ strtoupper(substr($s, 0, 1)) }}
+                                </span>
+
+                                {{-- Stage Indicator --}}
+                                <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                    @if ($isCompletedStage)
+                                        <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                    @elseif($isStageActive)
+                                        <span class="absolute inset-0 rounded-full bg-primary"></span>
+                                        <span class="absolute rounded-full bg-white" style="inset:5px"></span>
+                                    @else
+                                        <span
+                                            class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
+                                    @endif
                                 </span>
                             </button>
                         </li>
@@ -166,16 +200,5 @@
                 @endforeach
             </ol>
         </nav>
-
-        {{-- Close Button --}}
-        <div class="px-4 py-3 border-t border-gray-200/70" :class="openSidebar ? 'block' : 'hidden'">
-            <a href="{{ $closeRoute ?? '#' }}" wire:navigate
-                class="w-full inline-flex items-center justify-center gap-2 text-xs font-medium px-4 py-2.5 rounded-md bg-red-600 text-white hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-400/60 transition"
-                aria-label="Close Course">
-                <x-icon name="o-x-mark" class="size-4" />
-                <span>Close Course</span>
-            </a>
-        </div>
-        {{-- Collapsed rail removed (width becomes 0) --}}
     </div>
 </aside>

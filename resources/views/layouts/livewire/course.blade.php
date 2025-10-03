@@ -8,7 +8,7 @@
 
 <body class="bg-white min-h-screen" x-data="{ stage: '{{ $stage ?? 'pretest' }}', openSidebar: true, mobileSidebar: false }">
     <!-- Top Bar Component -->
-    <x-course-layout.top-bar :course-title="$courseTitle ?? 'Course'" />
+    <x-course-layout.top-bar :course-title="$courseTitle ?? 'Course'" :close-route="route('courses.index')" />
 
     <div class="flex mx-auto w-full h-[calc(100vh-4rem)] overflow-hidden">
         <!-- Desktop Sidebar Component -->
