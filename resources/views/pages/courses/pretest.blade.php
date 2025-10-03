@@ -45,7 +45,7 @@
     </div>
 
     <!-- Questions -->
-    <form @submit.prevent="submit" class="space-y-4 md:space-y-5">
+    <form x-ref="formEl" class="space-y-4 md:space-y-5" x-bind:aria-busy="submitting ? 'true' : 'false'">
         @forelse ($questions as $index => $q)
             <fieldset class="rounded-lg border border-gray-200 bg-white p-4 md:p-5 shadow-sm relative"
                 :class="errors['{{ $q['id'] }}'] ? 'border-red-300 ring-1 ring-red-200' : ''">
@@ -57,21 +57,35 @@
                 <div class="pl-10 pr-0 md:pr-4 mb-5">
                     <p class="text-sm font-medium text-gray-800 leading-snug">{{ $q['text'] }}</p>
                 </div>
-                <div class="grid gap-1.5 md:gap-2">
-                    @foreach ($q['options'] as $optIndex => $opt)
-                        <label
-                            class="flex items-start gap-3 group cursor-pointer rounded-md px-1.5 py-1 hover:bg-gray-50">
-                            <input type="radio" name="{{ $q['id'] }}"
-                                class="mt-1 h-4 w-4 text-primary focus:ring-primary/40 border-gray-300 rounded"
-                                :aria-invalid="errors['{{ $q['id'] }}'] ? 'true' : 'false'"
-                                value="{{ is_array($opt) ? $opt['id'] : $opt }}"
-                                @change="answers['{{ $q['id'] }}']= '{{ is_array($opt) ? $opt['id'] : addslashes($opt) }}'; delete errors['{{ $q['id'] }}']">
-                            <span class="text-sm text-gray-700 group-hover:text-gray-900 leading-snug">
-                                {{ is_array($opt) ? $opt['text'] : $opt }}
-                            </span>
-                        </label>
-                    @endforeach
-                </div>
+                @if ($q['type'] === 'essay')
+                    <div class="space-y-2">
+                        <textarea name="{{ $q['id'] }}" x-ref="txt_{{ $q['id'] }}" rows="4"
+                            placeholder="Tulis jawaban Anda di sini..."
+                            class="w-full rounded-md border border-gray-300 focus:border-primary focus:ring-primary/30 text-sm text-gray-800 placeholder:text-gray-400 resize-y p-3"
+                            :aria-invalid="errors['{{ $q['id'] }}'] ? 'true' : 'false'"
+                            @input="answers['{{ $q['id'] }}']=$event.target.value; if($event.target.value.trim().length){ delete errors['{{ $q['id'] }}'] }"></textarea>
+                        <div class="flex justify-between text-[11px] text-gray-400" x-data="{ limit: 2000 }">
+                            <span x-text="(answers['{{ $q['id'] }}']||'').length + ' karakter'"></span>
+                            <span>Batas saran 2000</span>
+                        </div>
+                    </div>
+                @else
+                    <div class="grid gap-1.5 md:gap-2">
+                        @foreach ($q['options'] as $optIndex => $opt)
+                            <label
+                                class="flex items-start gap-3 group cursor-pointer rounded-md px-1.5 py-1 hover:bg-gray-50">
+                                <input type="radio" name="{{ $q['id'] }}"
+                                    class="mt-1 h-4 w-4 text-primary focus:ring-primary/40 border-gray-300 rounded"
+                                    :aria-invalid="errors['{{ $q['id'] }}'] ? 'true' : 'false'"
+                                    value="{{ is_array($opt) ? $opt['id'] : $opt }}"
+                                    @change="answers['{{ $q['id'] }}']= '{{ is_array($opt) ? $opt['id'] : addslashes($opt) }}'; delete errors['{{ $q['id'] }}']">
+                                <span class="text-sm text-gray-700 group-hover:text-gray-900 leading-snug">
+                                    {{ is_array($opt) ? $opt['text'] : $opt }}
+                                </span>
+                            </label>
+                        @endforeach
+                    </div>
+                @endif
                 <template x-if="errors['{{ $q['id'] }}']">
                     <p class="mt-3 text-xs text-red-600 flex items-center gap-1">
                         <x-icon name="o-exclamation-triangle" class="size-4" />
@@ -86,17 +100,22 @@
         @endforelse
 
         <!-- Actions -->
-        <div class="pt-2 flex flex-row items-center justify-between md:justify-end gap-3">
-            <button type="button" @click="resetForm"
-                class="inline-flex items-center justify-center gap-2 rounded-md bg-gray-100 text-gray-700 px-4 py-2.5 text-sm font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300/50 transition">
-                <x-icon name="o-arrow-path" class="size-4" />
-                <span>Reset</span>
-            </button>
-            <button type="submit"
-                class="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-white px-5 py-2.5 text-sm font-medium shadow hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 transition">
-                <x-icon name="o-paper-airplane" class="size-4" />
-                <span>Submit</span>
-            </button>
+        <div class="pt-2 flex flex-col md:flex-row md:items-center md:justify-end gap-3">
+            <div class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
+                Fitur submit pretest sementara dinonaktifkan. Jawaban tidak disimpan.
+            </div>
+            <div class="flex flex-row items-center gap-3">
+                <button type="button" @click="resetForm" :disabled="submitting"
+                    class="inline-flex items-center justify-center gap-2 rounded-md bg-gray-100 text-gray-700 px-4 py-2.5 text-sm font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300/50 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                    <x-icon name="o-arrow-path" class="size-4" />
+                    <span>Reset</span>
+                </button>
+                <button type="button" disabled
+                    class="inline-flex items-center justify-center gap-2 rounded-md bg-gray-300 text-gray-500 px-5 py-2.5 text-sm font-medium shadow cursor-not-allowed">
+                    <x-icon name="o-paper-airplane" class="size-4" />
+                    <span>Submit Dinonaktifkan</span>
+                </button>
+            </div>
         </div>
     </form>
 </div>
@@ -107,6 +126,7 @@
             answers: {},
             errors: {},
             submitted: false,
+            submitting: false,
             totalQuestions: {{ $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions) }},
             get answeredCount() {
                 return Object.keys(this.answers).length;
@@ -130,24 +150,16 @@
                 return Object.keys(this.errors).length === 0;
             },
             resetForm() {
+                // Reset native form elements (radio selections, textareas)
+                if (this.$refs.formEl) {
+                    this.$refs.formEl.reset();
+                }
+                // Clear reactive state
                 this.answers = {};
                 this.errors = {};
                 this.submitted = false;
             },
-            submit() {
-                if (!this.validate()) {
-                    return;
-                }
-                this.submitted = true;
-                // Placeholder: emit Livewire event if needed
-                window.dispatchEvent(new CustomEvent('pretest-submitted', {
-                    detail: {
-                        answers: this.answers
-                    }
-                }));
-                // Simple UX feedback
-                alert('Pretest terkirim. Terima kasih!');
-            }
+            // submit() dihapus karena fitur submit dinonaktifkan sementara
         }
     }
 </script>

@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Auth;
 class Pretest extends Component
 {
     public Course $course;
+    public ?Test $pretest = null;
+    public array $questions = [];
 
     public function mount(Course $course)
     {
@@ -19,23 +21,17 @@ class Pretest extends Component
             abort(403, 'You are not assigned to this course.');
         }
 
-        // Eager load learning modules for sidebar listing (training relation removed)
-        $this->course = $course->load(['learningModules' => function ($q) {
-            $q->orderBy('id');
-        }]);
-    }
+        // Eager load learning modules for sidebar listing
+        $this->course = $course->load(['learningModules' => fn($q) => $q->orderBy('id')]);
 
-    public function render()
-    {
-        // Fetch pretest with eager loaded questions & options
-        $pretest = Test::with(['questions.options'])
+        // Load pretest with questions & options once
+        $this->pretest = Test::with(['questions.options'])
             ->where('course_id', $this->course->id)
             ->where('type', 'pretest')
             ->first();
 
-        $questions = collect();
-        if ($pretest) {
-            $questions = $pretest->questions->map(function ($q) {
+        if ($this->pretest) {
+            $collection = $this->pretest->questions->map(function ($q) {
                 return [
                     'id' => 'q' . $q->id,
                     'db_id' => $q->id,
@@ -48,13 +44,23 @@ class Pretest extends Component
                         ])->values()->all()
                         : [],
                 ];
-            })->values();
-        }
+            });
 
+            // Randomize once if flag set
+            if ($this->pretest->randomize_question) {
+                $collection = $collection->shuffle();
+            }
+
+            $this->questions = $collection->values()->all();
+        }
+    }
+
+    public function render()
+    {
         return view('pages.courses.pretest', [
             'course' => $this->course,
-            'pretest' => $pretest,
-            'questions' => $questions,
+            'pretest' => $this->pretest,
+            'questions' => $this->questions,
         ])->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'pretest',
