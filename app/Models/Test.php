@@ -8,31 +8,29 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Test extends Model
 {
-  protected $fillable = [
-    'course_id',
-    'type',
-    'passing_score',
-    'time_limit',
-    'max_attempts',
-    'randomize_question',
-    'is_active',
-  ];
+    protected $fillable = [
+        'course_id',
+        'type',
+        'passing_score',
+        'max_attempts',
+        'show_result_immediately',
+        'randomize_question',
+    ];
 
-  protected $casts = [
-    'passing_score' => 'integer',
-    'time_limit' => 'integer',
-    'max_attempts' => 'integer',
-    'randomize_question' => 'boolean',
-    'is_active' => 'boolean',
-  ];
+    protected $casts = [
+        'passing_score' => 'integer',
+        'max_attempts' => 'integer',
+        'randomize_question' => 'boolean',
+        'show_result_immediately' => 'boolean',
+    ];
 
-  public function course(): BelongsTo
-  {
-    return $this->belongsTo(Course::class);
-  }
+    public function course(): BelongsTo
+    {
+        return $this->belongsTo(Course::class);
+    }
 
-  public function questions(): HasMany
-  {
-    return $this->hasMany(TestQuestion::class)->orderBy('order')->orderBy('id');
-  }
+    public function questions(): HasMany
+    {
+        return $this->hasMany(TestQuestion::class)->orderBy('order')->orderBy('id');
+    }
 }

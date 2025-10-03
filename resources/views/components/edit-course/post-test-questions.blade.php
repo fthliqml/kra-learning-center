@@ -96,9 +96,9 @@
                 <x-icon name="o-arrow-left" class="size-4" />
                 <span>Back</span>
             </x-ui.button>
-            <x-ui.button type="button" variant="primary" class="gap-2" wire:click="finish">
-                <x-icon name="o-check" class="size-4" />
-                <span>Finish</span>
+            <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goNext">
+                <x-icon name="o-arrow-right" class="size-4" />
+                <span>Next</span>
             </x-ui.button>
         </div>
     </div>

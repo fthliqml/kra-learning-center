@@ -12,13 +12,12 @@ return new class extends Migration {
             $table->foreignId('course_id')->constrained()->cascadeOnDelete();
             $table->enum('type', ['pretest', 'posttest']);
             // passing_score: treat as percentage 0-100
-            $table->unsignedSmallInteger('passing_score');
-            // time limit in minutes (nullable => unlimited)
-            $table->unsignedSmallInteger('time_limit')->nullable();
+            $table->unsignedSmallInteger('passing_score')->default(75);
             // max attempts (nullable => unlimited)
             $table->unsignedSmallInteger('max_attempts')->nullable();
             $table->boolean('randomize_question')->default(false);
-            $table->boolean('is_active')->default(true);
+            $table->boolean('show_result_immediately')->default(true);
+            // Removed is_active (tests are implicitly active)
             $table->timestamps();
             $table->unique(['course_id', 'type']);
         });

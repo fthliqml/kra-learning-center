@@ -62,6 +62,10 @@ class PostTestQuestions extends Component
             ];
         }
         $this->questions = $loaded;
+        if (!empty($loaded)) {
+            $this->hasEverSaved = true;
+            $this->persisted = true;
+        }
     }
 
     private function makeQuestion(string $type = 'multiple'): array
@@ -194,6 +198,12 @@ class PostTestQuestions extends Component
         $this->dispatch('setTab', 'course-info');
     }
 
+    public function goNext(): void
+    {
+        // Navigate to test configuration tab after post test
+        $this->dispatch('setTab', 'test-config');
+    }
+
     public function saveDraft(): void
     {
         $this->errorQuestionIndexes = [];
@@ -234,10 +244,9 @@ class PostTestQuestions extends Component
                 ['course_id' => $this->courseId, 'type' => 'posttest'],
                 [
                     'passing_score' => 0,
-                    'time_limit' => null,
                     'max_attempts' => null,
                     'randomize_question' => false,
-                    'is_active' => true,
+                    'show_result_immediately' => true,
                 ]
             );
             $test->questions()->delete();
