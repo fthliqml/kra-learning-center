@@ -46,6 +46,9 @@ class PretestQuestions extends Component
             $this->questions = [];
             return;
         }
+        // Mark as previously saved so status component does not show 'Not saved yet'
+        $this->hasEverSaved = true;
+        $this->persisted = true;
         $loaded = [];
         $existingTest->load(['questions.options']);
         foreach ($existingTest->questions->sortBy('order')->values() as $qModel) {
@@ -270,9 +273,9 @@ class PretestQuestions extends Component
                 ],
                 [
                     'passing_score' => 0, // default; can be updated via separate UI later
-                    'time_limit' => null,
                     'max_attempts' => null,
                     'randomize_question' => false,
+                    'show_result_immediately' => true,
                     'is_active' => true,
                 ]
             );

@@ -62,6 +62,10 @@ class PostTestQuestions extends Component
             ];
         }
         $this->questions = $loaded;
+        if (!empty($loaded)) {
+            $this->hasEverSaved = true;
+            $this->persisted = true;
+        }
     }
 
     private function makeQuestion(string $type = 'multiple'): array
@@ -234,9 +238,9 @@ class PostTestQuestions extends Component
                 ['course_id' => $this->courseId, 'type' => 'posttest'],
                 [
                     'passing_score' => 0,
-                    'time_limit' => null,
                     'max_attempts' => null,
                     'randomize_question' => false,
+                    'show_result_immediately' => true,
                     'is_active' => true,
                 ]
             );

@@ -13,11 +13,10 @@ return new class extends Migration {
             $table->enum('type', ['pretest', 'posttest']);
             // passing_score: treat as percentage 0-100
             $table->unsignedSmallInteger('passing_score');
-            // time limit in minutes (nullable => unlimited)
-            $table->unsignedSmallInteger('time_limit')->nullable();
             // max attempts (nullable => unlimited)
             $table->unsignedSmallInteger('max_attempts')->nullable();
             $table->boolean('randomize_question')->default(false);
+            $table->boolean('show_result_immediately')->default(true);
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->unique(['course_id', 'type']);
