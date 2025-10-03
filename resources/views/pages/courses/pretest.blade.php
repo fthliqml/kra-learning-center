@@ -1,13 +1,169 @@
-<div class="p-6 space-y-6">
-    <div class="flex items-center justify-between gap-4">
-        <h1 class="text-2xl font-bold text-gray-900">Pretest: {{ $course->title }}</h1>
-        <a wire:navigate href="{{ route('courses-modules.index', $course) }}"
-            class="inline-flex items-center gap-2 rounded-md bg-primary/10 hover:bg-primary/15 text-primary px-4 py-2 text-sm font-medium transition">
-            <x-icon name="o-academic-cap" class="size-4" />
-            <span>Go to Modules</span>
-        </a>
+@php
+    // Temporary static questions until real model integration
+    $sampleQuestions = [
+        [
+            'id' => 'q1',
+            'type' => 'single',
+            'text' => 'Tujuan utama dari kursus ini bagi Anda adalah apa?',
+            'options' => [
+                'Memahami dasar konsep',
+                'Meningkatkan skill praktis',
+                'Mempersiapkan sertifikasi',
+                'Lainnya',
+            ],
+        ],
+        [
+            'id' => 'q2',
+            'type' => 'single',
+            'text' => 'Seberapa familiar Anda dengan materi inti topik ini?',
+            'options' => ['Belum pernah sama sekali', 'Sedikit tahu', 'Cukup paham', 'Sudah mahir'],
+        ],
+        [
+            'id' => 'q3',
+            'type' => 'single',
+            'text' => 'Berapa jam per minggu yang bisa Anda alokasikan?',
+            'options' => ['< 1 jam', '1-2 jam', '3-5 jam', '> 5 jam'],
+        ],
+    ];
+@endphp
+
+<div x-data="pretestForm()" x-init="init()" class="p-4 md:p-8 mx-auto max-w-3xl relative">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Pretest</h1>
+        </div>
     </div>
-    <div class="rounded-lg border border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-600">
-        Placeholder konten pretest. Tambahkan soal / instruksi di sini.
+
+    <!-- Intro / Instructions -->
+    <div class="rounded-xl border border-gray-200 bg-white p-4 md:p-6 shadow-sm mb-5 md:mb-6" x-data="{ open: true }">
+        <button type="button"
+            class="md:hidden inline-flex items-center gap-2 text-xs font-medium text-gray-600 transition"
+            @click="open = !open">
+            <span x-text="open ? 'Sembunyikan Instruksi' : 'Tampilkan Instruksi'"></span>
+            <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
+                viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+        </button>
+        <div class="flex items-start gap-4 mt-5 md:mt-0" x-show="open" x-transition>
+            <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-primary/10 text-primary">
+                <x-icon name="o-clipboard-document-check" class="size-5" />
+            </div>
+            <div class="flex-1">
+                <h2 class="text-base font-semibold text-gray-900">Sebelum Memulai</h2>
+                <p class="text-sm text-gray-600 mt-1 leading-relaxed">
+                    Pretest ini membantu kami memahami titik awal pengetahuan Anda sehingga pembelajaran bisa lebih
+                    relevan.
+                    Jawablah sejujur mungkin. Hasil pretest tidak menurunkan progres Anda.
+                </p>
+                <ul class="mt-3 text-xs text-gray-500 grid gap-1 grid-cols-1">
+                    <li class="inline-flex items-center gap-1">
+                        <span class="w-1.5 h-1.5 rounded-full bg-primary/60"></span>
+                        Jumlah Soal:
+                        <strong>{{ count($sampleQuestions) }}</strong>
+                    </li>
+                </ul>
+            </div>
+        </div>
     </div>
+
+    <!-- Questions -->
+    <form @submit.prevent="submit" class="space-y-4 md:space-y-5">
+        @foreach ($sampleQuestions as $index => $q)
+            <fieldset class="rounded-lg border border-gray-200 bg-white p-4 md:p-5 shadow-sm relative"
+                :class="errors['{{ $q['id'] }}'] ? 'border-red-300 ring-1 ring-red-200' : ''">
+                <legend class="sr-only">Soal {{ $index + 1 }}</legend>
+                <div
+                    class="absolute top-4 left-4 md:top-5 md:left-5 inline-flex items-center justify-center rounded-md bg-primary/10 text-primary text-[11px] font-semibold px-2 py-0.5 h-5 min-w-[28px]">
+                    {{ $index + 1 }}
+                </div>
+                <div class="pl-10 pr-0 md:pr-4 mb-5">
+                    <p class="text-sm font-medium text-gray-800 leading-snug">{{ $q['text'] }}</p>
+                </div>
+                <div class="grid gap-1.5 md:gap-2">
+                    @foreach ($q['options'] as $optIndex => $opt)
+                        <label
+                            class="flex items-start gap-3 group cursor-pointer rounded-md px-1.5 py-1 hover:bg-gray-50">
+                            <input type="radio" name="{{ $q['id'] }}"
+                                class="mt-1 h-4 w-4 text-primary focus:ring-primary/40 border-gray-300 rounded"
+                                :aria-invalid="errors['{{ $q['id'] }}'] ? 'true' : 'false'"
+                                value="{{ $opt }}"
+                                @change="answers['{{ $q['id'] }}']= '{{ $opt }}'; delete errors['{{ $q['id'] }}']">
+                            <span
+                                class="text-sm text-gray-700 group-hover:text-gray-900 leading-snug">{{ $opt }}</span>
+                        </label>
+                    @endforeach
+                </div>
+                <template x-if="errors['{{ $q['id'] }}']">
+                    <p class="mt-3 text-xs text-red-600 flex items-center gap-1">
+                        <x-icon name="o-exclamation-triangle" class="size-4" />
+                        <span x-text="errors['{{ $q['id'] }}']"></span>
+                    </p>
+                </template>
+            </fieldset>
+        @endforeach
+
+        <!-- Actions -->
+        <div class="pt-2 flex flex-col sm:flex-row sm:items-center gap-3">
+            <button type="submit"
+                class="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-white px-5 py-2.5 text-sm font-medium shadow hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 transition">
+                <x-icon name="o-paper-airplane" class="size-4" />
+                <span>Kirim Pretest</span>
+            </button>
+            <button type="button" @click="resetForm"
+                class="inline-flex items-center justify-center gap-2 rounded-md bg-gray-100 text-gray-700 px-4 py-2.5 text-sm font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300/50 transition">
+                <x-icon name="o-arrow-path" class="size-4" />
+                <span>Reset</span>
+            </button>
+            <p class="text-xs text-gray-500 sm:ml-2">Jawaban Anda tidak akan mengurangi progres.</p>
+        </div>
+    </form>
 </div>
+
+<script>
+    function pretestForm() {
+        return {
+            answers: {},
+            errors: {},
+            submitted: false,
+            totalQuestions: {{ count($sampleQuestions) }},
+            get answeredCount() {
+                return Object.keys(this.answers).length;
+            },
+            progressPercent() {
+                return this.totalQuestions ? (this.answeredCount / this.totalQuestions) * 100 : 0;
+            },
+            init() {},
+            validate() {
+                this.errors = {};
+                const required = @json(array_column($sampleQuestions, 'id'));
+                required.forEach(id => {
+                    if (!this.answers[id]) {
+                        this.errors[id] = 'Harus dipilih.';
+                    }
+                });
+                return Object.keys(this.errors).length === 0;
+            },
+            resetForm() {
+                this.answers = {};
+                this.errors = {};
+                this.submitted = false;
+            },
+            submit() {
+                if (!this.validate()) {
+                    return;
+                }
+                this.submitted = true;
+                // Placeholder: emit Livewire event if needed
+                window.dispatchEvent(new CustomEvent('pretest-submitted', {
+                    detail: {
+                        answers: this.answers
+                    }
+                }));
+                // Simple UX feedback
+                alert('Pretest terkirim. Terima kasih!');
+            }
+        }
+    }
+</script>
