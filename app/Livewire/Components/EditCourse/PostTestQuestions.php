@@ -193,11 +193,6 @@ class PostTestQuestions extends Component
         $this->dispatch('setTab', 'learning-module');
     }
 
-    public function finish(): void
-    {
-        $this->dispatch('setTab', 'course-info');
-    }
-
     public function goNext(): void
     {
         // Navigate to test configuration tab after post test

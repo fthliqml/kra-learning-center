@@ -23,7 +23,7 @@
                         </div>
                     </div>
                     <p class="text-xs text-base-content/60 leading-snug">
-                        Max Attempts dikosongkan apabila ingin tidak ada batas.
+                        Leave Max Attempts empty for unlimited attempts.
                     </p>
                 </div>
             </div>
@@ -50,7 +50,7 @@
                         </div>
                     </div>
                     <p class="text-xs text-base-content/60 leading-snug">
-                        Randomize akan mengacak urutan soal.
+                        Randomize will shuffle the question order.
                     </p>
                 </div>
             </div>

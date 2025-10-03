@@ -44,7 +44,7 @@
                 <x-icon name="o-arrow-left" class="size-4" />
                 <span>Back To Management</span>
             </x-ui.button>
-            <x-ui.button type="button" variant="primary" class="gap-2" wire:click="saveAndNext">
+            <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goNext">
                 <span>Next</span>
                 <x-icon name="o-arrow-right" class="size-4" />
             </x-ui.button>
