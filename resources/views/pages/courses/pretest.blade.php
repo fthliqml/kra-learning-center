@@ -1,33 +1,9 @@
 @php
-    // Temporary static questions until real model integration
-    $sampleQuestions = [
-        [
-            'id' => 'q1',
-            'type' => 'single',
-            'text' => 'Tujuan utama dari kursus ini bagi Anda adalah apa?',
-            'options' => [
-                'Memahami dasar konsep',
-                'Meningkatkan skill praktis',
-                'Mempersiapkan sertifikasi',
-                'Lainnya',
-            ],
-        ],
-        [
-            'id' => 'q2',
-            'type' => 'single',
-            'text' => 'Seberapa familiar Anda dengan materi inti topik ini?',
-            'options' => ['Belum pernah sama sekali', 'Sedikit tahu', 'Cukup paham', 'Sudah mahir'],
-        ],
-        [
-            'id' => 'q3',
-            'type' => 'single',
-            'text' => 'Berapa jam per minggu yang bisa Anda alokasikan?',
-            'options' => ['< 1 jam', '1-2 jam', '3-5 jam', '> 5 jam'],
-        ],
-    ];
+    // $questions is provided by Livewire component; ensure it's a collection/array
+    $questions = $questions ?? collect();
 @endphp
 
-<div x-data="pretestForm()" x-init="init()" class="p-4 md:p-8 mx-auto max-w-3xl relative">
+<div x-data="pretestForm()" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
         <div>
@@ -61,7 +37,7 @@
                     <li class="inline-flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-primary/60"></span>
                         Jumlah Soal:
-                        <strong>{{ count($sampleQuestions) }}</strong>
+                        <strong>{{ $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions) }}</strong>
                     </li>
                 </ul>
             </div>
@@ -70,7 +46,7 @@
 
     <!-- Questions -->
     <form @submit.prevent="submit" class="space-y-4 md:space-y-5">
-        @foreach ($sampleQuestions as $index => $q)
+        @forelse ($questions as $index => $q)
             <fieldset class="rounded-lg border border-gray-200 bg-white p-4 md:p-5 shadow-sm relative"
                 :class="errors['{{ $q['id'] }}'] ? 'border-red-300 ring-1 ring-red-200' : ''">
                 <legend class="sr-only">Soal {{ $index + 1 }}</legend>
@@ -88,10 +64,11 @@
                             <input type="radio" name="{{ $q['id'] }}"
                                 class="mt-1 h-4 w-4 text-primary focus:ring-primary/40 border-gray-300 rounded"
                                 :aria-invalid="errors['{{ $q['id'] }}'] ? 'true' : 'false'"
-                                value="{{ $opt }}"
-                                @change="answers['{{ $q['id'] }}']= '{{ $opt }}'; delete errors['{{ $q['id'] }}']">
-                            <span
-                                class="text-sm text-gray-700 group-hover:text-gray-900 leading-snug">{{ $opt }}</span>
+                                value="{{ is_array($opt) ? $opt['id'] : $opt }}"
+                                @change="answers['{{ $q['id'] }}']= '{{ is_array($opt) ? $opt['id'] : addslashes($opt) }}'; delete errors['{{ $q['id'] }}']">
+                            <span class="text-sm text-gray-700 group-hover:text-gray-900 leading-snug">
+                                {{ is_array($opt) ? $opt['text'] : $opt }}
+                            </span>
                         </label>
                     @endforeach
                 </div>
@@ -102,21 +79,24 @@
                     </p>
                 </template>
             </fieldset>
-        @endforeach
+        @empty
+            <div class="p-6 border border-dashed rounded-lg text-center text-sm text-gray-500 bg-white">
+                Belum ada soal pretest untuk course ini.
+            </div>
+        @endforelse
 
         <!-- Actions -->
-        <div class="pt-2 flex flex-col sm:flex-row sm:items-center gap-3">
-            <button type="submit"
-                class="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-white px-5 py-2.5 text-sm font-medium shadow hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 transition">
-                <x-icon name="o-paper-airplane" class="size-4" />
-                <span>Kirim Pretest</span>
-            </button>
+        <div class="pt-2 flex flex-row items-center justify-between md:justify-end gap-3">
             <button type="button" @click="resetForm"
                 class="inline-flex items-center justify-center gap-2 rounded-md bg-gray-100 text-gray-700 px-4 py-2.5 text-sm font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300/50 transition">
                 <x-icon name="o-arrow-path" class="size-4" />
                 <span>Reset</span>
             </button>
-            <p class="text-xs text-gray-500 sm:ml-2">Jawaban Anda tidak akan mengurangi progres.</p>
+            <button type="submit"
+                class="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-white px-5 py-2.5 text-sm font-medium shadow hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 transition">
+                <x-icon name="o-paper-airplane" class="size-4" />
+                <span>Submit</span>
+            </button>
         </div>
     </form>
 </div>
@@ -127,7 +107,7 @@
             answers: {},
             errors: {},
             submitted: false,
-            totalQuestions: {{ count($sampleQuestions) }},
+            totalQuestions: {{ $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions) }},
             get answeredCount() {
                 return Object.keys(this.answers).length;
             },
@@ -137,7 +117,11 @@
             init() {},
             validate() {
                 this.errors = {};
-                const required = @json(array_column($sampleQuestions, 'id'));
+                const required = @json(
+                    ($questions instanceof \Illuminate\Support\Collection
+                        ? $questions->pluck('id')
+                        : collect($questions)->pluck('id')
+                    )->values());
                 required.forEach(id => {
                     if (!this.answers[id]) {
                         this.errors[id] = 'Harus dipilih.';

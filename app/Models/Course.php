@@ -52,6 +52,14 @@ class Course extends Model
     }
 
     /**
+     * Tests (pretest/posttest) associated with this course.
+     */
+    public function tests(): HasMany
+    {
+        return $this->hasMany(Test::class, 'course_id');
+    }
+
+    /**
      * Scope: only courses assigned to a given user id.
      */
     public function scopeAssignedToUser($query, $userId)
