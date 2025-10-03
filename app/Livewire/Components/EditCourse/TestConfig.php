@@ -105,19 +105,19 @@ class TestConfig extends Component
         $this->posttest_passing_score = (int) $this->posttest_passing_score;
 
         if ($this->pretest_passing_score < 0 || $this->pretest_passing_score > 100) {
-            $this->error('Pretest passing score harus antara 0 - 100', timeout: 6000, position: 'toast-top toast-center');
+            $this->error('Pretest passing score must be between 0 and 100', timeout: 6000, position: 'toast-top toast-center');
             return;
         }
         if ($this->pretest_passing_score < 20) {
-            $this->error('Pretest passing score minimal 20', timeout: 6000, position: 'toast-top toast-center');
+            $this->error('Pretest passing score must be at least 20', timeout: 6000, position: 'toast-top toast-center');
             return;
         }
         if ($this->posttest_passing_score < 0 || $this->posttest_passing_score > 100) {
-            $this->error('Post test passing score harus antara 0 - 100', timeout: 6000, position: 'toast-top toast-center');
+            $this->error('Post test passing score must be between 0 and 100', timeout: 6000, position: 'toast-top toast-center');
             return;
         }
         if ($this->posttest_passing_score < 20) {
-            $this->error('Post test passing score minimal 20', timeout: 6000, position: 'toast-top toast-center');
+            $this->error('Post test passing score must be at least 20', timeout: 6000, position: 'toast-top toast-center');
             return;
         }
         if ($this->pretest_max_attempts !== null && $this->pretest_max_attempts !== '') {

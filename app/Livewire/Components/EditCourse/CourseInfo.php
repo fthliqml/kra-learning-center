@@ -92,14 +92,26 @@ class CourseInfo extends Component
         $this->snapshot();
         $this->hasEverSaved = true;
         $this->persisted = true;
+
+        // Broadcast courseCreated so other components (e.g., Pretest) can latch onto the ID
+        if ($this->courseId) {
+            $this->dispatch('courseCreated', id: $this->courseId);
+        }
+    }
+
+    /**
+     * Handle clicking the "Next" button from the Course Info tab.
+     * Simplified: only switch tab without auto-save, events, or toasts.
+     */
+    public function goNext(): void
+    {
+        $this->dispatch('setTab', 'pretest');
     }
 
     public function goManagement(): mixed
     {
         // Full HTTP redirect (refresh) to courses management page
         return redirect()->route('courses-management.index');
-        // Jika ingin SPA style (tanpa full refresh) di Livewire v3 bisa pakai:
-        // return $this->redirectRoute('courses-management.index', navigate: true);
     }
 
     public function mount(): void

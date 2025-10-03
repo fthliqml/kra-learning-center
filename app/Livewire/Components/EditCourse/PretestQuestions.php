@@ -22,7 +22,24 @@ class PretestQuestions extends Component
     // Error highlighting: indexes of invalid questions
     public array $errorQuestionIndexes = [];
 
-    protected $listeners = [];
+    // Listen for parent event when a new course draft gets created so we can attach pretest.
+    protected $listeners = [
+        'courseCreated' => 'onCourseCreated', // emitted with the new course id
+    ];
+
+    public function onCourseCreated(int $newCourseId): void
+    {
+        // Only set if we didn't already have a course id.
+        if (!$this->courseId) {
+            $this->courseId = $newCourseId;
+            // Re-hydrate (will load existing pretest if any — typically none for brand new course)
+            $this->hydrateFromCourse();
+            // Force at least one question if still empty
+            if (empty($this->questions)) {
+                $this->questions = [$this->makeQuestion()];
+            }
+        }
+    }
 
     public function mount(): void
     {
@@ -214,9 +231,10 @@ class PretestQuestions extends Component
         $this->errorQuestionIndexes = [];
 
         if (!$this->courseId) {
+            // Inform user they must save basic course info first (so parent can emit courseCreated afterwards)
             $this->error(
-                'Course ID not found',
-                timeout: 5000,
+                'Save Course Info first to create the course draft before saving the Pretest.',
+                timeout: 6000,
                 position: 'toast-top toast-center'
             );
             return;
