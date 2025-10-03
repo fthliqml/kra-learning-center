@@ -18,6 +18,11 @@ class LearningModules extends Component
 {
     use WithFileUploads, Toast;
 
+    // Listen for courseCreated so this tab can be opened before initial save
+    protected $listeners = [
+        'courseCreated' => 'onCourseCreated',
+    ];
+
     public array $topics = [];
     /**
      * View / partial iteration helper variable legend (used inside Blade partials):
@@ -46,9 +51,7 @@ class LearningModules extends Component
     // Track collapsed topic IDs (UI state persist across requests)
     public array $collapsedTopicIds = [];
 
-    // Dirty tracking flags (similar to CourseInfo component)
-    protected string $originalHash = '';
-    public bool $isDirty = false;
+    // Persistence flags (dirty tracking removed per latest requirement)
     public bool $hasEverSaved = false; // at least one successful save
     public bool $persisted = false;    // reflects last known DB persistence state
     // UI error highlighting (populated during validation when save fails)
@@ -91,7 +94,35 @@ class LearningModules extends Component
         }
 
         $this->normalizePdfResources();
-        $this->snapshot();
+    }
+
+    public function onCourseCreated(int $newCourseId): void
+    {
+        if (!$this->courseId) {
+            $this->courseId = $newCourseId;
+            $this->hydrateFromCourse();
+            if (empty($this->topics)) {
+                // Ensure a minimal editable structure exists
+                $this->topics = [
+                    [
+                        'id' => Str::uuid()->toString(),
+                        'title' => '',
+                        'sections' => [
+                            [
+                                'id' => Str::uuid()->toString(),
+                                'title' => '',
+                                'resources' => [],
+                                'quiz' => [
+                                    'enabled' => false,
+                                    'questions' => [],
+                                ],
+                            ],
+                        ],
+                    ],
+                ];
+            }
+            $this->normalizePdfResources();
+        }
     }
 
     /**
@@ -258,7 +289,6 @@ class LearningModules extends Component
                 ],
             ],
         ];
-        $this->computeDirty();
     }
 
     public function removeTopic(int $index): void
@@ -270,7 +300,6 @@ class LearningModules extends Component
             if ($removedId) {
                 $this->collapsedTopicIds = array_values(array_filter($this->collapsedTopicIds, fn($id) => $id !== $removedId));
             }
-            $this->computeDirty();
         }
     }
 
@@ -302,7 +331,6 @@ class LearningModules extends Component
             'resources' => [],
             'quiz' => ['enabled' => false, 'questions' => []],
         ];
-        $this->computeDirty();
     }
 
     public function removeSection(int $topicIndex, int $sectionIndex): void
@@ -310,7 +338,6 @@ class LearningModules extends Component
         if (isset($this->topics[$topicIndex]['sections'][$sectionIndex])) {
             unset($this->topics[$topicIndex]['sections'][$sectionIndex]);
             $this->topics[$topicIndex]['sections'] = array_values($this->topics[$topicIndex]['sections']);
-            $this->computeDirty();
         }
     }
 
@@ -324,7 +351,6 @@ class LearningModules extends Component
         } elseif ($type === 'youtube') {
             $this->topics[$topicIndex]['sections'][$sectionIndex]['resources'][] = ['type' => 'youtube', 'url' => ''];
         }
-        $this->computeDirty();
     }
 
     public function removeSectionResource(int $topicIndex, int $sectionIndex, int $resourceIndex): void
@@ -332,7 +358,6 @@ class LearningModules extends Component
         if (isset($this->topics[$topicIndex]['sections'][$sectionIndex]['resources'][$resourceIndex])) {
             unset($this->topics[$topicIndex]['sections'][$sectionIndex]['resources'][$resourceIndex]);
             $this->topics[$topicIndex]['sections'][$sectionIndex]['resources'] = array_values($this->topics[$topicIndex]['sections'][$sectionIndex]['resources']);
-            $this->computeDirty();
         }
     }
 
@@ -346,7 +371,6 @@ class LearningModules extends Component
         if ($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['enabled'] && empty($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'])) {
             $this->addSectionQuizQuestion($topicIndex, $sectionIndex);
         }
-        $this->computeDirty();
     }
 
     public function addSectionQuizQuestion(int $topicIndex, int $sectionIndex): void
@@ -354,7 +378,6 @@ class LearningModules extends Component
         if (!isset($this->topics[$topicIndex]['sections'][$sectionIndex]))
             return;
         $this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'][] = $this->makeQuestion();
-        $this->computeDirty();
     }
 
     public function removeSectionQuizQuestion(int $topicIndex, int $sectionIndex, int $questionIndex): void
@@ -362,7 +385,6 @@ class LearningModules extends Component
         if (isset($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'][$questionIndex])) {
             unset($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'][$questionIndex]);
             $this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'] = array_values($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions']);
-            $this->computeDirty();
         }
     }
 
@@ -370,7 +392,6 @@ class LearningModules extends Component
     {
         if (isset($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]) && ($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['type'] ?? '') === 'multiple') {
             $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'][] = '';
-            $this->computeDirty();
         }
     }
 
@@ -392,7 +413,6 @@ class LearningModules extends Component
                     $nonce++; // force radios remount
                 }
             }
-            $this->computeDirty();
         }
     }
 
@@ -416,7 +436,6 @@ class LearningModules extends Component
             // bump nonce so blade radio name/key changes -> browser clears checked state
             $question['answer_nonce']++;
         }
-        $this->computeDirty();
     }
 
     public function updated($prop): void
@@ -433,7 +452,6 @@ class LearningModules extends Component
                 $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'] = [''];
                 $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer'] = null;
             }
-            $this->computeDirty();
         }
 
         // Handle PDF upload -> store -> set public URL
@@ -478,7 +496,6 @@ class LearningModules extends Component
                     $this->error('PDF upload failed: ' . $e->getMessage(), timeout: 6000, position: 'toast-top toast-center');
                 }
                 unset($res['file']);
-                $this->computeDirty();
             }
         }
     }
@@ -503,7 +520,6 @@ class LearningModules extends Component
         foreach ($map as $left)
             $new[] = $left;
         $this->topics = $new;
-        $this->computeDirty();
     }
 
     public function reorderSections(int $topicIndex, array $orderedIds): void
@@ -525,59 +541,14 @@ class LearningModules extends Component
         foreach ($map as $left)
             $new[] = $left;
         $this->topics[$topicIndex]['sections'] = $new;
-        $this->computeDirty();
-    }
-
-    /* Dirty tracking helpers */
-    protected function sanitizedTopics(): array
-    {
-        $clone = $this->topics;
-        foreach ($clone as &$topic) {
-            if (!isset($topic['sections']) || !is_array($topic['sections']))
-                continue;
-            foreach ($topic['sections'] as &$section) {
-                if (!isset($section['resources']) || !is_array($section['resources']))
-                    continue;
-                foreach ($section['resources'] as &$res) {
-                    if (isset($res['file']))
-                        unset($res['file']); // remove transient upload refs
-                }
-                unset($res);
-            }
-            unset($section);
-        }
-        unset($topic);
-        return $clone;
-    }
-
-    protected function hashState(): string
-    {
-        return md5(json_encode($this->sanitizedTopics()));
-    }
-
-    protected function snapshot(): void
-    {
-        $this->originalHash = $this->hashState();
-        $this->isDirty = false;
-        if (!$this->hasEverSaved) {
-            $this->persisted = false;
-        }
-    }
-
-    protected function computeDirty(): void
-    {
-        $this->isDirty = $this->hashState() !== $this->originalHash;
-        if ($this->isDirty) {
-            $this->persisted = false;
-        }
     }
 
     public function saveDraft(): void
     {
         if (!$this->courseId) {
             $this->error(
-                'Course ID not found',
-                timeout: 5000,
+                'Please save the Course Info tab first to generate a Course ID before editing learning modules.',
+                timeout: 6000,
                 position: 'toast-top toast-center'
             );
             return;
@@ -729,7 +700,6 @@ class LearningModules extends Component
             timeout: 4000,
             position: 'toast-top toast-center'
         );
-        $this->snapshot();
         $this->hasEverSaved = true;
         $this->persisted = true;
     }
