@@ -125,9 +125,8 @@ class Course extends Model
             $units += $this->learningModules()->count();
         }
 
-        // Posttest unit
-        $hasPosttest = Test::where('course_id', $this->id)->where('type', 'posttest')->exists();
-        if ($hasPosttest) $units += 1;
+        // Posttest unit: business rule says posttest is always present, count it as a unit
+        $units += 1;
 
         return (int) $units;
     }

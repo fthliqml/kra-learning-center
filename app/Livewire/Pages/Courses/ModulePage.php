@@ -40,6 +40,7 @@ class ModulePage extends Component
         $this->course = $course->load(['learningModules' => function ($q) {
             $q->orderBy('id')->with(['sections' => function ($s) {
                 $s->select('id', 'topic_id', 'title')
+                    ->orderBy('id')
                     ->with(['resources' => function ($r) {
                         $r->select('id', 'section_id', 'content_type', 'url', 'filename');
                     }]);
@@ -99,14 +100,52 @@ class ModulePage extends Component
             }
             $enrollment->save();
         }
+
+        // After completing, navigate to the next section (or next topic's first section)
+        $this->goToNextSection();
+    }
+
+    private function goToNextSection(): void
+    {
+        $topics = $this->course->learningModules->values();
+        if ($topics->isEmpty()) return;
+
+        // Locate current topic index
+        $topicIndex = $topics->search(fn($t) => (int)$t->id === (int)$this->activeTopicId);
+        if ($topicIndex === false) {
+            $topicIndex = 0;
+        }
+        $topic = $topics[$topicIndex];
+
+        $sections = $topic->sections->values();
+        $secIndex = $sections->search(fn($s) => (int)$s->id === (int)$this->activeSectionId);
+        if ($secIndex === false) {
+            $secIndex = -1;
+        }
+
+        // Next section within current topic
+        if ($secIndex + 1 < $sections->count()) {
+            $this->activeSectionId = $sections[$secIndex + 1]->id;
+            return;
+        }
+
+        // Otherwise, advance to next topic with any section
+        for ($i = $topicIndex + 1; $i < $topics->count(); $i++) {
+            $t = $topics[$i];
+            $secs = $t->sections->values();
+            if ($secs->count() > 0) {
+                $this->activeTopicId = $t->id;
+                $this->activeSectionId = $secs[0]->id;
+                return;
+            }
+        }
+        // No further sections; remain on last section.
     }
 
     private function computeTotalUnits(): int
     {
-        // Prefer sections (sub-topics) count, fallback to topic count
-        $sectionCount = Section::whereHas('topic', fn($q) => $q->where('course_id', $this->course->id))->count();
-        if ($sectionCount > 0) return $sectionCount;
-        return $this->course->learningModules()->count();
+        // Align with Course::progressUnitsCount(): pretest + sections (fallback topics) + posttest
+        return (int) $this->course->progressUnitsCount();
     }
 
     public function render()
@@ -117,8 +156,14 @@ class ModulePage extends Component
         $videoResources = collect();
         $readingResources = collect();
         if ($activeSection) {
-            $videoResources = $activeSection->resources->where('content_type', 'video')->values();
-            $readingResources = $activeSection->resources->where('content_type', 'reading')->values();
+            // Map DB content types to UI buckets
+            // DB enum: 'yt' (video embed), 'pdf' (reading/doc)
+            $videoResources = $activeSection->resources
+                ->filter(fn($r) => in_array(strtolower($r->content_type), ['video', 'yt'], true))
+                ->values();
+            $readingResources = $activeSection->resources
+                ->filter(fn($r) => in_array(strtolower($r->content_type), ['reading', 'pdf'], true))
+                ->values();
         }
 
         return view('pages.courses.module-page', [
