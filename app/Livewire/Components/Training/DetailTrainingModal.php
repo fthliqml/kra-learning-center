@@ -32,6 +32,7 @@ class DetailTrainingModal extends Component
         'location' => false,
         'trainer' => false,
         'time' => false,
+        'group_comp' => false,
     ];
 
     protected $listeners = [
@@ -70,9 +71,11 @@ class DetailTrainingModal extends Component
 
         $this->selectedEvent = [
             'id' => $payload['id'],
-            'name' => $payload['name'],
-            'start_date' => $payload['start_date'],
-            'end_date' => $payload['end_date'],
+            'name' => $payload['name'] ?? null,
+            'group_comp' => $payload['group_comp'] ?? null,
+            'type' => $payload['type'] ?? ($payload['training_type'] ?? null),
+            'start_date' => $payload['start_date'] ?? null,
+            'end_date' => $payload['end_date'] ?? null,
         ];
 
         $this->sessions = $payload['sessions'] ?? [];
@@ -220,6 +223,7 @@ class DetailTrainingModal extends Component
             'name' => $this->selectedEvent['name'] ?? null,
             'start_date' => $startDate,
             'end_date' => $endDate,
+            'group_comp' => $this->selectedEvent['group_comp'] ?? null,
         ];
         $updateData = array_filter($updateData, fn($v) => !is_null($v));
 
@@ -334,6 +338,7 @@ class DetailTrainingModal extends Component
             'name' => $this->selectedEvent['name'],
             'start_date' => $updateData['start_date'] ?? $this->selectedEvent['start_date'],
             'end_date' => $updateData['end_date'] ?? $this->selectedEvent['end_date'],
+            'group_comp' => $updateData['group_comp'] ?? $this->selectedEvent['group_comp'] ?? null,
             'session' => $updatedSessionPayload,
         ]);
         $this->success('Successfully updated data!', position: 'toast-top toast-center');

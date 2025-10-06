@@ -277,6 +277,7 @@ class ScheduleView extends Component
             ->values()->map(fn($t) => [
                 'id' => $t->id,
                 'name' => $t->name,
+                'group_comp' => $t->group_comp,
                 'type' => $t->type ?? null,
                 'start_date' => $t->start_date,
                 'end_date' => $t->end_date,
@@ -353,6 +354,7 @@ class ScheduleView extends Component
         $payload = [
             'id' => $training->id,
             'name' => $training->name,
+            'group_comp' => $training->group_comp,
             'start_date' => $training->start_date,
             'end_date' => $training->end_date,
             'sessions' => $sessions,

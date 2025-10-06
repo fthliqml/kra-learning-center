@@ -96,6 +96,63 @@
                         class="w-5 h-5 text-gray-400 absolute top-3.5 right-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200"
                         wire:click="$toggle('editModes.location')" />
                 </x-card>
+                {{-- Group Competency Card (editable) --}}
+                <x-card body-class="flex justify-center items-center gap-5 relative group"
+                    class="shadow border border-gray-200 w-full border-l-[6px] border-l-[#2196F3] hover:bg-gray-100 cursor-pointer"
+                    wire:click="$toggle('editModes.group_comp')" separator>
+                    <x-icon name="o-rectangle-group" class="w-7 h-7 text-[#2196F3]" />
+                    <div class="flex-1">
+                        <span class="text-sm text-gray-700">Group Competency</span>
+                        @if ($editModes['group_comp'])
+                            <div onclick="event.stopPropagation()">
+                                <x-select wire:model="selectedEvent.group_comp" :options="[
+                                    ['id' => 'BMC', 'name' => 'BMC'],
+                                    ['id' => 'BC', 'name' => 'BC'],
+                                    ['id' => 'MMP', 'name' => 'MMP'],
+                                    ['id' => 'LC', 'name' => 'LC'],
+                                    ['id' => 'MDP', 'name' => 'MDP'],
+                                    ['id' => 'TOC', 'name' => 'TOC'],
+                                ]" option-label="name"
+                                    option-value="id" class="w-full focus-within:outline-none" />
+                            </div>
+                        @else
+                            <h1 class="font-semibold">{{ $selectedEvent['group_comp'] ?? '-' }}</h1>
+                        @endif
+                    </div>
+                    <x-icon name="{{ $editModes['group_comp'] ? 'o-check' : 'o-pencil' }}"
+                        class="w-5 h-5 text-gray-400 absolute {{ $editModes['group_comp'] ? 'top-0' : 'top-3.5' }} right-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        wire:click="$toggle('editModes.group_comp')" />
+                </x-card>
+
+                {{-- Time Card --}}
+                <x-card body-class="flex justify-center items-center gap-5 relative group"
+                    class="shadow border border-gray-200 w-full border-l-[6px] border-l-[#FF9800] hover:bg-gray-100 cursor-pointer transition-colors"
+                    wire:click="$toggle('editModes.time')" separator>
+                    <x-icon name="o-clock" class="w-7 h-7 text-[#FF9800]" />
+                    <div class="flex-1">
+                        <span class="text-sm text-gray-700">Time</span>
+                        @php
+                            $st = $this->currentSession['start_time'] ?? null;
+                            $et = $this->currentSession['end_time'] ?? null;
+                            $st = $st ? substr($st, 0, 5) : null;
+                            $et = $et ? substr($et, 0, 5) : null;
+                        @endphp
+                        @if ($editModes['time'])
+                            <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                                <x-input type="time" wire:model="sessions.{{ $dayNumber - 1 }}.start_time"
+                                    class="!w-24 !h-8 text-sm" />
+                                <span>-</span>
+                                <x-input type="time" wire:model="sessions.{{ $dayNumber - 1 }}.end_time"
+                                    class="!w-24 !h-8 text-sm" />
+                            </div>
+                        @else
+                            <h1 class="font-semibold">{{ $st && $et ? $st . ' - ' . $et : '-' }}</h1>
+                        @endif
+                    </div>
+                    <x-icon name="{{ $editModes['time'] ? 'o-check' : 'o-pencil' }}"
+                        class="w-5 h-5 text-gray-400 absolute {{ $editModes['time'] ? 'top-0' : 'top-3.5' }} right-1 cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity duration-200"
+                        wire:click="$toggle('editModes.time')" />
+                </x-card>
             </div>
 
             {{-- Attendance Section --}}
@@ -104,32 +161,6 @@
                     class="flex justify-between flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4 mb-5 w-full">
                     <h2 class="text-xl font-bold">Attendance List</h2>
                     <div class="flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full sm:w-auto">
-                        <div class="w-full sm:w-fit flex items-center gap-2 p-[9px] rounded-lg border border-gray-300">
-                            <span class="text-sm text-gray-700">Time</span>
-                            @if (!$editModes['time'])
-                                @php
-                                    $st = $this->currentSession['start_time'] ?? null;
-                                    $et = $this->currentSession['end_time'] ?? null;
-                                    $st = $st ? substr($st, 0, 5) : null;
-                                    $et = $et ? substr($et, 0, 5) : null;
-                                @endphp
-                                <button type="button"
-                                    class="text-sm font-medium text-gray-800 hover:underline focus-within:outline-none cursor-pointer"
-                                    wire:click="$toggle('editModes.time')">
-                                    {{ $st && $et ? $st . ' - ' . $et : '-' }}
-                                </button>
-                            @else
-                                <div class="flex items-center gap-2" onclick="event.stopPropagation()">
-                                    <x-input type="time" wire:model="sessions.{{ $dayNumber - 1 }}.start_time"
-                                        class="!w-28 !h-8 text-sm" />
-                                    <span>-</span>
-                                    <x-input type="time" wire:model="sessions.{{ $dayNumber - 1 }}.end_time"
-                                        class="!w-28 !h-8 text-sm" />
-                                    <x-icon name="o-check" class="w-5 h-5 text-gray-500 cursor-pointer"
-                                        wire:click="$toggle('editModes.time')" />
-                                </div>
-                            @endif
-                        </div>
                         <x-select wire:model="dayNumber" :options="$trainingDates" option-label="name" option-value="id"
                             wire:change="$refresh" class="w-full sm:w-auto" />
                     </div>

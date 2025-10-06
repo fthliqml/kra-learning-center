@@ -6,22 +6,22 @@
         </x-tab>
 
         {{-- TAB: Pretest --}}
-        <x-tab name="pretest" label="Pretest" icon="m-clipboard-document-list">
+        <x-tab name="pretest" label="Pretest" icon="m-clipboard-document-list" :disabled="!$courseId">
             <livewire:components.edit-course.pretest-questions :courseId="$course->id" lazy />
         </x-tab>
 
         {{-- TAB: Learning Module --}}
-        <x-tab name="learning-module" label="Learning Module" icon="m-academic-cap">
+        <x-tab name="learning-module" label="Learning Module" icon="m-academic-cap" :disabled="!$courseId">
             <livewire:components.edit-course.learning-modules :courseId="$course->id" lazy />
         </x-tab>
 
         {{-- TAB: Post Test --}}
-        <x-tab name="post-test" label="Post Test" icon="m-check-badge">
+        <x-tab name="post-test" label="Post Test" icon="m-check-badge" :disabled="!$courseId">
             <livewire:components.edit-course.post-test-questions :courseId="$course->id" lazy />
         </x-tab>
 
         {{-- TAB: Test Config --}}
-        <x-tab name="test-config" label="Test Config" icon="m-cog-6-tooth">
+        <x-tab name="test-config" label="Test Config" icon="m-cog-6-tooth" :disabled="!$courseId">
             <livewire:components.edit-course.test-config :courseId="$course->id" lazy />
         </x-tab>
     </x-tabs>
