@@ -44,11 +44,18 @@ class UserCourse extends Model
     {
         return Attribute::make(
             get: function () {
-                $totalModules = $this->course?->learningModules()->count() ?? 0;
-                if ($totalModules <= 0) {
+                // Prefer counting sections (sub-topics) for finer-grained progress
+                $course = $this->course;
+                if (!$course) {
                     return 0;
                 }
-                $raw = ($this->current_step / $totalModules) * 100;
+                $topicCount = $course->learningModules()->count();
+                $sectionCount = \App\Models\Section::whereHas('topic', fn($q) => $q->where('course_id', $course->id))->count();
+                $totalUnits = $sectionCount > 0 ? $sectionCount : $topicCount;
+                if ($totalUnits <= 0) {
+                    return 0;
+                }
+                $raw = ($this->current_step / $totalUnits) * 100;
                 return min(100, max(0, (int) round($raw)));
             }
         );

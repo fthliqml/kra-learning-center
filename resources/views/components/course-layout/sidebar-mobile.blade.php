@@ -4,6 +4,8 @@
     'progress' => null,
     'closeRoute' => null,
     'modules' => collect(),
+    'activeModuleId' => null,
+    'activeSectionId' => null,
 ])
 
 <div x-show="mobileSidebar" x-cloak class="fixed inset-0 z-50 md:hidden">
@@ -60,7 +62,7 @@
                                 <ul class="space-y-1" role="list">
                                     @foreach ($modules as $m)
                                         @php
-                                            $isActive = false; // mobile does not have activeModuleId context passed
+                                            $isActive = $activeModuleId && (string) $activeModuleId === (string) $m->id;
                                             $isCompleted = false; // can be wired later
                                         @endphp
                                         <li class="group relative border border-transparent rounded-md bg-white transition-colors"
@@ -69,6 +71,7 @@
                                                 'hover:border-primary/20 hover:bg-gray-50'"
                                             x-data="{ id: 'm-{{ $m->id }}' }">
                                             <button type="button" @click="openModule = openModule === id ? '' : id"
+                                                @if ($stage === 'module') wire:click="selectTopic({{ $m->id }})" @endif
                                                 class="w-full flex items-center gap-2 pl-4 pr-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md"
                                                 :aria-expanded="openModule === id" :aria-controls="id + '-panel'"
                                                 :class="openModule === id ? 'font-semibold text-primary' :
@@ -101,23 +104,33 @@
                                                 @if ($sections->count())
                                                     <ul class="space-y-1.5">
                                                         @foreach ($sections as $index => $sec)
-                                                            @php $sectionCompleted = false; @endphp
+                                                            @php
+                                                                $sectionCompleted = false;
+                                                                $sectionActive =
+                                                                    $activeModuleId === $m->id &&
+                                                                    (string) ($activeSectionId ?? '') ===
+                                                                        (string) $sec->id;
+                                                            @endphp
                                                             <li class="flex items-start gap-2 group/section">
                                                                 <span
                                                                     class="mt-1 w-3.5 h-3.5 flex items-center justify-center">
                                                                     @if ($sectionCompleted)
                                                                         <x-icon name="o-check"
                                                                             class="size-3 text-green-600" />
+                                                                    @elseif($sectionActive)
+                                                                        <span
+                                                                            class="w-2 h-2 rounded-full bg-primary"></span>
                                                                     @else
                                                                         <span
                                                                             class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover/section:bg-primary/60 transition"></span>
                                                                     @endif
                                                                 </span>
-                                                                <span
-                                                                    class="flex-1 pt-1 text-[11px] leading-snug text-gray-600 group-hover/section:text-gray-800 truncate"
+                                                                <button type="button"
+                                                                    @if ($stage === 'module') wire:click="selectSection({{ $sec->id }})" @endif
+                                                                    class="flex-1 text-left pt-1 text-[11px] leading-snug truncate rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary/30 px-1 {{ $sectionActive ? 'text-primary font-semibold' : 'text-gray-600 group-hover/section:text-gray-800' }}"
                                                                     title="{{ $sec->title ?? 'Section ' . ($index + 1) }}">
                                                                     {{ Str::limit($sec->title ?? 'Section ' . ($index + 1), 70) }}
-                                                                </span>
+                                                                </button>
                                                             </li>
                                                         @endforeach
                                                     </ul>

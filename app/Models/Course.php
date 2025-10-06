@@ -6,6 +6,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Auth;
+use App\Models\Section;
+use App\Models\Test;
 
 class Course extends Model
 {
@@ -90,21 +92,43 @@ class Course extends Model
             return 0;
         }
 
-        // Prefer pre-counted attribute
-        $modules = null;
-        if (isset($this->learning_modules_count)) {
-            $modules = (int) $this->learning_modules_count;
-        } elseif ($this->relationLoaded('learningModules')) {
-            $modules = $this->learningModules->count();
-        } else {
-            $modules = $this->learningModules()->count();
-        }
+        // Total progress units according to business rules
+        $units = $this->progressUnitsCount();
 
-        if ($modules <= 0) {
+        if ($units <= 0) {
             return 0;
         }
 
         $current = (int) ($assignment->current_step ?? 0);
-        return min(100, max(0, (int) floor(($current / max(1, $modules)) * 100)));
+        return min(100, max(0, (int) floor(($current / max(1, $units)) * 100)));
+    }
+
+    /**
+     * Count total units for progress:
+     * - +1 if pretest exists
+     * - +N for each Section across topics (fallback to topics if no sections)
+     * - +1 if posttest exists
+     * Result stage does not count.
+     */
+    public function progressUnitsCount(): int
+    {
+        $units = 0;
+        // Pretest unit
+        $hasPretest = Test::where('course_id', $this->id)->where('type', 'pretest')->exists();
+        if ($hasPretest) $units += 1;
+
+        // Sections as main units (fallback to topics count)
+        $sectionCount = Section::whereHas('topic', fn($q) => $q->where('course_id', $this->id))->count();
+        if ($sectionCount > 0) {
+            $units += $sectionCount;
+        } else {
+            $units += $this->learningModules()->count();
+        }
+
+        // Posttest unit
+        $hasPosttest = Test::where('course_id', $this->id)->where('type', 'posttest')->exists();
+        if ($hasPosttest) $units += 1;
+
+        return (int) $units;
     }
 }

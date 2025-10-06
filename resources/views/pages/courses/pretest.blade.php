@@ -3,7 +3,7 @@
     $questions = $questions ?? collect();
 @endphp
 
-<div x-data="pretestForm()" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
+<div x-data="pretestForm($wire)" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
     <!-- Header -->
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
         <div>
@@ -45,7 +45,8 @@
     </div>
 
     <!-- Questions -->
-    <form x-ref="formEl" class="space-y-4 md:space-y-5" x-bind:aria-busy="submitting ? 'true' : 'false'">
+    <form x-ref="formEl" @submit.prevent="submit" class="space-y-4 md:space-y-5"
+        x-bind:aria-busy="submitting ? 'true' : 'false'">
         @forelse ($questions as $index => $q)
             <fieldset class="rounded-lg border border-gray-200 bg-white p-4 md:p-5 shadow-sm relative"
                 :class="errors['{{ $q['id'] }}'] ? 'border-red-300 ring-1 ring-red-200' : ''">
@@ -99,30 +100,29 @@
             </div>
         @endforelse
 
-        <!-- Actions -->
-        <div class="pt-2 flex flex-col md:flex-row md:items-center md:justify-end gap-3">
-            <div class="text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-md px-3 py-2">
-                Fitur submit pretest sementara dinonaktifkan. Jawaban tidak disimpan.
-            </div>
-            <div class="flex flex-row items-center gap-3">
+        @php $qCount = $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions); @endphp
+        @if ($qCount > 0)
+            <!-- Actions -->
+            <div class="pt-2 flex flex-row items-center justify-between md:justify-end gap-3">
                 <button type="button" @click="resetForm" :disabled="submitting"
                     class="inline-flex items-center justify-center gap-2 rounded-md bg-gray-100 text-gray-700 px-4 py-2.5 text-sm font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300/50 transition disabled:opacity-50 disabled:cursor-not-allowed">
                     <x-icon name="o-arrow-path" class="size-4" />
                     <span>Reset</span>
                 </button>
-                <button type="button" disabled
-                    class="inline-flex items-center justify-center gap-2 rounded-md bg-gray-300 text-gray-500 px-5 py-2.5 text-sm font-medium shadow cursor-not-allowed">
+                <button type="submit" :disabled="submitting"
+                    class="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-white px-5 py-2.5 text-sm font-medium shadow hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 transition disabled:opacity-60 disabled:cursor-not-allowed">
                     <x-icon name="o-paper-airplane" class="size-4" />
-                    <span>Submit Dinonaktifkan</span>
+                    <span>Submit</span>
                 </button>
             </div>
-        </div>
+        @endif
     </form>
 </div>
 
 <script>
-    function pretestForm() {
+    function pretestForm(wire) {
         return {
+            lw: wire,
             answers: {},
             errors: {},
             submitted: false,
@@ -134,7 +134,41 @@
             progressPercent() {
                 return this.totalQuestions ? (this.answeredCount / this.totalQuestions) * 100 : 0;
             },
-            init() {},
+            key() {
+                // Unique key per user+pretest
+                return `pretest:${@json($userId)}:${@json($pretestId)}`;
+            },
+            init() {
+                // Restore saved answers
+                try {
+                    const raw = localStorage.getItem(this.key());
+                    if (raw) {
+                        const parsed = JSON.parse(raw);
+                        if (parsed && typeof parsed === 'object') {
+                            this.answers = parsed;
+                            // Re-check radios
+                            Object.entries(this.answers).forEach(([name, val]) => {
+                                const el = this.$refs.formEl?.querySelector(
+                                    `input[type=radio][name='${name}'][value='${val}']`);
+                                if (el) el.checked = true;
+                                const ta = this.$refs[`txt_${name}`];
+                                if (ta && ta.value !== undefined && typeof val === 'string') ta.value = val;
+                            });
+                        }
+                    }
+                } catch (e) {}
+                // Autosave on input change
+                this.$nextTick(() => {
+                    this.$refs.formEl?.addEventListener('input', this.saveDraft.bind(this));
+                    this.$refs.formEl?.addEventListener('change', this.saveDraft.bind(this));
+                });
+                window.addEventListener('beforeunload', this.saveDraft.bind(this));
+            },
+            saveDraft() {
+                try {
+                    localStorage.setItem(this.key(), JSON.stringify(this.answers));
+                } catch (e) {}
+            },
             validate() {
                 this.errors = {};
                 const required = @json(
@@ -158,8 +192,25 @@
                 this.answers = {};
                 this.errors = {};
                 this.submitted = false;
+                this.saveDraft();
             },
-            // submit() dihapus karena fitur submit dinonaktifkan sementara
+            submit() {
+                if (!this.validate()) {
+                    return;
+                }
+                this.submitting = true;
+                this.submitted = true;
+                // Persist draft immediately before sending
+                this.saveDraft();
+                Promise.resolve(this.lw.submitPretest(this.answers))
+                    .catch(() => {
+                        this.submitting = false;
+                    })
+                    .finally(() => {
+                        // Livewire will redirect on success; on non-redirect, reset immediately
+                        this.submitting = false;
+                    });
+            }
         }
     }
 </script>

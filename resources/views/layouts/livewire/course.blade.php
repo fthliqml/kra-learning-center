@@ -13,11 +13,11 @@
     <div class="flex mx-auto w-full h-[calc(100vh-4rem)] overflow-hidden">
         <!-- Desktop Sidebar Component -->
         <x-course-layout.sidebar :stage="$stage ?? 'pretest'" :stages="$stages ?? ['pretest', 'module', 'posttest', 'result']" :progress="$progress ?? null" :modules="$modules ?? collect()"
-            :close-route="route('courses.index')" />
+            :active-module-id="$activeModuleId ?? null" :active-section-id="$activeSectionId ?? null" :close-route="route('courses.index')" />
 
         <!-- Mobile Sidebar Component -->
         <x-course-layout.sidebar-mobile :stage="$stage ?? 'pretest'" :stages="$stages ?? ['pretest', 'module', 'posttest', 'result']" :progress="$progress ?? null" :modules="$modules ?? collect()"
-            :close-route="route('courses.index')" />
+            :active-module-id="$activeModuleId ?? null" :active-section-id="$activeSectionId ?? null" :close-route="route('courses.index')" />
 
         <!-- Content -->
         <main class="flex-1 min-w-0 h-full overflow-y-auto">
