@@ -4,6 +4,7 @@ namespace App\Livewire\Components\Training;
 
 use App\Models\Training;
 use App\Models\Trainer;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Livewire\Component;
 
@@ -87,10 +88,24 @@ class ScheduleView extends Component
     public function refreshTrainings(): void
     {
         [$start, $end] = $this->calendarRange();
-        $this->trainings = Training::with('sessions')
+        $query = Training::with('sessions')
             ->where(function ($q) use ($start, $end) {
                 $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
-            })->get();
+            });
+
+        $user = Auth::user();
+        /** @var \App\Models\User|null $user */
+        if ($user && strtolower($user->role ?? '') !== 'admin') {
+            // Limit to trainings where user participates (assessment) OR is trainer in any session
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        $this->trainings = $query->get();
         $this->recomputeDays();
         $this->computeMonthNavCounts();
         $this->trainingDetails = []; // reset cache
@@ -247,14 +262,25 @@ class ScheduleView extends Component
      */
     private function buildYearCounts(int $year): array
     {
+        /** @var \App\Models\User|null $user */
         $counts = array_fill(1, 12, 0);
         $yearStart = Carbon::createFromDate($year, 1, 1)->startOfDay();
         $yearEnd = Carbon::createFromDate($year, 12, 31)->endOfDay();
 
-        $trainings = Training::select('id', 'start_date', 'end_date')
+        $trainingsQuery = Training::select('id', 'start_date', 'end_date')
             ->whereDate('start_date', '<=', $yearEnd)
-            ->whereDate('end_date', '>=', $yearStart)
-            ->get();
+            ->whereDate('end_date', '>=', $yearStart);
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') !== 'admin') {
+            $trainingsQuery->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        $trainings = $trainingsQuery->get();
 
         foreach ($trainings as $t) {
             $ts = Carbon::parse($t->start_date);
@@ -273,12 +299,22 @@ class ScheduleView extends Component
      */
     private function countForMonth(int $year, int $month): int
     {
+        /** @var \App\Models\User|null $user */
         $start = Carbon::createFromDate($year, $month, 1)->startOfDay();
         $end = (clone $start)->endOfMonth()->endOfDay();
-        return Training::whereDate('start_date', '<=', $end)
-            ->whereDate('end_date', '>=', $start)
-            ->distinct('id')
-            ->count('id');
+        $query = Training::whereDate('start_date', '<=', $end)
+            ->whereDate('end_date', '>=', $start);
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') !== 'admin') {
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        return $query->distinct('id')->count('id');
     }
 
     private function trainingsForDate(string $iso): array
