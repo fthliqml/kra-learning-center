@@ -23,7 +23,9 @@
             Training Schedule
         </h1>
 
-        <livewire:components.training.add-training-modal />
+        @role('admin')
+            <livewire:components.training.add-training-modal />
+        @endrole
     </div>
 
     <livewire:components.training.schedule-view />
