@@ -33,6 +33,7 @@ class ScheduleView extends Component
         'training-updated' => 'applyTrainingUpdate',
         'training-deleted' => 'removeTraining',
         'fullcalendar-open-event' => 'openEventModal',
+        'training-info-updated' => 'onTrainingInfoUpdated',
     ];
 
     private array $trainingDetails = [];
@@ -176,6 +177,16 @@ class ScheduleView extends Component
             }
         }
         $this->calendarVersion++;
+    }
+
+    public function onTrainingInfoUpdated(...$args): void
+    {
+        $payload = $args[0] ?? [];
+        if (!is_array($payload) || !isset($payload['id'])) {
+            return;
+        }
+        // If date range changed we rely on existing logic in applyTrainingUpdate
+        $this->applyTrainingUpdate($payload);
     }
 
     private function calendarRange(): array

@@ -39,7 +39,7 @@ class TrainingSeeder extends Seeder
         ]);
 
         Trainer::create([
-            'user_id' => 5,
+            'user_id' => 10,
             'institution' => "KRA"
 
         ]);
@@ -69,7 +69,7 @@ class TrainingSeeder extends Seeder
         }
 
         $employees = User::inRandomOrder()
-            ->limit(5)
+            ->limit(10)
             ->get();
 
         foreach ($employees as $employee) {
