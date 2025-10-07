@@ -15,13 +15,13 @@ return new class extends Migration {
 
             // Foreign Keys
             $table->foreignId('training_id')->constrained('trainings')->cascadeOnDelete();
-            $table->foreignId('trainer_id')->constrained('trainer')->cascadeOnDelete();
+            $table->foreignId('trainer_id')->nullable()->constrained('trainer')->nullOnDelete();
 
             // Session Details
             $table->string('room_name')->nullable();
             $table->string('room_location')->nullable();
-            $table->time('start_time');
-            $table->time('end_time');
+            $table->time('start_time')->nullable();
+            $table->time('end_time')->nullable();
             $table->date('date');
             $table->integer('day_number');
 

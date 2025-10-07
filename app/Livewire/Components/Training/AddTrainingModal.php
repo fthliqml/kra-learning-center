@@ -3,6 +3,7 @@
 namespace App\Livewire\Components\Training;
 
 use App\Models\TrainingSession;
+use App\Models\Course;
 use App\Models\User;
 use App\Models\Trainer;
 use App\Models\Training;
@@ -27,6 +28,7 @@ class AddTrainingModal extends Component
     public $date = '';
     public $start_time = '';
     public $end_time = '';
+    public $course_id = null; // Only for K-LEARN type
 
     // id trainer
     public $trainerId = null;
@@ -58,22 +60,44 @@ class AddTrainingModal extends Component
         ['id' => 'TOC', 'name' => 'TOC'],
     ];
 
-    protected $rules = [
-        'training_name' => 'required|string|min:3',
-        'training_type' => 'required',
-        'group_comp' => 'required',
-        'date' => 'required|string|min:10',
-        'trainerId' => 'required|integer|exists:trainer,id',
-        'room.name' => 'required|string|max:100',
-        'room.location' => 'required|string|max:150',
-        'start_time' => 'required|date_format:H:i',
-        'end_time' => 'required|date_format:H:i|after:start_time',
-        'participants' => 'required|array|min:1',
-        'participants.*' => 'integer|exists:users,id',
-    ];
+    /**
+     * Dynamic rules: adjust when K-LEARN (course based) vs regular training.
+     */
+    public function rules(): array
+    {
+        if ($this->training_type === 'K-LEARN') {
+            return [
+                'course_id' => 'required|integer|exists:courses,id',
+                'training_type' => 'required',
+                'group_comp' => 'required',
+                'date' => 'required|string|min:10',
+                'room.name' => 'nullable|string|max:100',
+                'room.location' => 'nullable|string|max:150',
+                // Trainer & times optional / ignored
+                'start_time' => 'nullable|date_format:H:i',
+                'end_time' => 'nullable|date_format:H:i',
+                'participants' => 'required|array|min:1',
+                'participants.*' => 'integer|exists:users,id',
+            ];
+        }
+        return [
+            'training_name' => 'required|string|min:3',
+            'training_type' => 'required',
+            'group_comp' => 'required',
+            'date' => 'required|string|min:10',
+            'trainerId' => 'required|integer|exists:trainer,id',
+            'room.name' => 'required|string|max:100',
+            'room.location' => 'required|string|max:150',
+            'start_time' => 'required|date_format:H:i',
+            'end_time' => 'required|date_format:H:i|after:start_time',
+            'participants' => 'required|array|min:1',
+            'participants.*' => 'integer|exists:users,id',
+        ];
+    }
 
     protected $messages = [
         'training_name.required' => 'Training name is required.',
+        'course_id.required' => 'Course must be selected for K-Learn.',
         'training_type.required' => 'Training type is required.',
         'group_comp.required' => 'Group competency is required.',
         'training_name.min' => 'Training name must be at least 3 characters.',
@@ -105,6 +129,41 @@ class AddTrainingModal extends Component
         $this->userSearch();
         $this->trainersSearchable = collect([]);
         $this->trainerSearch();
+        $this->loadCourseOptions();
+    }
+
+    public array $courseOptions = [];
+
+    private function loadCourseOptions(): void
+    {
+        $this->courseOptions = Course::select('id', 'title')->orderBy('title')->get()
+            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title])->toArray();
+    }
+
+    public function updatedCourseId($value): void
+    {
+        if ($this->training_type === 'K-LEARN' && $value) {
+            $course = collect($this->courseOptions)->firstWhere('id', (int) $value);
+            $this->training_name = $course['title'] ?? '';
+        }
+    }
+
+    public function updatedTrainingType($value): void
+    {
+        // Clear errors & adjust when switching type
+        $this->resetValidation();
+        if ($value === 'K-LEARN') {
+            $this->training_name = '';
+            $this->course_id = null;
+            $this->trainerId = null;
+            $this->room = ['name' => '', 'location' => ''];
+            $this->start_time = '';
+            $this->end_time = '';
+            $this->loadCourseOptions();
+        } else {
+            // Leaving K-LEARN: reset course_id
+            $this->course_id = null;
+        }
     }
 
     private function parseDateRange($dateRange): array
@@ -172,6 +231,7 @@ class AddTrainingModal extends Component
         $this->training_type = 'IN';
         $this->group_comp = 'BMC';
         $this->date = '';
+        $this->course_id = null;
         $this->activeTab = 'training';
         $this->trainerId = null;
         $this->room = [
@@ -267,12 +327,20 @@ class AddTrainingModal extends Component
             }
         }
 
+        // Determine effective name & course reference
+        $courseTitle = null;
+        if ($this->training_type === 'K-LEARN') {
+            $course = Course::find($this->course_id);
+            $courseTitle = $course?->title;
+        }
+
         $training = Training::create([
-            "name" => $this->training_name,
-            "type" => $this->training_type,
-            "group_comp" => $this->group_comp,
-            "start_date" => $startDate,
-            "end_date" => $endDate,
+            'name' => $this->training_type === 'K-LEARN' ? ($courseTitle ?? 'K-Learn') : $this->training_name,
+            'type' => $this->training_type,
+            'group_comp' => $this->group_comp,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+            'course_id' => $this->training_type === 'K-LEARN' ? $this->course_id : null,
         ]);
 
         $sessions = [];
@@ -284,11 +352,11 @@ class AddTrainingModal extends Component
                     'training_id' => $training->id,
                     'day_number' => $day,
                     'date' => $dateObj->format('Y-m-d'),
-                    'trainer_id' => $this->trainerId,
-                    'room_name' => $this->room['name'],
-                    'room_location' => $this->room['location'],
-                    'start_time' => $this->start_time,
-                    'end_time' => $this->end_time,
+                    'trainer_id' => $this->training_type === 'K-LEARN' ? null : $this->trainerId,
+                    'room_name' => $this->training_type === 'K-LEARN' ? ($this->room['name'] ?: null) : $this->room['name'],
+                    'room_location' => $this->training_type === 'K-LEARN' ? ($this->room['location'] ?: null) : $this->room['location'],
+                    'start_time' => $this->training_type === 'K-LEARN' ? null : $this->start_time,
+                    'end_time' => $this->training_type === 'K-LEARN' ? null : $this->end_time,
                 ]);
                 $day++;
             }
@@ -298,14 +366,16 @@ class AddTrainingModal extends Component
             TrainingAssessment::create(["training_id" => $training->id, "employee_id" => $participantId]);
         }
 
-        foreach ($sessions as $session) {
-            foreach ($this->participants as $participantId) {
-                TrainingAttendance::create([
-                    'session_id' => $session->id,
-                    'employee_id' => $participantId,
-                    'notes' => null,
-                    'recorded_at' => Carbon::now(),
-                ]);
+        if ($this->training_type !== 'K-LEARN') {
+            foreach ($sessions as $session) {
+                foreach ($this->participants as $participantId) {
+                    TrainingAttendance::create([
+                        'session_id' => $session->id,
+                        'employee_id' => $participantId,
+                        'notes' => null,
+                        'recorded_at' => Carbon::now(),
+                    ]);
+                }
             }
         }
 

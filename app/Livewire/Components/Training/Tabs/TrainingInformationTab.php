@@ -115,32 +115,6 @@ class TrainingInformationTab extends Component
         return [$start, $end];
     }
 
-    // Editing & persistence removed – this component is now read-only.
-
-
-
-    public function placeholder(): string
-    {
-        return <<<'HTML'
-            <div class="space-y-4 animate-pulse">
-            <div class="h-6 bg-gray-200 rounded"></div>
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
-                <div class="h-24 bg-gray-200 rounded"></div>
-                <div class="h-24 bg-gray-200 rounded"></div>
-                <div class="h-24 bg-gray-200 rounded hidden md:block"></div>
-                <div class="h-24 bg-gray-200 rounded"></div>
-                <div class="h-24 bg-gray-200 rounded"></div>
-                <div class="h-24 bg-gray-200 rounded hidden md:block"></div>
-            </div>
-        </div>
-        HTML;
-    }
-
-    public function render()
-    {
-        return view('components.training.tabs.training-information-tab');
-    }
-
     /**
      * Short human readable date range like "6-9 sep" or "28 Sep - 2 Oct".
      * Falls back to raw $dateRange if parsing fails.
@@ -165,5 +139,10 @@ class TrainingInformationTab extends Component
             return sprintf('%d %s - %d %s %d', $s->day, $s->format('F'), $e->day, $e->format('F'), $e->year);
         }
         return sprintf('%d %s %d - %d %s %d', $s->day, $s->format('F'), $s->year, $e->day, $e->format('F'), $e->year);
+    }
+
+    public function render()
+    {
+        return view('components.training.tabs.training-information-tab');
     }
 }

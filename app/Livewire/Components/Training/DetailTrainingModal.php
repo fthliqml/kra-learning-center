@@ -94,13 +94,6 @@ class DetailTrainingModal extends Component
         $this->modal = false;
     }
 
-    public function render()
-    {
-        return view('components.training.detail-training-modal', [
-            'trainingDates' => $this->trainingDates(),
-        ]);
-    }
-
     public function requestDeleteConfirm(): void
     {
         $id = $this->selectedEvent['id'] ?? null;
@@ -153,4 +146,12 @@ class DetailTrainingModal extends Component
             $this->error('Failed to delete training.');
         }
     }
+
+    public function render()
+    {
+        return view('components.training.detail-training-modal', [
+            'trainingDates' => $this->trainingDates(),
+        ]);
+    }
 }
+

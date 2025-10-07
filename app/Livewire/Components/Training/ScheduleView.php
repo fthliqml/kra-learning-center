@@ -404,6 +404,7 @@ class ScheduleView extends Component
             'group_comp' => $training->group_comp,
             'start_date' => $training->start_date,
             'end_date' => $training->end_date,
+            'type' => $training->type, // include type so detail modal badge can render without extra query
             'sessions' => $sessions,
             'employees' => $employees,
         ];

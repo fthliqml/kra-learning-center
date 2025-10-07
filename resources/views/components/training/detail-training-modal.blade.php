@@ -24,16 +24,42 @@
                         </button>
                     @endanyrole
                 </div>
-                <div class="flex items-center gap-2 pb-1">
-                    <span class="text-xs text-gray-500">Day</span>
-                    <x-select wire:model="dayNumber" :options="$trainingDates" option-label="name" option-value="id"
-                        wire:change="$refresh" class="w-40 !h-8 !text-sm focus-within:outline-none" />
+                <div class="flex items-center gap-3 pb-1">
+                    @php
+                        $type = strtoupper($selectedEvent['type'] ?? '');
+                        switch ($type) {
+                            case 'IN':
+                                $badge = 'bg-green-100 text-green-700 border border-green-300';
+                                break;
+                            case 'OUT':
+                                $badge = 'bg-amber-100 text-amber-700 border border-amber-300';
+                                break;
+                            case 'K-LEARN':
+                            case 'KLEARN':
+                            case 'KLEARNING':
+                                $badge = 'bg-indigo-100 text-indigo-700 border border-indigo-300';
+                                break;
+                            default:
+                                $badge = 'bg-blue-100 text-blue-700 border border-blue-300';
+                        }
+                    @endphp
+                    @if ($type)
+                        <span
+                            class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide {{ $badge }}">
+                            {{ $type }}
+                        </span>
+                    @endif
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs text-gray-500">Day</span>
+                        <x-select wire:model="dayNumber" :options="$trainingDates" option-label="name" option-value="id"
+                            wire:change="$refresh" class="w-40 !h-8 !text-sm focus-within:outline-none" />
+                    </div>
                 </div>
             </div>
 
             @if ($activeTab === 'information')
                 <livewire:components.training.tabs.training-information-tab :training-id="$selectedEvent['id']" :day-number="$dayNumber"
-                    :key="'info-' . $selectedEvent['id'] . '-' . $dayNumber" lazy />
+                    :key="'info-' . $selectedEvent['id'] . '-' . $dayNumber" />
             @endif
 
             @anyrole('admin', 'instructor')
