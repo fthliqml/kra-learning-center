@@ -21,6 +21,11 @@ class FullCalendar extends Component
         $this->dispatch('fullcalendar-open-event', id: $id, clickedDate: $date);
     }
 
+    public function placeholder()
+    {
+        return view('components.skeletons.full-calendar');
+    }
+
     public function render()
     {
         return view('components.training.full-calendar');

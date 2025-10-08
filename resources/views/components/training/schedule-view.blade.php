@@ -50,11 +50,11 @@
             </button>
         </div>
         <div class="hidden sm:flex gap-2 sm:ml-auto">
-            <button x-on:click="activeView='month'"
+            <button wire:click="setView('month')"
                 :class="['px-3 py-1 rounded-md text-xs font-medium border shadow-sm cursor-pointer', activeView==='month' ?
                     'bg-primary text-white' : 'bg-white text-gray-600'
                 ]">Month</button>
-            <button x-on:click="activeView='agenda'"
+            <button wire:click="setView('agenda')"
                 :class="['px-3 py-1 rounded-md text-xs font-medium border shadow-sm cursor-pointer', activeView==='agenda' ?
                     'bg-primary text-white' : 'bg-white text-gray-600'
                 ]">Agenda</button>
@@ -63,10 +63,12 @@
 
     <div class="space-y-6">
         <div x-show="!mobile && activeView==='month'" x-cloak>
-            <livewire:components.training.full-calendar :days="$days" :monthName="$this->monthName" :key="'cal-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" />
+            <livewire:components.training.full-calendar :days="$days" :monthName="$this->monthName" :key="'cal-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" lazy />
         </div>
         <div x-show="mobile || activeView==='agenda'" x-cloak>
-            <livewire:components.training.agenda-list :days="$days" :key="'agenda-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" />
+            <livewire:components.training.agenda-list :days="$days" :key="'agenda-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" lazy />
         </div>
     </div>
+
+    <livewire:components.shared.action-choice-modal />
 </div>

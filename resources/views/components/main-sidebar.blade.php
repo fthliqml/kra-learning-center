@@ -1,50 +1,8 @@
 @php
-    $menuItems = [
-        ['id' => 'home', 'label' => 'Home', 'icon' => 'home', 'href' => url('/')],
-        ['id' => 'courses', 'label' => 'Courses', 'icon' => 'book-open', 'href' => url('/courses')],
-        [
-            'id' => 'history',
-            'label' => 'History',
-            'icon' => 'clock',
-            'href' => '#',
-            'submenu' => [
-                ['label' => 'Training History', 'href' => url('/history/training')],
-                ['label' => 'Certification History', 'href' => url('/history/certification')],
-            ],
-        ],
-        [
-            'id' => 'survey',
-            'label' => 'Survey',
-            'icon' => 'document-text',
-            'href' => '#',
-            'submenu' => [
-                ['label' => 'Survey 1', 'href' => url('/survey/1')],
-                ['label' => 'Survey 2', 'href' => url('/survey/2')],
-                ['label' => 'Survey 3', 'href' => url('/survey/3')],
-            ],
-        ],
-        [
-            'id' => 'k-learn',
-            'label' => 'K-Learn',
-            'icon' => 'folder-open',
-            'href' => '/courses/management',
-        ],
-        ['id' => 'development', 'label' => 'Development', 'icon' => 'trophy', 'href' => url('/development')],
-        [
-            'id' => 'training',
-            'label' => 'Training',
-            'icon' => 'academic-cap',
-            'href' => '#',
-            'submenu' => [
-                ['label' => 'Training History', 'href' => url('/history/training')],
-                ['label' => 'Training Module', 'href' => url('/training/module')],
-                ['label' => 'Training Schedule', 'href' => url('/training/schedule')],
-                ['label' => 'Data Trainer', 'href' => url('/training/trainer')],
-            ],
-        ],
-    ];
-
-    $firstSegment = '/' . (request()->segment(1) ?? '');
+    use App\Support\SidebarMenu;
+    $user = auth()->user();
+    $role = $user?->role;
+    $menuItems = SidebarMenu::for($user);
 @endphp
 
 <div x-data="{
@@ -72,13 +30,18 @@
         </button>
 
         <!-- Logo: only rendered (display:block) when sidebar open to avoid overlaying tab headers -->
+        @php
+            $manageRoles = ['admin', 'instructor', 'leader'];
+            $logoMode = in_array(strtolower($role ?? ''), $manageRoles) ? 'MANAGE' : 'LEARN';
+        @endphp
         <h1 x-cloak x-show="isOpen" x-transition:enter="transition ease-out duration-400"
             x-transition:enter-start="opacity-0 -translate-x-6" x-transition:enter-end="opacity-100 translate-x-0"
             x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-x-0"
             x-transition:leave-end="opacity-0 -translate-x-6" class="text-4xl font-bold hidden md:block select-none">
             <span class="bg-gradient-to-r from-primary to-primary text-transparent bg-clip-text">K</span>
             <span class="text-primary">-</span>
-            <span class="bg-gradient-to-r from-primary to-tetriary text-transparent bg-clip-text">LEARN</span>
+            <span
+                class="bg-gradient-to-r from-primary to-tetriary text-transparent bg-clip-text">{{ $logoMode }}</span>
         </h1>
     </div>
 

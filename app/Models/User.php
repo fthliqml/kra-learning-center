@@ -11,6 +11,12 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 
+/**
+ * @property string|null $role
+ * @method bool hasRole(string $role)
+ * @method bool hasAnyRole(array|string $roles)
+ * @method bool hasAllRoles(array|string $roles)
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -105,5 +111,33 @@ class User extends Authenticatable
     {
         return $this->belongsToMany(Course::class, 'user_courses', 'user_id', 'course_id')
             ->withTimestamps();
+    }
+
+    /* =====================
+     |  Role Utilities
+     |  Single role stored on users.role (string)
+     |===================== */
+    public function hasRole(string $role): bool
+    {
+        return strtolower(trim($this->role ?? '')) === strtolower(trim($role));
+    }
+
+    public function hasAnyRole(array|string $roles): bool
+    {
+        $roles = is_array($roles) ? $roles : explode(',', $roles);
+        $current = strtolower(trim($this->role ?? ''));
+        foreach ($roles as $r) {
+            if ($current === strtolower(trim($r)))
+                return true;
+        }
+        return false;
+    }
+
+    public function hasAllRoles(array|string $roles): bool
+    {
+        // Because we only store one role string, "all roles" only true if exactly one requested and it matches.
+        $roles = is_array($roles) ? $roles : explode(',', $roles);
+        $roles = array_values(array_filter(array_map(fn($r) => trim($r), $roles)));
+        return count($roles) === 1 && $this->hasRole($roles[0]);
     }
 }

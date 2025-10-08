@@ -69,3 +69,4 @@ $sessionForDay =
         @endforeach
     @endif
 </div>
+</div>

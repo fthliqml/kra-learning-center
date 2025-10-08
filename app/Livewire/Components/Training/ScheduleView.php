@@ -4,6 +4,7 @@ namespace App\Livewire\Components\Training;
 
 use App\Models\Training;
 use App\Models\Trainer;
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Livewire\Component;
 
@@ -30,9 +31,11 @@ class ScheduleView extends Component
 
     protected $listeners = [
         'training-created' => 'refreshTrainings',
-        'training-updated' => 'applyTrainingUpdate',
+        // Unified: any update triggers full refresh to keep sessions & counts consistent
+        'training-updated' => 'refreshTrainings',
         'training-deleted' => 'removeTraining',
         'fullcalendar-open-event' => 'openEventModal',
+        'training-info-updated' => 'onTrainingInfoUpdated',
     ];
 
     private array $trainingDetails = [];
@@ -47,8 +50,14 @@ class ScheduleView extends Component
 
     public function setView(string $view): void
     {
-        if (in_array($view, ['month', 'agenda']))
-            $this->activeView = $view;
+        if (!in_array($view, ['month', 'agenda'])) {
+            return;
+        }
+        if ($this->activeView === $view) {
+            return; // no change
+        }
+        $this->activeView = $view;
+        $this->refreshTrainings(); // refetch sesuai view baru
     }
 
     public function previousMonth(): void
@@ -85,20 +94,18 @@ class ScheduleView extends Component
 
     public function refreshTrainings(): void
     {
-        [$start, $end] = $this->calendarRange();
-        $this->trainings = Training::with('sessions')
-            ->where(function ($q) use ($start, $end) {
-                $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
-            })->get();
+        // Pilih query sesuai view
+        $this->trainings = $this->activeView === 'agenda'
+            ? $this->fetchAgendaTrainings()
+            : $this->fetchMonthTrainings();
         $this->recomputeDays();
         $this->computeMonthNavCounts();
         $this->trainingDetails = []; // reset cache
         $this->calendarVersion++;
-        // Broadcast current month context so other components (e.g., AddTrainingModal) can align default datepicker month
+        // Broadcast current month context so other components (e.g., TrainingFormModal) can align default datepicker month
         if (method_exists($this, 'dispatch')) {
             $this->dispatch('schedule-month-context', year: $this->currentYear, month: $this->currentMonth);
         }
-        $this->stopGlobalOverlay();
     }
 
     public function applyTrainingUpdate($payload): void
@@ -178,6 +185,16 @@ class ScheduleView extends Component
         $this->calendarVersion++;
     }
 
+    public function onTrainingInfoUpdated(...$args): void
+    {
+        $payload = $args[0] ?? [];
+        if (!is_array($payload) || !isset($payload['id'])) {
+            return;
+        }
+        // If date range changed we rely on existing logic in applyTrainingUpdate
+        $this->applyTrainingUpdate($payload);
+    }
+
     private function calendarRange(): array
     {
         $startOfMonth = Carbon::createFromDate($this->currentYear, $this->currentMonth, 1);
@@ -190,7 +207,11 @@ class ScheduleView extends Component
 
     private function recomputeDays(): void
     {
-        [$s, $e] = $this->calendarRange();
+        if ($this->activeView === 'agenda') {
+            [$s, $e] = $this->strictMonthRange();
+        } else {
+            [$s, $e] = $this->calendarRange();
+        }
         $start = Carbon::parse($s);
         $end = Carbon::parse($e);
         $days = [];
@@ -206,6 +227,62 @@ class ScheduleView extends Component
             $cur->addDay();
         }
         $this->days = $days;
+    }
+
+    /**
+     * Strict range hanya tanggal di dalam bulan aktif (tanpa padding minggu).
+     */
+    private function strictMonthRange(): array
+    {
+        $start = Carbon::createFromDate($this->currentYear, $this->currentMonth, 1)->startOfDay();
+        $end = $start->copy()->endOfMonth();
+        return [$start->toDateString(), $end->toDateString()];
+    }
+
+    /**
+     * Query data untuk month view (menggunakan calendarRange extended full weeks)
+     */
+    private function fetchMonthTrainings()
+    {
+        [$start, $end] = $this->calendarRange();
+        $query = Training::with('sessions')
+            ->where(function ($q) use ($start, $end) {
+                $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
+            });
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') !== 'admin') {
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        return $query->get();
+    }
+
+    /**
+     * Query data untuk agenda view (strict bulan saja)
+     */
+    private function fetchAgendaTrainings()
+    {
+        [$start, $end] = $this->strictMonthRange();
+        $query = Training::with('sessions')
+            ->where(function ($q) use ($start, $end) {
+                $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
+            });
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') !== 'admin') {
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        return $query->get();
     }
 
     /**
@@ -236,14 +313,25 @@ class ScheduleView extends Component
      */
     private function buildYearCounts(int $year): array
     {
+        /** @var \App\Models\User|null $user */
         $counts = array_fill(1, 12, 0);
         $yearStart = Carbon::createFromDate($year, 1, 1)->startOfDay();
         $yearEnd = Carbon::createFromDate($year, 12, 31)->endOfDay();
 
-        $trainings = Training::select('id', 'start_date', 'end_date')
+        $trainingsQuery = Training::select('id', 'start_date', 'end_date')
             ->whereDate('start_date', '<=', $yearEnd)
-            ->whereDate('end_date', '>=', $yearStart)
-            ->get();
+            ->whereDate('end_date', '>=', $yearStart);
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') !== 'admin') {
+            $trainingsQuery->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        $trainings = $trainingsQuery->get();
 
         foreach ($trainings as $t) {
             $ts = Carbon::parse($t->start_date);
@@ -262,12 +350,22 @@ class ScheduleView extends Component
      */
     private function countForMonth(int $year, int $month): int
     {
+        /** @var \App\Models\User|null $user */
         $start = Carbon::createFromDate($year, $month, 1)->startOfDay();
         $end = (clone $start)->endOfMonth()->endOfDay();
-        return Training::whereDate('start_date', '<=', $end)
-            ->whereDate('end_date', '>=', $start)
-            ->distinct('id')
-            ->count('id');
+        $query = Training::whereDate('start_date', '<=', $end)
+            ->whereDate('end_date', '>=', $start);
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') !== 'admin') {
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        return $query->distinct('id')->count('id');
     }
 
     private function trainingsForDate(string $iso): array
@@ -302,7 +400,28 @@ class ScheduleView extends Component
                 $payload['initial_day_number'] = $start->diffInDays($target) + 1;
             }
         }
-        $this->dispatch('open-detail-training-modal', $payload);
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') === 'admin') {
+            $this->dispatch('open-action-choice', [
+                'title' => 'Training Action',
+                'message' => 'What would you like to do with this training?',
+                'payload' => $payload,
+                'actions' => [
+                    [
+                        'label' => 'View Detail',
+                        'event' => 'open-detail-training-modal',
+                        'variant' => 'outline'
+                    ],
+                    [
+                        'label' => 'Edit Training',
+                        'event' => 'open-training-form-edit',
+                        'variant' => 'primary'
+                    ]
+                ]
+            ]);
+        } else {
+            $this->dispatch('open-detail-training-modal', $payload);
+        }
     }
 
     public function removeTraining($payload): void
@@ -357,6 +476,7 @@ class ScheduleView extends Component
             'group_comp' => $training->group_comp,
             'start_date' => $training->start_date,
             'end_date' => $training->end_date,
+            'type' => $training->type, // include type so detail modal badge can render without extra query
             'sessions' => $sessions,
             'employees' => $employees,
         ];
@@ -374,15 +494,4 @@ class ScheduleView extends Component
         return view('components.training.schedule-view');
     }
 
-    private function stopGlobalOverlay(): void
-    {
-        if (method_exists($this, 'dispatch')) {
-            $this->dispatch('global-overlay-stop');
-            return;
-        }
-        if (method_exists($this, 'dispatchBrowserEvent')) {
-            $this->dispatchBrowserEvent('global-overlay-stop');
-            return;
-        }
-    }
 }
