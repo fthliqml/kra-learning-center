@@ -72,14 +72,14 @@
                                             @endif
                                         </div>
                                         <div
-                                            class="flex flex-wrap hidden md:inline items-center gap-x-3 gap-y-1 text-[11px] font-medium text-gray-500 leading-none">
+                                            class="hidden md:flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-gray-500 leading-none">
                                             <span class="inline-flex items-center gap-1 whitespace-nowrap">
                                                 <x-icon name="o-folder" class="size-3 text-gray-400 relative top-px" />
                                                 <span class="align-middle pt-1">{{ $sectionCount }}
                                                     {{ Str::plural('Section', $sectionCount) }}</span>
                                             </span>
                                             @if ($videoCount > 0)
-                                                <span class="text-gray-300">•</span>
+                                                <span class="text-gray-300 align-middle">•</span>
                                                 <span class="inline-flex items-center gap-1 whitespace-nowrap">
                                                     <x-icon name="o-play-circle"
                                                         class="size-3 text-gray-400 relative top-px" />
@@ -88,7 +88,7 @@
                                                 </span>
                                             @endif
                                             @if ($readingCount > 0)
-                                                <span class="text-gray-300">•</span>
+                                                <span class="text-gray-300 align-middle">•</span>
                                                 <span class="inline-flex items-center gap-1 whitespace-nowrap">
                                                     <x-icon name="o-book-open"
                                                         class="size-3 text-gray-400 relative top-px" />
@@ -118,7 +118,7 @@
                                                             <p class="font-medium text-gray-800 truncate">
                                                                 {{ $sec->title }}</p>
                                                             <div
-                                                                class="flex flex-wrap gap-x-2 gap-y-1 text-[11px] text-gray-500 leading-tight">
+                                                                class="flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-gray-500 leading-tight">
                                                                 @if ($videoCount > 0)
                                                                     <span
                                                                         class="inline-flex items-center gap-1 whitespace-nowrap">
@@ -128,7 +128,8 @@
                                                                 @endif
                                                                 @if ($readingCount > 0)
                                                                     @if ($videoCount > 0)
-                                                                        <span class="text-gray-300">•</span>
+                                                                        <span
+                                                                            class="text-gray-300 align-middle">•</span>
                                                                     @endif
                                                                     <span
                                                                         class="inline-flex items-center gap-1 whitespace-nowrap">
