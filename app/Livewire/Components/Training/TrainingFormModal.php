@@ -230,18 +230,11 @@ class TrainingFormModal extends Component
         $this->resetForm();
         $this->isEdit = false;
         $this->trainingId = null;
-        // If caller passes a specific date, keep it; otherwise default to October 1st
+        // Only set date if explicitly provided; otherwise leave blank for safety.
         if (!empty($data['date'])) {
             $this->date = $data['date'];
-        } else {
-            // Use last known context month if available; fallback to October
-            $year = $this->contextYear ?? Carbon::now()->year;
-            $month = $this->contextMonth ?? 10;
-            $first = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
-            $this->date = $first . ' to ' . $first;
         }
         $this->showModal = true;
-
     }
 
     // Hold last known schedule context
@@ -256,15 +249,11 @@ class TrainingFormModal extends Component
 
     public function openModal()
     {
-        // Reset form and default date picker to the current schedule month (fallback to current month)
+        // Reset form; do NOT set any default date to force explicit user selection
         $this->resetForm();
         $this->isEdit = false;
         $this->trainingId = null;
         $this->activeTab = 'training';
-        $year = $this->contextYear ?? Carbon::now()->year;
-        $month = $this->contextMonth ?? Carbon::now()->month;
-        $first = Carbon::createFromDate($year, $month, 1)->format('Y-m-d');
-        $this->date = $first . ' to ' . $first;
         $this->showModal = true;
     }
 
