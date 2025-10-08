@@ -13,7 +13,7 @@ return [
             'label' => 'Courses',
             'icon' => 'book-open',
             'href' => '/courses',
-            'roles' => ['employee'],
+            'roles' => ['employee', 'instructor'],
         ],
         [
             'id' => 'history',
@@ -33,6 +33,13 @@ return [
                     'roles' => ['employee'],
                 ],
             ],
+        ],
+        [
+            'id' => 'training-schedule',
+            'label' => 'Training Schedule',
+            'icon' => 'book-open',
+            'href' => '/training/schedule',
+            'roles' => ['employee'],
         ],
         [
             'id' => 'training',

@@ -62,6 +62,31 @@
     </div>
 
     <div class="space-y-6">
+        @php
+            $hasFilters = $filterTrainerId || $filterType;
+        @endphp
+        @if ($hasFilters)
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+                <span class="text-gray-500 mr-1">Filters:</span>
+                @if ($filterTrainerId)
+                    <span class="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full">
+                        <span>Trainer:
+                            {{ optional(\App\Models\Trainer::find($filterTrainerId))->name ?? 'ID ' . $filterTrainerId }}</span>
+                        <button class="hover:text-red-500" wire:click="onFiltersUpdated(null, '{{ $filterType }}')"
+                            aria-label="Clear trainer filter">&times;</button>
+                    </span>
+                @endif
+                @if ($filterType)
+                    <span class="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full">
+                        <span>Type: {{ $filterType }}</span>
+                        <button class="hover:text-red-500" wire:click="onFiltersUpdated('{{ $filterTrainerId }}', null)"
+                            aria-label="Clear type filter">&times;</button>
+                    </span>
+                @endif
+                <button class="ml-2 text-gray-500 hover:text-gray-700 underline"
+                    wire:click="onFiltersUpdated(null, null)">Clear All</button>
+            </div>
+        @endif
         <div x-show="!mobile && activeView==='month'" x-cloak>
             <livewire:components.training.full-calendar :days="$days" :monthName="$this->monthName" :key="'cal-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" lazy />
         </div>

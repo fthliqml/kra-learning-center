@@ -28,6 +28,9 @@ class ScheduleView extends Component
     /** @var \Illuminate\Support\Collection<int,\App\Models\Training> */
     public $trainings;
     public array $days = [];
+    // Filters
+    public $filterTrainerId = null;
+    public $filterType = null;
 
     protected $listeners = [
         'training-created' => 'refreshTrainings',
@@ -36,6 +39,7 @@ class ScheduleView extends Component
         'training-deleted' => 'removeTraining',
         'fullcalendar-open-event' => 'openEventModal',
         'training-info-updated' => 'onTrainingInfoUpdated',
+        'schedule-filters-updated' => 'onFiltersUpdated',
     ];
 
     private array $trainingDetails = [];
@@ -249,6 +253,15 @@ class ScheduleView extends Component
             ->where(function ($q) use ($start, $end) {
                 $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
             });
+        // Apply filters
+        if ($this->filterType && in_array($this->filterType, ['K-LEARN', 'IN', 'OUT'])) {
+            $query->where('type', $this->filterType);
+        }
+        if ($this->filterTrainerId) {
+            $query->whereHas('sessions', function ($q) {
+                $q->where('trainer_id', $this->filterTrainerId);
+            });
+        }
         $user = Auth::user();
         if ($user && strtolower($user->role ?? '') !== 'admin') {
             $query->where(function ($q) use ($user) {
@@ -272,6 +285,16 @@ class ScheduleView extends Component
             ->where(function ($q) use ($start, $end) {
                 $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
             });
+        if ($this->filterType) {
+            if ($this->filterType && in_array($this->filterType, ['K-LEARN', 'IN', 'OUT'])) {
+                $query->where('type', $this->filterType);
+            }
+        }
+        if ($this->filterTrainerId) {
+            $query->whereHas('sessions', function ($q) {
+                $q->where('trainer_id', $this->filterTrainerId);
+            });
+        }
         $user = Auth::user();
         if ($user && strtolower($user->role ?? '') !== 'admin') {
             $query->where(function ($q) use ($user) {
@@ -492,6 +515,14 @@ class ScheduleView extends Component
     public function render()
     {
         return view('components.training.schedule-view');
+    }
+
+    public function onFiltersUpdated($trainerId = null, $type = null): void
+    {
+        // normalize incoming event (Livewire passes named args as separate parameters)
+        $this->filterTrainerId = $trainerId ?: null;
+        $this->filterType = $type ?: null;
+        $this->refreshTrainings();
     }
 
 }
