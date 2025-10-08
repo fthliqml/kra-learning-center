@@ -1,50 +1,8 @@
 @php
-    $menuItems = [
-        ['id' => 'home', 'label' => 'Home', 'icon' => 'home', 'href' => url('/')],
-        ['id' => 'courses', 'label' => 'Courses', 'icon' => 'book-open', 'href' => url('/courses')],
-        [
-            'id' => 'history',
-            'label' => 'History',
-            'icon' => 'clock',
-            'href' => '#',
-            'submenu' => [
-                ['label' => 'Training History', 'href' => url('/history/training')],
-                ['label' => 'Certification History', 'href' => url('/history/certification')],
-            ],
-        ],
-        [
-            'id' => 'survey',
-            'label' => 'Survey',
-            'icon' => 'document-text',
-            'href' => '#',
-            'submenu' => [
-                ['label' => 'Survey 1', 'href' => url('/survey/1')],
-                ['label' => 'Survey 2', 'href' => url('/survey/2')],
-                ['label' => 'Survey 3', 'href' => url('/survey/3')],
-            ],
-        ],
-        [
-            'id' => 'k-learn',
-            'label' => 'K-Learn',
-            'icon' => 'folder-open',
-            'href' => '/courses/management',
-        ],
-        ['id' => 'development', 'label' => 'Development', 'icon' => 'trophy', 'href' => url('/development')],
-        [
-            'id' => 'training',
-            'label' => 'Training',
-            'icon' => 'academic-cap',
-            'href' => '#',
-            'submenu' => [
-                ['label' => 'Training History', 'href' => url('/history/training')],
-                ['label' => 'Training Module', 'href' => url('/training/module')],
-                ['label' => 'Training Schedule', 'href' => url('/training/schedule')],
-                ['label' => 'Data Trainer', 'href' => url('/training/trainer')],
-            ],
-        ],
-    ];
-
-    $firstSegment = '/' . (request()->segment(1) ?? '');
+    use App\Support\SidebarMenu;
+    $user = auth()->user();
+    $role = $user?->role;
+    $menuItems = SidebarMenu::for($user);
 @endphp
 
 <div x-data="{
@@ -71,12 +29,19 @@
             <x-icon name="o-bars-3" class="w-5 h-5 text-primary" />
         </button>
 
-        <!-- Logo -->
-        <h1 class="text-4xl font-bold transform transition-all duration-500 hidden md:block"
-            :class="isOpen ? 'translate-x-0 opacity-100' : '-translate-x-10 opacity-0 pointer-events-none'">
+        <!-- Logo: only rendered (display:block) when sidebar open to avoid overlaying tab headers -->
+        @php
+            $manageRoles = ['admin', 'instructor', 'leader'];
+            $logoMode = in_array(strtolower($role ?? ''), $manageRoles) ? 'MANAGE' : 'LEARN';
+        @endphp
+        <h1 x-cloak x-show="isOpen" x-transition:enter="transition ease-out duration-400"
+            x-transition:enter-start="opacity-0 -translate-x-6" x-transition:enter-end="opacity-100 translate-x-0"
+            x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-x-0"
+            x-transition:leave-end="opacity-0 -translate-x-6" class="text-4xl font-bold hidden md:block select-none">
             <span class="bg-gradient-to-r from-primary to-primary text-transparent bg-clip-text">K</span>
             <span class="text-primary">-</span>
-            <span class="bg-gradient-to-r from-primary to-tetriary text-transparent bg-clip-text">LEARN</span>
+            <span
+                class="bg-gradient-to-r from-primary to-tetriary text-transparent bg-clip-text">{{ $logoMode }}</span>
         </h1>
     </div>
 
@@ -96,7 +61,11 @@
                     @php
                         $hasSub = isset($item['submenu']) && count(value: $item['submenu']) > 0;
                         $path = ltrim(parse_url($item['href'], PHP_URL_PATH) ?? '/', '/');
-                        $isActiveTop = !$hasSub && request()->is($path === '' ? '/' : $path . '*');
+                        // Active only when exact path matches (no wildcard) for top-level items without submenu
+                        $currentPath = trim(request()->path(), '/');
+                        $isActiveTop =
+                            !$hasSub &&
+                            (($path === '' && $currentPath === '') || ($path !== '' && $currentPath === $path));
                     @endphp
 
                     <div class="transition-all duration-1000 ease-out">
@@ -142,8 +111,12 @@
                                 x-transition:leave-end="opacity-0 -translate-y-2">
                                 @foreach ($item['submenu'] as $index => $sub)
                                     @php
+                                        // Determine active state for submenu by comparing normalized paths (ignoring domain & query)
+                                        $subPath = ltrim(parse_url($sub['href'], PHP_URL_PATH) ?? '/', '/');
+                                        $currentPath = trim(request()->path(), '/');
                                         $subActive =
-                                            request()->fullUrlIs($sub['href']) || url()->current() === $sub['href'];
+                                            ($subPath === '' && $currentPath === '') ||
+                                            ($subPath !== '' && $currentPath === $subPath);
                                     @endphp
                                     <button @click="window.location.href='{{ $sub['href'] }}'"
                                         @class([
@@ -160,6 +133,18 @@
                 @endforeach
 
             </nav>
+            @auth
+                <div class="mt-4 pt-4 border-t border-white/20" x-show="isOpen" x-transition>
+                    <form method="POST" action="{{ route('logout') }}" class="w-full">
+                        @csrf
+                        <button type="submit"
+                            class="group flex items-center gap-3 w-full px-3 py-2 rounded-md bg-white/10 hover:cursor-pointer hover:bg-white/20 text-white text-sm transition-all">
+                            <x-icon name="o-arrow-left-on-rectangle" class="w-[20px] h-[20px]" />
+                            <span x-show="isOpen" x-transition>Logout</span>
+                        </button>
+                    </form>
+                </div>
+            @endauth
         </div>
     </div>
 

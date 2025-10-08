@@ -25,6 +25,7 @@ class TrainingSeeder extends Seeder
         $training = Training::create([
             'name' => 'Safety Induction',
             'type' => 'IN',
+            'group_comp' => 'BMC',
             'start_date' => Carbon::now()->toDateString(),
             'end_date' => Carbon::now()->addDays(3)->toDateString(),
             'status' => "in_progress",
@@ -38,7 +39,7 @@ class TrainingSeeder extends Seeder
         ]);
 
         Trainer::create([
-            'user_id' => 5,
+            'user_id' => 10,
             'institution' => "KRA"
 
         ]);
@@ -68,7 +69,7 @@ class TrainingSeeder extends Seeder
         }
 
         $employees = User::inRandomOrder()
-            ->limit(5)
+            ->limit(10)
             ->get();
 
         foreach ($employees as $employee) {

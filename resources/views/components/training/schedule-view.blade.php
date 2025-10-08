@@ -30,8 +30,12 @@
                         @foreach ($months as $idx => $label)
                             <button
                                 @click="$wire.setMonth({{ $idx + 1 }}); open=false; $dispatch('global-overlay-start', { message: 'Loading calendar...' })"
-                                class="text-xs px-2 py-1 rounded hover:bg-gray-100 {{ $currentMonth === $idx + 1 ? 'bg-primary/10 text-primary' : 'text-gray-700' }}">
-                                {{ $label }}
+                                class="text-xs px-2 py-1 rounded hover:bg-gray-100 flex items-center justify-between gap-2 {{ $currentMonth === $idx + 1 ? 'bg-primary/10 text-primary' : 'text-gray-700' }}">
+                                <span>{{ $label }}</span>
+                                @php $cnt = $monthlyTrainingCounts[$idx+1] ?? 0; @endphp
+                                @if ($cnt > 0)
+                                    <x-badge value="{{ $cnt }}" class="badge-neutral badge-xs" />
+                                @endif
                             </button>
                         @endforeach
                     </div>
@@ -46,11 +50,11 @@
             </button>
         </div>
         <div class="hidden sm:flex gap-2 sm:ml-auto">
-            <button x-on:click="activeView='month'"
+            <button wire:click="setView('month')"
                 :class="['px-3 py-1 rounded-md text-xs font-medium border shadow-sm cursor-pointer', activeView==='month' ?
                     'bg-primary text-white' : 'bg-white text-gray-600'
                 ]">Month</button>
-            <button x-on:click="activeView='agenda'"
+            <button wire:click="setView('agenda')"
                 :class="['px-3 py-1 rounded-md text-xs font-medium border shadow-sm cursor-pointer', activeView==='agenda' ?
                     'bg-primary text-white' : 'bg-white text-gray-600'
                 ]">Agenda</button>
@@ -58,11 +62,38 @@
     </div>
 
     <div class="space-y-6">
+        @php
+            $hasFilters = $filterTrainerId || $filterType;
+        @endphp
+        @if ($hasFilters)
+            <div class="flex flex-wrap items-center gap-2 text-xs">
+                <span class="text-gray-500 mr-1">Filters:</span>
+                @if ($filterTrainerId)
+                    <span class="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full">
+                        <span>Trainer:
+                            {{ optional(\App\Models\Trainer::find($filterTrainerId))->name ?? 'ID ' . $filterTrainerId }}</span>
+                        <button class="hover:text-red-500" wire:click="onFiltersUpdated(null, '{{ $filterType }}')"
+                            aria-label="Clear trainer filter">&times;</button>
+                    </span>
+                @endif
+                @if ($filterType)
+                    <span class="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full">
+                        <span>Type: {{ $filterType }}</span>
+                        <button class="hover:text-red-500" wire:click="onFiltersUpdated('{{ $filterTrainerId }}', null)"
+                            aria-label="Clear type filter">&times;</button>
+                    </span>
+                @endif
+                <button class="ml-2 text-gray-500 hover:text-gray-700 underline"
+                    wire:click="onFiltersUpdated(null, null)">Clear All</button>
+            </div>
+        @endif
         <div x-show="!mobile && activeView==='month'" x-cloak>
-            <livewire:components.training.full-calendar :days="$days" :monthName="$this->monthName" :key="'cal-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" />
+            <livewire:components.training.full-calendar :days="$days" :monthName="$this->monthName" :key="'cal-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" lazy />
         </div>
         <div x-show="mobile || activeView==='agenda'" x-cloak>
-            <livewire:components.training.agenda-list :days="$days" :key="'agenda-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" />
+            <livewire:components.training.agenda-list :days="$days" :key="'agenda-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" lazy />
         </div>
     </div>
+
+    <livewire:components.shared.action-choice-modal />
 </div>

@@ -82,8 +82,8 @@
                     <!-- Delete -->
                     <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
                         wire:click="$dispatch('confirm', {
-                            title: 'Yakin mau hapus?',
-                            text: 'Data yang sudah dihapus tidak bisa dikembalikan!',
+                            title: 'Are you sure you want to delete?',
+                            text: 'This action is permanent and cannot be undone.',
                             action: 'deleteModule',
                             id: {{ $module->id }}
                         })" />

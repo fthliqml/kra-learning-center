@@ -6,6 +6,7 @@ use App\Models\Course;
 use Livewire\Attributes\Computed;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Illuminate\Support\Facades\Auth;
 
 class Courses extends Component
 {
@@ -13,7 +14,8 @@ class Courses extends Component
 
     // Filters/search bound from the view
     public string $search = '';
-    public ?string $filter = null; // group_comp value
+    public ?string $filter = null;
+    public int $perPage = 12;
 
     // Options for the filter dropdown
     public $groupOptions = [
@@ -36,12 +38,54 @@ class Courses extends Component
     #[Computed]
     public function courses()
     {
+        // Simple per-request cache to avoid duplicate queries (courses() + resultsText())
+        static $cached;
+        if ($cached) {
+            return $cached;
+        }
+        $userId = Auth::id();
+
         $query = Course::query()
-            ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
-            ->when($this->filter, fn($q) => $q->where('group_comp', $this->filter))
+            ->with([
+                // Load only the current user's assignment record (if any)
+                'userCourses' => function ($q) use ($userId) {
+                    if ($userId) {
+                        $q->where('user_id', $userId)->select(['id', 'user_id', 'course_id', 'current_step', 'status']);
+                    } else {
+                        $q->whereRaw('1 = 0');
+                    }
+                },
+            ])
+            // Provide counts for UI metadata
+            ->withCount(['learningModules as learning_modules_count', 'users'])
+            // Only courses assigned to the logged-in user
+            ->when($userId, function ($q) use ($userId) {
+                $q->whereHas('userCourses', fn($uc) => $uc->where('user_id', $userId));
+            })
+            ->when($this->search, function ($q) {
+                $term = trim($this->search);
+                if ($term !== '') {
+                    $q->where('title', 'like', "%{$term}%");
+                }
+            })
+            // Filter by course group_comp directly (no training relation)
+            ->when($this->filter, function ($q) {
+                $value = trim((string) $this->filter);
+                if ($value !== '') {
+                    $q->where('group_comp', $value);
+                }
+            })
             ->orderBy('created_at', 'desc');
 
-        return $query->paginate(12)->onEachSide(1);
+        $cached = $query->paginate($this->perPage)->onEachSide(1);
+
+        // Map each course to add a computed progress_percent for current user using model method
+        $user = Auth::user();
+        $cached->getCollection()->transform(function ($course) use ($user) {
+            $course->progress_percent = $course->progressForUser($user);
+            return $course;
+        });
+        return $cached;
     }
 
     #[Computed]
@@ -49,7 +93,6 @@ class Courses extends Component
     {
         $courses = $this->courses();
 
-        // Support both paginator and collection just in case of future changes
         $hasPaginator = is_object($courses) && method_exists($courses, 'total');
         $total = $hasPaginator ? $courses->total() : (is_countable($courses) ? count($courses) : 0);
         $from = $hasPaginator ? ($total ? ($courses->firstItem() ?? 0) : 0) : ($total ? 1 : 0);

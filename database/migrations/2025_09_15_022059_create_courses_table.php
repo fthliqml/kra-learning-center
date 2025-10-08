@@ -13,16 +13,14 @@ return new class extends Migration {
         Schema::create('courses', function (Blueprint $table) {
             $table->id();
 
-            // Foreign Keys (auditing & linkage)
-            $table->foreignId('training_id')->constrained('trainings')->cascadeOnDelete();
-
             // Core Fields
-            $table->string('title')->nullable();
+            $table->string('title');
             $table->text('description');
-            $table->string('thumbnail_url');
+            $table->string('thumbnail_url')->nullable();
+            $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
 
             // Status Fields
-            $table->enum('status', ['active', 'inactive']);
+            $table->enum('status', ['draft', 'inactive', 'assigned']);
 
             // Meta
             $table->timestamps();
