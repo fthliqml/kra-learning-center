@@ -9,9 +9,8 @@
 }" class="relative">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 my-4">
         <div class="flex items-center gap-2 w-full sm:w-auto">
-            <button wire:click="previousMonth"
-                x-on:click="$dispatch('global-overlay-start', { message: 'Loading calendar...' })"
-                class="p-2 hover:bg-gray-200 rounded-full cursor-pointer" aria-label="Previous Month">
+            <button wire:click="previousMonth" class="p-2 hover:bg-gray-200 rounded-full cursor-pointer"
+                aria-label="Previous Month">
                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
                 </svg>
@@ -28,8 +27,7 @@
                         class="absolute z-20 mt-1 bg-white border border-gray-200 rounded shadow p-2 grid grid-cols-3 gap-1 w-56 left-[-10rem] right-auto sm:left-auto sm:right-0">
                         @php $months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']; @endphp
                         @foreach ($months as $idx => $label)
-                            <button
-                                @click="$wire.setMonth({{ $idx + 1 }}); open=false; $dispatch('global-overlay-start', { message: 'Loading calendar...' })"
+                            <button @click="$wire.setMonth({{ $idx + 1 }}); open=false"
                                 class="text-xs px-2 py-1 rounded hover:bg-gray-100 flex items-center justify-between gap-2 {{ $currentMonth === $idx + 1 ? 'bg-primary/10 text-primary' : 'text-gray-700' }}">
                                 <span>{{ $label }}</span>
                                 @php $cnt = $monthlyTrainingCounts[$idx+1] ?? 0; @endphp
@@ -41,9 +39,8 @@
                     </div>
                 </div>
             </div>
-            <button wire:click="nextMonth"
-                x-on:click="$dispatch('global-overlay-start', { message: 'Loading calendar...' })"
-                class="p-2 hover:bg-gray-200 rounded-full cursor-pointer" aria-label="Next Month">
+            <button wire:click="nextMonth" class="p-2 hover:bg-gray-200 rounded-full cursor-pointer"
+                aria-label="Next Month">
                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                 </svg>
@@ -69,10 +66,15 @@
             <div class="flex flex-wrap items-center gap-2 text-xs">
                 <span class="text-gray-500 mr-1">Filters:</span>
                 @if ($filterTrainerId)
+                    @php
+                        $trainerModel = \App\Models\Trainer::with('user')->find($filterTrainerId);
+                        $trainerDisplayName =
+                            $trainerModel?->name ?: $trainerModel?->user?->name ?? 'ID ' . $filterTrainerId;
+                    @endphp
                     <span class="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full">
-                        <span>Trainer:
-                            {{ optional(\App\Models\Trainer::find($filterTrainerId))->name ?? 'ID ' . $filterTrainerId }}</span>
+                        <span>Trainer: {{ $trainerDisplayName }}</span>
                         <button class="hover:text-red-500" wire:click="onFiltersUpdated(null, '{{ $filterType }}')"
+                            x-on:click="$dispatch('schedule-clear-trainer')"
                             aria-label="Clear trainer filter">&times;</button>
                     </span>
                 @endif
@@ -80,11 +82,13 @@
                     <span class="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full">
                         <span>Type: {{ $filterType }}</span>
                         <button class="hover:text-red-500" wire:click="onFiltersUpdated('{{ $filterTrainerId }}', null)"
+                            x-on:click="$dispatch('schedule-clear-type')"
                             aria-label="Clear type filter">&times;</button>
                     </span>
                 @endif
                 <button class="ml-2 text-gray-500 hover:text-gray-700 underline"
-                    wire:click="onFiltersUpdated(null, null)">Clear All</button>
+                    wire:click="onFiltersUpdated(null, null)" x-on:click="$dispatch('schedule-clear-all')">Clear
+                    All</button>
             </div>
         @endif
         <div x-show="!mobile && activeView==='month'" x-cloak>

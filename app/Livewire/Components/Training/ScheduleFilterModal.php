@@ -15,6 +15,9 @@ class ScheduleFilterModal extends Component
   protected $listeners = [
     'open-schedule-filter' => 'openModal',
     'schedule-month-context' => 'onMonthContext',
+    'schedule-clear-all' => 'externalClearAll',
+    'schedule-clear-trainer' => 'externalClearTrainer',
+    'schedule-clear-type' => 'externalClearType',
   ];
 
   public function mount(): void
@@ -63,6 +66,23 @@ class ScheduleFilterModal extends Component
   {
     $this->dispatch('schedule-filters-updated', trainerId: $this->trainerId ?: null, type: $this->type ?: null);
     $this->closeModal();
+  }
+
+  public function externalClearAll(): void
+  {
+    // Called when Clear All button outside modal is clicked; sync internal state so select inputs reset next open
+    $this->trainerId = null;
+    $this->type = null;
+  }
+
+  public function externalClearTrainer(): void
+  {
+    $this->trainerId = null;
+  }
+
+  public function externalClearType(): void
+  {
+    $this->type = null;
   }
 
   public function onMonthContext(): void
