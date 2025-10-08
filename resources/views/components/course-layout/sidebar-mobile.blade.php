@@ -6,6 +6,7 @@
     'modules' => collect(),
     'activeModuleId' => null,
     'activeSectionId' => null,
+    'completedModuleIds' => [],
 ])
 
 <div x-show="mobileSidebar" x-cloak class="fixed inset-0 z-50 md:hidden">
@@ -58,12 +59,12 @@
                 @foreach ($stages as $s)
                     @if ($s === 'module')
                         @if ($modules->count())
-                            <li class="mt-1 mb-2" x-data="{ openModule: '' }">
+                            <li class="mt-1 mb-2" x-data="{ openModule: 'm-{{ $activeModuleId ?? '' }}' }">
                                 <ul class="space-y-1" role="list">
                                     @foreach ($modules as $m)
                                         @php
                                             $isActive = $activeModuleId && (string) $activeModuleId === (string) $m->id;
-                                            $isCompleted = false; // can be wired later
+                                            $isCompleted = in_array($m->id, $completedModuleIds ?? []);
                                         @endphp
                                         <li class="group relative border border-transparent rounded-md bg-white transition-colors"
                                             :class="openModule === 'm-{{ $m->id }}' ?
@@ -105,24 +106,28 @@
                                                     <ul class="space-y-1.5">
                                                         @foreach ($sections as $index => $sec)
                                                             @php
-                                                                $sectionCompleted = false;
+                                                                $sectionCompleted =
+                                                                    (bool) ($sec->is_completed ?? false);
                                                                 $sectionActive =
-                                                                    $activeModuleId === $m->id &&
+                                                                    (string) ($activeModuleId ?? '') ===
+                                                                        (string) $m->id &&
                                                                     (string) ($activeSectionId ?? '') ===
                                                                         (string) $sec->id;
                                                             @endphp
                                                             <li class="flex items-start gap-2 group/section">
                                                                 <span
-                                                                    class="mt-1 w-3.5 h-3.5 flex items-center justify-center">
+                                                                    class="relative mt-0.5 w-4 h-4 flex items-center justify-center">
                                                                     @if ($sectionCompleted)
-                                                                        <x-icon name="o-check"
-                                                                            class="size-3 text-green-600" />
+                                                                        <x-icon name="o-check-circle"
+                                                                            class="size-4 text-green-500" />
                                                                     @elseif($sectionActive)
                                                                         <span
-                                                                            class="w-2 h-2 rounded-full bg-primary"></span>
+                                                                            class="absolute inset-0 rounded-full bg-primary"></span>
+                                                                        <span class="absolute rounded-full bg-white"
+                                                                            style="inset:3px"></span>
                                                                     @else
                                                                         <span
-                                                                            class="w-1.5 h-1.5 rounded-full bg-gray-300 group-hover/section:bg-primary/60 transition"></span>
+                                                                            class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover/section:border-primary/40"></span>
                                                                     @endif
                                                                 </span>
                                                                 <button type="button"

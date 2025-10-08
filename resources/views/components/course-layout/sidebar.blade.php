@@ -47,12 +47,14 @@
                     {{-- Learning Module --}}
                     @if ($s === 'module')
                         @if ($modules->count())
-                            <li class="mt-2 mb-2" x-data="{ openModule: '{{ $activeModuleId ?? '' }}' }">
+                            <li class="mt-2 mb-2" x-data="{ openModule: 'module-{{ $activeModuleId ?? '' }}' }">
                                 <ul class="space-y-1" role="list">
                                     @foreach ($modules as $m)
                                         @php
                                             $isActive = $activeModuleId && (string) $activeModuleId === (string) $m->id;
-                                            $isCompleted = in_array($m->id, $completedModuleIds ?? []);
+                                            $isCompleted =
+                                                (isset($m->is_completed) && $m->is_completed) ||
+                                                in_array($m->id, $completedModuleIds ?? []);
                                             $rowClasses = $isActive
                                                 ? 'text-primary'
                                                 : 'text-gray-700 hover:text-gray-900';
@@ -118,17 +120,18 @@
                                                                     ? (bool) $sec->is_completed
                                                                     : false;
                                                                 $sectionActive =
-                                                                    $activeModuleId === $m->id &&
+                                                                    (string) ($activeModuleId ?? '') ===
+                                                                        (string) $m->id &&
                                                                     (string) ($activeSectionId ?? '') ===
                                                                         (string) $sec->id;
                                                             @endphp
                                                             <li class="flex items-start gap-2 group/section">
-                                                                {{-- Section Indicator --}}
+                                                                {{-- Section Indicator (match stage style) --}}
                                                                 <span
-                                                                    class="mt-1 w-3.5 h-3.5 flex items-center justify-center">
+                                                                    class="relative mt-0.5 w-4 h-4 flex items-center justify-center">
                                                                     @if ($sectionCompleted)
-                                                                        <x-icon name="o-check"
-                                                                            class="size-3 text-green-600" />
+                                                                        <x-icon name="o-check-circle"
+                                                                            class="size-4 text-green-500" />
                                                                     @elseif($sectionActive)
                                                                         <span
                                                                             class="w-2 h-2 rounded-full bg-primary"></span>

@@ -72,7 +72,7 @@
                                             @endif
                                         </div>
                                         <div
-                                            class="flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium text-gray-500 leading-none">
+                                            class="flex flex-wrap hidden md:inline items-center gap-x-3 gap-y-1 text-[11px] font-medium text-gray-500 leading-none">
                                             <span class="inline-flex items-center gap-1 whitespace-nowrap">
                                                 <x-icon name="o-folder" class="size-3 text-gray-400 relative top-px" />
                                                 <span class="align-middle pt-1">{{ $sectionCount }}
@@ -113,7 +113,7 @@
                                                     @endphp
                                                     <li class="flex items-start gap-2">
                                                         <x-icon name="o-folder-open"
-                                                            class="size-4 mt-0.5 text-primary/60" />
+                                                            class="hidden md:inline size-4 mt-0.5 text-primary/60" />
                                                         <div class="min-w-0 flex-1 space-y-0.5">
                                                             <p class="font-medium text-gray-800 truncate">
                                                                 {{ $sec->title }}</p>

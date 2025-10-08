@@ -47,12 +47,36 @@ class ModulePage extends Component
             }]);
         }]);
 
-        // Initialize active topic & section
-        $firstTopic = $this->course->learningModules->first();
-        if ($firstTopic) {
-            $this->activeTopicId = $firstTopic->id;
-            $firstSection = $firstTopic->sections->first();
-            $this->activeSectionId = $firstSection?->id;
+        // Initialize active topic & section based on user's progress (resume)
+        $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
+        $currentStep = (int) ($enrollment->current_step ?? 0);
+
+        // Compute ordered sections across topics
+        $orderedSections = [];
+        foreach ($this->course->learningModules as $topic) {
+            foreach ($topic->sections as $sec) {
+                $orderedSections[] = [$topic->id, $sec->id];
+            }
+        }
+        $sectionsCount = count($orderedSections);
+
+        if ($sectionsCount > 0) {
+            $hasPretest = (bool) $pretest;
+            $pretestUnits = $hasPretest ? 1 : 0;
+            // Number of sections completed so far
+            $completedSections = max(0, min($currentStep - $pretestUnits, $sectionsCount));
+            // Target index is the next not-yet-done section, or last if all done
+            $targetIndex = ($completedSections < $sectionsCount) ? $completedSections : ($sectionsCount - 1);
+            $pair = $orderedSections[$targetIndex];
+            $this->activeTopicId = $pair[0];
+            $this->activeSectionId = $pair[1];
+        } else {
+            // Fallback to first topic if no sections
+            $firstTopic = $this->course->learningModules->first();
+            if ($firstTopic) {
+                $this->activeTopicId = $firstTopic->id;
+                $this->activeSectionId = $firstTopic->sections->first()?->id;
+            }
         }
     }
 
@@ -77,17 +101,17 @@ class ModulePage extends Component
     /**
      * Increment progress by one sub-topic (Section) unit, bounded by total units.
      */
-    public function completeSubtopic(): void
+    public function completeSubtopic(): mixed
     {
         $userId = Auth::id();
-        if (!$userId) return;
+        if (!$userId) return null;
 
         // Fetch enrollment
         $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
-        if (!$enrollment) return;
+        if (!$enrollment) return null;
 
         $totalUnits = $this->computeTotalUnits();
-        if ($totalUnits <= 0) return;
+        if ($totalUnits <= 0) return null;
 
         $current = (int) ($enrollment->current_step ?? 0);
         if ($current < $totalUnits) {
@@ -103,6 +127,9 @@ class ModulePage extends Component
 
         // After completing, navigate to the next section (or next topic's first section)
         $this->goToNextSection();
+
+        // Force a fresh render so layout/sidebars receive updated active IDs
+        return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
     }
 
     private function goToNextSection(): void
@@ -166,6 +193,42 @@ class ModulePage extends Component
                 ->values();
         }
 
+        // Determine completed sections for current user to drive sidebar indicators
+        $userId = Auth::id();
+        $enrollment = $this->course->userCourses()->where('user_id', $userId)->select(['id', 'user_id', 'course_id', 'current_step'])->first();
+        $currentStep = (int) ($enrollment->current_step ?? 0);
+
+        // Build ordered list of all sections across topics
+        $orderedSectionRefs = [];
+        foreach ($this->course->learningModules as $topic) {
+            foreach ($topic->sections as $section) {
+                $orderedSectionRefs[] = $section; // keep reference to mutate is_completed
+            }
+        }
+        $sectionsTotal = count($orderedSectionRefs);
+        $hasPretest = Test::where('course_id', $this->course->id)->where('type', 'pretest')->exists();
+        $pretestUnits = $hasPretest ? 1 : 0;
+        $completedCount = max(0, min($currentStep - $pretestUnits, $sectionsTotal));
+
+        // Mark first N sections as completed
+        for ($i = 0; $i < $completedCount; $i++) {
+            if (isset($orderedSectionRefs[$i])) {
+                $orderedSectionRefs[$i]->is_completed = true;
+            }
+        }
+
+        // Compute completed module ids (all sections in module completed)
+        $completedModuleIds = [];
+        foreach ($this->course->learningModules as $topic) {
+            $secs = $topic->sections ?? collect();
+            $count = $secs->count();
+            if ($count === 0) continue;
+            $doneInTopic = $secs->filter(fn($s) => !empty($s->is_completed))->count();
+            if ($doneInTopic > 0 && $doneInTopic === $count) {
+                $completedModuleIds[] = $topic->id;
+            }
+        }
+
         return view('pages.courses.module-page', [
             'course' => $this->course,
             'topics' => $this->course->learningModules,
@@ -182,7 +245,7 @@ class ModulePage extends Component
             'modules' => $this->course->learningModules,
             'activeModuleId' => $this->activeTopicId,
             'activeSectionId' => $this->activeSectionId,
-            'completedModuleIds' => [],
+            'completedModuleIds' => $completedModuleIds,
         ]);
     }
 }
