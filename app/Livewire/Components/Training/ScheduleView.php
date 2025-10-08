@@ -31,7 +31,8 @@ class ScheduleView extends Component
 
     protected $listeners = [
         'training-created' => 'refreshTrainings',
-        'training-updated' => 'applyTrainingUpdate',
+        // Unified: any update triggers full refresh to keep sessions & counts consistent
+        'training-updated' => 'refreshTrainings',
         'training-deleted' => 'removeTraining',
         'fullcalendar-open-event' => 'openEventModal',
         'training-info-updated' => 'onTrainingInfoUpdated',
@@ -110,11 +111,10 @@ class ScheduleView extends Component
         $this->computeMonthNavCounts();
         $this->trainingDetails = []; // reset cache
         $this->calendarVersion++;
-        // Broadcast current month context so other components (e.g., AddTrainingModal) can align default datepicker month
+        // Broadcast current month context so other components (e.g., TrainingFormModal) can align default datepicker month
         if (method_exists($this, 'dispatch')) {
             $this->dispatch('schedule-month-context', year: $this->currentYear, month: $this->currentMonth);
         }
-        $this->stopGlobalOverlay();
     }
 
     public function applyTrainingUpdate($payload): void
@@ -349,7 +349,28 @@ class ScheduleView extends Component
                 $payload['initial_day_number'] = $start->diffInDays($target) + 1;
             }
         }
-        $this->dispatch('open-detail-training-modal', $payload);
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') === 'admin') {
+            $this->dispatch('open-action-choice', [
+                'title' => 'Training Action',
+                'message' => 'What would you like to do with this training?',
+                'payload' => $payload,
+                'actions' => [
+                    [
+                        'label' => 'View Detail',
+                        'event' => 'open-detail-training-modal',
+                        'variant' => 'outline'
+                    ],
+                    [
+                        'label' => 'Edit Training',
+                        'event' => 'open-training-form-edit',
+                        'variant' => 'primary'
+                    ]
+                ]
+            ]);
+        } else {
+            $this->dispatch('open-detail-training-modal', $payload);
+        }
     }
 
     public function removeTraining($payload): void
@@ -422,15 +443,4 @@ class ScheduleView extends Component
         return view('components.training.schedule-view');
     }
 
-    private function stopGlobalOverlay(): void
-    {
-        if (method_exists($this, 'dispatch')) {
-            $this->dispatch('global-overlay-stop');
-            return;
-        }
-        if (method_exists($this, 'dispatchBrowserEvent')) {
-            $this->dispatchBrowserEvent('global-overlay-stop');
-            return;
-        }
-    }
 }

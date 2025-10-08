@@ -69,4 +69,6 @@
             <livewire:components.training.agenda-list :days="$days" :key="'agenda-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" />
         </div>
     </div>
+
+    <livewire:components.shared.action-choice-modal />
 </div>

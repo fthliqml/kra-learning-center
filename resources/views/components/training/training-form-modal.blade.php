@@ -6,9 +6,22 @@
     </x-ui.button>
 
     <!-- Modal -->
-    <x-modal wire:model="showModal" title="New Training" subtitle="Creating a new training"
-        box-class="backdrop-blur max-w-4xl">
+    <x-modal wire:model="showModal" :title="$isEdit ? 'Edit Training' : 'New Training'" :subtitle="$isEdit ? 'Modify existing training' : 'Creating a new training'" box-class="backdrop-blur max-w-4xl">
         <div class="space-y-6">
+            @if ($showTypeChangeConfirm)
+                <div class="p-4 rounded-md border border-amber-300 bg-amber-50 text-amber-800 text-sm space-y-2">
+                    <p class="font-semibold">Confirm Training Type Change</p>
+                    <p>Switching to <strong>K-LEARN</strong> will remove all trainer & session time fields and
+                        <strong>delete existing attendance records</strong> when you save. Participants (assessments)
+                        will stay.
+                    </p>
+                    <div class="flex gap-2">
+                        <x-button label="Cancel" class="btn-ghost btn-sm" wire:click="cancelTypeChange" />
+                        <x-button label="Yes, switch to K-LEARN" class="btn-warning btn-sm"
+                            wire:click="confirmTypeChange" />
+                    </div>
+                </div>
+            @endif
             <!-- Tabs Navigation -->
             <x-tabs wire:model="activeTab">
                 <x-tab name="training" label="Training Config" icon="o-academic-cap">
@@ -124,8 +137,8 @@
         <!-- Modal Actions -->
         <x-slot:actions>
             <x-button label="Cancel" wire:click="closeModal" class="btn-ghost" />
-            <x-button label="Save Training" wire:click="saveTraining" class="btn-primary" spinner="saveTraining"
-                :disabled="$errors->any()" title="Fix the validation errors first" />
+            <x-button :label="$isEdit ? 'Update Training' : 'Save Training'" wire:click="saveTraining" class="btn-primary" spinner="saveTraining"
+                title="Fix the validation errors first" />
         </x-slot:actions>
     </x-modal>
 
