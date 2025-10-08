@@ -50,8 +50,14 @@ class ScheduleView extends Component
 
     public function setView(string $view): void
     {
-        if (in_array($view, ['month', 'agenda']))
-            $this->activeView = $view;
+        if (!in_array($view, ['month', 'agenda'])) {
+            return;
+        }
+        if ($this->activeView === $view) {
+            return; // no change
+        }
+        $this->activeView = $view;
+        $this->refreshTrainings(); // refetch sesuai view baru
     }
 
     public function previousMonth(): void
@@ -88,25 +94,10 @@ class ScheduleView extends Component
 
     public function refreshTrainings(): void
     {
-        [$start, $end] = $this->calendarRange();
-        $query = Training::with('sessions')
-            ->where(function ($q) use ($start, $end) {
-                $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
-            });
-
-        $user = Auth::user();
-        /** @var \App\Models\User|null $user */
-        if ($user && strtolower($user->role ?? '') !== 'admin') {
-            // Limit to trainings where user participates (assessment) OR is trainer in any session
-            $query->where(function ($q) use ($user) {
-                $q->whereHas('assessments', function ($qq) use ($user) {
-                    $qq->where('employee_id', $user->id);
-                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
-                    $qq->where('users.id', $user->id);
-                });
-            });
-        }
-        $this->trainings = $query->get();
+        // Pilih query sesuai view
+        $this->trainings = $this->activeView === 'agenda'
+            ? $this->fetchAgendaTrainings()
+            : $this->fetchMonthTrainings();
         $this->recomputeDays();
         $this->computeMonthNavCounts();
         $this->trainingDetails = []; // reset cache
@@ -216,7 +207,11 @@ class ScheduleView extends Component
 
     private function recomputeDays(): void
     {
-        [$s, $e] = $this->calendarRange();
+        if ($this->activeView === 'agenda') {
+            [$s, $e] = $this->strictMonthRange();
+        } else {
+            [$s, $e] = $this->calendarRange();
+        }
         $start = Carbon::parse($s);
         $end = Carbon::parse($e);
         $days = [];
@@ -232,6 +227,62 @@ class ScheduleView extends Component
             $cur->addDay();
         }
         $this->days = $days;
+    }
+
+    /**
+     * Strict range hanya tanggal di dalam bulan aktif (tanpa padding minggu).
+     */
+    private function strictMonthRange(): array
+    {
+        $start = Carbon::createFromDate($this->currentYear, $this->currentMonth, 1)->startOfDay();
+        $end = $start->copy()->endOfMonth();
+        return [$start->toDateString(), $end->toDateString()];
+    }
+
+    /**
+     * Query data untuk month view (menggunakan calendarRange extended full weeks)
+     */
+    private function fetchMonthTrainings()
+    {
+        [$start, $end] = $this->calendarRange();
+        $query = Training::with('sessions')
+            ->where(function ($q) use ($start, $end) {
+                $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
+            });
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') !== 'admin') {
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        return $query->get();
+    }
+
+    /**
+     * Query data untuk agenda view (strict bulan saja)
+     */
+    private function fetchAgendaTrainings()
+    {
+        [$start, $end] = $this->strictMonthRange();
+        $query = Training::with('sessions')
+            ->where(function ($q) use ($start, $end) {
+                $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
+            });
+        $user = Auth::user();
+        if ($user && strtolower($user->role ?? '') !== 'admin') {
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        return $query->get();
     }
 
     /**
