@@ -3,11 +3,11 @@
 
     <x-slot:actions>
         <x-ui.button wire:click="cancel" type="button">
-            Batal
+            Cancel
         </x-ui.button>
 
         <x-ui.button variant="primary" wire:click="proceed" spinner>
-            Ya, lanjutkan
+            Yes, continue
         </x-ui.button>
     </x-slot:actions>
 </x-modal>

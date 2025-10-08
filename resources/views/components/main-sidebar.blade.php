@@ -61,7 +61,11 @@
                     @php
                         $hasSub = isset($item['submenu']) && count(value: $item['submenu']) > 0;
                         $path = ltrim(parse_url($item['href'], PHP_URL_PATH) ?? '/', '/');
-                        $isActiveTop = !$hasSub && request()->is($path === '' ? '/' : $path . '*');
+                        // Active only when exact path matches (no wildcard) for top-level items without submenu
+                        $currentPath = trim(request()->path(), '/');
+                        $isActiveTop =
+                            !$hasSub &&
+                            (($path === '' && $currentPath === '') || ($path !== '' && $currentPath === $path));
                     @endphp
 
                     <div class="transition-all duration-1000 ease-out">
@@ -107,8 +111,12 @@
                                 x-transition:leave-end="opacity-0 -translate-y-2">
                                 @foreach ($item['submenu'] as $index => $sub)
                                     @php
+                                        // Determine active state for submenu by comparing normalized paths (ignoring domain & query)
+                                        $subPath = ltrim(parse_url($sub['href'], PHP_URL_PATH) ?? '/', '/');
+                                        $currentPath = trim(request()->path(), '/');
                                         $subActive =
-                                            request()->fullUrlIs($sub['href']) || url()->current() === $sub['href'];
+                                            ($subPath === '' && $currentPath === '') ||
+                                            ($subPath !== '' && $currentPath === $subPath);
                                     @endphp
                                     <button @click="window.location.href='{{ $sub['href'] }}'"
                                         @class([
@@ -130,7 +138,7 @@
                     <form method="POST" action="{{ route('logout') }}" class="w-full">
                         @csrf
                         <button type="submit"
-                            class="group flex items-center gap-3 w-full px-3 py-2 rounded-md bg-white/10 hover:bg-white/20 text-white text-sm transition-all">
+                            class="group flex items-center gap-3 w-full px-3 py-2 rounded-md bg-white/10 hover:cursor-pointer hover:bg-white/20 text-white text-sm transition-all">
                             <x-icon name="o-arrow-left-on-rectangle" class="w-[20px] h-[20px]" />
                             <span x-show="isOpen" x-transition>Logout</span>
                         </button>
