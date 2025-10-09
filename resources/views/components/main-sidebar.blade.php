@@ -80,7 +80,7 @@
                             ])
                             :class="{
                                 'justify-between': isOpen,
-                                'justify-center': !isOpen,
+                                'justify-center rounded-full': !isOpen,
                                 'rounded-tr-[80px]': isOpen && '{{ $item['id'] }}'
                                 === 'home'
                             }"
