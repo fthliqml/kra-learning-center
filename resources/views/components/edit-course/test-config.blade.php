@@ -9,10 +9,6 @@
                     Pretest</h3>
                 <div class="space-y-4">
                     <div class="flex flex-wrap items-center gap-4">
-                        <x-input label="Passing Score" placeholder="0-100" type="number" min="0" max="100"
-                            wire:model.live.debounce.400ms="pretest_passing_score" inputmode="numeric" pattern="[0-9]*"
-                            x-on:input="if(!this.value)return; const v=this.value; if(v.length>3) this.value=v.slice(0,3); const n=parseInt(this.value); if(n>100) this.value=100; if(n<0) this.value=0;"
-                            class="w-28" />
                         <x-input label="Max Attempts" placeholder="∞" type="number" min="1"
                             wire:model.live.debounce.400ms="pretest_max_attempts" class="w-32"
                             x-on:input="if(!this.value){return;} const v=this.value; if(v.length>3) this.value=v.slice(0,3); const n=parseInt(this.value); if(isNaN(n) || n<1) this.value='';" />
@@ -23,7 +19,7 @@
                         </div>
                     </div>
                     <p class="text-xs text-base-content/60 leading-snug">
-                        Leave Max Attempts empty for unlimited attempts.
+                        Pretest has no passing score. Set Max Attempts or leave empty for unlimited.
                     </p>
                 </div>
             </div>
