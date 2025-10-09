@@ -45,8 +45,14 @@
                                 option-value="id" option-label="name" icon="o-book-open" wire:change="$refresh" />
 
                             <!-- Group Comp -->
-                            <x-select label="Group Competency" wire:model="group_comp" :options="$groupCompOptions"
-                                option-value="id" option-label="name" icon="o-clipboard-document" />
+                            <div>
+                                <x-select label="Group Competency" wire:model="group_comp" :options="$groupCompOptions"
+                                    option-value="id" option-label="name" icon="o-clipboard-document"
+                                    :disabled="$training_type === 'K-LEARN'" />
+                                @if ($training_type === 'K-LEARN')
+                                    <p class="text-xs text-gray-500 mt-1">Synced from selected Course.</p>
+                                @endif
+                            </div>
                         </div>
 
                         <!-- Date Range -->

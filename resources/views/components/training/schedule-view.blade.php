@@ -9,7 +9,8 @@
 }" class="relative">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 my-4">
         <div class="flex items-center gap-2 w-full sm:w-auto">
-            <button wire:click="previousMonth" class="p-2 hover:bg-gray-200 rounded-full cursor-pointer"
+            <button wire:click="previousMonth"
+                class="p-2 hover:bg-gray-200 rounded-full cursor-pointer tooltip tooltip-bottom" data-tip="previous month"
                 aria-label="Previous Month">
                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
@@ -18,7 +19,8 @@
             <div class="flex items-center gap-2">
                 <h2 class="text-lg sm:text-xl font-semibold text-gray-800">{{ $this->monthName }}</h2>
                 <div class="relative" x-data="{ open: false }">
-                    <button @click="open=!open" class="p-1 rounded hover:bg-gray-200" aria-label="Jump to month">
+                    <button @click="open=!open" class="p-1 rounded hover:bg-gray-200 tooltip tooltip-bottom"
+                        data-tip="jump to" aria-label="Jump to month">
                         <svg class="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
                         </svg>
@@ -39,7 +41,8 @@
                     </div>
                 </div>
             </div>
-            <button wire:click="nextMonth" class="p-2 hover:bg-gray-200 rounded-full cursor-pointer"
+            <button wire:click="nextMonth"
+                class="p-2 hover:bg-gray-200 rounded-full cursor-pointer tooltip tooltip-bottom" data-tip="next month"
                 aria-label="Next Month">
                 <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />

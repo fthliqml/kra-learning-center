@@ -148,8 +148,9 @@ class TrainingFormModal extends Component
 
     private function loadCourseOptions(): void
     {
-        $this->courseOptions = Course::select('id', 'title')->orderBy('title')->get()
-            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title])->toArray();
+        // Include group_comp so we can auto-sync training group_comp for K-LEARN
+        $this->courseOptions = Course::select('id', 'title', 'group_comp')->orderBy('title')->get()
+            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->group_comp])->toArray();
     }
 
     public function updatedCourseId($value): void
@@ -157,6 +158,13 @@ class TrainingFormModal extends Component
         if ($this->training_type === 'K-LEARN' && $value) {
             $course = collect($this->courseOptions)->firstWhere('id', (int) $value);
             $this->training_name = $course['title'] ?? '';
+            // Auto-sync group competency with selected course
+            if (!empty($course['group_comp'])) {
+                $this->group_comp = $course['group_comp'];
+            } else {
+                // Fallback: query directly if options list missing group_comp
+                $this->group_comp = (string) (Course::where('id', (int) $value)->value('group_comp') ?? $this->group_comp);
+            }
         }
     }
 
@@ -486,7 +494,18 @@ class TrainingFormModal extends Component
                     $training->course_id = null; // leaving K-LEARN
                     $training->name = $this->training_name;
                 }
-                $training->group_comp = $this->group_comp;
+                // Enforce group_comp sync: if K-LEARN, use the course's group_comp
+                if ($this->training_type === 'K-LEARN') {
+                    $syncedGroup = Course::where('id', $this->course_id)->value('group_comp');
+                    if ($syncedGroup) {
+                        $this->group_comp = $syncedGroup;
+                        $training->group_comp = $syncedGroup;
+                    } else {
+                        $training->group_comp = $this->group_comp;
+                    }
+                } else {
+                    $training->group_comp = $this->group_comp;
+                }
                 $training->start_date = $startDate;
                 $training->end_date = $endDate;
                 $training->save();
@@ -557,10 +576,20 @@ class TrainingFormModal extends Component
         }
 
         // CREATE FLOW
+        // Determine group_comp to persist (auto from course for K-LEARN)
+        $groupToPersist = $this->group_comp;
+        if ($this->training_type === 'K-LEARN' && $this->course_id) {
+            $syncedGroup = Course::where('id', $this->course_id)->value('group_comp');
+            if ($syncedGroup) {
+                $this->group_comp = $syncedGroup; // sync UI model
+                $groupToPersist = $syncedGroup;
+            }
+        }
+
         $training = Training::create([
             'name' => $this->training_type === 'K-LEARN' ? ($courseTitle ?? 'K-Learn') : $this->training_name,
             'type' => $this->training_type,
-            'group_comp' => $this->group_comp,
+            'group_comp' => $groupToPersist,
             'start_date' => $startDate,
             'end_date' => $endDate,
             'course_id' => $this->training_type === 'K-LEARN' ? $this->course_id : null,
