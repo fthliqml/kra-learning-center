@@ -56,10 +56,9 @@ class CourseInfo extends Component
     public function updatedThumbnail(): void
     {
         if ($this->thumbnail) {
-            // Validate only the thumbnail when it changes
             $this->validateOnly('thumbnail');
             $path = $this->thumbnail->store('thumbnails', 'public');
-            $this->course['thumbnail_url'] = asset('storage/' . $path);
+            $this->course['thumbnail_url'] = $path;
             $this->computeDirty();
         }
     }
