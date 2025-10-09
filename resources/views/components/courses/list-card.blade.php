@@ -44,7 +44,9 @@
                 <div class="mt-auto @if ($hasProgress) mb-0 @else mb-3 @endif">
                     @php
                         $modulesCount = (int) ($course->learning_modules_count ?? 0);
-                        $usersCount = (int) ($course->users_count ?? 0);
+                        $usersCount = (int) ($course->trainings
+                            ? $course->trainings->flatMap->assessments->unique('employee_id')->count()
+                            : 0);
                         $progress = (int) ($course->progress_percent ?? 0);
                     @endphp
                     <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-gray-600">

@@ -31,14 +31,16 @@
         {{-- Details --}}
         @php
             $modulesCount = (int) ($course->learning_modules_count ?? 0);
-            $usersCount = (int) ($course->users_count ?? 0);
+            $usersCount = (int) ($course->trainings
+                ? $course->trainings->flatMap->assessments->unique('employee_id')->count()
+                : 0);
         @endphp
         <!-- Desktop / Tablet Details -->
         <div
             class="mt-2 hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] sm:text-[12px] text-gray-600">
             <span class="inline-flex items-center gap-1 min-w-0">
                 <x-icon name="o-book-open" class="size-4 text-gray-500 shrink-0" />
-                <span>{{ $modulesCount }} {{ Str::plural('Topic', $modulesCount) }}</span>
+                <span>{{ $modulesCount }} {{ Str::plural('Chapter', $modulesCount) }}</span>
             </span>
             <span class="hidden sm:inline h-3 w-px bg-gray-300/60"></span>
             <span class="inline-flex items-center gap-1 min-w-0">
@@ -50,7 +52,7 @@
         <!-- Mobile Compact Meta -->
         <div class="mt-1 flex sm:hidden items-center gap-2 text-[11px] text-gray-600">
             <x-icon name="o-book-open" class="size-1 text-gray-500 shrink-0" />
-            <span>{{ $modulesCount }} {{ Str::plural('Topic', $modulesCount) }}</span>
+            <span>{{ $modulesCount }} {{ Str::plural('Chapter', $modulesCount) }}</span>
             <span class="h-3 w-px bg-gray-300/60"></span>
             <x-icon name="o-user-group" class="size-1 text-gray-500 shrink-0" />
             <span>{{ $usersCount }} {{ Str::plural('Learner', $usersCount) }}</span>

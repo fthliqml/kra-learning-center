@@ -20,9 +20,29 @@ class ModulePage extends Component
     public function mount(Course $course)
     {
         $userId = Auth::id();
-        $assigned = $course->userCourses()->where('user_id', $userId)->exists();
+        // Assigned via TrainingAssessment within the training schedule window
+        $today = now()->startOfDay();
+        $assigned = $course->trainings()
+            ->where(function ($w) use ($today) {
+                $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->where(function ($w) use ($today) {
+                $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+            })
+            ->whereHas('assessments', function ($a) use ($userId) {
+                $a->where('employee_id', $userId);
+            })
+            ->exists();
         if (! $assigned) {
             abort(403, 'You are not assigned to this course.');
+        }
+
+        // Ensure enrollment for progress tracking exists
+        if ($userId) {
+            $course->userCourses()->firstOrCreate(
+                ['user_id' => $userId],
+                ['status' => 'in_progress', 'current_step' => 0]
+            );
         }
 
         // Gate: require pretest submitted before accessing modules (if pretest exists)
@@ -229,15 +249,8 @@ class ModulePage extends Component
             }
         }
 
-        return view('pages.courses.module-page', [
-            'course' => $this->course,
-            'topics' => $this->course->learningModules,
-            'activeTopic' => $activeTopic,
-            'sections' => $activeTopic?->sections ?? collect(),
-            'activeSection' => $activeSection,
-            'videoResources' => $videoResources,
-            'readingResources' => $readingResources,
-        ])->layout('layouts.livewire.course', [
+        // Return the layout view directly and embed page content into the slot
+        return view('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'module',
             'progress' => $this->course->progressForUser(),
@@ -246,6 +259,15 @@ class ModulePage extends Component
             'activeModuleId' => $this->activeTopicId,
             'activeSectionId' => $this->activeSectionId,
             'completedModuleIds' => $completedModuleIds,
+            'slot' => view('pages.courses.module-page', [
+                'course' => $this->course,
+                'topics' => $this->course->learningModules,
+                'activeTopic' => $activeTopic,
+                'sections' => $activeTopic?->sections ?? collect(),
+                'activeSection' => $activeSection,
+                'videoResources' => $videoResources,
+                'readingResources' => $readingResources,
+            ]),
         ]);
     }
 }

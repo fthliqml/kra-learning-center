@@ -4,6 +4,8 @@ namespace App\Livewire\Pages\Courses;
 
 use Livewire\Component;
 use App\Models\Course;
+use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 
 class Overview extends Component
 {
@@ -16,6 +18,32 @@ class Overview extends Component
 
     public function mount(Course $course)
     {
+        // Gate: ensure user is assigned via TrainingAssessment within schedule window
+        $userId = Auth::id();
+        $today = Carbon::today();
+        $isAssigned = $course->trainings()
+            ->where(function ($w) use ($today) {
+                $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->where(function ($w) use ($today) {
+                $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+            })
+            ->whereHas('assessments', function ($a) use ($userId) {
+                $a->where('employee_id', $userId);
+            })
+            ->exists();
+        if (! $isAssigned) {
+            abort(403, 'You are not assigned to this course.');
+        }
+
+        // Ensure an enrollment record exists for progress tracking
+        if ($userId) {
+            $course->userCourses()->firstOrCreate(
+                ['user_id' => $userId],
+                ['status' => 'not_started', 'current_step' => 0]
+            );
+        }
+
         $this->course = $course->load([
             'learningModules.sections.resources' => function ($q) {
                 // simple ordering for consistency

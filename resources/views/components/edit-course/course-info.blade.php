@@ -14,7 +14,7 @@
         <div class="flex flex-col items-stretch w-full">
             <input id="thumbnail-input" type="file" wire:model="thumbnail" accept="image/*" class="sr-only" />
             <label for="thumbnail-input" class="cursor-pointer group block w-full">
-                @php($finalThumb = $course['thumbnail_url'] ?? '')
+                @php($finalThumb = Storage::url($course['thumbnail_url']))
                 @if ($thumbnail)
                     <img src="{{ $thumbnail->temporaryUrl() }}"
                         class="w-3xl h-60 object-contain object-center rounded-lg shadow-md group-hover:ring-2 group-hover:ring-primary/60 transition border-1 border-gray-300 block mx-auto"

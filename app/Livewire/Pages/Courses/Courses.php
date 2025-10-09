@@ -47,7 +47,7 @@ class Courses extends Component
 
         $query = Course::query()
             ->with([
-                // Load only the current user's assignment record (if any)
+                // Load only the current user's enrollment (if any) for progress bar without N+1
                 'userCourses' => function ($q) use ($userId) {
                     if ($userId) {
                         $q->where('user_id', $userId)->select(['id', 'user_id', 'course_id', 'current_step', 'status']);
@@ -58,9 +58,9 @@ class Courses extends Component
             ])
             // Provide counts for UI metadata
             ->withCount(['learningModules as learning_modules_count', 'users'])
-            // Only courses assigned to the logged-in user
+            // Only courses assigned to the logged-in user via TrainingAssessment within schedule window
             ->when($userId, function ($q) use ($userId) {
-                $q->whereHas('userCourses', fn($uc) => $uc->where('user_id', $userId));
+                $q->assignedToUser($userId);
             })
             ->when($this->search, function ($q) {
                 $term = trim($this->search);
@@ -82,6 +82,8 @@ class Courses extends Component
         // Map each course to add a computed progress_percent for current user using model method
         $user = Auth::user();
         $cached->getCollection()->transform(function ($course) use ($user) {
+            // Note: progress is based on user_courses which may be separate from assessments.
+            // If no user_courses exists yet for assigned course, progress will be 0.
             $course->progress_percent = $course->progressForUser($user);
             return $course;
         });

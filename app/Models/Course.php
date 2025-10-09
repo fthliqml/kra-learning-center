@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Auth;
+use Carbon\Carbon;
 use App\Models\Section;
 use App\Models\Test;
 
@@ -62,6 +63,14 @@ class Course extends Model
     }
 
     /**
+     * Get the trainings for the course.
+     */
+    public function trainings(): HasMany
+    {
+        return $this->hasMany(Training::class, 'course_id');
+    }
+
+    /**
      * Scope: only courses assigned to a given user id.
      */
     public function scopeAssignedToUser($query, $userId)
@@ -70,7 +79,19 @@ class Course extends Model
             // If no user, return empty result intentionally
             return $query->whereRaw('1 = 0');
         }
-        return $query->whereHas('userCourses', fn($q) => $q->where('user_id', $userId));
+        $today = Carbon::today();
+        return $query->whereHas('trainings', function ($t) use ($userId, $today) {
+            $t
+                ->where(function ($w) use ($today) {
+                    $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+                })
+                ->where(function ($w) use ($today) {
+                    $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+                })
+                ->whereHas('assessments', function ($a) use ($userId) {
+                    $a->where('employee_id', $userId);
+                });
+        });
     }
 
     /**
