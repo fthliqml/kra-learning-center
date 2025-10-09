@@ -5,12 +5,11 @@ namespace App\Livewire\Pages\Courses;
 use App\Models\Course;
 use App\Models\Test;
 use App\Models\TestAttempt;
-use App\Models\Section;
-use App\Models\Topic;
-use App\Models\ResourceItem;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Livewire\Attributes\Layout;
 
+#[Layout('layouts.livewire.course')]
 class ModulePage extends Component
 {
     public Course $course;
@@ -249,8 +248,16 @@ class ModulePage extends Component
             }
         }
 
-        // Return the layout view directly and embed page content into the slot
-        return view('layouts.livewire.course', [
+        // Return page view and pass layout variables via layoutData()
+        return view('pages.courses.module-page', [
+            'course' => $this->course,
+            'topics' => $this->course->learningModules,
+            'activeTopic' => $activeTopic,
+            'sections' => $activeTopic?->sections ?? collect(),
+            'activeSection' => $activeSection,
+            'videoResources' => $videoResources,
+            'readingResources' => $readingResources,
+        ])->layoutData([
             'courseTitle' => $this->course->title,
             'stage' => 'module',
             'progress' => $this->course->progressForUser(),
@@ -259,15 +266,6 @@ class ModulePage extends Component
             'activeModuleId' => $this->activeTopicId,
             'activeSectionId' => $this->activeSectionId,
             'completedModuleIds' => $completedModuleIds,
-            'slot' => view('pages.courses.module-page', [
-                'course' => $this->course,
-                'topics' => $this->course->learningModules,
-                'activeTopic' => $activeTopic,
-                'sections' => $activeTopic?->sections ?? collect(),
-                'activeSection' => $activeSection,
-                'videoResources' => $videoResources,
-                'readingResources' => $readingResources,
-            ]),
         ]);
     }
 }
