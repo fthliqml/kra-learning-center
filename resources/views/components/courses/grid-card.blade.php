@@ -37,7 +37,7 @@
         @endphp
         <!-- Desktop / Tablet Details -->
         <div
-            class="mt-2 hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] sm:text-[12px] text-gray-600">
+            class="mt-4 hidden sm:flex flex-wrap items-center gap-x-4 gap-y-1 text-[11px] sm:text-[12px] text-gray-600">
             <span class="inline-flex items-center gap-1 min-w-0">
                 <x-icon name="o-book-open" class="size-4 text-gray-500 shrink-0" />
                 <span>{{ $modulesCount }} {{ Str::plural('Chapter', $modulesCount) }}</span>
@@ -50,7 +50,7 @@
         </div>
 
         <!-- Mobile Compact Meta -->
-        <div class="mt-1 flex sm:hidden items-center gap-2 text-[11px] text-gray-600">
+        <div class="mt-3 flex sm:hidden items-center gap-2 text-[11px] text-gray-600">
             <x-icon name="o-book-open" class="size-1 text-gray-500 shrink-0" />
             <span>{{ $modulesCount }} {{ Str::plural('Chapter', $modulesCount) }}</span>
             <span class="h-3 w-px bg-gray-300/60"></span>
@@ -79,11 +79,27 @@
         @endif
 
         {{-- Action --}}
-        <a wire:navigate href="{{ route('courses-overview.show', $course) }}" data-card-action
-            class="mt-3 hidden sm:inline-flex w-full items-center justify-center gap-2 text-sm font-medium text-primary/90 hover:text-primary border border-primary/20 rounded-full px-3 py-2"
-            aria-label="Go to course overview" @click.stop>
-            <span>Course Overview</span>
-            <span aria-hidden="true">→</span>
-        </a>
+        @if ($progress === 100)
+            <button type="button" data-card-action
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300 cursor-default"
+                aria-label="See results (coming soon)" @click.stop>
+                <span>See Results</span>
+                <span aria-hidden="true">→</span>
+            </button>
+        @elseif ($progress > 0)
+            <a wire:navigate href="{{ route('courses-modules.index', $course) }}" data-card-action
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
+                aria-label="Continue learning" @click.stop>
+                <span>Continue Learning</span>
+                <span aria-hidden="true">→</span>
+            </a>
+        @else
+            <a wire:navigate href="{{ route('courses-overview.show', $course) }}" data-card-action
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
+                aria-label="Go to course overview" @click.stop>
+                <span>Course Overview</span>
+                <span aria-hidden="true">→</span>
+            </a>
+        @endif
     </div>
 </div>

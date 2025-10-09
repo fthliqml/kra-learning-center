@@ -7,9 +7,6 @@ use App\Models\Test;
 use App\Models\TestAttempt;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
-use Livewire\Attributes\Layout;
-
-#[Layout('layouts.livewire.course')]
 class ModulePage extends Component
 {
     public Course $course;
@@ -36,12 +33,17 @@ class ModulePage extends Component
             abort(403, 'You are not assigned to this course.');
         }
 
-        // Ensure enrollment for progress tracking exists
+        // Ensure enrollment for progress tracking exists and mark in_progress on first engagement
         if ($userId) {
-            $course->userCourses()->firstOrCreate(
+            $enrollment = $course->userCourses()->firstOrCreate(
                 ['user_id' => $userId],
                 ['status' => 'in_progress', 'current_step' => 0]
             );
+            // If existing with null/not_started, bump to in_progress
+            if (($enrollment->status ?? '') === '' || strtolower($enrollment->status) === 'not_started') {
+                $enrollment->status = 'in_progress';
+                $enrollment->save();
+            }
         }
 
         // Gate: require pretest submitted before accessing modules (if pretest exists)
@@ -49,7 +51,7 @@ class ModulePage extends Component
         if ($pretest) {
             $done = TestAttempt::where('test_id', $pretest->id)
                 ->where('user_id', $userId)
-                ->where('status', TestAttempt::STATUS_SUBMITTED)
+                ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
                 ->exists();
             if (! $done) {
                 return redirect()->route('courses-pretest.index', ['course' => $course->id]);
@@ -257,7 +259,7 @@ class ModulePage extends Component
             'activeSection' => $activeSection,
             'videoResources' => $videoResources,
             'readingResources' => $readingResources,
-        ])->layoutData([
+        ])->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'module',
             'progress' => $this->course->progressForUser(),

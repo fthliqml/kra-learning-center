@@ -176,7 +176,7 @@
 
                     @if ($hasReading)
                         <div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-                            x-data="window.readingAccordionState('reading_open_course_{{ $course->id ?? 'c' }}_section_{{ $activeSection->id ?? 's' }}')">
+                            x-data="Object.assign({ open: true }, window.readingAccordionState('reading_open_course_{{ $course->id ?? 'c' }}_section_{{ $activeSection->id ?? 's' }}'))">
                             <button type="button" @click="open = !open" :aria-expanded="open.toString()"
                                 class="w-full px-4 md:px-6 py-3 md:py-4 flex items-center justify-between text-left">
                                 <h3 class="text-sm font-semibold text-gray-900">Reading</h3>

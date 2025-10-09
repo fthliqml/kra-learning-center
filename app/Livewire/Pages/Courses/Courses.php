@@ -82,8 +82,6 @@ class Courses extends Component
         // Map each course to add a computed progress_percent for current user using model method
         $user = Auth::user();
         $cached->getCollection()->transform(function ($course) use ($user) {
-            // Note: progress is based on user_courses which may be separate from assessments.
-            // If no user_courses exists yet for assigned course, progress will be 0.
             $course->progress_percent = $course->progressForUser($user);
             return $course;
         });
