@@ -5,12 +5,8 @@ namespace App\Livewire\Pages\Courses;
 use App\Models\Course;
 use App\Models\Test;
 use App\Models\TestAttempt;
-use App\Models\Section;
-use App\Models\Topic;
-use App\Models\ResourceItem;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
-
 class ModulePage extends Component
 {
     public Course $course;
@@ -20,9 +16,34 @@ class ModulePage extends Component
     public function mount(Course $course)
     {
         $userId = Auth::id();
-        $assigned = $course->userCourses()->where('user_id', $userId)->exists();
+        // Assigned via TrainingAssessment within the training schedule window
+        $today = now()->startOfDay();
+        $assigned = $course->trainings()
+            ->where(function ($w) use ($today) {
+                $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->where(function ($w) use ($today) {
+                $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+            })
+            ->whereHas('assessments', function ($a) use ($userId) {
+                $a->where('employee_id', $userId);
+            })
+            ->exists();
         if (! $assigned) {
             abort(403, 'You are not assigned to this course.');
+        }
+
+        // Ensure enrollment for progress tracking exists and mark in_progress on first engagement
+        if ($userId) {
+            $enrollment = $course->userCourses()->firstOrCreate(
+                ['user_id' => $userId],
+                ['status' => 'in_progress', 'current_step' => 0]
+            );
+            // If existing with null/not_started, bump to in_progress
+            if (($enrollment->status ?? '') === '' || strtolower($enrollment->status) === 'not_started') {
+                $enrollment->status = 'in_progress';
+                $enrollment->save();
+            }
         }
 
         // Gate: require pretest submitted before accessing modules (if pretest exists)
@@ -30,7 +51,7 @@ class ModulePage extends Component
         if ($pretest) {
             $done = TestAttempt::where('test_id', $pretest->id)
                 ->where('user_id', $userId)
-                ->where('status', TestAttempt::STATUS_SUBMITTED)
+                ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
                 ->exists();
             if (! $done) {
                 return redirect()->route('courses-pretest.index', ['course' => $course->id]);
@@ -229,6 +250,7 @@ class ModulePage extends Component
             }
         }
 
+        // Return page view and pass layout variables via layoutData()
         return view('pages.courses.module-page', [
             'course' => $this->course,
             'topics' => $this->course->learningModules,

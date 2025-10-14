@@ -22,9 +22,33 @@ class Pretest extends Component
     public function mount(Course $course)
     {
         $userId = Auth::id();
-        $assigned = $course->userCourses()->where('user_id', $userId)->exists();
+        // Assigned via TrainingAssessment within the training schedule window
+        $today = now()->startOfDay();
+        $assigned = $course->trainings()
+            ->where(function ($w) use ($today) {
+                $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->where(function ($w) use ($today) {
+                $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+            })
+            ->whereHas('assessments', function ($a) use ($userId) {
+                $a->where('employee_id', $userId);
+            })
+            ->exists();
         if (!$assigned) {
             abort(403, 'You are not assigned to this course.');
+        }
+
+        // Ensure enrollment exists and mark status in_progress on first engagement
+        if ($userId) {
+            $enrollment = $course->userCourses()->firstOrCreate(
+                ['user_id' => $userId],
+                ['status' => 'in_progress', 'current_step' => 0]
+            );
+            if (($enrollment->status ?? '') === '' || strtolower($enrollment->status) === 'not_started') {
+                $enrollment->status = 'in_progress';
+                $enrollment->save();
+            }
         }
 
         // Eager load learning modules for sidebar listing
@@ -47,7 +71,7 @@ class Pretest extends Component
             // If already submitted an attempt, skip pretest page
             $alreadySubmitted = TestAttempt::where('test_id', $this->pretest->id)
                 ->where('user_id', $userId)
-                ->where('status', TestAttempt::STATUS_SUBMITTED)
+                ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
                 ->exists();
             if ($alreadySubmitted) {
                 return redirect()->route('courses-modules.index', ['course' => $course->id]);
@@ -111,7 +135,7 @@ class Pretest extends Component
         // Prevent duplicate submissions
         $alreadySubmitted = TestAttempt::where('test_id', $this->pretest->id)
             ->where('user_id', $userId)
-            ->where('status', TestAttempt::STATUS_SUBMITTED)
+            ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
             ->exists();
         if ($alreadySubmitted) {
             return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
@@ -158,13 +182,18 @@ class Pretest extends Component
         }
         $t3 = microtime(true);
 
-        DB::transaction(function () use ($userId, $answers, $questionRows, $attemptNumber, $enrollment, $optionsById, $t0, $t1, $t2, $t3) {
+        // Determine if any essay/open-ended questions exist (non-multiple)
+        $hasEssay = $questionRows->contains(function ($q) {
+            return ($q->question_type !== 'multiple');
+        });
+
+        DB::transaction(function () use ($userId, $answers, $questionRows, $attemptNumber, $enrollment, $optionsById, $t0, $t1, $t2, $t3, $hasEssay) {
             $now = now();
             $attempt = TestAttempt::create([
                 'user_id' => $userId,
                 'test_id' => $this->pretest->id,
                 'attempt_number' => $attemptNumber,
-                'status' => TestAttempt::STATUS_SUBMITTED,
+                'status' => $hasEssay ? TestAttempt::STATUS_UNDER_REVIEW : TestAttempt::STATUS_SUBMITTED,
                 'auto_score' => 0,
                 'manual_score' => 0,
                 'total_score' => 0,
@@ -224,18 +253,25 @@ class Pretest extends Component
             $attempt->auto_score = $autoScore;
             $attempt->manual_score = 0;
             $attempt->total_score = $autoScore;
-            // Determine pass by percentage if passing_score configured on test
-            $passingScore = (int) ($this->pretest->passing_score ?? 0);
-            if ($passingScore > 0) {
-                $maxAutoPoints = $questionRows->where('question_type', 'multiple')->sum('max_points');
-                $percent = $maxAutoPoints > 0 ? (int) round(($autoScore / max(1, $maxAutoPoints)) * 100) : 0;
-                $attempt->is_passed = $percent >= $passingScore;
+            // Determine pass only if not under review (i.e., no essay questions)
+            if (!$hasEssay) {
+                $passingScore = (int) ($this->pretest->passing_score ?? 0);
+                if ($passingScore > 0) {
+                    $maxAutoPoints = $questionRows->where('question_type', 'multiple')->sum('max_points');
+                    $percent = $maxAutoPoints > 0 ? (int) round(($autoScore / max(1, $maxAutoPoints)) * 100) : 0;
+                    $attempt->is_passed = $percent >= $passingScore;
+                }
             }
             $attempt->save();
 
             // Update user progress: mark at least step 1 completed (pretest done)
             if (($enrollment->current_step ?? 0) < 1) {
                 $enrollment->current_step = 1;
+                $enrollment->save();
+            }
+            // Ensure status reflects engagement
+            if (($enrollment->status ?? '') === '' || strtolower($enrollment->status) === 'not_started') {
+                $enrollment->status = 'in_progress';
                 $enrollment->save();
             }
 
@@ -257,7 +293,7 @@ class Pretest extends Component
             }
         });
 
-        // Redirect to learning modules page
+        // Redirect to learning modules page (SPA navigate)
         return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
     }
 }

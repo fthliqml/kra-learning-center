@@ -17,10 +17,11 @@ class DatabaseSeeder extends Seeder
         $this->call(UserSeeder::class);
         $this->call(TrainingModuleSeeder::class);
         $this->call(TrainingSeeder::class);
-        $this->call(CoursesSeeder::class);
-        $this->call(TopicSeeder::class);
-        $this->call(SectionSeeder::class);
-        $this->call(ResourceSeeder::class);
-        $this->call(CourseAssignmentSeeder::class);
+        // $this->call(CoursesSeeder::class);
+        // $this->call(TopicSeeder::class);
+        // $this->call(SectionSeeder::class);
+        // $this->call(ResourceSeeder::class);
+        // $this->call(CourseAssignmentSeeder::class);
     }
 }
+

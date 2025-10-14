@@ -31,9 +31,6 @@ import { PageFlip } from 'page-flip/dist/js/page-flip.module.js';
     }
     if (!url || !container) return;
     var state = { pdf: null, total: 0 };
-    var loadTimeout = setTimeout(function(){
-      if (!state.pdf) showError('Viewer terlalu lama memuat');
-    }, 9000);
 
     function renderAllPagesToImages(pdf, maxPages){
       var tasks = [];
@@ -114,7 +111,7 @@ import { PageFlip } from 'page-flip/dist/js/page-flip.module.js';
           // Setup UI: current/total indicator and left/right navigation overlays
           setupNavigationUI(root, pageFlip, state.total);
         }).catch(function(e){ showError('Gagal merender halaman'); console.error('[Flipbook] Render error:', e); });
-        clearTimeout(loadTimeout);
+  // keep waiting without timeout limit
       }).catch(function(err) {
         console.warn('[Flipbook] PDF load failed (first try), retrying w/o worker', err);
         try {
@@ -168,7 +165,7 @@ import { PageFlip } from 'page-flip/dist/js/page-flip.module.js';
               pageFlip.loadFromHTML(pages);
               setupNavigationUI(root, pageFlip, state.total);
             }).catch(function(e){ showError('Gagal merender halaman'); console.error('[Flipbook] Render error:', e); });
-            clearTimeout(loadTimeout);
+            // keep waiting without timeout limit
           }).catch(function(e2){
             console.error('[Flipbook] PDF load failed (retry)', e2);
             showError('Gagal memuat PDF (file tidak dapat diakses atau rusak)');
@@ -188,12 +185,12 @@ import { PageFlip } from 'page-flip/dist/js/page-flip.module.js';
       msg.className = 'absolute inset-0 flex flex-col items-center justify-center gap-2 text-sm text-red-600 bg-white/80';
       msg.textContent = text;
       root.appendChild(msg);
-      var retry = document.createElement('button');
+  var retry = document.createElement('button');
       retry.type = 'button';
       retry.className = 'px-3 py-1.5 rounded border text-sm bg-white hover:bg-gray-50';
       retry.textContent = 'Muat ulang viewer';
       retry.addEventListener('click', function(){
-        root.innerHTML = '<div class="pdf-loading absolute inset-0 flex items-center justify-center text-sm text-gray-500 pointer-events-none">Memuat viewer...</div><div class="flip-container w-full h-full"></div>';
+        root.innerHTML = '<div class="flip-container w-full h-full"></div>';
         root.__flipInit = false;
         initRoot(root);
       });

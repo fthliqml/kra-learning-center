@@ -44,18 +44,20 @@
                 <div class="mt-auto @if ($hasProgress) mb-0 @else mb-3 @endif">
                     @php
                         $modulesCount = (int) ($course->learning_modules_count ?? 0);
-                        $usersCount = (int) ($course->users_count ?? 0);
+                        $usersCount = (int) ($course->trainings
+                            ? $course->trainings->flatMap->assessments->unique('employee_id')->count()
+                            : 0);
                         $progress = (int) ($course->progress_percent ?? 0);
                     @endphp
                     <div class="mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-gray-600">
                         <span class="inline-flex items-center gap-1 min-w-0">
                             <x-icon name="o-book-open" class="size-4 text-gray-500" />
-                            <span>{{ $modulesCount }} {{ Str::plural('chapter', $modulesCount) }}</span>
+                            <span>{{ $modulesCount }} {{ Str::plural('Chapter', $modulesCount) }}</span>
                         </span>
                         <span class="hidden md:inline h-3 w-px bg-gray-300/60"></span>
                         <span class="inline-flex items-center gap-1 min-w-0">
                             <x-icon name="o-user-group" class="size-4 text-gray-500" />
-                            <span>{{ $usersCount }} {{ Str::plural('learner', $usersCount) }}</span>
+                            <span>{{ $usersCount }} {{ Str::plural('Learner', $usersCount) }}</span>
                         </span>
                     </div>
 
@@ -90,12 +92,28 @@
 
         {{-- Action (desktop) --}}
         <div class="hidden sm:flex items-end justify-end self-stretch min-w-40 pr-1 sm:pr-2 md:pr-3">
-            <a wire:navigate href="{{ route('courses-overview.show', $course) }}" data-card-action
-                class="inline-flex items-center gap-2 text-sm font-medium text-primary/90 hover:text-primary px-3 py-2 rounded-full border border-primary/20"
-                aria-label="Go to course overview" @click.stop>
-                <span>Course Overview</span>
-                <span aria-hidden="true">→</span>
-            </a>
+            @if ($progress === 100)
+                <button type="button" data-card-action
+                    class="inline-flex items-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300 cursor-default"
+                    aria-label="See results (coming soon)" @click.stop>
+                    <span>See Results</span>
+                    <span aria-hidden="true">→</span>
+                </button>
+            @elseif ($progress > 0)
+                <a wire:navigate href="{{ route('courses-modules.index', $course) }}" data-card-action
+                    class="inline-flex items-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
+                    aria-label="Continue learning" @click.stop>
+                    <span>Continue Learning</span>
+                    <span aria-hidden="true">→</span>
+                </a>
+            @else
+                <a wire:navigate href="{{ route('courses-overview.show', $course) }}" data-card-action
+                    class="inline-flex items-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
+                    aria-label="Go to course overview" @click.stop>
+                    <span>Course Overview</span>
+                    <span aria-hidden="true">→</span>
+                </a>
+            @endif
         </div>
     </div>
 </div>

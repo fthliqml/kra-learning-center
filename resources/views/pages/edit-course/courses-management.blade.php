@@ -63,10 +63,12 @@
             @scope('cell_action', $course)
                 <div class="flex gap-2 justify-center">
                     <!-- Edit -->
-                    <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary hover:opacity-85" spinner
-                        wire:navigate href="{{ route('edit-course.index', ['course' => $course->id]) }}" />
+                    <x-button tooltip-left="Edit Course" icon="o-pencil-square"
+                        class="btn-circle btn-ghost p-2 bg-tetriary hover:opacity-85" spinner wire:navigate
+                        href="{{ route('edit-course.index', ['course' => $course->id]) }}" />
                     <!-- Delete -->
-                    <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
+                    <x-button icon="o-trash" tooltip-right="Delete Course"
+                        class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
                         wire:click="$dispatch('confirm', {
                             title: 'Are you sure you want to delete?',
                             text: 'This action is permanent and cannot be undone.',

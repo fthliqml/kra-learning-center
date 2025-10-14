@@ -80,12 +80,12 @@
                             ])
                             :class="{
                                 'justify-between': isOpen,
-                                'justify-center': !isOpen,
+                                'justify-center rounded-full tooltip tooltip-right': !isOpen,
                                 'rounded-tr-[80px]': isOpen && '{{ $item['id'] }}'
                                 === 'home'
                             }"
                             @keydown.enter.prevent="{{ $hasSub ? "toggle('{$item['id']}')" : '' }}"
-                            aria-expanded="{{ $hasSub ? 'true' : 'false' }}">
+                            aria-expanded="{{ $hasSub ? 'true' : 'false' }}" data-tip="{{ $item['label'] }}">
 
                             <span class="flex items-center gap-3">
                                 <x-icon :name="'o-' . $item['icon']" class="w-[23px] h-[23px]" />
