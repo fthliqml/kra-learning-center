@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use App\Models\Trainer;
 
 class TrainingSurvey extends Model
 {
@@ -81,5 +82,28 @@ class TrainingSurvey extends Model
     public static function forEmployeeId(int $employeeId)
     {
         return static::query()->forEmployee($employeeId);
+    }
+
+    /**
+     * Scope: surveys visible to an instructor (trainings where any session is led by the instructor's trainer id)
+     */
+    public function scopeForInstructorTrainer($query, int $trainerId)
+    {
+        return $query->whereHas('training.sessions', function ($q) use ($trainerId) {
+            $q->where('trainer_id', $trainerId);
+        });
+    }
+
+    /**
+     * Convenience: using user id to infer Trainer profile.
+     */
+    public static function forInstructorUserId(int $userId)
+    {
+        $trainerId = Trainer::where('user_id', $userId)->value('id');
+        if (!$trainerId) {
+            // empty query
+            return static::query()->whereRaw('1 = 0');
+        }
+        return static::query()->forInstructorTrainer($trainerId);
     }
 }
