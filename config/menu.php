@@ -66,11 +66,23 @@ return [
             'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
-            'roles' => ['admin'],
+            'roles' => ['admin', 'instructor'],
             'submenu' => [
-                ['label' => 'Survey 1', 'href' => '/survey/1', 'roles' => ['admin', 'employee']],
-                ['label' => 'Survey 2', 'href' => '/survey/2', 'roles' => ['admin']],
-                ['label' => 'Survey 3', 'href' => '/survey/3', 'roles' => ['admin']],
+                ['label' => 'Survey 1', 'href' => '/survey/1/management', 'roles' => ['admin', 'instructor']],
+                ['label' => 'Survey 2', 'href' => '/survey/2/management', 'roles' => ['admin', 'instructor']],
+                ['label' => 'Survey 3', 'href' => '/survey/3/management', 'roles' => ['admin', 'instructor']],
+            ],
+        ],
+        [
+            'id' => 'survey',
+            'label' => 'Survey',
+            'icon' => 'document-text',
+            'href' => '#',
+            'roles' => ['employee'],
+            'submenu' => [
+                ['label' => 'Survey 1', 'href' => '/survey/1', 'roles' => ['employee']],
+                ['label' => 'Survey 2', 'href' => '/survey/2', 'roles' => ['employee']],
+                ['label' => 'Survey 3', 'href' => '/survey/3', 'roles' => ['employee']],
             ],
         ],
         [

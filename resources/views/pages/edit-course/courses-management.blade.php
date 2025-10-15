@@ -53,7 +53,7 @@
                     $badgeClass = match ($status) {
                         'draft' => 'badge-warning',
                         'assigned' => 'badge-primary bg-primary/95',
-                        'inactive' => ' badge primary badge-soft',
+                        'inactive' => 'badge primary badge-soft',
                     };
                 @endphp
                 <x-badge :value="str($status)->title()" :class="$badgeClass" />

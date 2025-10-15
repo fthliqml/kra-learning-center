@@ -6,13 +6,25 @@ use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use App\Models\TrainingSurvey;
 
-class Survey extends Component
+class SurveyManagement extends Component
 {
     public $surveyLevel = 1;
 
     public function mount($id)
     {
         $this->surveyLevel = (int) $id;
+    }
+
+    public function headers(): array
+    {
+        return [
+            ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
+            ['key' => 'training_name', 'label' => 'Training Name', 'class' => 'w-[300px]'],
+            ['key' => 'date', 'label' => 'Date', 'class' => '!text-start w-[300px]'],
+            ['key' => 'participant', 'label' => 'Participants', 'class' => '!text-center w-[140px]'],
+            ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
+            ['key' => 'action', 'label' => 'Action', 'class' => '!text-center'],
+        ];
     }
 
     public function surveys()
@@ -28,27 +40,11 @@ class Survey extends Component
             if ($role === 'instructor') {
                 $base = TrainingSurvey::forInstructorUserId($user->id)->where('level', (int) $this->surveyLevel)->with(['training', 'training.assessments']);
             } else {
-                // Employee: show only incomplete and completed (exclude draft)
-                $base = TrainingSurvey::forEmployeeId($user->id)
-                    ->where('level', (int) $this->surveyLevel)
-                    ->whereIn('status', [
-                        TrainingSurvey::STATUS_INCOMPLETE,
-                        TrainingSurvey::STATUS_COMPLETED,
-                    ])
-                    ->with(['training', 'training.assessments']);
+                $base = TrainingSurvey::forEmployeeId($user->id)->where('level', (int) $this->surveyLevel)->with(['training', 'training.assessments']);
             }
         }
 
-        // Ordering: for employees, put incomplete first, then completed; others by latest
-        if ($user && !$isAdminOrLeader && $role !== 'instructor') {
-            $base = $base->orderByRaw(
-                "CASE WHEN status = 'incomplete' THEN 0 WHEN status = 'completed' THEN 1 ELSE 2 END ASC"
-            )->orderByDesc('id');
-        } else {
-            $base = $base->orderByDesc('id');
-        }
-
-        $paginator = $base->paginate(10)->onEachSide(1);
+        $paginator = $base->orderByDesc('id')->paginate(10)->onEachSide(1);
         return $paginator->through(function ($survey, $index) use ($paginator) {
             $start = $paginator->firstItem() ?? 0;
             $survey->no = $start + $index;
@@ -69,16 +65,10 @@ class Survey extends Component
 
     }
 
-    public function startSurvey($id): void
-    {
-        // TODO: Redirect to survey filling page when available
-        // $this->redirectRoute('survey.fill', ['id' => $id], navigate: true);
-        $this->dispatch('start-survey', id: $id);
-    }
-
     public function render()
     {
-        return view('pages.survey.survey', [
+        return view('pages.survey.survey-management', [
+            'headers' => $this->headers(),
             'surveys' => $this->surveys(),
         ]);
     }
