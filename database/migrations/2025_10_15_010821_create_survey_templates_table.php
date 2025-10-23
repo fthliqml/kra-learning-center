@@ -12,8 +12,10 @@ return new class extends Migration {
     {
         Schema::create('survey_templates', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
+            $table->string('title');
             $table->text('description');
+            $table->enum('status', ['draft', 'active']);
+            $table->integer('level');
             $table->timestamps();
         });
     }

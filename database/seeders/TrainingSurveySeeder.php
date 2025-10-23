@@ -19,36 +19,24 @@ class TrainingSurveySeeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
-            // Create 2 survey templates
-            $templates = [];
-            $templates[] = SurveyTemplate::create([
-                'name' => 'Post-Training Reaction (Level 1)',
-                'description' => 'Kirkpatrick Level 1 - reaction feedback survey',
-            ]);
-            $templates[] = SurveyTemplate::create([
-                'name' => 'Learning Outcomes (Level 2)',
-                'description' => 'Kirkpatrick Level 2 - learning outcomes self-evaluation',
-            ]);
 
-            // Seed questions and options for each template
-            foreach ($templates as $ti => $template) {
-                for ($i = 1; $i <= 3; $i++) {
-                    $q = SurveyQuestion::create([
-                        'template_id' => $template->id,
-                        'text' => "Question {$i} for {$template->name}",
-                        'order' => $i,
+
+            for ($i = 1; $i <= 3; $i++) {
+                $q = SurveyQuestion::create([
+                    'text' => "Question {$i}",
+                    'order' => $i,
+                ]);
+                // 4 options (Likert scale-like)
+                $options = ['Strongly Disagree', 'Disagree', 'Agree', 'Strongly Agree'];
+                foreach ($options as $oi => $optText) {
+                    SurveyOption::create([
+                        'question_id' => $q->id,
+                        'text' => $optText,
+                        'order' => $oi + 1,
                     ]);
-                    // 4 options (Likert scale-like)
-                    $options = ['Strongly Disagree', 'Disagree', 'Agree', 'Strongly Agree'];
-                    foreach ($options as $oi => $optText) {
-                        SurveyOption::create([
-                            'question_id' => $q->id,
-                            'text' => $optText,
-                            'order' => $oi + 1,
-                        ]);
-                    }
                 }
             }
+
 
             // Pick 5 trainings to attach surveys to
             $trainingIds = Training::query()->inRandomOrder()->limit(5)->pluck('id');
@@ -81,7 +69,6 @@ class TrainingSurveySeeder extends Seeder
             foreach ($trainingIds->values() as $idx => $trainingId) {
                 TrainingSurvey::create([
                     'training_id' => $trainingId,
-                    'template_id' => $templates[$idx % 2]->id,
                     'level' => $levels[$idx] ?? 1,
                     'status' => $statuses[$idx] ?? TrainingSurvey::STATUS_DRAFT,
                 ]);

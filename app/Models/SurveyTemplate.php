@@ -9,7 +9,13 @@ class SurveyTemplate extends Model
     protected $table = 'survey_templates';
 
     protected $fillable = [
-        'name',
-        'description'
+        'title',
+        'description',
+        'status',
+        'level'
+    ];
+
+    protected $casts = [
+        'level' => 'integer',
     ];
 }

@@ -13,7 +13,6 @@ class TrainingSurvey extends Model
     // Mass assignable attributes
     protected $fillable = [
         'training_id',
-        'template_id',
         'level',
         'status',
     ];
@@ -21,7 +20,6 @@ class TrainingSurvey extends Model
     // Attribute casts
     protected $casts = [
         'training_id' => 'integer',
-        'template_id' => 'integer',
         'level' => 'integer',
     ];
 
@@ -43,15 +41,6 @@ class TrainingSurvey extends Model
     public function training()
     {
         return $this->belongsTo(Training::class);
-    }
-
-    /**
-     * Summary of template
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<SurveyTemplate, TrainingSurvey>
-     */
-    public function template()
-    {
-        return $this->belongsTo(SurveyTemplate::class, 'template_id');
     }
 
     /**

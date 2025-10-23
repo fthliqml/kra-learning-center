@@ -10,19 +10,9 @@ class SurveyQuestion extends Model
     protected $table = "survey_questions";
 
     protected $fillable = [
-        'template_id',
         'text',
         'order',
     ];
-
-    /**
-     * Summary of surveyTemplate
-     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<SurveyTemplate, SurveyQuestion>
-     */
-    public function surveyTemplate()
-    {
-        return $this->belongsTo(SurveyTemplate::class);
-    }
 
     /**
      * Summary of option

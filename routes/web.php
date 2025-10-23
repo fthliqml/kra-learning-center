@@ -1,8 +1,6 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
-use App\Http\Controllers\Training\TrainingModuleController;
-use App\Http\Controllers\Training\TrainingDataController;
 use App\Livewire\Pages\Courses\Courses;
 use App\Livewire\Pages\Courses\Overview;
 use App\Livewire\Pages\Courses\Pretest;
@@ -11,6 +9,7 @@ use App\Livewire\Pages\EditCourse\CoursesManagement;
 use App\Livewire\Pages\EditCourse\EditCourse;
 use App\Livewire\Pages\Survey\Survey;
 use App\Livewire\Pages\Survey\SurveyManagement;
+use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\Schedule;
@@ -48,4 +47,7 @@ Route::middleware('auth')->group(function () {
     // Survey
     Route::get('/survey/{id}', Survey::class)->name('survey.index');
     Route::get('/survey/{id}/management', SurveyManagement::class)->name('survey-management.index');
+
+    // Survey Templates
+    Route::get('/survey-template', SurveyTemplate::class)->name('survey-template.index');
 });

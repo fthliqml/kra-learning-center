@@ -12,7 +12,6 @@ return new class extends Migration {
     {
         Schema::create('survey_questions', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('template_id')->constrained('survey_templates');
             $table->text('text');
             $table->integer('order');
             $table->timestamps();

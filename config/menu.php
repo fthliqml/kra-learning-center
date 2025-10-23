@@ -62,8 +62,8 @@ return [
             'roles' => ['admin', 'instructor'],
         ],
         [
-            'id' => 'survey',
-            'label' => 'Survey',
+            'id' => 'survey-management',
+            'label' => 'Survey Management',
             'icon' => 'document-text',
             'href' => '#',
             'roles' => ['admin', 'instructor'],
@@ -72,6 +72,13 @@ return [
                 ['label' => 'Survey 2', 'href' => '/survey/2/management', 'roles' => ['admin', 'instructor']],
                 ['label' => 'Survey 3', 'href' => '/survey/3/management', 'roles' => ['admin', 'instructor']],
             ],
+        ],
+        [
+            'id' => 'survey-template',
+            'label' => 'Survey Template',
+            'icon' => 'document-duplicate',
+            'href' => '/survey-template',
+            'roles' => ['admin', 'instructor'],
         ],
         [
             'id' => 'survey',

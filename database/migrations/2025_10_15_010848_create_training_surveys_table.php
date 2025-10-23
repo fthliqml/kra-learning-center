@@ -13,7 +13,6 @@ return new class extends Migration {
         Schema::create('training_surveys', function (Blueprint $table) {
             $table->id();
             $table->foreignId('training_id')->constrained('trainings')->onDelete('cascade');
-            $table->foreignId('template_id')->nullable()->constrained('survey_templates')->onDelete('cascade');
             $table->integer('level');
             $table->enum('status', ['completed', 'draft', 'incomplete']);
             $table->timestamps();
