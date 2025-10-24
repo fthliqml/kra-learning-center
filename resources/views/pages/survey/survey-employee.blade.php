@@ -4,12 +4,22 @@
         <h1 class="text-primary text-2xl sm:text-3xl lg:text-4xl font-bold text-center lg:text-start">
             Survey {{ $surveyLevel }}
         </h1>
+
+        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
+            <x-select wire:model="filterStatus" :options="$filterOptions" option-value="value" option-label="label"
+                placeholder="Filter" wire:change="$refresh"
+                class="!h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                icon-right="o-funnel" />
+            <x-search-input placeholder="Search..." class="max-w-md" wire:model.live.debounce.600ms="search" />
+        </div>
     </div>
 
+    <x-skeletons.survey-employee />
+
     {{-- Cards Grid for Employee --}}
-    <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
+    <div wire:loading.remove class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
         @forelse ($surveys as $survey)
-            <div class="card bg-base-100 border border-primary/20 shadow h-full">
+            <div class="card bg-base-100 border border-primary/20 shadow h-48">
                 <div class="card-body p-4 md:p-5 flex flex-col h-full">
                     <div class="flex items-start justify-between gap-3">
                         <div>
@@ -18,6 +28,9 @@
                             </h3>
                             <p class="text-xs md:text-sm text-base-content/60 mt-1">
                                 {{ $survey->date ?? '-' }}
+                            </p>
+                            <p class="text-xs md:text-sm text-base-content/50 mt-1">
+                                {{ $survey->participants }} Participants
                             </p>
                         </div>
                         @php
@@ -36,9 +49,9 @@
                         $type = strtoupper($survey->training?->type ?? '');
                         $groupComp = $survey->training?->group_comp ?? null;
                         $colorClasses = match ($type) {
-                            'IN' => ['badge' => 'border-green-500 bg-green-50'],
-                            'OUT' => ['badge' => 'border-amber-500 bg-amber-50'],
-                            'K-LEARN', 'KLEARN', 'KLEARNING' => ['badge' => 'border-indigo-500 bg-indigo-50'],
+                            'IN' => ['badge' => 'border-green-700 bg-green-50'],
+                            'OUT' => ['badge' => 'border-amber-700 bg-amber-50'],
+                            'K-LEARN', 'KLEARN', 'KLEARNING' => ['badge' => 'border-indigo-700 bg-indigo-50'],
                             default => ['badge' => 'border-primary bg-[#E4F3FF]'],
                         };
                     @endphp
