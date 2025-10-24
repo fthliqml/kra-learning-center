@@ -17,9 +17,9 @@ class SurveyEmployee extends Component
     public $search = '';
     public $filterStatus = '';
 
-    public function mount($id)
+    public function mount($levelId)
     {
-        $this->surveyLevel = (int) $id;
+        $this->surveyLevel = (int) $levelId;
     }
 
     public function surveys()
@@ -68,13 +68,6 @@ class SurveyEmployee extends Component
     {
         // TODO: Implement edit/view survey flow
 
-    }
-
-    public function startSurvey($id): void
-    {
-        // TODO: Redirect to survey filling page when available
-        // $this->redirectRoute('survey.fill', ['id' => $id], navigate: true);
-        $this->dispatch('start-survey', id: $id);
     }
 
     public function render()
