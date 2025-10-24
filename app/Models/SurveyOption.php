@@ -13,7 +13,7 @@ class SurveyOption extends Model
     ];
 
     protected $casts = [
-        'question_id' => 'integer'
+        'question_id' => 'integer',
     ];
 
     /**

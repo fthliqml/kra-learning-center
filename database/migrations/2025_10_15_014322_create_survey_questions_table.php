@@ -13,6 +13,7 @@ return new class extends Migration {
         Schema::create('survey_questions', function (Blueprint $table) {
             $table->id();
             $table->text('text');
+            $table->enum('question_type', ['multiple', 'essay']);
             $table->integer('order');
             $table->timestamps();
         });

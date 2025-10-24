@@ -11,6 +11,7 @@ class SurveyQuestion extends Model
 
     protected $fillable = [
         'text',
+        'question_type',
         'order',
     ];
 
@@ -18,8 +19,8 @@ class SurveyQuestion extends Model
      * Summary of option
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<SurveyOption, SurveyQuestion>
      */
-    public function option()
+    public function options()
     {
-        return $this->hasMany(SurveyOption::class);
+        return $this->hasMany(SurveyOption::class, 'question_id');
     }
 }

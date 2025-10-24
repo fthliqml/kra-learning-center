@@ -47,7 +47,7 @@ Route::middleware('auth')->group(function () {
 
     // Survey
     Route::get('/survey/{levelId}', SurveyEmployee::class)->name('survey.index');
-    Route::get('/survey/{levelId}/take/{surveyId}', TakeSurvey::class)->name('survey.fill');
+    Route::get('/survey/{levelId}/take/{surveyId}', TakeSurvey::class)->name('survey.take');
     Route::get('/survey/{id}/management', SurveyManagement::class)->name('survey-management.index');
 
     // Survey Templates

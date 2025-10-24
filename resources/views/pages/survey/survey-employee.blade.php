@@ -70,7 +70,7 @@
                                 </span>
                             @endif
                         </div>
-                        <a href="{{ route('survey.fill', ['levelId' => $survey->level, 'surveyId' => $survey->id]) }}">
+                        <a href="{{ route('survey.take', ['levelId' => $survey->level, 'surveyId' => $survey->id]) }}">
                             <x-button type="button" class="btn-xs sm:btn-sm border-primary/30 bg-success/10"
                                 icon="o-play" label="Start Survey" />
                         </a>

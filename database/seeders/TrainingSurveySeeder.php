@@ -20,7 +20,6 @@ class TrainingSurveySeeder extends Seeder
     {
         DB::transaction(function () {
 
-
             for ($i = 1; $i <= 3; $i++) {
                 $q = SurveyQuestion::create([
                     'text' => "Question {$i}",
@@ -36,7 +35,6 @@ class TrainingSurveySeeder extends Seeder
                     ]);
                 }
             }
-
 
             // Pick 5 trainings to attach surveys to
             $trainingIds = Training::query()->inRandomOrder()->limit(5)->pluck('id');
