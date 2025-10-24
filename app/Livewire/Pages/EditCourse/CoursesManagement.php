@@ -17,6 +17,7 @@ class CoursesManagement extends Component
     public ?string $filterGroup = null; // new group filter (replacing $filter gradually)
     public ?string $filterStatus = null; // status filter
     public bool $showFilterModal = false;
+    public $currentPage;
 
     public $groupOptions = [
         ['value' => 'BMC', 'label' => 'BMC'],
@@ -41,6 +42,7 @@ class CoursesManagement extends Component
 
     public function closeFilters(): void
     {
+        // TODO : when closing filter, don't apply changes
         $this->showFilterModal = false;
     }
 
@@ -61,6 +63,7 @@ class CoursesManagement extends Component
         $this->showFilterModal = false;
     }
 
+
     public function headers(): array
     {
         return [
@@ -70,6 +73,11 @@ class CoursesManagement extends Component
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center'],
         ];
+    }
+
+    public function updatingPage($value)
+    {
+        $this->currentPage = $value; // set properti publik saat pagination berubah
     }
 
     public function courses()
@@ -94,6 +102,11 @@ class CoursesManagement extends Component
     {
         Course::findOrFail($id)->delete();
         $this->error('Course deleted', position: 'toast-top toast-center');
+    }
+
+    public function mount()
+    {
+        $this->currentPage = 1; // default
     }
 
     public function render()
