@@ -10,9 +10,9 @@ class SurveyManagement extends Component
 {
     public $surveyLevel = 1;
 
-    public function mount($id)
+    public function mount($level)
     {
-        $this->surveyLevel = (int) $id;
+        $this->surveyLevel = (int) $level;
     }
 
     public function headers(): array

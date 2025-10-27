@@ -29,8 +29,9 @@
 
             @scope('cell_action', $survey)
                 <div class="flex gap-2 justify-center">
-                    <x-button icon="o-pencil-square" class="btn-circle btn-ghost bg-tetriary p-2" spinner
-                        wire:click="openEditModal({{ $survey->id }})" />
+                    <a href="{{ route('survey.edit', ['level' => $this->surveyLevel, 'surveyId' => $survey->id]) }}">
+                        <x-button icon="o-pencil-square" class="btn-circle btn-ghost bg-tetriary p-2" />
+                    </a>
                 </div>
             @endscope
         </x-table>

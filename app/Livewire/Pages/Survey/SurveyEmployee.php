@@ -17,9 +17,9 @@ class SurveyEmployee extends Component
     public $search = '';
     public $filterStatus = '';
 
-    public function mount($levelId)
+    public function mount($level)
     {
-        $this->surveyLevel = (int) $levelId;
+        $this->surveyLevel = (int) $level;
     }
 
     public function surveys()

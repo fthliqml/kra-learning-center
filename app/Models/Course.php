@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Facades\Auth;
- use Carbon\Carbon;
+use Carbon\Carbon;
 use App\Models\Section;
 use App\Models\Test;
 
@@ -136,7 +136,8 @@ class Course extends Model
         $units = 0;
         // Pretest unit
         $hasPretest = Test::where('course_id', $this->id)->where('type', 'pretest')->exists();
-        if ($hasPretest) $units += 1;
+        if ($hasPretest)
+            $units += 1;
 
         // Sections as main units (fallback to topics count)
         $sectionCount = Section::whereHas('topic', fn($q) => $q->where('course_id', $this->id))->count();
