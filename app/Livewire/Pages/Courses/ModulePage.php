@@ -16,22 +16,6 @@ class ModulePage extends Component
     public function mount(Course $course)
     {
         $userId = Auth::id();
-        // Assigned via TrainingAssessment within the training schedule window
-        $today = now()->startOfDay();
-        $assigned = $course->trainings()
-            ->where(function ($w) use ($today) {
-                $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
-            })
-            ->where(function ($w) use ($today) {
-                $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
-            })
-            ->whereHas('assessments', function ($a) use ($userId) {
-                $a->where('employee_id', $userId);
-            })
-            ->exists();
-        if (! $assigned) {
-            abort(403, 'You are not assigned to this course.');
-        }
 
         // Ensure enrollment for progress tracking exists and mark in_progress on first engagement
         if ($userId) {

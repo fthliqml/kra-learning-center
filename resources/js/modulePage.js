@@ -205,17 +205,20 @@
     function setMuteIcon(isMuted, vol){
       if (!btnMute) return;
       var v = (typeof vol === 'number') ? vol : null;
-      var isSilent = isMuted || (v !== null && v <= 0);
       var iMuted = btnMute.querySelector('[data-yt-icon-variant="muted"]');
       var iHigh = btnMute.querySelector('[data-yt-icon-variant="vol-high"]');
       var iMid = btnMute.querySelector('[data-yt-icon-variant="vol-mid"]');
       var iLow = btnMute.querySelector('[data-yt-icon-variant="vol-low"]');
       // Decide visible icon
       var show = { muted: false, high: false, mid: false, low: false };
-      if (isSilent) show.muted = true;
-      else if (v >= 70) show.high = true;
-      else if (v >= 30) show.mid = true;
-      else show.low = true;
+      if (isMuted) {
+        show.muted = true;
+      } else {
+        var vv = (v == null ? 100 : v);
+        if (vv >= 70) show.high = true;
+        else if (vv >= 30) show.mid = true;
+        else show.low = true; // show low icon for 0..29 even if not muted
+      }
   if (iMuted) { iMuted.classList.toggle('hidden', !show.muted); iMuted.style.display = show.muted ? '' : 'none'; }
   if (iHigh) { iHigh.classList.toggle('hidden', !show.high); iHigh.style.display = show.high ? '' : 'none'; }
   if (iMid)  { iMid.classList.toggle('hidden', !show.mid);  iMid.style.display = show.mid  ? '' : 'none'; }
@@ -282,21 +285,26 @@
       });
     }
     // Volume slider toggle + mute behavior
-    var volHideTimer = 0; var VOL_AUTOHIDE_MS = 2000; // 2s
-    function showVol(){ if (!rngVol) return; rngVol.classList.remove('hidden'); rngVol.style.display = ''; }
-    function hideVol(){ if (!rngVol) return; rngVol.classList.add('hidden'); rngVol.style.display = 'none'; }
-    function scheduleHide(){ clearTimeout(volHideTimer); volHideTimer = setTimeout(hideVol, VOL_AUTOHIDE_MS); }
+  var volHideTimer = 0; var VOL_AUTOHIDE_MS = 2000; // 2s
+  function showVol(){ if (!rngVol) return; rngVol.classList.remove('hidden'); rngVol.style.display = ''; }
+  function hideVol(){ if (!rngVol) return; if (!volAutoHideEnabled) return; rngVol.classList.add('hidden'); rngVol.style.display = 'none'; }
+  function scheduleHide(){ if (!volAutoHideEnabled) return; clearTimeout(volHideTimer); volHideTimer = setTimeout(hideVol, VOL_AUTOHIDE_MS); }
     if (btnMute) {
       btnMute.addEventListener('click', function(){
         try {
           if (!rngVol) return;
           // If slider hidden: just reveal it, don't toggle mute yet
           var isHidden = rngVol.classList.contains('hidden') || rngVol.style.display === 'none';
-          if (isHidden) {
-            showVol(); scheduleHide(); return;
+          if (isHidden) { showVol(); scheduleHide(); return; }
+          var wasMuted = false; var volNow = 0;
+          try { wasMuted = player.isMuted(); volNow = player.getVolume() || 0; } catch(_){}
+          if (wasMuted) {
+            player.unMute();
+            // If unmuted but volume is zero, set a sensible default volume
+            if (volNow <= 0) { try { player.setVolume(50); volNow = 50; } catch(_){} }
+          } else {
+            player.mute();
           }
-          // If visible: toggle mute
-          if (player.isMuted()) player.unMute(); else player.mute();
           setMuteIcon(player.isMuted(), player.getVolume());
           scheduleHide();
         } catch (e) {}
@@ -469,13 +477,16 @@
     function hideMenu(){ if (!menuQ) return; menuQ.classList.add('hidden'); menuQ.style.display = 'none'; }
 
     // Auto-hide whole controls on inactivity; show on tap/click
-    var autoHideEnabled = controls.hasAttribute('data-yt-autohide');
-    var hideTimer = 0; var AUTOHIDE_MS = 2500;
-    function showControls(){ controls.style.opacity = '1'; }
-    function hideControls(){ controls.style.opacity = '0'; hideMenu(); hideVol(); }
-    function scheduleControlsHide(){ if (!autoHideEnabled) return; clearTimeout(hideTimer); hideTimer = setTimeout(hideControls, AUTOHIDE_MS); }
-    function cancelControlsHide(){ if (!autoHideEnabled) return; clearTimeout(hideTimer); }
-    if (autoHideEnabled) {
+  var autohideAttr = controls.getAttribute('data-yt-autohide');
+  var autoHideEnabled = controls.hasAttribute('data-yt-autohide') && autohideAttr !== '0' && autohideAttr !== 'false';
+  // Volume auto-hide follows same flag so it can be kept visible when disabled
+  var volAutoHideEnabled = autoHideEnabled;
+  var hideTimer = 0; var AUTOHIDE_MS = 2500;
+  function showControls(){ controls.style.opacity = '1'; }
+  function hideControls(){ controls.style.opacity = '0'; hideMenu(); if (volAutoHideEnabled) hideVol(); }
+  function scheduleControlsHide(){ if (!autoHideEnabled) return; clearTimeout(hideTimer); hideTimer = setTimeout(hideControls, AUTOHIDE_MS); }
+  function cancelControlsHide(){ if (!autoHideEnabled) return; clearTimeout(hideTimer); }
+  if (autoHideEnabled) {
       // Interactions that should keep controls visible
       ['mousemove','pointermove','touchstart','keydown'].forEach(function(evt){ document.addEventListener(evt, function(){ showControls(); scheduleControlsHide(); }, { passive: true }); });
       // Show controls on container tap/click
