@@ -9,6 +9,7 @@ use App\Models\Trainer;
 use App\Models\Training;
 use App\Models\TrainingAssessment;
 use App\Models\TrainingAttendance;
+use App\Models\TrainingSurvey;
 use Livewire\Component;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -594,6 +595,15 @@ class TrainingFormModal extends Component
             'end_date' => $endDate,
             'course_id' => $this->training_type === 'K-LEARN' ? $this->course_id : null,
         ]);
+
+        // Create surveys for each level (1,2,3) with draft status and no questions yet
+        for ($level = 1; $level <= 3; $level++) {
+            TrainingSurvey::create([
+                'training_id' => $training->id,
+                'level' => $level,
+                'status' => TrainingSurvey::STATUS_DRAFT,
+            ]);
+        }
 
         $sessions = [];
         if ($startDate && $endDate) {
