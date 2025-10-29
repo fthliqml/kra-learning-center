@@ -16,6 +16,18 @@ function initPlyr() {
         if (!els || !els.length) return;
         const players = Plyr.setup(els, {
             hideControls: true,
+            seekTime: 10, // rewind/fast-forward step (we only show rewind)
+            // Hide timeline bar, but keep time labels and add a rewind button
+            controls: [
+                'play-large',
+                'play',
+                'rewind',
+                'current-time',
+                'duration',
+                'mute',
+                'volume',
+                'fullscreen'
+            ],
             youtube: {
                 rel: 0,
                 modestbranding: 1,
@@ -34,14 +46,15 @@ function initPlyr() {
                 const host = p.elements?.original || hostEls[idx] || null;
                 const endId = host?.getAttribute?.('data-end-id') || null;
                 p.on('ended', () => {
-                    if (endId) {
-                        window.dispatchEvent(new CustomEvent('module-video-ended', { detail: { id: endId } }));
-                    }
+                    if (endId) window.dispatchEvent(new CustomEvent('module-video-ended', { detail: { id: endId } }));
                 });
                 // Remove resolution menu: keep Plyr's default gear (speed); do not attach custom quality menu
                 // try { if (p?.provider === 'youtube') { p.on('ready', () => attachYoutubeQualityMenu(p, host)); } } catch(_){ }
                 // Add shield to suppress YT overlays (title, share, watch later, endscreen)
                 try { if (p?.provider === 'youtube') { p.on('ready', () => attachYoutubeShield(p)); } } catch(_){}
+
+                // Ensure rewind + time labels sit directly beside play/pause
+                try { p.on('ready', () => repositionControls(p)); } catch(_){}
 
                 // --- Anti-forward skip, allow rewind ---
                 let maxWatched = 0;
@@ -77,6 +90,8 @@ function initPlyr() {
                 }
                 p.on('seeking', clampForward);
                 p.on('seeked', clampForward);
+                // Lock playback rate to 1x in case external code tries to change it
+                try { p.on('ratechange', () => { try { if (Math.abs((p.speed || 1) - 1) > 1e-3) p.speed = 1; } catch(_){} }); } catch(_){}
                 // Allow rewind via keyboard, block forward via keyboard
                 try {
                     if (container) {
@@ -125,6 +140,24 @@ function attachYoutubeShield(player){
         // Block context menu
         shield.addEventListener('contextmenu', (e) => { e.preventDefault(); e.stopPropagation(); return false; });
         wrapper.appendChild(shield);
+    } catch (e) {}
+}
+
+// Move current-time, duration, and rewind right next to the play/pause button
+function repositionControls(player){
+    try {
+        const bar = player?.elements?.controls; if (!bar) return;
+        const sel = (q) => bar.querySelector(q);
+        const playBtn = sel('[data-plyr="play"]');
+        const rewindBtn = sel('[data-plyr="rewind"]');
+        const curTime = sel('[data-plyr="current-time"]');
+        const dur = sel('[data-plyr="duration"]');
+        if (!playBtn) return;
+        const insertAfter = (ref, node) => { if (!ref || !node || ref === node) return; ref.parentNode.insertBefore(node, ref.nextSibling); };
+        // Order: play, rewind, current-time, duration
+        if (rewindBtn) insertAfter(playBtn, rewindBtn);
+        if (curTime) insertAfter(rewindBtn || playBtn, curTime);
+        if (dur) insertAfter(curTime || rewindBtn || playBtn, dur);
     } catch (e) {}
 }
 
