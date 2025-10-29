@@ -27,58 +27,67 @@
                     @endif
                 </div>
             </div>
-            <x-search-input placeholder="Search..." class="max-w-md" wire:model.live="search" />
+            <x-search-input placeholder="Search..." class="max-w-md" wire:model.live.debounce.600ms="search" />
         </div>
     </div>
 
+    <x-skeletons.courses-management-table />
+
     {{-- Table --}}
-    <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
-        <x-table :headers="$headers" :rows="$courses" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
-            with-pagination>
-            {{-- Custom cell untuk kolom Nomor --}}
-            @scope('cell_no', $course)
-                {{ $course->no ?? $loop->iteration }}
-            @endscope
+    @if ($courses->isNotEmpty())
+        <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+            <x-table :headers="$headers" :rows="$courses" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
+                with-pagination>
+                {{-- Custom cell untuk kolom Nomor --}}
+                @scope('cell_no', $course)
+                    {{ $course->no ?? $loop->iteration }}
+                @endscope
 
-            {{-- Group Comp from related training --}}
-            @scope('cell_group_comp', $course)
-                {{ $course->group_comp ?? '-' }}
-            @endscope
+                {{-- Group Comp from related training --}}
+                @scope('cell_group_comp', $course)
+                    {{ $course->group_comp ?? '-' }}
+                @endscope
 
-            {{-- Status badge --}}
-            @scope('cell_status', $course)
-                @php
-                    $status = $course->status ?? 'inactive';
-                    // Map to badge classes (no variant prop)
-                    $badgeClass = match ($status) {
-                        'draft' => 'badge-warning',
-                        'assigned' => 'badge-primary bg-primary/95',
-                        'inactive' => ' badge primary badge-soft',
-                    };
-                @endphp
-                <x-badge :value="str($status)->title()" :class="$badgeClass" />
-            @endscope
+                {{-- Status badge --}}
+                @scope('cell_status', $course)
+                    @php
+                        $status = $course->status ?? 'inactive';
+                        $badgeClass = match ($status) {
+                            'draft' => 'badge-warning',
+                            'assigned' => 'badge-primary bg-primary/95',
+                            'inactive' => 'badge primary badge-soft',
+                        };
+                    @endphp
+                    <x-badge :value="str($status)->title()" :class="$badgeClass" />
+                @endscope
 
-            {{-- Custom cell untuk kolom Action --}}
-            @scope('cell_action', $course)
-                <div class="flex gap-2 justify-center">
-                    <!-- Edit -->
-                    <x-button tooltip-left="Edit Course" icon="o-pencil-square"
-                        class="btn-circle btn-ghost p-2 bg-tetriary hover:opacity-85" spinner wire:navigate
-                        href="{{ route('edit-course.index', ['course' => $course->id]) }}" />
-                    <!-- Delete -->
-                    <x-button icon="o-trash" tooltip-right="Delete Course"
-                        class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
-                        wire:click="$dispatch('confirm', {
+                {{-- Custom cell untuk kolom Action --}}
+                @scope('cell_action', $course)
+                    <div class="flex gap-2 justify-center">
+                        <!-- Edit -->
+                        <x-button tooltip-left="Edit Course" icon="o-pencil-square"
+                            class="btn-circle btn-ghost p-2 bg-tetriary hover:opacity-85" spinner wire:navigate
+                            href="{{ route('edit-course.index', ['course' => $course->id]) }}" />
+                        <!-- Delete -->
+                        <x-button icon="o-trash" tooltip-right="Delete Course"
+                            class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
+                            wire:click="$dispatch('confirm', {
                             title: 'Are you sure you want to delete?',
                             text: 'This action is permanent and cannot be undone.',
                             action: 'deleteCourse',
                             id: {{ $course->id }}
                         })" />
-                </div>
-            @endscope
-        </x-table>
-    </div>
+                    </div>
+                @endscope
+            </x-table>
+        </div>
+    @else
+        <div class="col-span-full">
+            <div class="p-6 border border-dashed rounded-lg text-center text-sm text-base-content/70 bg-base-100">
+                No courses available.
+            </div>
+        </div>
+    @endif
 
     {{-- Filter Modal --}}
     @if ($showFilterModal)

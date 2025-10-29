@@ -3,10 +3,26 @@
 if (!function_exists('formatRangeDate')) {
     function formatRangeDate($startDate, $endDate)
     {
-        $start = new DateTime($startDate);
-        $end = new DateTime($endDate);
+        $start = $startDate instanceof DateTimeInterface ? (clone $startDate) : new DateTime($startDate);
+        $end = $endDate instanceof DateTimeInterface ? (clone $endDate) : new DateTime($endDate);
 
-        return $start->format('d') . '-' . $end->format('d') . ' ' . $end->format('F Y');
+        // Same day
+        if ($start->format('Y-m-d') === $end->format('Y-m-d')) {
+            return $start->format('d F Y');
+        }
+
+        // Same month and year -> 06 - 08 November 2025
+        if ($start->format('Y-m') === $end->format('Y-m')) {
+            return $start->format('d') . ' - ' . $end->format('d F Y');
+        }
+
+        // Same year, different month -> 28 November - 02 December 2025
+        if ($start->format('Y') === $end->format('Y')) {
+            return $start->format('d F') . ' - ' . $end->format('d F Y');
+        }
+
+        // Different year -> 31 December 2025 - 02 January 2026
+        return $start->format('d F Y') . ' - ' . $end->format('d F Y');
     }
 }
 
