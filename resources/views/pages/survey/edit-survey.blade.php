@@ -79,12 +79,16 @@
             <x-button type="button" icon="o-plus" wire:click="addQuestion" class="border-gray-400">Add
                 Question</x-button>
 
-            <x-ui.button type="button" variant="primary" wire:click="save">
+            <x-ui.button type="button" variant="primary" wire:click="saveDraft" wire:loading.attr="disabled"
+                wire:target="saveDraft">
                 <x-icon name="o-bookmark" />
-                Save
+                <span wire:loading.remove wire:target="saveDraft">Save</span>
+                <span wire:loading wire:target="saveDraft">Saving...</span>
             </x-ui.button>
 
         </div>
     </div>
+
+    <x-loading-overlay text="Saving survey questions..." target="saveDraft" />
 
 </div>

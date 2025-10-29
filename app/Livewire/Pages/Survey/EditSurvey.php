@@ -4,11 +4,15 @@ namespace App\Livewire\Pages\Survey;
 
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Mary\Traits\Toast;
+use Illuminate\Support\Facades\DB;
 use App\Models\TrainingSurvey;
 use App\Models\SurveyQuestion;
+use App\Models\SurveyOption;
 
 class EditSurvey extends Component
 {
+    use Toast;
     public $surveyLevel = 1;
     public $surveyId = 1;
 
@@ -113,9 +117,96 @@ class EditSurvey extends Component
         $this->questions = $new;
     }
 
-    public function save()
+    public function saveDraft(): void
     {
-        dump($this->questions);
+        // Reset previous errors
+        $this->errorQuestionIndexes = [];
+
+        // Validate structure via service
+        $validator = new \App\Services\SurveyQuestionsValidator();
+        $result = $validator->validate($this->questions);
+        $errors = $result['errors'];
+        $this->errorQuestionIndexes = $result['errorQuestionIndexes'];
+
+        if (!empty($errors)) {
+            $bulletLines = collect($errors)->take(6)->map(fn($e) => '• ' . $e);
+            $display = $bulletLines->implode("\n");
+            if (count($errors) > 6) {
+                $display .= "\n..." . (count($errors) - 6) . " more errors";
+            }
+            $htmlMessage = "<div style=\"white-space:pre-line; text-align:left\"><strong>Validation failed:</strong>\n" . e($display) . '</div>';
+            $this->error(
+                $htmlMessage,
+                timeout: 10000,
+                position: 'toast-top toast-center'
+            );
+            return;
+        }
+
+        // If all questions removed somehow (should be caught earlier) block save
+        if (empty($this->questions)) {
+            $this->error(
+                'Cannot save empty survey. Add at least one question.',
+                timeout: 6000,
+                position: 'toast-top toast-center'
+            );
+            return;
+        }
+
+        // Trim question & option texts before persistence
+        foreach ($this->questions as &$q) {
+            $q['text'] = trim($q['text'] ?? '');
+            if (($q['question_type'] ?? '') === 'multiple') {
+                $q['options'] = array_map(fn($o) => trim($o), $q['options'] ?? []);
+            } else {
+                $q['options'] = []; // ensure essay has no options
+            }
+        }
+        unset($q);
+
+        DB::transaction(function () {
+            // Load the survey
+            $survey = TrainingSurvey::find($this->surveyId);
+            if (!$survey) {
+                $this->error('Survey not found.', timeout: 6000, position: 'toast-top toast-center');
+                return;
+            }
+
+            // Wipe existing options first to avoid foreign key constraint
+            SurveyOption::whereHas('question', fn($q) => $q->where('training_survey_id', $survey->id))->delete();
+
+            // Wipe existing questions (cascade deletes options if set, but we did it manually)
+            $survey->questions()->delete();
+
+            foreach ($this->questions as $qOrder => $q) {
+                $questionModel = SurveyQuestion::create([
+                    'training_survey_id' => $survey->id,
+                    'question_type' => in_array($q['question_type'] ?? '', ['multiple', 'essay']) ? $q['question_type'] : 'multiple',
+                    'text' => $q['text'] ?: 'Untitled Question',
+                    'order' => $qOrder,
+                ]);
+
+                if (($q['question_type'] ?? '') === 'multiple') {
+                    foreach (($q['options'] ?? []) as $optIndex => $optText) {
+                        $optText = trim($optText);
+                        if ($optText === '')
+                            continue; // skip empty placeholder
+                        SurveyOption::create([
+                            'question_id' => $questionModel->id,
+                            'text' => $optText,
+                            'order' => $optIndex,
+                        ]);
+                    }
+                }
+            }
+        });
+
+        $this->errorQuestionIndexes = []; // clear highlights on success
+        $this->success(
+            'Survey questions saved successfully',
+            timeout: 4000,
+            position: 'toast-top toast-center'
+        );
     }
 
     public function back()
