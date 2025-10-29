@@ -40,9 +40,12 @@ class TrainingSeeder extends Seeder
         ]);
 
         // 2. Employees pool for assessments/attendances
-        $employees = User::inRandomOrder()
-            ->limit(10)
-            ->get();
+        $employees = User::inRandomOrder()->limit(10)->get();
+        $employeeUser = User::where('email', 'employee@example.com')->first();
+        if ($employeeUser && !$employees->contains('id', $employeeUser->id)) {
+            $employees->pop(); // remove one to make space
+            $employees->push($employeeUser);
+        }
 
         // 3. Create 6 trainings with sessions, assessments, and attendances
         for ($i = 1; $i <= 6; $i++) {

@@ -74,5 +74,22 @@ class CourseAssignmentSeeder extends Seeder
         } else {
             $this->command?->line('No new user-course assignments inserted.');
         }
+
+        // Ensure employee@example.com has some courses for demo
+        $employeeUser = User::where('email', 'employee@example.com')->first();
+        if ($employeeUser) {
+            $assignedCourses = UserCourse::where('user_id', $employeeUser->id)->pluck('course_id')->toArray();
+            $availableCourses = Course::whereNotIn('id', $assignedCourses)->get();
+            $toAssign = $availableCourses->take(5); // assign up to 5 courses
+            foreach ($toAssign as $course) {
+                UserCourse::create([
+                    'user_id' => $employeeUser->id,
+                    'course_id' => $course->id,
+                    'current_step' => 0,
+                    'status' => 'not_started',
+                ]);
+                $totalInserted++;
+            }
+        }
     }
 }
