@@ -7,6 +7,8 @@ use App\Models\Test;
 use App\Models\TestAttempt;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
 class ModulePage extends Component
 {
     public Course $course;
@@ -111,24 +113,61 @@ class ModulePage extends Component
         $userId = Auth::id();
         if (!$userId) return null;
 
-        // Fetch enrollment
-        $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
-        if (!$enrollment) return null;
-
         $totalUnits = $this->computeTotalUnits();
         if ($totalUnits <= 0) return null;
 
-        $current = (int) ($enrollment->current_step ?? 0);
-        if ($current < $totalUnits) {
-            $enrollment->current_step = $current + 1;
-            // Update status heuristically
-            if ($enrollment->current_step >= $totalUnits) {
+        // Atomic increment with idempotency per section: only advance at most once for current active section
+        DB::transaction(function () use ($userId, $totalUnits) {
+            // Lock enrollment row to prevent race conditions on rapid clicks
+            $enrollment = $this->course->userCourses()
+                ->where('user_id', $userId)
+                ->lockForUpdate()
+                ->first();
+            if (!$enrollment) return;
+
+            // Determine the step index corresponding to finishing the current active section
+            $hasPretest = Test::where('course_id', $this->course->id)->where('type', 'pretest')->exists();
+            $pretestUnits = $hasPretest ? 1 : 0;
+
+            // Build ordered sections list
+            $orderedSections = [];
+            foreach ($this->course->learningModules as $topic) {
+                foreach ($topic->sections as $sec) {
+                    $orderedSections[] = $sec->id;
+                }
+            }
+
+            $sectionIndex = array_search($this->activeSectionId, $orderedSections, true);
+            // If section not found, fallback to normal increment of 1
+            $targetStep = null;
+            if ($sectionIndex !== false) {
+                // Completing this section means step should be pretestUnits + (index+1)
+                $targetStep = min($totalUnits, $pretestUnits + ($sectionIndex + 1));
+            }
+
+            $current = (int) ($enrollment->current_step ?? 0);
+            if ($targetStep !== null) {
+                if ($current < $targetStep) {
+                    $enrollment->current_step = $targetStep;
+                } else {
+                    // Already recorded completion for this section; don't advance again
+                }
+            } else {
+                // Fallback: single-step increment without skipping beyond total
+                if ($current < $totalUnits) {
+                    $enrollment->current_step = $current + 1;
+                }
+            }
+
+            // Update status based on resultant step
+            $newStep = (int) $enrollment->current_step;
+            if ($newStep >= $totalUnits) {
                 $enrollment->status = 'completed';
-            } elseif ($enrollment->current_step > 0) {
+            } elseif ($newStep > 0) {
                 $enrollment->status = 'in_progress';
             }
             $enrollment->save();
-        }
+        });
 
         // After completing, navigate to the next section (or next topic's first section)
         $this->goToNextSection();
