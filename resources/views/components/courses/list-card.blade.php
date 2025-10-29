@@ -62,7 +62,7 @@
                     </div>
 
                     {{-- Progress --}}
-                    @if ($assignment)
+                    @if ($progress > 0)
                         <div class="mt-3">
                             <div class="h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
                                 aria-label="Course progress" aria-valuemin="0" aria-valuemax="100"

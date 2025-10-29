@@ -42,7 +42,7 @@ if (window.matchMedia('(max-width: 639px)').matches) { $wire.set('perPage', 8) }
                 wire:model.live="search" />
 
             <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
-                placeholder="Filter"
+                placeholder="All"
                 class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer rounded-full shadow-sm [&_svg]:!opacity-100"
                 icon-right="o-funnel" />
         </div>

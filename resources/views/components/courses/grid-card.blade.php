@@ -3,7 +3,7 @@
     class="group cursor-pointer bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden hover:shadow-md hover:border-primary/20 focus-within:ring-2 ring-primary/20 transition">
 
     {{-- Thumbnail --}}
-    <div  class="px-3 sm:px-4 pt-3 sm:pt-4">
+    <div class="px-3 sm:px-4 pt-3 sm:pt-4">
         <div class="w-full aspect-[16/9] bg-gray-100 overflow-hidden rounded-lg">
             @if (!empty($course->thumbnail_url))
                 <img src="{{ Storage::url($course->thumbnail_url) }}" alt="{{ $course->title }}"
@@ -63,7 +63,7 @@
             $assignment = $course->userCourses->first();
             $progress = (int) ($course->progress_percent ?? 0);
         @endphp
-        @if ($assignment ?? false)
+        @if ($progress > 0)
             <div class="mt-2 sm:mt-3" x-data>
                 <div class="h-1.5 sm:h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
                     aria-label="Course progress" aria-valuemin="0" aria-valuemax="100"
