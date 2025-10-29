@@ -44,6 +44,15 @@ class TrainingSurvey extends Model
     }
 
     /**
+     * Summary of questions
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany<SurveyQuestion, TrainingSurvey>
+     */
+    public function questions()
+    {
+        return $this->hasMany(SurveyQuestion::class, 'training_survey_id');
+    }
+
+    /**
      * Summary of scopeStatus
      * @param mixed $query
      * @param string $status

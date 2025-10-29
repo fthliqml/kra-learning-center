@@ -12,6 +12,7 @@ return new class extends Migration {
     {
         Schema::create('survey_questions', function (Blueprint $table) {
             $table->id();
+            $table->foreignId('training_survey_id')->constrained('training_surveys');
             $table->text('text');
             $table->enum('question_type', ['multiple', 'essay']);
             $table->integer('order');

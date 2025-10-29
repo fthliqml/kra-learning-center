@@ -20,22 +20,6 @@ class TrainingSurveySeeder extends Seeder
     {
         DB::transaction(function () {
 
-            for ($i = 1; $i <= 3; $i++) {
-                $q = SurveyQuestion::create([
-                    'text' => "Question {$i}",
-                    'order' => $i,
-                ]);
-                // 4 options (Likert scale-like)
-                $options = ['Strongly Disagree', 'Disagree', 'Agree', 'Strongly Agree'];
-                foreach ($options as $oi => $optText) {
-                    SurveyOption::create([
-                        'question_id' => $q->id,
-                        'text' => $optText,
-                        'order' => $oi + 1,
-                    ]);
-                }
-            }
-
             // Pick 5 trainings to attach surveys to
             $trainingIds = Training::query()->inRandomOrder()->limit(5)->pluck('id');
             // If not enough trainings, create 5 simple placeholders
@@ -65,11 +49,30 @@ class TrainingSurveySeeder extends Seeder
             ];
 
             foreach ($trainingIds->values() as $idx => $trainingId) {
-                TrainingSurvey::create([
+                $survey = TrainingSurvey::create([
                     'training_id' => $trainingId,
                     'level' => $levels[$idx] ?? 1,
                     'status' => $statuses[$idx] ?? TrainingSurvey::STATUS_DRAFT,
                 ]);
+
+                // Create 3 questions for each survey
+                for ($i = 1; $i <= 3; $i++) {
+                    $q = SurveyQuestion::create([
+                        'training_survey_id' => $survey->id,
+                        'text' => "Question {$i} for Survey {$survey->id}",
+                        'question_type' => 'multiple',
+                        'order' => $i,
+                    ]);
+                    // 4 options (Likert scale-like)
+                    $options = ['Strongly Disagree', 'Disagree', 'Agree', 'Strongly Agree'];
+                    foreach ($options as $oi => $optText) {
+                        SurveyOption::create([
+                            'question_id' => $q->id,
+                            'text' => $optText,
+                            'order' => $oi + 1,
+                        ]);
+                    }
+                }
             }
         });
     }
