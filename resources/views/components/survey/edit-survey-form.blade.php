@@ -1,16 +1,4 @@
 <div>
-    <div class="w-full flex justify-between mb-5 lg:mb-9 items-center">
-        <div class="flex items-center gap-4">
-            <x-button class="btn btn-ghost btn-sm" icon="o-arrow-left" wire:click="back">Back</x-button>
-            <h1 class="text-primary text-2xl sm:text-3xl lg:text-4xl font-bold text-center lg:text-start">
-                Edit Survey Level {{ $surveyLevel }} - {{ $surveyId }}
-            </h1>
-        </div>
-
-        <x-button class="btn btn-outline btn-primary w-fit" icon="o-arrow-down-tray">Import From
-            Template</x-button>
-    </div>
-
     <div class="space-y-4">
         <div id="survey-list" class="space-y-4" x-init="(() => {
             const list = $el;

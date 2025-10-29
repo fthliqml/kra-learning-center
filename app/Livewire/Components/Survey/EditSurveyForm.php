@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Pages\Survey;
+namespace App\Livewire\Components\Survey;
 
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -10,7 +10,7 @@ use App\Models\TrainingSurvey;
 use App\Models\SurveyQuestion;
 use App\Models\SurveyOption;
 
-class EditSurvey extends Component
+class EditSurveyForm extends Component
 {
     use Toast;
     public $surveyLevel = 1;
@@ -209,15 +209,8 @@ class EditSurvey extends Component
         );
     }
 
-    public function back()
+    public function mount()
     {
-        return redirect()->route('survey-management.index', ['level' => $this->surveyLevel]);
-    }
-
-    public function mount($level, $surveyId)
-    {
-        $this->surveyLevel = (int) $level;
-        $this->surveyId = (int) $surveyId;
         $this->hydrateFromSurvey();
         if (empty($this->questions)) {
             $this->questions = [$this->makeQuestion()];
@@ -226,7 +219,7 @@ class EditSurvey extends Component
 
     public function render()
     {
-        return view('pages.survey.edit-survey', [
+        return view('components.survey.edit-survey-form', [
         ]);
     }
 }

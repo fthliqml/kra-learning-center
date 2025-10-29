@@ -7,9 +7,9 @@ use App\Livewire\Pages\Courses\Pretest;
 use App\Livewire\Pages\Courses\ModulePage;
 use App\Livewire\Pages\EditCourse\CoursesManagement;
 use App\Livewire\Pages\EditCourse\EditCourse;
-use App\Livewire\Pages\Survey\EditSurvey;
 use App\Livewire\Pages\Survey\SurveyEmployee;
 use App\Livewire\Pages\Survey\SurveyManagement;
+use App\Livewire\Pages\Survey\SurveyPreview;
 use App\Livewire\Pages\Survey\TakeSurvey;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Training\DataTrainer;
@@ -50,7 +50,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/survey/{level}', SurveyEmployee::class)->name('survey.index');
     Route::get('/survey/{level}/take/{surveyId}', TakeSurvey::class)->name('survey.take');
     Route::get('/survey/{level}/management', SurveyManagement::class)->name('survey-management.index');
-    Route::get('/survey/{level}/edit/{surveyId}', EditSurvey::class)->name('survey.edit');
+    Route::get('/survey/{level}/edit/{surveyId}', SurveyPreview::class)->name('survey.edit');
 
     // Survey Templates
     Route::get('/survey-template', SurveyTemplate::class)->name('survey-template.index');
