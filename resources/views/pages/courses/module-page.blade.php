@@ -73,44 +73,35 @@
                     @endif
 
                     @if ($hasReading)
-                        <div class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow"
-                            x-data="Object.assign({ open: true }, window.readingAccordionState('reading_open_course_{{ $course->id ?? 'c' }}_section_{{ $activeSection->id ?? 's' }}'))">
-                            <button type="button" @click="open = !open" :aria-expanded="open.toString()"
-                                class="w-full px-4 md:px-6 py-3 md:py-4 flex items-center justify-between text-left">
+                        <div
+                            class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
+                            <div class="w-full px-4 md:px-6 py-3 md:py-4 flex items-center justify-between text-left">
                                 <h3 class="text-sm font-semibold text-gray-900">Reading</h3>
-                                <svg class="size-4 text-gray-500 transition-transform" :class="open ? 'rotate-180' : ''"
-                                    viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                    <path fill-rule="evenodd"
-                                        d="M5.23 7.21a.75.75 0 011.06.02L10 11.127l3.71-3.896a.75.75 0 111.08 1.04l-4.24 4.46a.75.75 0 01-1.08 0l-4.24-4.46a.75.75 0 01.02-1.06z"
-                                        clip-rule="evenodd" />
-                                </svg>
-                            </button>
-                            <div x-show="open" x-collapse x-cloak>
-                                <div class="space-y-4">
-                                    @foreach ($readingResources as $doc)
-                                        @php $url = rsrc_url($doc->url ?? ''); @endphp
-                                        <article class="px-4 pb-4 rounded-lg text-sm text-gray-800">
-                                            @if ($url)
-                                                @if (Str::endsWith(strtolower($url), ['.pdf']))
-                                                    <div x-data="{ ready: false }" x-init="$nextTick(() => { if (window.__initFlipbook) window.__initFlipbook($el) })">
-                                                        <div class="flipbook-root relative w-full h-[35vh] md:h-[80vh] bg-white rounded overflow-hidden border border-gray-200 flex items-center justify-center"
-                                                            data-pdf-url="{{ $url }}" tabindex="0"
-                                                            role="application" aria-label="Flipbook viewer">
-                                                            <div
-                                                                class="pdf-loading absolute inset-0 flex items-center justify-center text-sm text-gray-500 pointer-events-none">
-                                                                Memuat viewer...
-                                                            </div>
-                                                            <div class="flip-container w-full h-full"></div>
+                            </div>
+                            <div class="space-y-4">
+                                @foreach ($readingResources as $doc)
+                                    @php $url = rsrc_url($doc->url ?? ''); @endphp
+                                    <article class="px-4 pb-4 rounded-lg text-sm text-gray-800">
+                                        @if ($url)
+                                            @if (Str::endsWith(strtolower($url), ['.pdf']))
+                                                <div x-data="{ ready: false }" x-init="$nextTick(() => { if (window.__initFlipbook) window.__initFlipbook($el) })">
+                                                    <div class="flipbook-root relative w-full h-[35vh] md:h-[80vh] bg-white rounded overflow-hidden border border-gray-200 flex items-center justify-center"
+                                                        data-pdf-url="{{ $url }}" tabindex="0"
+                                                        role="application" aria-label="Flipbook viewer">
+                                                        <div
+                                                            class="pdf-loading absolute inset-0 flex items-center justify-center text-sm text-gray-500 pointer-events-none">
+                                                            Memuat viewer...
                                                         </div>
+                                                        <div class="flip-container w-full h-full"></div>
                                                     </div>
-                                                @else
-                                                    <a href="{{ $url }}" target="_blank" rel="noopener"
-                                                        class="text-primary hover:underline">Buka Dokumen</a>
-                                                @endif
+                                                </div>
+                                            @else
+                                                <a href="{{ $url }}" target="_blank" rel="noopener"
+                                                    class="text-primary hover:underline">Buka Dokumen</a>
                                             @endif
-                                        </article>
-                                    @endforeach
-                                </div>
+                                        @endif
+                                    </article>
+                                @endforeach
                             </div>
                         </div>
                     @endif
