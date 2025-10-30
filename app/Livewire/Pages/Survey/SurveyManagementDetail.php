@@ -4,7 +4,7 @@ namespace App\Livewire\Pages\Survey;
 
 use Livewire\Component;
 
-class SurveyPreview extends Component
+class SurveyManagementDetail extends Component
 {
     public $surveyLevel = 1;
     public $surveyId = 1;
@@ -29,7 +29,7 @@ class SurveyPreview extends Component
 
     public function render()
     {
-        return view('pages.survey.survey-preview', [
+        return view('pages.survey.survey-management-detail', [
         ]);
     }
 }

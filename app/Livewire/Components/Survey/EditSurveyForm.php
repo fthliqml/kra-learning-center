@@ -164,6 +164,7 @@ class EditSurveyForm extends Component
         }
         unset($q);
 
+
         DB::transaction(function () {
             // Load the survey
             $survey = TrainingSurvey::find($this->surveyId);
@@ -198,6 +199,12 @@ class EditSurveyForm extends Component
                         ]);
                     }
                 }
+            }
+
+            // Jika pertanyaan >= 3, ubah status survey ke incomplete
+            if (count($this->questions) >= 3 && $survey->status !== TrainingSurvey::STATUS_INCOMPLETE) {
+                $survey->status = TrainingSurvey::STATUS_INCOMPLETE;
+                $survey->save();
             }
         });
 
