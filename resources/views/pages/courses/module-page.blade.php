@@ -95,9 +95,6 @@
                                                         <div class="flip-container w-full h-full"></div>
                                                     </div>
                                                 </div>
-                                            @else
-                                                <a href="{{ $url }}" target="_blank" rel="noopener"
-                                                    class="text-primary hover:underline">Buka Dokumen</a>
                                             @endif
                                         @endif
                                     </article>
