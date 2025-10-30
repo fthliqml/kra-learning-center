@@ -52,10 +52,18 @@ class SurveyEmployee extends Component
                 fn($tq) =>
                 $tq->where('name', 'like', "%{$this->search}%")
             ))
-            // tampilkan semua status, termasuk draft
-            ->orderByRaw(
-                "CASE WHEN status = 'incomplete' THEN 0 WHEN status = 'completed' THEN 1 ELSE 2 END ASC"
-            )
+            // Urutkan berdasarkan status response user (incomplete, complete)
+            ->orderByRaw('(
+                SELECT CASE
+                    WHEN sr.is_completed = 0 THEN 0
+                    WHEN sr.is_completed = 1 THEN 1
+                    ELSE 2
+                END
+                FROM survey_responses sr
+                WHERE sr.survey_id = training_surveys.id AND sr.employee_id = ?
+                LIMIT 1
+            ) ASC', [$user->id])
+            ->orderByRaw("CASE WHEN status = 'draft' THEN 1 ELSE 0 END ASC")
             ->orderByDesc('id');
 
         $paginator = $base->paginate(9)->onEachSide(1);
