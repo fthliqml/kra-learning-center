@@ -70,7 +70,15 @@
                                     style="width: {{ $progress }}%"></div>
                             </div>
                             <div class="mt-1 text-xs text-gray-600 flex justify-between">
-                                <span>{{ $progress !== 100 ? 'In Progress' : 'Completed' }}</span>
+                                <span>
+                                    @if ($progress === 0)
+                                        Not Started
+                                    @elseif($progress === 100)
+                                        Completed
+                                    @else
+                                        In Progress
+                                    @endif
+                                </span>
                                 <span>{{ $progress }}%</span>
                             </div>
                         </div>
