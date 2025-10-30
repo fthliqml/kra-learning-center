@@ -10,6 +10,20 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6" x-data="window.videoGate({{ $videoCount }})"
         @module-video-ended.window="ended[$event.detail.id] = true">
         <main class="lg:col-span-12">
+            @isset($eligibleForPosttest)
+                @if ($eligibleForPosttest)
+                    <div
+                        class="mb-4 p-3 md:p-4 rounded-lg border border-green-200 bg-green-50 text-green-800 flex items-center justify-between">
+                        <div class="text-sm md:text-[13px] font-medium">Semua materi selesai. Anda dapat melanjutkan ke
+                            Posttest.</div>
+                        <a wire:navigate href="{{ route('courses-posttest.index', $course) }}"
+                            class="inline-flex items-center gap-2 rounded-md bg-green-600 text-white px-3 py-1.5 text-xs md:text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400/50">
+                            Mulai Posttest
+                            <x-icon name="o-arrow-right" class="size-4" />
+                        </a>
+                    </div>
+                @endif
+            @endisset
             @if ($activeSection)
                 <div class="flex items-center justify-between mb-5 md:mb-6">
                     <h1 class="text-lg md:text-2xl font-bold text-gray-900">{{ $activeSection->title }}</h1>
@@ -18,7 +32,7 @@
                             wire:target="completeSubtopic" wire:loading.class="opacity-70 pointer-events-none"
                             class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
                             <x-icon name="o-arrow-right" class="size-4" />
-                            <span>Next</span>
+                            <span>{{ $isLastSection ?? false ? 'Posttest' : 'Next' }}</span>
                         </button>
                     </div>
                 </div>
@@ -110,7 +124,7 @@
                         wire:target="completeSubtopic" wire:loading.class="opacity-70 pointer-events-none"
                         class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
                         <x-icon name="o-arrow-right" class="size-5" />
-                        <span>Next</span>
+                        <span>{{ $isLastSection ?? false ? 'Posttest' : 'Next' }}</span>
                     </button>
                 </div>
             @else

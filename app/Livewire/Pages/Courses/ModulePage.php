@@ -132,6 +132,26 @@ class ModulePage extends Component
         $totalUnits = $this->computeTotalUnits();
         if ($totalUnits <= 0) return null;
 
+        // Determine if current position is the very last section/topic before posttest
+        $isLastBeforePosttest = false;
+        $orderedSections = [];
+        foreach ($this->course->learningModules as $topic) {
+            foreach ($topic->sections as $sec) {
+                $orderedSections[] = $sec->id;
+            }
+        }
+        if (count($orderedSections) > 0) {
+            $lastSectionId = end($orderedSections);
+            $isLastBeforePosttest = (int) $this->activeSectionId === (int) $lastSectionId;
+        } else {
+            // Fallback: no sections, consider last topic as last unit before posttest
+            $topics = $this->course->learningModules->values();
+            if ($topics->count() > 0) {
+                $lastTopicId = $topics->last()->id;
+                $isLastBeforePosttest = (int) $this->activeTopicId === (int) $lastTopicId;
+            }
+        }
+
         // Atomic increment with idempotency per section: only advance at most once for current active section
         DB::transaction(function () use ($userId, $totalUnits) {
             // Lock enrollment row to prevent race conditions on rapid clicks
@@ -185,10 +205,13 @@ class ModulePage extends Component
             $enrollment->save();
         });
 
-        // After completing, navigate to the next section (or next topic's first section)
-        $this->goToNextSection();
+        // If this was the last unit before posttest, go to posttest instead of modules
+        if ($isLastBeforePosttest) {
+            return redirect()->route('courses-posttest.index', ['course' => $this->course->id]);
+        }
 
-        // Force a fresh render so layout/sidebars receive updated active IDs
+        // Otherwise, advance to next section/topic and return to modules
+        $this->goToNextSection();
         return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
     }
 
@@ -289,6 +312,20 @@ class ModulePage extends Component
             }
         }
 
+        // Eligibility: can access posttest when all prior units (pretest + sections/topics) are completed
+        $totalUnits = (int) $this->course->progressUnitsCount();
+        $eligibleForPosttest = $currentStep >= max(0, $totalUnits - 1);
+
+        // Determine if this is the last visible unit (for button label)
+        $isLastSection = false;
+        if (count($orderedSectionRefs) > 0) {
+            $last = end($orderedSectionRefs);
+            $isLastSection = $activeSection && $last && ((int) $activeSection->id === (int) $last->id);
+        } else {
+            $topicsList = $this->course->learningModules->values();
+            $isLastSection = $activeTopic && $topicsList->isNotEmpty() && ((int) $activeTopic->id === (int) $topicsList->last()->id);
+        }
+
         // Return page view and pass layout variables via layoutData()
         return view('pages.courses.module-page', [
             'course' => $this->course,
@@ -298,6 +335,8 @@ class ModulePage extends Component
             'activeSection' => $activeSection,
             'videoResources' => $videoResources,
             'readingResources' => $readingResources,
+            'eligibleForPosttest' => $eligibleForPosttest,
+            'isLastSection' => $isLastSection,
         ])->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'module',
