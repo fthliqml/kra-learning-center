@@ -222,4 +222,9 @@ class EditSurveyForm extends Component
         return view('components.survey.edit-survey-form', [
         ]);
     }
+
+    public function placeholder()
+    {
+        return view('components.skeletons.edit-survey-form-skeleton');
+    }
 }
