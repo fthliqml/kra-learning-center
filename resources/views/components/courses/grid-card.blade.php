@@ -88,12 +88,12 @@
 
         {{-- Action --}}
         @if ($progress === 100)
-            <button type="button" data-card-action
-                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300 cursor-default"
-                aria-label="See results (coming soon)" @click.stop>
+            <a wire:navigate href="{{ route('courses-result.index', $course) }}" data-card-action
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
+                aria-label="See results" @click.stop>
                 <span>See Results</span>
                 <span aria-hidden="true">→</span>
-            </button>
+            </a>
         @elseif ($progress > 0)
             <a wire:navigate href="{{ route('courses-modules.index', $course) }}" data-card-action
                 class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
