@@ -1,5 +1,5 @@
 <div class="space-y-6">
-    <x-tabs wire:model="activeTab" class="bg-base-100 p-3 rounded-box shadow-sm">
+    <x-tabs wire:model="activeTab" class="bg-base-100 p-3 rounded-box shadow-sm pt-0 !mt-[-3px]">
         {{-- TAB: Course Info --}}
         <x-tab name="course-info" label="Course Info" icon="m-document-text">
             <livewire:components.edit-course.course-info :courseId="$course->id" lazy />

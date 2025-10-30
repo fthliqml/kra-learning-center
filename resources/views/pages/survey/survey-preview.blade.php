@@ -12,7 +12,7 @@
     </div>
 
     <div class="space-y-6">
-        <x-tabs wire:model="activeTab" class="bg-base-100 p-3 rounded-box shadow-sm">
+        <x-tabs wire:model="activeTab" class="bg-base-100 p-3 pt-0 !mt-[-3px] rounded-box shadow-sm">
 
             {{-- TAB: Participants Information --}}
             <x-tab name="participants-info" label="Participants Information" icon="m-user-group">
