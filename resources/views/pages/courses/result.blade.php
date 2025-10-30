@@ -1,8 +1,6 @@
 <div class="mx-auto max-w-5xl">
     <div class="flex items-center justify-between mb-5 md:mb-6">
         <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Hasil Belajar</h1>
-        <a wire:navigate href="{{ route('courses.index') }}"
-            class="text-sm text-primary font-medium hover:underline">Kembali ke Courses</a>
     </div>
 
     <div class="grid gap-5 md:gap-6 grid-cols-1 md:grid-cols-2">
@@ -127,20 +125,8 @@
                             Coba Lagi
                         </a>
                     @endif
-                    <a wire:navigate href="{{ route('courses-modules.index', $course) }}"
-                        class="inline-flex items-center gap-2 text-sm font-medium px-3 py-2 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200">
-                        Lihat Materi
-                    </a>
                 </div>
             @endif
         </section>
-    </div>
-
-    <div class="mt-6 rounded-xl border border-gray-200 bg-white p-4 md:p-6 shadow-sm">
-        <h3 class="text-base font-semibold text-gray-900 mb-2">Langkah Berikutnya</h3>
-        <ul class="list-disc pl-5 text-sm text-gray-700 space-y-1">
-            <li>Jika belum lulus, Anda dapat mencoba posttest lagi bila masih tersedia kesempatan.</li>
-            <li>Jika diperlukan, pelajari kembali materi pada modul yang belum dikuasai.</li>
-        </ul>
     </div>
 </div>

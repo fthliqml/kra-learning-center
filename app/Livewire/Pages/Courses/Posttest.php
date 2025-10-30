@@ -300,6 +300,23 @@ class Posttest extends Component
             }
         });
 
+        // If perfect score (100%), mark course progress as fully completed.
+        $maxAutoPoints = $questionRows->where('question_type', 'multiple')->sum('max_points');
+        $latestAuto = TestAttempt::where('test_id', $this->posttest->id)
+            ->where('user_id', $userId)
+            ->orderByDesc('submitted_at')->orderByDesc('id')
+            ->value('auto_score');
+        $percent = ($maxAutoPoints > 0) ? (int) round(((int) $latestAuto / max(1, $maxAutoPoints)) * 100) : 0;
+        if ($percent === 100) {
+            $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
+            if ($enrollment) {
+                $totalUnits = (int) $this->course->progressUnitsCount();
+                $enrollment->current_step = $totalUnits;
+                $enrollment->status = 'completed';
+                $enrollment->save();
+            }
+        }
+
         // Redirect to results page
         return redirect()->route('courses-result.index', ['course' => $this->course->id]);
     }

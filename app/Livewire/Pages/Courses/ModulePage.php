@@ -36,6 +36,7 @@ class ModulePage extends Component
         }
 
         // Ensure enrollment for progress tracking exists and mark in_progress on first engagement
+        $enrollment = null;
         if ($userId) {
             $enrollment = $course->userCourses()->firstOrCreate(
                 ['user_id' => $userId],
@@ -45,6 +46,15 @@ class ModulePage extends Component
             if (($enrollment->status ?? '') === '' || strtolower($enrollment->status) === 'not_started') {
                 $enrollment->status = 'in_progress';
                 $enrollment->save();
+            }
+        }
+
+        // If course already completed (e.g., perfect posttest), block revisiting modules
+        if ($enrollment) {
+            $totalUnits = (int) $course->progressUnitsCount();
+            $current = (int) ($enrollment->current_step ?? 0);
+            if ($current >= $totalUnits || strtolower($enrollment->status ?? '') === 'completed') {
+                return redirect()->route('courses-result.index', ['course' => $course->id]);
             }
         }
 
