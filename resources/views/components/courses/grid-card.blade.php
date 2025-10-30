@@ -63,7 +63,7 @@
             $assignment = $course->userCourses->first();
             $progress = (int) ($course->progress_percent ?? 0);
         @endphp
-        @if ($progress > 0)
+        @if ($assignment)
             <div class="mt-2 sm:mt-3" x-data>
                 <div class="h-1.5 sm:h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
                     aria-label="Course progress" aria-valuemin="0" aria-valuemax="100"
@@ -72,7 +72,15 @@
                     </div>
                 </div>
                 <div class="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-600 flex justify-between">
-                    <span>{{ $progress !== 100 ? 'In Progress' : 'Completed' }}</span>
+                    <span>
+                        @if ($progress === 0)
+                            Not Started
+                        @elseif($progress === 100)
+                            Completed
+                        @else
+                            In Progress
+                        @endif
+                    </span>
                     <span>{{ $progress }}%</span>
                 </div>
             </div>

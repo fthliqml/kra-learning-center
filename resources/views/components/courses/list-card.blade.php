@@ -38,10 +38,9 @@
                 {{-- Details --}}
                 @php
                     $assignment = $course->userCourses->first() ?? null;
-                    $hasProgress = $assignment && $assignment->status === 'in_progress';
                 @endphp
 
-                <div class="mt-auto @if ($hasProgress) mb-0 @else mb-3 @endif">
+                <div class="mt-auto mb-0">
                     @php
                         $modulesCount = (int) ($course->learning_modules_count ?? 0);
                         $usersCount = (int) ($course->trainings
@@ -62,7 +61,7 @@
                     </div>
 
                     {{-- Progress --}}
-                    @if ($progress > 0)
+                    @if ($assignment)
                         <div class="mt-3">
                             <div class="h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
                                 aria-label="Course progress" aria-valuemin="0" aria-valuemax="100"
