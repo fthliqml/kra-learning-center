@@ -79,6 +79,19 @@ class Course extends Model
             // If no user, return empty result intentionally
             return $query->whereRaw('1 = 0');
         }
+        $today = Carbon::today();
+        return $query->whereHas('trainings', function ($t) use ($userId, $today) {
+            $t
+                // ->where(function ($w) use ($today) {
+                //     $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+                // })
+                // ->where(function ($w) use ($today) {
+                //     $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
+                // })
+                ->whereHas('assessments', function ($a) use ($userId) {
+                    $a->where('employee_id', $userId);
+                });
+        });
     }
 
     /**
