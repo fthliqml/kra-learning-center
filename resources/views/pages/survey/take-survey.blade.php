@@ -1,4 +1,4 @@
-<div>
+<div x-data="{ showConfirm: false }">
     <div class="w-full flex items-center gap-2 mb-2">
         <a href="javascript:history.back()"
             class="inline-flex items-center px-2 py-1 rounded hover:bg-primary/10 text-primary text-sm font-medium focus:outline-none">
@@ -10,8 +10,7 @@
         </h1>
     </div>
 
-    <form x-ref="formEl" @submit.prevent="submit" class="space-y-4 md:space-y-5"
-        x-bind:aria-busy="submitting ? 'true' : 'false'">
+    <form x-ref="formEl" class="space-y-4 md:space-y-5" x-bind:aria-busy="submitting ? 'true' : 'false'">
         @forelse ($questions as $index => $q)
             <fieldset
                 class="relative rounded-lg border bg-white p-4 md:p-5 shadow-sm {{ in_array($index, $errorQuestionIndexes ?? []) ? 'border-red-500 ring-1 ring-red-300' : 'border-gray-200' }}">
@@ -67,10 +66,29 @@
 
     </form>
 
-    <div class="w-full flex justify-end">
-        <x-ui.button wire:click="submit" variant="primary">Submit</x-ui.button>
+
+    <div class="w-full flex justify-end mt-5">
+        <x-ui.button @click.prevent="showConfirm = true" variant="primary">Submit</x-ui.button>
     </div>
 
-    <x-loading-overlay text="Submitting..." target="submit" />
+    <!-- Modal Confirmation -->
+    <div x-show="showConfirm" style="display: none;"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/30">
+        <div class="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h2 class="text-lg font-semibold mb-2">Submit Survey?</h2>
+            <p class="mb-4 text-sm text-gray-600">Are you sure you want to submit your answers? You won't be able to
+                change them after submission.</p>
+            <div class="flex justify-end gap-2">
+                <button type="button"
+                    class="px-4 py-2 rounded bg-gray-200 text-gray-700 hover:bg-gray-300 hover:cursor-pointer"
+                    @click="showConfirm = false">Cancel</button>
+                <button type="button"
+                    class="px-4 py-2 rounded bg-primary text-white hover:bg-primary/90 hover:cursor-pointer"
+                    @click="showConfirm = false; $wire.confirmAndSubmit()">Yes, Submit</button>
+            </div>
+        </div>
+    </div>
+
+    <x-loading-overlay text="Submitting..." target="confirmAndSubmit" />
 
 </div>

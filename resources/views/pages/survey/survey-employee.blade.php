@@ -80,7 +80,7 @@
                         </div>
                         @if ($survey->badge_status === 'complete')
                             <a
-                                href="{{ route('survey.take', ['level' => $survey->level, 'surveyId' => $survey->id]) }}">
+                                href="{{ route('survey.preview', ['level' => $survey->level, 'surveyId' => $survey->id]) }}">
                                 <x-button type="button" class="btn-xs sm:btn-sm border-primary/30 bg-primary/10"
                                     icon="o-eye" label="Preview Survey" />
                             </a>

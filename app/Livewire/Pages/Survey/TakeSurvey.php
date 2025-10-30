@@ -65,6 +65,14 @@ class TakeSurvey extends Component
         $this->answers = $answers;
     }
 
+    /**
+     * Dipanggil dari modal konfirmasi sebelum submit.
+     */
+    public function confirmAndSubmit()
+    {
+        $this->submit();
+    }
+
     public function submit()
     {
         $this->currentUser = Auth::user();
