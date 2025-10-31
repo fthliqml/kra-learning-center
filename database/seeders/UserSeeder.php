@@ -20,7 +20,7 @@ class UserSeeder extends Seeder
             User::create([
                 'name' => ucfirst($role) . ' User',
                 'email' => $role . '@example.com',
-                'password' => Hash::make('123456'),
+                'password' => Hash::make('password'),
                 'NRP' => 1234567,
                 'section' => 'LID',
                 'role' => $role,

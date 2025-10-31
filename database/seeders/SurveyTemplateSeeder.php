@@ -196,5 +196,38 @@ class SurveyTemplateSeeder extends Seeder
         ];
 
         SurveyTemplate::insert($templates);
+
+        // Ambil satu template untuk contoh seeding pertanyaan dan opsi
+        $template = \App\Models\SurveyTemplate::first();
+        if ($template) {
+            // Pertanyaan 1 (multiple choice)
+            $q1 = \App\Models\SurveyTemplateQuestion::create([
+                'survey_template_id' => $template->id,
+                'text' => 'How satisfied are you with your job?',
+                'question_type' => 'multiple',
+                'order' => 1,
+            ]);
+            foreach ([
+                'Very Satisfied',
+                'Satisfied',
+                'Neutral',
+                'Dissatisfied',
+                'Very Dissatisfied',
+            ] as $i => $opt) {
+                \App\Models\SurveyTemplateOption::create([
+                    'survey_template_question_id' => $q1->id,
+                    'text' => $opt,
+                    'order' => $i + 1,
+                ]);
+            }
+
+            // Pertanyaan 2 (essay)
+            \App\Models\SurveyTemplateQuestion::create([
+                'survey_template_id' => $template->id,
+                'text' => 'What would you improve in the workplace?',
+                'question_type' => 'essay',
+                'order' => 2,
+            ]);
+        }
     }
 }
