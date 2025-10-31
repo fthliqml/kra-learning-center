@@ -40,6 +40,7 @@ class SurveyTemplate extends Component
                 fn($q) =>
                 $q->where('level', $this->filter)
             )
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
             ->orderBy('created_at', 'desc')
             ->paginate(9);
     }

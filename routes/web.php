@@ -12,6 +12,7 @@ use App\Livewire\Pages\Survey\SurveyManagement;
 use App\Livewire\Pages\Survey\SurveyManagementDetail;
 use App\Livewire\Pages\Survey\SurveyPreview;
 use App\Livewire\Pages\Survey\TakeSurvey;
+use App\Livewire\Pages\SurveyTemplate\EditSurveyTemplate;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\Module;
@@ -56,4 +57,5 @@ Route::middleware('auth')->group(function () {
 
     // Survey Templates
     Route::get('/survey-template', SurveyTemplate::class)->name('survey-template.index');
+    Route::get('/survey-template/{level}/edit/{surveyId}', EditSurveyTemplate::class)->name('survey-template.edit');
 });

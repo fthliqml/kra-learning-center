@@ -30,8 +30,9 @@
 
     <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
         @forelse ($surveyTemplates as $surveyTemplate)
-            <div wire:loading.remove
-                class="card bg-base-100 border border-primary/20 shadow h-44 transition duration-200 hover:shadow-md hover:border-primary/60 hover:bg-primary/5 hover:-translate-y-1 cursor-pointer">
+            <a wire:loading.remove
+                href="{{ route('survey-template.edit', ['level' => $surveyTemplate->level, 'surveyId' => $surveyTemplate->id]) }}"
+                class="card bg-base-100 border border-primary/20 shadow h-44 transition duration-200 hover:shadow-md hover:border-primary/60 hover:bg-primary/5 hover:-translate-y-1 cursor-pointer block">
                 <div class="card-body p-4 md:p-5 flex flex-col h-full">
                     <div class="flex items-start justify-between gap-3">
                         <div>
@@ -76,7 +77,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </a>
         @empty
             <div class="col-span-full">
                 <div class="p-6 border border-dashed rounded-lg text-center text-sm text-base-content/70 bg-base-100">
