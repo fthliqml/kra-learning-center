@@ -15,30 +15,51 @@
         $topPassed = false;
         if ($topAttempt) {
             $topUnderReview = $topAttempt->status === \App\Models\TestAttempt::STATUS_UNDER_REVIEW;
-            $topPassed = !$topUnderReview && (bool) $topAttempt->is_passed;
+            // Derive pass: is_passed OR 100% OR meets passing threshold
+            $passing = (int) ($post['passing'] ?? 0);
+            $derivedPass = false;
+            if (!$topUnderReview) {
+                if ($postPct === 100) {
+                    $derivedPass = true;
+                } elseif ($passing > 0 && $postPct >= $passing) {
+                    $derivedPass = true;
+                } elseif ((bool) $topAttempt->is_passed) {
+                    $derivedPass = true;
+                }
+            }
+            $topPassed = $derivedPass;
         }
     @endphp
 
     @if ($topAttempt)
         @if ($topUnderReview)
             <div class="rounded-md border border-amber-200 bg-amber-50 text-amber-800 p-3 mb-4">
-                <div class="flex items-center gap-2">
-                    <x-icon name="o-clock" class="size-5" />
-                    <p class="text-sm">Posttest dalam proses penilaian. Harap menunggu review.</p>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <x-icon name="o-clock" class="size-5" />
+                        <p class="text-sm">Posttest dalam proses penilaian. Harap menunggu review.</p>
+                    </div>
                 </div>
             </div>
         @elseif ($topPassed)
             <div class="rounded-md border border-green-200 bg-green-50 text-green-800 p-3 mb-4">
-                <div class="flex items-center gap-2">
-                    <x-icon name="o-check-circle" class="size-5" />
-                    <p class="text-sm font-semibold">Lulus</p>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <x-icon name="o-check-circle" class="size-5" />
+                        <p class="text-sm font-semibold">Lulus</p>
+                    </div>
                 </div>
             </div>
         @else
             <div class="rounded-md border border-red-200 bg-red-50 text-red-800 p-3 mb-4">
-                <div class="flex items-center gap-2">
-                    <x-icon name="o-x-circle" class="size-5" />
-                    <p class="text-sm font-semibold">Tidak Lulus</p>
+                <div class="flex items-center justify-between gap-3">
+                    <div class="flex items-center gap-2">
+                        <x-icon name="o-x-circle" class="size-5" />
+                        <p class="text-sm font-semibold">Tidak Lulus</p>
+                    </div>
+                    <a wire:navigate href="{{ route('courses-posttest.index', $course) }}"
+                        class="inline-flex items-center gap-2 text-xs font-medium px-2.5 py-1.5 rounded-md bg-primary text-white hover:bg-primary/90">Coba
+                        Lagi</a>
                 </div>
             </div>
         @endif

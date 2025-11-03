@@ -7,7 +7,7 @@
 @endphp
 
 <div class="p-1 md:p-6">
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6" x-data="window.videoGate({{ $videoCount }})"
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6" x-data="Object.assign(window.videoGate({{ $videoCount }}), { remedial: {{ !empty($canRetakePosttest) ? 'true' : 'false' }} })"
         @module-video-ended.window="ended[$event.detail.id] = true">
         <main class="lg:col-span-12">
             @isset($eligibleForPosttest)
@@ -22,14 +22,28 @@
                             <x-icon name="o-arrow-right" class="size-4" />
                         </a>
                     </div>
+                @elseif (!empty($canRetakePosttest))
+                    <div
+                        class="mb-4 p-3 md:p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 flex items-center justify-between gap-2 flex-wrap">
+                        <div class="text-sm md:text-[13px] font-medium">Anda dapat mencoba Posttest lagi kapan saja, atau
+                            kembali mempelajari materi.</div>
+                        <div class="flex items-center gap-2">
+                            <a wire:navigate href="{{ route('courses-posttest.index', $course) }}"
+                                class="inline-flex items-center gap-2 rounded-md bg-amber-600 text-white px-3 py-1.5 text-xs md:text-sm font-medium hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400/50">
+                                Coba Lagi Posttest
+                                <x-icon name="o-arrow-right" class="size-4" />
+                            </a>
+                        </div>
+                    </div>
                 @endif
             @endisset
             @if ($activeSection)
                 <div class="flex items-center justify-between mb-5 md:mb-6">
                     <h1 class="text-lg md:text-2xl font-bold text-gray-900">{{ $activeSection->title }}</h1>
                     <div class="hidden md:flex items-center gap-2">
-                        <button wire:click="completeSubtopic" :disabled="!done" wire:loading.attr="disabled"
-                            wire:target="completeSubtopic" wire:loading.class="opacity-70 pointer-events-none"
+                        <button wire:click="completeSubtopic" :disabled="!(done || remedial)"
+                            wire:loading.attr="disabled" wire:target="completeSubtopic"
+                            wire:loading.class="opacity-70 pointer-events-none"
                             class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
                             <x-icon name="o-arrow-right" class="size-4" />
                             <span>{{ $isLastSection ?? false ? 'Posttest' : 'Next' }}</span>
@@ -120,12 +134,17 @@
 
                 <!-- Bottom Action (mobile) -->
                 <div class="mt-6 flex items-center justify-end md:hidden">
-                    <button wire:click="completeSubtopic" :disabled="!done" wire:loading.attr="disabled"
+                    <button wire:click="completeSubtopic" :disabled="!(done || remedial)" wire:loading.attr="disabled"
                         wire:target="completeSubtopic" wire:loading.class="opacity-70 pointer-events-none"
                         class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
                         <x-icon name="o-arrow-right" class="size-5" />
                         <span>{{ $isLastSection ?? false ? 'Posttest' : 'Next' }}</span>
                     </button>
+                    <template x-if="remedial && !done">
+                        <span
+                            class="ml-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Remedial
+                            aktif</span>
+                    </template>
                 </div>
             @else
                 <div class="p-6 border border-dashed rounded-md text-sm text-gray-500">

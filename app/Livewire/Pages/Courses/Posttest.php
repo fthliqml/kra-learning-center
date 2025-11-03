@@ -52,15 +52,28 @@ class Posttest extends Component
             }]);
         }]);
 
-        // Gate: only allow access to posttest after completing the course flow
-        // Requirement: user must have finished all units except the posttest unit itself.
+        // Gate: allow access after finishing modules, OR if last posttest attempt failed (remedial)
         if ($userId && $enrollment) {
-            $totalUnits = (int) $this->course->progressUnitsCount(); // pretest + sections/topics + posttest
-            $requiredStep = max(0, $totalUnits - 1); // all prior units
-            $currentStep = (int) ($enrollment->current_step ?? 0);
-            if ($currentStep < $requiredStep) {
-                // Not yet eligible for posttest -> continue modules first
-                return redirect()->route('courses-modules.index', ['course' => $course->id]);
+            $allowRemedial = false;
+            $postRow = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
+            if ($postRow) {
+                $lastAttempt = TestAttempt::where('test_id', $postRow->id)
+                    ->where('user_id', $userId)
+                    ->orderByDesc('submitted_at')->orderByDesc('id')
+                    ->first();
+                if ($lastAttempt && !$lastAttempt->is_passed) {
+                    $allowRemedial = true;
+                }
+            }
+
+            if (!$allowRemedial) {
+                $totalUnits = (int) $this->course->progressUnitsCount(); // pretest + sections/topics + posttest
+                $requiredStep = max(0, $totalUnits - 1); // all prior units
+                $currentStep = (int) ($enrollment->current_step ?? 0);
+                if ($currentStep < $requiredStep) {
+                    // Not yet eligible for posttest -> continue modules first
+                    return redirect()->route('courses-modules.index', ['course' => $course->id]);
+                }
             }
         }
 
@@ -78,13 +91,13 @@ class Posttest extends Component
             ->first();
 
         if ($this->posttest) {
-            // If already submitted an attempt, go back to modules/result
-            $alreadySubmitted = TestAttempt::where('test_id', $this->posttest->id)
-                ->where('user_id', $userId)
-                ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-                ->exists();
-            if ($alreadySubmitted) {
-                return redirect()->route('courses-modules.index', ['course' => $course->id]);
+            // Allow multiple attempts unless course is fully completed (locked after perfect score)
+            $enrollment = $course->userCourses()->where('user_id', $userId)->first();
+            if ($enrollment) {
+                $totalUnits = (int) $this->course->progressUnitsCount();
+                if ((int) ($enrollment->current_step ?? 0) >= $totalUnits || strtolower($enrollment->status ?? '') === 'completed') {
+                    return redirect()->route('courses-result.index', ['course' => $course->id]);
+                }
             }
 
             $collection = $this->posttest->questions->map(function ($q) {
@@ -145,12 +158,39 @@ class Posttest extends Component
             }
         }
 
+        // Build flat list of sections for dropdown navigation from Posttest
+        $sectionsList = [];
+        foreach ($this->course->learningModules as $topic) {
+            $secs = $topic->sections ?? collect();
+            foreach ($secs as $sec) {
+                $sectionsList[] = [
+                    'id' => (int) $sec->id,
+                    'title' => (string) ($sec->title ?? 'Untitled'),
+                    'module' => (string) ($topic->title ?? 'Module'),
+                ];
+            }
+        }
+
+        // Show material picker only if user has attempted posttest and did not pass (exclude under review)
+        $showMaterialPicker = false;
+        if ($this->posttest) {
+            $latest = TestAttempt::where('test_id', $this->posttest->id)
+                ->where('user_id', $userId)
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->first();
+            if ($latest && $latest->status !== TestAttempt::STATUS_UNDER_REVIEW && !$latest->is_passed) {
+                $showMaterialPicker = true;
+            }
+        }
+
         return view('pages.courses.posttest', [
             'course' => $this->course,
             'posttest' => $this->posttest,
             'questions' => $this->questions,
             'posttestId' => $this->posttest?->id,
             'userId' => $userId,
+            'sectionsList' => $sectionsList,
+            'showMaterialPicker' => $showMaterialPicker,
         ])->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'posttest',
@@ -174,13 +214,7 @@ class Posttest extends Component
         $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
         if (!$enrollment) abort(403);
 
-        $alreadySubmitted = TestAttempt::where('test_id', $this->posttest->id)
-            ->where('user_id', $userId)
-            ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-            ->exists();
-        if ($alreadySubmitted) {
-            return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
-        }
+        // Allow retakes: do not block if a previous attempt exists
 
         $t1 = microtime(true);
         $questionRows = TestQuestion::select('id', 'test_id', 'question_type', 'max_points')
@@ -293,11 +327,7 @@ class Posttest extends Component
             }
             $attempt->save();
 
-            // Mark step 3 (posttest) as completed at minimum
-            if (($enrollment->current_step ?? 0) < 3) {
-                $enrollment->current_step = 3;
-                $enrollment->save();
-            }
+            // Do not bump progress to 100% on failure; keep current_step unchanged for retakes
         });
 
         // If perfect score (100%), mark course progress as fully completed.
@@ -314,6 +344,23 @@ class Posttest extends Component
                 $enrollment->current_step = $totalUnits;
                 $enrollment->status = 'completed';
                 $enrollment->save();
+            }
+        } else {
+            // If latest attempt exists and is not passed, reset progress to the first material
+            $last = TestAttempt::where('test_id', $this->posttest->id)
+                ->where('user_id', $userId)
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->first();
+            if ($last && !$last->is_passed) {
+                $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
+                if ($enrollment) {
+                    $hasPretest = Test::where('course_id', $this->course->id)->where('type', 'pretest')->exists();
+                    $enrollment->current_step = $hasPretest ? 1 : 0;
+                    if (strtolower($enrollment->status ?? '') === 'completed') {
+                        $enrollment->status = 'in_progress';
+                    }
+                    $enrollment->save();
+                }
             }
         }
 

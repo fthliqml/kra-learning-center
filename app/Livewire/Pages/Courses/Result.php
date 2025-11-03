@@ -49,6 +49,11 @@ class Result extends Component
             $maxAuto = (int) TestQuestion::where('test_id', $pre->id)
                 ->where('question_type', 'multiple')
                 ->sum('max_points');
+            if ($maxAuto === 0) {
+                $maxAuto = (int) TestQuestion::where('test_id', $pre->id)
+                    ->where('question_type', 'multiple')
+                    ->count();
+            }
             $percent = null;
             if ($attempt && $maxAuto > 0) {
                 $percent = (int) round(($attempt->auto_score / max(1, $maxAuto)) * 100);
@@ -71,6 +76,11 @@ class Result extends Component
             $maxAuto = (int) TestQuestion::where('test_id', $post->id)
                 ->where('question_type', 'multiple')
                 ->sum('max_points');
+            if ($maxAuto === 0) {
+                $maxAuto = (int) TestQuestion::where('test_id', $post->id)
+                    ->where('question_type', 'multiple')
+                    ->count();
+            }
             $percent = null;
             if ($attempt && $maxAuto > 0) {
                 $percent = (int) round(($attempt->auto_score / max(1, $maxAuto)) * 100);
@@ -92,8 +102,20 @@ class Result extends Component
                 ->where('user_id', $userId)
                 ->orderByDesc('submitted_at')->orderByDesc('id')
                 ->get();
-            $attempts = $attemptRows->map(function ($a) use ($maxAuto) {
+            $passingScore = (int) ($post->passing_score ?? 0);
+            $attempts = $attemptRows->map(function ($a) use ($maxAuto, $passingScore) {
                 $pct = ($maxAuto > 0) ? (int) round(($a->auto_score / max(1, $maxAuto)) * 100) : null;
+                $isUnderReview = ($a->status === TestAttempt::STATUS_UNDER_REVIEW);
+                $derivedPass = false;
+                if (!$isUnderReview && $pct !== null) {
+                    if ($pct === 100) {
+                        $derivedPass = true;
+                    } elseif ($passingScore > 0 && $pct >= $passingScore) {
+                        $derivedPass = true;
+                    } elseif ($a->is_passed) {
+                        $derivedPass = true;
+                    }
+                }
                 return [
                     'number' => (int) $a->attempt_number,
                     'submitted_at' => optional($a->submitted_at)->format('Y-m-d H:i') ?? '-',
@@ -101,7 +123,7 @@ class Result extends Component
                     'total' => (int) $a->total_score,
                     'percent' => $pct,
                     'status' => (string) $a->status,
-                    'passed' => (bool) $a->is_passed,
+                    'passed' => $derivedPass,
                 ];
             })->values()->all();
 

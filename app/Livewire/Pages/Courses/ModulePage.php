@@ -94,15 +94,45 @@ class ModulePage extends Component
         $sectionsCount = count($orderedSections);
 
         if ($sectionsCount > 0) {
-            $hasPretest = (bool) $pretest;
-            $pretestUnits = $hasPretest ? 1 : 0;
-            // Number of sections completed so far
-            $completedSections = max(0, min($currentStep - $pretestUnits, $sectionsCount));
-            // Target index is the next not-yet-done section, or last if all done
-            $targetIndex = ($completedSections < $sectionsCount) ? $completedSections : ($sectionsCount - 1);
-            $pair = $orderedSections[$targetIndex];
-            $this->activeTopicId = $pair[0];
-            $this->activeSectionId = $pair[1];
+            // Allow deep-linking to a specific section or starting from first via query params
+            $reqSectionId = (int) request()->query('section', 0);
+            $start = (string) request()->query('start', '');
+
+            if ($reqSectionId > 0) {
+                // Find the topic for the given section id
+                $found = null;
+                foreach ($this->course->learningModules as $topic) {
+                    $sec = $topic->sections->firstWhere('id', $reqSectionId);
+                    if ($sec) {
+                        $found = [$topic->id, $sec->id];
+                        break;
+                    }
+                }
+                if ($found) {
+                    $this->activeTopicId = $found[0];
+                    $this->activeSectionId = $found[1];
+                }
+            }
+
+            if (!$this->activeTopicId || !$this->activeSectionId) {
+                if (strtolower($start) === 'first') {
+                    // Force first available section
+                    $pair = $orderedSections[0];
+                    $this->activeTopicId = $pair[0];
+                    $this->activeSectionId = $pair[1];
+                } else {
+                    // Default resume behavior based on progress
+                    $hasPretest = (bool) $pretest;
+                    $pretestUnits = $hasPretest ? 1 : 0;
+                    // Number of sections completed so far
+                    $completedSections = max(0, min($currentStep - $pretestUnits, $sectionsCount));
+                    // Target index is the next not-yet-done section, or last if all done
+                    $targetIndex = ($completedSections < $sectionsCount) ? $completedSections : ($sectionsCount - 1);
+                    $pair = $orderedSections[$targetIndex];
+                    $this->activeTopicId = $pair[0];
+                    $this->activeSectionId = $pair[1];
+                }
+            }
         } else {
             // Fallback to first topic if no sections
             $firstTopic = $this->course->learningModules->first();
@@ -326,6 +356,19 @@ class ModulePage extends Component
         $totalUnits = (int) $this->course->progressUnitsCount();
         $eligibleForPosttest = $currentStep >= max(0, $totalUnits - 1);
 
+        // Retake allowance: if last posttest attempt failed, show CTA to retry anytime
+        $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+        $canRetakePosttest = false;
+        if ($postRow) {
+            $lastAttempt = TestAttempt::where('test_id', $postRow->id)
+                ->where('user_id', $userId)
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->first();
+            if ($lastAttempt && !$lastAttempt->is_passed) {
+                $canRetakePosttest = true;
+            }
+        }
+
         // Determine if this is the last visible unit (for button label)
         $isLastSection = false;
         if (count($orderedSectionRefs) > 0) {
@@ -347,6 +390,7 @@ class ModulePage extends Component
             'readingResources' => $readingResources,
             'eligibleForPosttest' => $eligibleForPosttest,
             'isLastSection' => $isLastSection,
+            'canRetakePosttest' => $canRetakePosttest,
         ])->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'module',
