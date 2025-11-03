@@ -5,6 +5,7 @@ namespace App\Livewire\Pages\Courses;
 use App\Models\Course;
 use App\Models\Test;
 use App\Models\TestAttempt;
+use App\Models\TestAttemptAnswer;
 use App\Models\TestQuestion;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
@@ -74,12 +75,46 @@ class Result extends Component
             if ($attempt && $maxAuto > 0) {
                 $percent = (int) round(($attempt->auto_score / max(1, $maxAuto)) * 100);
             }
+            // Extra aggregates for donut chart and history
+            $mcTotal = (int) TestQuestion::where('test_id', $post->id)
+                ->where('question_type', 'multiple')
+                ->count();
+            $qTotal = (int) TestQuestion::where('test_id', $post->id)->count();
+            $correct = 0;
+            if ($attempt) {
+                $correct = (int) TestAttemptAnswer::where('attempt_id', $attempt->id)
+                    ->where('is_correct', true)
+                    ->count();
+            }
+
+            // Attempt history (latest first)
+            $attemptRows = TestAttempt::where('test_id', $post->id)
+                ->where('user_id', $userId)
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->get();
+            $attempts = $attemptRows->map(function ($a) use ($maxAuto) {
+                $pct = ($maxAuto > 0) ? (int) round(($a->auto_score / max(1, $maxAuto)) * 100) : null;
+                return [
+                    'number' => (int) $a->attempt_number,
+                    'submitted_at' => optional($a->submitted_at)->format('Y-m-d H:i') ?? '-',
+                    'auto' => (int) $a->auto_score,
+                    'total' => (int) $a->total_score,
+                    'percent' => $pct,
+                    'status' => (string) $a->status,
+                    'passed' => (bool) $a->is_passed,
+                ];
+            })->values()->all();
+
             $this->posttest = [
                 'test' => $post,
                 'attempt' => $attempt,
                 'max_auto' => $maxAuto,
                 'percent' => $percent,
                 'passing' => $post->passing_score,
+                'mc_total' => $mcTotal,
+                'q_total' => $qTotal,
+                'correct' => $correct,
+                'attempts' => $attempts,
             ];
         }
     }
