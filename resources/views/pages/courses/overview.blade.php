@@ -173,10 +173,26 @@
                             <span class="w-6 text-xs font-medium text-gray-500">4.</span><span>Result</span>
                         </li>
                     </ol>
-                    <a type="button" href="{{ route('courses-pretest.index', $course) }}"
-                        class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary">
-                        Start Course
-                    </a>
+                    @php $progress = (int) ($course->progressForUser() ?? 0); @endphp
+                    @if ($progress === 100)
+                        <a wire:navigate href="{{ route('courses-result.index', $course) }}"
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                            aria-label="See results">
+                            See Results
+                        </a>
+                    @elseif ($progress > 0)
+                        <a wire:navigate href="{{ route('courses-modules.index', $course) }}"
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                            aria-label="Continue learning">
+                            Continue Learning
+                        </a>
+                    @else
+                        <a wire:navigate href="{{ route('courses-pretest.index', $course) }}"
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                            aria-label="Start course">
+                            Start Course
+                        </a>
+                    @endif
                 </div>
             </aside>
         </div>
