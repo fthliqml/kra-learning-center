@@ -6,9 +6,6 @@
                 Survey Level {{ $surveyLevel }} - {{ $surveyId }}
             </h1>
         </div>
-
-        <x-button class="btn btn-outline btn-primary w-fit" icon="o-arrow-down-tray">Import From
-            Template</x-button>
     </div>
 
     <div class="space-y-6">
@@ -73,8 +70,3 @@
             });
         });
     </script>
-
-
-
-
-</div>

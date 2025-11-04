@@ -1,4 +1,5 @@
 <div>
+    @livewire('components.confirm-dialog')
     <div class="space-y-4">
         <div id="survey-list" class="space-y-4" x-init="(() => {
             const list = $el;
@@ -67,16 +68,65 @@
             <x-button type="button" icon="o-plus" wire:click="addQuestion" class="border-gray-400">Add
                 Question</x-button>
 
-            <x-ui.button type="button" variant="primary" wire:click="saveDraft" wire:loading.attr="disabled"
-                wire:target="saveDraft">
-                <x-icon name="o-bookmark" />
-                <span wire:loading.remove wire:target="saveDraft">Save</span>
-                <span wire:loading wire:target="saveDraft">Saving...</span>
-            </x-ui.button>
+            <div class="flex gap-5 items-center">
+                <x-button type="button" icon="o-trash" class="border-gray-400 btn btn-error" spinner
+                    wire:click="$dispatch('confirm', {
+                        title: 'Are you sure you want to clear all?',
+                        text: 'This will remove all survey questions, but the changes won’t be saved until you click the Save button.',
+                        action: 'clearQuestions',
+                    })">
+                    Clear
+                </x-button>
+                <x-button type="button" icon="o-arrow-down-tray" class="border-gray-400"
+                    @click="window.dispatchEvent(new CustomEvent('open-import-template-modal'))">
+                    Import Questions
+                </x-button>
+                <x-ui.button type="button" variant="primary" wire:click="saveDraft" wire:loading.attr="disabled"
+                    wire:target="saveDraft">
+                    <x-icon name="o-bookmark" />
+                    <span wire:loading.remove wire:target="saveDraft">Save</span>
+                    <span wire:loading wire:target="saveDraft">Saving...</span>
+                </x-ui.button>
+            </div>
 
         </div>
     </div>
 
     <x-loading-overlay text="Saving survey questions..." target="saveDraft" />
+    <x-loading-overlay text="Clearing questions..." target="clearQuestions" />
+
+    <!-- Import From Template Modal -->
+    <div x-data="{ show: false }" x-on:open-import-template-modal.window="show = true"
+        x-on:close-import-template-modal.window="show = false" x-show="show" style="display:none"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+        <div class="bg-white rounded-lg shadow-lg w-full max-w-lg p-6 relative">
+            <button class="absolute top-2 right-2 text-gray-400 hover:text-primary" @click="show = false">
+                <x-icon name="o-x-mark" class="size-5" />
+            </button>
+            <h2 class="text-lg font-bold mb-4">Import Questions from Template</h2>
+            <div class="space-y-4">
+                <x-select wire:model="selectedTemplateId" :options="$templateOptions" option-value="id" option-label="title"
+                    placeholder="Select an active template for this level" class="w-full" />
+
+                <div class="flex justify-end gap-2">
+                    <x-button type="button" class="btn btn-ghost border-gray-400"
+                        @click="show = false">Cancel</x-button>
+                    <x-ui.button type="button" variant="primary" wire:click="importFromTemplate"
+                        wire:loading.attr="disabled" wire:target="importFromTemplate">
+                        <span wire:loading.remove wire:target="importFromTemplate"
+                            class="inline-flex items-center gap-2">
+                            <x-icon name="o-arrow-down-tray" class="size-4" />
+                            Import
+                        </span>
+                        <span wire:loading wire:target="importFromTemplate" class="inline-flex items-center gap-2">
+                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                            Importing...
+                        </span>
+                    </x-ui.button>
+                </div>
+                <p class="text-xs text-gray-500">Questions will be appended and will not replace existing ones.</p>
+            </div>
+        </div>
+    </div>
 
 </div>

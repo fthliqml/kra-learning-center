@@ -2,18 +2,61 @@
 
 namespace App\Livewire\Components\Survey;
 
+use App\Services\SurveyQuestionsValidator;
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Livewire\Attributes\On;
 use Mary\Traits\Toast;
 use Illuminate\Support\Facades\DB;
 use App\Models\TrainingSurvey;
 use App\Models\SurveyQuestion;
 use App\Models\SurveyOption;
+use App\Models\SurveyTemplate;
 
 class EditSurveyForm extends Component
 {
     use Toast;
     public $surveyLevel = 1;
+    public ?int $selectedTemplateId = null;
+
+    public function importFromTemplate($templateId = null)
+    {
+        $templateId = $templateId ?? $this->selectedTemplateId;
+        if (!$templateId) {
+            $this->error('Please select a template first.', timeout: 6000, position: 'toast-top toast-center');
+            return;
+        }
+
+        $template = SurveyTemplate::with(['questions.options'])
+            ->where('status', 'active')
+            ->where('level', $this->surveyLevel)
+            ->find($templateId);
+        if (!$template) {
+            $this->error('Template not found or not active.', timeout: 6000, position: 'toast-top toast-center');
+            return;
+        }
+        $imported = [];
+        foreach ($template->questions->sortBy('order')->values() as $qModel) {
+            $options = $qModel->options->sortBy('order')->values();
+            $opts = $options->map(fn($o) => $o->text)->all();
+            $imported[] = [
+                'id' => Str::uuid()->toString(),
+                'question_type' => $qModel->question_type ?? 'multiple',
+                'text' => $qModel->text ?? '',
+                'options' => ($qModel->question_type === 'multiple') ? $opts : [],
+            ];
+        }
+        $this->questions = array_merge($this->questions, $imported);
+        $this->success('Template questions imported and appended successfully.', timeout: 4000, position: 'toast-top toast-center');
+        // Close modal on UI
+        if (method_exists($this, 'dispatch')) {
+            // Livewire v3
+            $this->dispatch('close-import-template-modal');
+        } else {
+            // Livewire v2 fallback
+            $this->dispatchBrowserEvent('close-import-template-modal');
+        }
+    }
     public $surveyId = 1;
 
     public $questions = [];
@@ -55,6 +98,17 @@ class EditSurveyForm extends Component
     public function addQuestion(): void
     {
         $this->questions[] = $this->makeQuestion();
+    }
+
+    #[On('clearQuestions')]
+    public function clearQuestions(): void
+    {
+        // User confirmed: clear all questions
+        $this->questions = [];
+        $this->errorQuestionIndexes = [];
+        $this->success('All questions cleared.', timeout: 3000, position: 'toast-top toast-center');
+        // notify confirm dialog to close and stop processing state
+        $this->dispatch('confirm-done');
     }
 
     public function removeQuestion(int $index): void
@@ -123,7 +177,7 @@ class EditSurveyForm extends Component
         $this->errorQuestionIndexes = [];
 
         // Validate structure via service
-        $validator = new \App\Services\SurveyQuestionsValidator();
+        $validator = new SurveyQuestionsValidator();
         $result = $validator->validate($this->questions);
         $errors = $result['errors'];
         $this->errorQuestionIndexes = $result['errorQuestionIndexes'];
@@ -201,7 +255,7 @@ class EditSurveyForm extends Component
                 }
             }
 
-            // Jika pertanyaan >= 3, ubah status survey ke incomplete
+            // If questions >= 3, set survey status to incomplete
             if (count($this->questions) >= 3 && $survey->status !== TrainingSurvey::STATUS_INCOMPLETE) {
                 $survey->status = TrainingSurvey::STATUS_INCOMPLETE;
                 $survey->save();
@@ -226,7 +280,14 @@ class EditSurveyForm extends Component
 
     public function render()
     {
+        $templateOptions = SurveyTemplate::select('id', 'title')
+            ->where('level', $this->surveyLevel)
+            ->where('status', 'active')
+            ->orderBy('title')
+            ->get();
+
         return view('components.survey.edit-survey-form', [
+            'templateOptions' => $templateOptions,
         ]);
     }
 
