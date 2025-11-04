@@ -30,24 +30,7 @@
                                 {{ $survey->date ?? '-' }}
                             </p>
                         </div>
-                        @php
-                            $status = $survey->badge_status;
-                            $isDraft = ($survey->status ?? '') === 'draft';
-                            if ($isDraft && $status !== 'complete') {
-                                $badgeLabel = 'Not Ready';
-                                $badgeClass = 'badge-warning';
-                            } elseif ($status === 'complete') {
-                                $badgeLabel = 'Complete';
-                                $badgeClass = 'badge-primary bg-primary/95';
-                            } elseif ($status === 'incomplete') {
-                                $badgeLabel = 'Incomplete';
-                                $badgeClass = 'badge primary badge-soft';
-                            } else {
-                                $badgeLabel = 'Not Started';
-                                $badgeClass = 'badge-ghost';
-                            }
-                        @endphp
-                        <x-badge :value="$badgeLabel" class="{{ $badgeClass }} badge-xs sm:badge-sm" />
+                        <x-badge :value="$survey->badge_label" class="{{ $survey->badge_class }} badge-xs sm:badge-sm" />
                     </div>
 
                     @php
@@ -81,7 +64,7 @@
                                 <x-button type="button" class="btn-xs sm:btn-sm border-primary/30 bg-primary/10"
                                     icon="o-eye" label="Preview Survey" />
                             </a>
-                        @elseif (($survey->status ?? '') === 'draft')
+                        @elseif ($survey->start_disabled)
                             <x-button type="button"
                                 class="btn-xs sm:btn-sm border-primary/30 bg-gray-200 text-gray-400 cursor-not-allowed"
                                 icon="o-play" label="Start Survey" disabled />

@@ -255,10 +255,17 @@ class EditSurveyForm extends Component
                 }
             }
 
-            // If questions >= 3, set survey status to incomplete
-            if (count($this->questions) >= 3 && $survey->status !== TrainingSurvey::STATUS_INCOMPLETE) {
-                $survey->status = TrainingSurvey::STATUS_INCOMPLETE;
-                $survey->save();
+            // Status rules: if questions >= 5 => incomplete, else draft
+            if (count($this->questions) >= 5) {
+                if ($survey->status !== TrainingSurvey::STATUS_INCOMPLETE) {
+                    $survey->status = TrainingSurvey::STATUS_INCOMPLETE;
+                    $survey->save();
+                }
+            } else {
+                if ($survey->status !== TrainingSurvey::STATUS_DRAFT) {
+                    $survey->status = TrainingSurvey::STATUS_DRAFT;
+                    $survey->save();
+                }
             }
         });
 

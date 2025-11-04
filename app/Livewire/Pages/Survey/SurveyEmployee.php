@@ -83,6 +83,27 @@ class SurveyEmployee extends Component
             if ($survey->my_response) {
                 $survey->badge_status = $survey->my_response->is_completed ? 'complete' : 'incomplete';
             }
+
+            // Compute badge label and class in controller (component) instead of Blade
+            $status = $survey->badge_status; // complete | incomplete | null
+            $isDraft = ($survey->status ?? '') === 'draft';
+            $trainingStatus = strtolower($survey->training?->status ?? '');
+
+            if ($status === 'complete') {
+                $survey->badge_label = 'Complete';
+                $survey->badge_class = 'badge-primary bg-primary/95';
+            } elseif ($isDraft || $trainingStatus !== 'done') {
+                $survey->badge_label = 'Not Ready';
+                $survey->badge_class = 'badge-warning';
+            } elseif ($status === 'incomplete') {
+                $survey->badge_label = 'Incomplete';
+                $survey->badge_class = 'badge primary badge-soft';
+            } else {
+                $survey->badge_label = 'Not Started';
+                $survey->badge_class = 'badge-ghost';
+            }
+            // Determine if Start Survey button should be disabled
+            $survey->start_disabled = $isDraft || $trainingStatus !== 'done';
             return $survey;
         });
     }
