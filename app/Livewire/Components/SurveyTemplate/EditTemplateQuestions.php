@@ -195,8 +195,15 @@ class EditTemplateQuestions extends Component
             }
 
             if (count($this->questions) >= 5) {
-                $template->status = 'active';
-                $template->save();
+                if ($template->status !== 'active') {
+                    $template->status = 'active';
+                    $template->save();
+                }
+            } else {
+                if ($template->status !== 'draft') {
+                    $template->status = 'draft';
+                    $template->save();
+                }
             }
         });
 

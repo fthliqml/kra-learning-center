@@ -217,10 +217,17 @@ class EditSurveyTemplate extends Component
                 }
             }
 
-            // Set status to active if at least 5 questions
+            // Status rules: >=5 => active, otherwise draft
             if (count($this->questions) >= 5) {
-                $template->status = 'active';
-                $template->save();
+                if ($template->status !== 'active') {
+                    $template->status = 'active';
+                    $template->save();
+                }
+            } else {
+                if ($template->status !== 'draft') {
+                    $template->status = 'draft';
+                    $template->save();
+                }
             }
         });
 
