@@ -29,9 +29,6 @@
                             <p class="text-xs md:text-sm text-base-content/60 mt-1">
                                 {{ $survey->date ?? '-' }}
                             </p>
-                            <p class="text-xs md:text-sm text-base-content/50 mt-1">
-                                {{ $survey->participants }} Participants
-                            </p>
                         </div>
                         @php
                             $status = $survey->badge_status;

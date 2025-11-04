@@ -136,11 +136,38 @@ class TakeSurvey extends Component
             }
         }
 
+        // After submit: if all expected employees have completed responses, mark survey as completed
+        $surveyModel = TrainingSurvey::with('training.assessments')->find($this->surveyId);
+        if ($surveyModel && $surveyModel->training) {
+            $expectedCount = $surveyModel->training->assessments()->count();
+            if ($expectedCount > 0) {
+                $completedCount = SurveyResponse::where('survey_id', $surveyModel->id)
+                    ->where('is_completed', true)
+                    ->count();
+
+                if ($completedCount >= $expectedCount) {
+                    if ($surveyModel->status !== TrainingSurvey::STATUS_COMPLETED) {
+                        $surveyModel->status = TrainingSurvey::STATUS_COMPLETED;
+                        $surveyModel->save();
+                    }
+                } else {
+                    // Optional: if was marked completed before but now not all complete, set back to incomplete
+                    if ($surveyModel->status === TrainingSurvey::STATUS_COMPLETED) {
+                        $surveyModel->status = TrainingSurvey::STATUS_INCOMPLETE;
+                        $surveyModel->save();
+                    }
+                }
+            }
+        }
+
         $this->success(
             'Survey answers have been saved and submitted successfully',
             timeout: 4000,
             position: 'toast-top toast-center'
         );
+
+        // Redirect back to Survey Employee list for this level
+        return redirect()->route('survey.index', ['level' => $this->surveyLevel]);
     }
 
     public function render()

@@ -1,13 +1,17 @@
 <div x-data="{ showConfirm: false }">
-    <div class="w-full flex items-center gap-2 mb-2">
+    <div class="w-full flex items-center gap-2 mb-5">
         <a href="javascript:history.back()"
             class="inline-flex items-center px-2 py-1 rounded hover:bg-primary/10 text-primary text-sm font-medium focus:outline-none">
             <x-icon name="o-arrow-left" class="w-5 h-5 mr-1" />
             Back
         </a>
-        <h1 class="flex-1 text-primary text-2xl font-bold text-center lg:text-start">
-            Take Survey - {{ $trainingName }} (Level {{ $surveyLevel }})
-        </h1>
+        <div class="flex gap-2 items-center">
+            <h1 class="flex-1 text-primary text-2xl font-bold text-center lg:text-start">
+                {{ $trainingName }}
+            </h1>
+            <span class="badge badge-primary badge-soft">Level
+                {{ $surveyLevel }}</span>
+        </div>
     </div>
 
     <form x-ref="formEl" class="space-y-4 md:space-y-5" x-bind:aria-busy="submitting ? 'true' : 'false'">
