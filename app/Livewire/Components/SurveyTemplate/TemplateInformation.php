@@ -44,14 +44,22 @@ class TemplateInformation extends Component
 
         $template = SurveyTemplate::find($this->surveyId);
         if (!$template) {
-            $this->error('Survey template not found.', timeout: 6000, position: 'toast-top toast-center');
-            return;
+            // Create new template in add flow
+            $template = SurveyTemplate::create([
+                'title' => trim($this->templateTitle),
+                'description' => $this->templateDescription !== null ? trim($this->templateDescription) : null,
+                'level' => (int) $this->templateLevel,
+                'status' => 'draft',
+            ]);
+            // Update local state
+            $this->surveyId = (int) $template->id;
+        } else {
+            // Update existing template in edit flow
+            $template->title = trim($this->templateTitle);
+            $template->description = $this->templateDescription !== null ? trim($this->templateDescription) : null;
+            $template->level = (int) $this->templateLevel;
+            $template->save();
         }
-
-        $template->title = trim($this->templateTitle);
-        $template->description = $this->templateDescription !== null ? trim($this->templateDescription) : null;
-        $template->level = (int) $this->templateLevel;
-        $template->save();
 
         $this->surveyLevel = (int) $template->level;
 

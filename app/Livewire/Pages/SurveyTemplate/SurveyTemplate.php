@@ -47,8 +47,8 @@ class SurveyTemplate extends Component
 
     public function addPage(): void
     {
-        // TODO: Implement add/edit page
-
+        // Navigate to edit page in 'add' mode: pass level=1 and surveyId=0
+        $this->redirectRoute('survey-template.edit', ['level' => 1, 'surveyId' => 0], navigate: true);
     }
 
     public function render()
