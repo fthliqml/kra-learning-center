@@ -2,9 +2,16 @@
     <div class="w-full flex justify-between mb-5 lg:mb-9 items-center">
         <div class="flex items-center gap-4">
             <x-button class="btn btn-ghost btn-sm" icon="o-arrow-left" wire:click="back">Back</x-button>
-            <h1 class="text-primary text-2xl sm:text-3xl font-bold text-center lg:text-start">
-                Survey Level {{ $surveyLevel }} - {{ $surveyId }}
-            </h1>
+            <div class="flex flex-col">
+                <h1 class="text-primary text-2xl sm:text-3xl font-bold leading-tight">
+                    Survey Editor
+                </h1>
+                <div class="mt-1 flex items-center gap-2 text-sm text-base-content/70">
+                    <span class="badge badge-primary badge-soft">Level {{ $surveyLevel }}</span>
+                    <span class="badge badge-ghost" title="Survey ID: {{ $surveyId }}">Survey:
+                        {{ $surveyName ?: '#' . $surveyId }}</span>
+                </div>
+            </div>
         </div>
     </div>
 
