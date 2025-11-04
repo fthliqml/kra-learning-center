@@ -381,8 +381,10 @@ class DataTrainer extends Component
             $trainer->delete();
 
             $this->success("Trainer \"{$trainerName}\" deleted successfully", position: 'toast-top toast-center');
+            $this->dispatch('confirm-done');
         } catch (\Exception $e) {
             $this->error('Failed to delete trainer: ' . $e->getMessage(), position: 'toast-top toast-center');
+            $this->dispatch('confirm-done');
         }
     }
 
