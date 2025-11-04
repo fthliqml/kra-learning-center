@@ -25,8 +25,9 @@
                 @elseif (!empty($canRetakePosttest))
                     <div
                         class="mb-4 p-3 md:p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 flex items-center justify-between gap-2 flex-wrap">
-                        <div class="text-sm md:text-[13px] font-medium">Anda dapat mencoba Posttest lagi kapan saja, atau
-                            kembali mempelajari materi.</div>
+                        <div class="text-sm md:text-[13px] font-medium">
+                            Anda dapat mencoba Posttest lagi kapan saja, atau kembali mempelajari materi.
+                        </div>
                         <div class="flex items-center gap-2">
                             <a wire:navigate href="{{ route('courses-posttest.index', $course) }}"
                                 class="inline-flex items-center gap-2 rounded-md bg-amber-600 text-white px-3 py-1.5 text-xs md:text-sm font-medium hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400/50">
@@ -140,15 +141,6 @@
                         <x-icon name="o-arrow-right" class="size-5" />
                         <span>{{ $isLastSection ?? false ? 'Posttest' : 'Next' }}</span>
                     </button>
-                    <template x-if="remedial && !done">
-                        <span
-                            class="ml-2 text-[11px] text-amber-700 bg-amber-50 border border-amber-200 rounded px-2 py-1">Remedial
-                            aktif</span>
-                    </template>
-                </div>
-            @else
-                <div class="p-6 border border-dashed rounded-md text-sm text-gray-500">
-                    Pilih module dan section dari sidebar untuk mulai belajar.
                 </div>
             @endif
         </main>
