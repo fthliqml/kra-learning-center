@@ -63,28 +63,26 @@
             $assignment = $course->userCourses->first();
             $progress = (int) ($course->progress_percent ?? 0);
         @endphp
-        @if ($assignment)
-            <div class="mt-2 sm:mt-3" x-data>
-                <div class="h-1.5 sm:h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
-                    aria-label="Course progress" aria-valuemin="0" aria-valuemax="100"
-                    aria-valuenow="{{ $progress }}" aria-valuetext="{{ $progress }} percent">
-                    <div class="h-full bg-primary rounded-full transition-all" style="width: {{ $progress }}%">
-                    </div>
-                </div>
-                <div class="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-600 flex justify-between">
-                    <span>
-                        @if ($progress === 0)
-                            Not Started
-                        @elseif($progress === 100)
-                            Completed
-                        @else
-                            In Progress
-                        @endif
-                    </span>
-                    <span>{{ $progress }}%</span>
+        <div class="mt-2 sm:mt-3" x-data>
+            <div class="h-1.5 sm:h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
+                aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $progress }}"
+                aria-valuetext="{{ $progress }} percent">
+                <div class="h-full bg-primary rounded-full transition-all" style="width: {{ $progress }}%">
                 </div>
             </div>
-        @endif
+            <div class="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-600 flex justify-between">
+                <span>
+                    @if ($progress === 0)
+                        Not Started
+                    @elseif($progress === 100)
+                        Completed
+                    @else
+                        In Progress
+                    @endif
+                </span>
+                <span>{{ $progress }}%</span>
+            </div>
+        </div>
 
         {{-- Action --}}
         @if ($progress === 100)
