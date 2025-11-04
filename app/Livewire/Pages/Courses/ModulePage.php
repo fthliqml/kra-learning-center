@@ -4,6 +4,9 @@ namespace App\Livewire\Pages\Courses;
 
 use App\Models\Course;
 use App\Models\Test;
+use App\Models\SectionQuizQuestion;
+use App\Models\SectionQuizAttempt;
+use App\Models\SectionQuizAttemptAnswer;
 use App\Models\TestAttempt;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +17,13 @@ class ModulePage extends Component
     public Course $course;
     public ?int $activeTopicId = null;
     public ?int $activeSectionId = null;
+
+    // Quiz modal state
+    public bool $showQuizModal = false;
+    public ?int $quizSectionId = null;
+    public array $quizQuestions = [];
+    public bool $quizHasEssay = false;
+    public ?array $quizResult = null; // e.g., ['score'=>3,'total'=>4,'passed'=>true,'hasEssay'=>false]
 
     public function mount(Course $course)
     {
@@ -209,11 +219,11 @@ class ModulePage extends Component
             $orderedSections = [];
             foreach ($this->course->learningModules as $topic) {
                 foreach ($topic->sections as $sec) {
-                    $orderedSections[] = $sec->id;
+                    $orderedSections[] = (int) $sec->id;
                 }
             }
 
-            $sectionIndex = array_search($this->activeSectionId, $orderedSections, true);
+            $sectionIndex = array_search((int) $this->activeSectionId, $orderedSections, true);
             // If section not found, fallback to normal increment of 1
             $targetStep = null;
             if ($sectionIndex !== false) {
@@ -245,6 +255,24 @@ class ModulePage extends Component
             $enrollment->save();
         });
 
+        // If this section has a quiz configured, open the quiz modal unless user is in remedial (failed posttest)
+        $hasSectionQuiz = SectionQuizQuestion::where('section_id', $this->activeSectionId)->exists();
+        $isRemedial = false;
+        $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+        if ($postRow) {
+            $lastAttempt = TestAttempt::where('test_id', $postRow->id)
+                ->where('user_id', Auth::id())
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->first();
+            if ($lastAttempt && !$lastAttempt->is_passed) {
+                $isRemedial = true;
+            }
+        }
+        if ($hasSectionQuiz && !$isRemedial) {
+            $this->openQuizModalForSection($this->activeSectionId);
+            return null;
+        }
+
         // If this was the last unit before posttest, go to posttest instead of modules
         if ($isLastBeforePosttest) {
             return redirect()->route('courses-posttest.index', ['course' => $this->course->id]);
@@ -253,6 +281,185 @@ class ModulePage extends Component
         // Otherwise, advance to next section/topic and return to modules
         $this->goToNextSection();
         return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
+    }
+
+    public function openQuizModalForSection(int $sectionId): void
+    {
+        $this->quizSectionId = $sectionId;
+        $rows = SectionQuizQuestion::with(['options' => function ($q) {
+            $q->orderBy('order')->select('id', 'question_id', 'option', 'is_correct', 'order');
+        }])->where('section_id', $sectionId)
+            ->orderBy('order')
+            ->get();
+
+        $collection = $rows->map(function ($q) {
+            return [
+                'id' => 'q' . $q->id,
+                'db_id' => $q->id,
+                'type' => $q->type,
+                'text' => $q->question,
+                'options' => $q->type === 'multiple'
+                    ? $q->options->map(fn($o) => [
+                        'id' => $o->id,
+                        'text' => $o->option,
+                    ])->values()->all()
+                    : [],
+            ];
+        });
+        $this->quizQuestions = $collection->values()->all();
+        $this->quizHasEssay = $rows->contains(fn($q) => strtolower($q->type) !== 'multiple');
+        $this->quizResult = null;
+        $this->showQuizModal = true;
+    }
+
+    public function submitSectionQuiz(array $answers): void
+    {
+        $userId = Auth::id();
+        if (!$userId) return;
+        if (!$this->quizSectionId) return;
+
+        $questionRows = SectionQuizQuestion::with('options')
+            ->where('section_id', $this->quizSectionId)
+            ->get()
+            ->keyBy('id');
+        if ($questionRows->isEmpty()) return;
+
+        foreach ($questionRows as $qid => $q) {
+            $key = 'q' . $qid;
+            if (!array_key_exists($key, $answers) || ($answers[$key] === null || $answers[$key] === '')) {
+                return; // client-side should prevent; silently ignore
+            }
+        }
+
+        $now = now();
+        $hasEssay = $questionRows->contains(fn($q) => strtolower($q->type) !== 'multiple');
+
+        $items = [];
+        DB::transaction(function () use ($userId, $answers, $questionRows, $now, $hasEssay, &$items) {
+            $attempt = SectionQuizAttempt::create([
+                'user_id' => $userId,
+                'section_id' => $this->quizSectionId,
+                'score' => 0,
+                'total_questions' => $questionRows->count(),
+                'passed' => false,
+                'started_at' => $now,
+                'completed_at' => $now,
+            ]);
+
+            $score = 0;
+            $inserts = [];
+            foreach ($answers as $frontendKey => $value) {
+                if (!str_starts_with($frontendKey, 'q')) continue;
+                $qid = (int) substr($frontendKey, 1);
+                if (!$qid || !isset($questionRows[$qid])) continue;
+                $q = $questionRows[$qid];
+
+                $selectedOptionId = null;
+                $answerText = null;
+                $isCorrect = null;
+                $points = 0;
+                $userAnswerText = null;
+                $correctAnswerText = null;
+
+                if (strtolower($q->type) === 'multiple') {
+                    $selectedOptionId = (int) $value;
+                    $opt = $q->options->firstWhere('id', $selectedOptionId);
+                    $userAnswerText = $opt?->option;
+                    $correctOpt = $q->options->firstWhere('is_correct', true);
+                    $correctAnswerText = $correctOpt?->option;
+                    if ($opt && (int) $opt->question_id === (int) $qid && ($opt->is_correct ?? false)) {
+                        $isCorrect = true;
+                        $points = 1;
+                        $score += 1;
+                    } else {
+                        $isCorrect = false;
+                        $points = 0;
+                    }
+                } else {
+                    $answerText = (string) $value;
+                    $userAnswerText = $answerText;
+                    $points = 0;
+                    $isCorrect = null;
+                }
+
+                $inserts[] = [
+                    'quiz_attempt_id' => $attempt->id,
+                    'quiz_question_id' => $qid,
+                    'selected_option_id' => $selectedOptionId,
+                    'answer_text' => $answerText,
+                    'is_correct' => $isCorrect,
+                    'points_awarded' => $points,
+                    'order' => (int) ($q->order ?? 0),
+                    'answered_at' => $now,
+                    'created_at' => $now,
+                    'updated_at' => $now,
+                ];
+
+                // Build per-question feedback item
+                $items[] = [
+                    'id' => (string) ('q' . $qid),
+                    'type' => strtolower($q->type),
+                    'text' => (string) $q->question,
+                    'is_correct' => $isCorrect, // true/false for MC, null for essay
+                    'user_answer' => $userAnswerText,
+                    'correct_answer' => $correctAnswerText,
+                ];
+            }
+
+            if (!empty($inserts)) SectionQuizAttemptAnswer::insert($inserts);
+
+            $attempt->score = $score;
+            if (!$hasEssay) {
+                $mcCount = $questionRows->where('type', 'multiple')->count();
+                if ($mcCount > 0 && $score >= $mcCount) {
+                    $attempt->passed = true;
+                }
+            }
+            $attempt->save();
+
+            $this->quizResult = [
+                'score' => $score,
+                'total' => (int) $questionRows->count(),
+                'hasEssay' => $hasEssay,
+                'items' => $items,
+            ];
+        });
+
+        // Keep modal open to display the result
+        $this->showQuizModal = true;
+    }
+
+    public function closeQuizModalAndAdvance(): mixed
+    {
+        $this->showQuizModal = false;
+        $this->quizQuestions = [];
+        $this->quizResult = null;
+        $this->quizHasEssay = false;
+        $this->quizSectionId = null;
+        // Determine if current active section is the last before posttest
+        $orderedSections = [];
+        foreach ($this->course->learningModules as $topic) {
+            foreach ($topic->sections as $sec) {
+                $orderedSections[] = $sec->id;
+            }
+        }
+        $isLastBeforePosttest = false;
+        if (count($orderedSections) > 0) {
+            $lastSectionId = end($orderedSections);
+            $isLastBeforePosttest = (int) $this->activeSectionId === (int) $lastSectionId;
+        }
+
+        if ($isLastBeforePosttest) {
+            // All sections done, go straight to posttest
+            return redirect()->route('courses-posttest.index', ['course' => $this->course->id]);
+        }
+
+        // Otherwise move to the next section and reload modules on that section
+        $this->goToNextSection();
+        return redirect()->route('courses-modules.index', [
+            'course' => $this->course->id,
+            'section' => $this->activeSectionId,
+        ]);
     }
 
     private function goToNextSection(): void
@@ -379,6 +586,12 @@ class ModulePage extends Component
             $isLastSection = $activeTopic && $topicsList->isNotEmpty() && ((int) $activeTopic->id === (int) $topicsList->last()->id);
         }
 
+        // Check if active section has a quiz
+        $hasSectionQuiz = false;
+        if ($activeSection) {
+            $hasSectionQuiz = SectionQuizQuestion::where('section_id', $activeSection->id)->exists();
+        }
+
         // Return page view and pass layout variables via layoutData()
         return view('pages.courses.module-page', [
             'course' => $this->course,
@@ -391,6 +604,9 @@ class ModulePage extends Component
             'eligibleForPosttest' => $eligibleForPosttest,
             'isLastSection' => $isLastSection,
             'canRetakePosttest' => $canRetakePosttest,
+            'hasSectionQuiz' => $hasSectionQuiz,
+            'quizQuestions' => $this->quizQuestions,
+            'quizResult' => $this->quizResult,
         ])->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'module',

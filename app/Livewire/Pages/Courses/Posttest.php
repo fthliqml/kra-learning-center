@@ -346,7 +346,8 @@ class Posttest extends Component
                 $enrollment->save();
             }
         } else {
-            // If latest attempt exists and is not passed, reset progress to the first material
+            // If latest attempt exists and is not passed, DO NOT reset progress.
+            // Keep progress at modules-completed level to allow remedial without losing progress.
             $last = TestAttempt::where('test_id', $this->posttest->id)
                 ->where('user_id', $userId)
                 ->orderByDesc('submitted_at')->orderByDesc('id')
@@ -354,8 +355,14 @@ class Posttest extends Component
             if ($last && !$last->is_passed) {
                 $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
                 if ($enrollment) {
-                    $hasPretest = Test::where('course_id', $this->course->id)->where('type', 'pretest')->exists();
-                    $enrollment->current_step = $hasPretest ? 1 : 0;
+                    $totalUnits = (int) $this->course->progressUnitsCount();
+                    $requiredStep = max(0, $totalUnits - 1); // all pretest + sections completed
+                    // Ensure current_step is at least the modules-completed step; don't decrease progress
+                    $current = (int) ($enrollment->current_step ?? 0);
+                    if ($current < $requiredStep) {
+                        $enrollment->current_step = $requiredStep;
+                    }
+                    // Status should remain in_progress on failure
                     if (strtolower($enrollment->status ?? '') === 'completed') {
                         $enrollment->status = 'in_progress';
                     }

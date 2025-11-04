@@ -7,6 +7,7 @@ use App\Livewire\Pages\Courses\Pretest;
 use App\Livewire\Pages\Courses\Posttest;
 use App\Livewire\Pages\Courses\Result;
 use App\Livewire\Pages\Courses\ModulePage;
+use App\Livewire\Pages\Courses\SectionQuiz;
 use App\Livewire\Pages\EditCourse\CoursesManagement;
 use App\Livewire\Pages\EditCourse\EditCourse;
 use App\Livewire\Pages\Survey\SurveyEmployee;
@@ -44,6 +45,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/courses/{course}/overview', Overview::class)->name('courses-overview.show');
     Route::get('/courses/{course}/pretest', Pretest::class)->name('courses-pretest.index');
     Route::get('/courses/{course}/modules', ModulePage::class)->name('courses-modules.index');
+    Route::get('/courses/{course}/sections/{section}/quiz', SectionQuiz::class)->name('courses-section-quiz.show');
     Route::get('/courses/{course}/posttest', Posttest::class)->name('courses-posttest.index');
     Route::get('/courses/{course}/result', Result::class)->name('courses-result.index');
     Route::get('/courses/management', CoursesManagement::class)->name('courses-management.index');
