@@ -7,7 +7,6 @@ use App\Models\Section;
 use App\Models\SectionQuizAttempt;
 use App\Models\SectionQuizAttemptAnswer;
 use App\Models\SectionQuizQuestion;
-use App\Models\SectionQuizQuestionOption;
 use App\Models\Test;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
