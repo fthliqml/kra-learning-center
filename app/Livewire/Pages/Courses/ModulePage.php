@@ -151,6 +151,35 @@ class ModulePage extends Component
                 $this->activeSectionId = $firstTopic->sections->first()?->id;
             }
         }
+
+        // Lightweight server-side flag: auto-reopen quiz modal on refresh if previously opened
+        $reopenQuizId = session()->get('reopen_quiz_section');
+        if ($reopenQuizId && (int) $reopenQuizId === (int) $this->activeSectionId) {
+            // Only reopen if section still has quiz, no remedial, and no attempt yet
+            $hasSectionQuiz = SectionQuizQuestion::where('section_id', $this->activeSectionId)->exists();
+            if ($hasSectionQuiz) {
+                $isRemedial = false;
+                $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+                if ($postRow) {
+                    $lastAttempt = TestAttempt::where('test_id', $postRow->id)
+                        ->where('user_id', $userId)
+                        ->orderByDesc('submitted_at')->orderByDesc('id')
+                        ->first();
+                    if ($lastAttempt && !$lastAttempt->is_passed) {
+                        $isRemedial = true;
+                    }
+                }
+
+                $attemptExists = SectionQuizAttempt::where('section_id', $this->activeSectionId)
+                    ->where('user_id', $userId)
+                    ->exists();
+
+                if (!$isRemedial && !$attemptExists) {
+                    $this->openQuizModalForSection($this->activeSectionId);
+                }
+            }
+            // Keep the flag for subsequent refreshes while modal is considered open
+        }
     }
 
     public function selectTopic(int $topicId): void
@@ -202,60 +231,7 @@ class ModulePage extends Component
             }
         }
 
-        // Atomic increment with idempotency per section: only advance at most once for current active section
-        DB::transaction(function () use ($userId, $totalUnits) {
-            // Lock enrollment row to prevent race conditions on rapid clicks
-            $enrollment = $this->course->userCourses()
-                ->where('user_id', $userId)
-                ->lockForUpdate()
-                ->first();
-            if (!$enrollment) return;
-
-            // Determine the step index corresponding to finishing the current active section
-            $hasPretest = Test::where('course_id', $this->course->id)->where('type', 'pretest')->exists();
-            $pretestUnits = $hasPretest ? 1 : 0;
-
-            // Build ordered sections list
-            $orderedSections = [];
-            foreach ($this->course->learningModules as $topic) {
-                foreach ($topic->sections as $sec) {
-                    $orderedSections[] = (int) $sec->id;
-                }
-            }
-
-            $sectionIndex = array_search((int) $this->activeSectionId, $orderedSections, true);
-            // If section not found, fallback to normal increment of 1
-            $targetStep = null;
-            if ($sectionIndex !== false) {
-                // Completing this section means step should be pretestUnits + (index+1)
-                $targetStep = min($totalUnits, $pretestUnits + ($sectionIndex + 1));
-            }
-
-            $current = (int) ($enrollment->current_step ?? 0);
-            if ($targetStep !== null) {
-                if ($current < $targetStep) {
-                    $enrollment->current_step = $targetStep;
-                } else {
-                    // Already recorded completion for this section; don't advance again
-                }
-            } else {
-                // Fallback: single-step increment without skipping beyond total
-                if ($current < $totalUnits) {
-                    $enrollment->current_step = $current + 1;
-                }
-            }
-
-            // Update status based on resultant step
-            $newStep = (int) $enrollment->current_step;
-            if ($newStep >= $totalUnits) {
-                $enrollment->status = 'completed';
-            } elseif ($newStep > 0) {
-                $enrollment->status = 'in_progress';
-            }
-            $enrollment->save();
-        });
-
-        // If this section has a quiz configured, open the quiz modal unless user is in remedial (failed posttest)
+        // If this section has a quiz configured and user is not in remedial, show quiz first (do NOT advance progress yet)
         $hasSectionQuiz = SectionQuizQuestion::where('section_id', $this->activeSectionId)->exists();
         $isRemedial = false;
         $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
@@ -273,6 +249,9 @@ class ModulePage extends Component
             return null;
         }
 
+        // No quiz (or remedial): advance progress now
+        $this->advanceProgressForActiveSection($totalUnits);
+
         // If this was the last unit before posttest, go to posttest instead of modules
         if ($isLastBeforePosttest) {
             return redirect()->route('courses-posttest.index', ['course' => $this->course->id]);
@@ -285,6 +264,8 @@ class ModulePage extends Component
 
     public function openQuizModalForSection(int $sectionId): void
     {
+        // Mark intent in session so refresh reopens the modal
+        session()->put('reopen_quiz_section', $sectionId);
         $this->quizSectionId = $sectionId;
         $rows = SectionQuizQuestion::with(['options' => function ($q) {
             $q->orderBy('order')->select('id', 'question_id', 'option', 'is_correct', 'order');
@@ -436,6 +417,10 @@ class ModulePage extends Component
         $this->quizResult = null;
         $this->quizHasEssay = false;
         $this->quizSectionId = null;
+        // Clear the reopen flag; quiz flow is finished for this section
+        session()->forget('reopen_quiz_section');
+        // Advance progress now that quiz is completed for this section
+        $this->advanceProgressForActiveSection($this->computeTotalUnits());
         // Determine if current active section is the last before posttest
         $orderedSections = [];
         foreach ($this->course->learningModules as $topic) {
@@ -460,6 +445,54 @@ class ModulePage extends Component
             'course' => $this->course->id,
             'section' => $this->activeSectionId,
         ]);
+    }
+
+    private function advanceProgressForActiveSection(int $totalUnits): void
+    {
+        $userId = Auth::id();
+        if (!$userId) return;
+        DB::transaction(function () use ($userId, $totalUnits) {
+            $enrollment = $this->course->userCourses()
+                ->where('user_id', $userId)
+                ->lockForUpdate()
+                ->first();
+            if (!$enrollment) return;
+
+            $hasPretest = Test::where('course_id', $this->course->id)->where('type', 'pretest')->exists();
+            $pretestUnits = $hasPretest ? 1 : 0;
+
+            $orderedSections = [];
+            foreach ($this->course->learningModules as $topic) {
+                foreach ($topic->sections as $sec) {
+                    $orderedSections[] = (int) $sec->id;
+                }
+            }
+
+            $sectionIndex = array_search((int) $this->activeSectionId, $orderedSections, true);
+            $targetStep = null;
+            if ($sectionIndex !== false) {
+                $targetStep = min($totalUnits, $pretestUnits + ($sectionIndex + 1));
+            }
+
+            $current = (int) ($enrollment->current_step ?? 0);
+            if ($targetStep !== null) {
+                if ($current < $targetStep) {
+                    $enrollment->current_step = $targetStep;
+                }
+            } else {
+                if ($current < $totalUnits) {
+                    $enrollment->current_step = $current + 1;
+                }
+            }
+
+            $newStep = (int) $enrollment->current_step;
+            if ($newStep >= $totalUnits) {
+                $enrollment->status = 'completed';
+            } elseif ($newStep > 0) {
+                $enrollment->status = 'in_progress';
+            }
+            $enrollment->save();
+        });
     }
 
     private function goToNextSection(): void
