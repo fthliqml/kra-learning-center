@@ -7,6 +7,8 @@ use App\Models\Test;
 use App\Models\TestAttempt;
 use App\Models\TestAttemptAnswer;
 use App\Models\TestQuestion;
+use App\Models\SectionQuizAttempt;
+use App\Models\Section;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 
@@ -16,6 +18,7 @@ class Result extends Component
 
     public ?array $pretest = null;   // ['attempt' => TestAttempt|null, 'percent' => int|null, 'max' => int]
     public ?array $posttest = null;  // ['attempt' => TestAttempt|null, 'percent' => int|null, 'max' => int, 'passing' => int|null]
+    public array $quizzes = [];      // list of per-section quiz results
 
     public function mount(Course $course)
     {
@@ -58,11 +61,25 @@ class Result extends Component
             if ($attempt && $maxAuto > 0) {
                 $percent = (int) round(($attempt->auto_score / max(1, $maxAuto)) * 100);
             }
+            // Extra aggregates for donut
+            $mcTotalPre = (int) TestQuestion::where('test_id', $pre->id)
+                ->where('question_type', 'multiple')
+                ->count();
+            $qTotalPre = (int) TestQuestion::where('test_id', $pre->id)->count();
+            $correctPre = 0;
+            if ($attempt) {
+                $correctPre = (int) TestAttemptAnswer::where('attempt_id', $attempt->id)
+                    ->where('is_correct', true)
+                    ->count();
+            }
             $this->pretest = [
                 'test' => $pre,
                 'attempt' => $attempt,
                 'max_auto' => $maxAuto,
                 'percent' => $percent,
+                'mc_total' => $mcTotalPre,
+                'q_total' => $qTotalPre,
+                'correct' => $correctPre,
             ];
         }
 
@@ -139,6 +156,39 @@ class Result extends Component
                 'attempts' => $attempts,
             ];
         }
+
+        // Per-section quiz results for this course
+        // Collect all section IDs that belong to this course
+        $sectionIds = [];
+        foreach ($this->course->learningModules as $topic) {
+            foreach ($topic->sections as $sec) {
+                $sectionIds[] = (int) $sec->id;
+            }
+        }
+        if (!empty($sectionIds)) {
+            $rows = SectionQuizAttempt::with(['section' => function ($q) {
+                $q->select('id', 'topic_id', 'title')->with(['topic' => function ($t) {
+                    $t->select('id', 'title');
+                }]);
+            }])
+                ->where('user_id', $userId)
+                ->whereIn('section_id', $sectionIds)
+                ->orderByDesc('completed_at')
+                ->orderByDesc('id')
+                ->get();
+
+            $this->quizzes = $rows->map(function ($r) {
+                return [
+                    'section_id' => (int) $r->section_id,
+                    'module' => (string) ($r->section?->topic?->title ?? ''),
+                    'section' => (string) ($r->section?->title ?? ''),
+                    'score' => (int) ($r->score ?? 0),
+                    'total' => (int) ($r->total_questions ?? 0),
+                    'passed' => (bool) ($r->passed ?? false),
+                    'completed_at' => optional($r->completed_at)->format('Y-m-d H:i') ?? '-',
+                ];
+            })->values()->all();
+        }
     }
 
     public function render()
@@ -178,6 +228,7 @@ class Result extends Component
             'course' => $this->course,
             'pre' => $this->pretest,
             'post' => $this->posttest,
+            'quizzes' => $this->quizzes,
         ])->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'result',
