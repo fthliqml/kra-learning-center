@@ -1,5 +1,9 @@
 @php
+    // Initialize questions collection
     $questions = $questions ?? collect();
+
+    // Count questions
+    $qCount = $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions);
 @endphp
 
 <div x-data="posttestForm($wire)" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
@@ -8,7 +12,7 @@
         <div>
             <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Posttest</h1>
         </div>
-        {{-- Material Picker --}}
+        {{-- Learning Module Picker --}}
         @if (!empty($showMaterialPicker))
             <div class="flex items-center gap-2" x-data="{ sel: 'resume' }">
                 <label class="sr-only" for="material-select">Pilih materi</label>
@@ -59,7 +63,7 @@
         </div>
     </div>
 
-    {{-- Form --}}
+    {{-- Form Posttest --}}
     <form x-ref="formEl" @submit.prevent="submit" class="space-y-4 md:space-y-5"
         x-bind:aria-busy="submitting ? 'true' : 'false'">
         @forelse ($questions as $index => $q)
@@ -115,7 +119,7 @@
             </div>
         @endforelse
 
-        @php $qCount = $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions); @endphp
+        {{-- Actions --}}
         @if ($qCount > 0)
             <div class="pt-2 flex flex-row items-center justify-between md:justify-end gap-3">
                 <button type="button" @click="resetForm" :disabled="submitting"
@@ -133,7 +137,7 @@
     </form>
 </div>
 
-
+{{-- Script --}}
 <script>
     function posttestForm(wire) {
         return {

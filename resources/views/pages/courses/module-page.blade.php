@@ -1,6 +1,7 @@
 @php
     use Illuminate\Support\Str;
 
+    // Determine resource types
     $hasVideo = ($videoResources->count() ?? 0) > 0;
     $hasReading = ($readingResources->count() ?? 0) > 0;
     $videoCount = (int) ($videoResources->count() ?? 0);
@@ -10,6 +11,7 @@
     <div class="grid grid-cols-1 lg:grid-cols-12 gap-6" x-data="Object.assign(window.videoGate({{ $videoCount }}), { remedial: {{ !empty($canRetakePosttest) ? 'true' : 'false' }}, quizOpen: @entangle('showQuizModal') })"
         @module-video-ended.window="ended[$event.detail.id] = true">
         <main class="lg:col-span-12">
+            {{-- Posttest Eligibility --}}
             @isset($eligibleForPosttest)
                 @if ($eligibleForPosttest)
                     <div
@@ -38,6 +40,8 @@
                     </div>
                 @endif
             @endisset
+
+            {{-- Active Section --}}
             @if ($activeSection)
                 <div class="flex items-center justify-between mb-5 md:mb-6">
                     <h1 class="text-lg md:text-2xl font-bold text-gray-900">{{ $activeSection->title }}</h1>
@@ -58,11 +62,13 @@
                     </div>
                 </div>
 
+                {{-- Resources --}}
                 @if (!$hasVideo && !$hasReading)
                     <div class="p-6 border border-dashed rounded-md text-sm text-gray-500">
                         Belum ada konten untuk section ini.
                     </div>
                 @else
+                    {{-- Video Resources --}}
                     @if ($hasVideo)
                         <div
                             class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow mb-4">
@@ -107,6 +113,7 @@
                         </div>
                     @endif
 
+                    {{-- Reading Resources --}}
                     @if ($hasReading)
                         <div
                             class="bg-white border border-gray-200 rounded-xl shadow-sm hover:shadow-md transition-shadow">
@@ -139,7 +146,7 @@
                     @endif
                 @endif
 
-                <!-- Bottom Action (mobile) -->
+                {{-- Bottom Action (mobile) --}}
                 <div class="mt-6 flex items-center justify-end md:hidden">
                     <button wire:click="completeSubtopic" :disabled="!(done || remedial)" wire:loading.attr="disabled"
                         wire:target="completeSubtopic" wire:loading.class="opacity-70 pointer-events-none"
@@ -313,6 +320,7 @@
     </div>
 </div>
 
+{{-- Script --}}
 <script>
     function sectionQuizInModal(wire) {
         return {

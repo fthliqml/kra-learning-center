@@ -1,8 +1,13 @@
 @php
+    // Initialize questions collection
     $questions = $questions ?? collect();
+
+    // Count questions
+    $qCount = $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions);
 @endphp
 
 <div x-data="sectionQuizForm($wire)" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
+    {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Quiz: {{ $section->title }}</h1>
@@ -10,6 +15,7 @@
         </div>
     </div>
 
+    {{-- Form Quiz --}}
     <form x-ref="formEl" @submit.prevent="submit" :aria-busy="submitting ? 'true' : 'false'"
         class="space-y-4 md:space-y-5">
         @forelse ($questions as $index => $q)
@@ -56,7 +62,7 @@
             </div>
         @endforelse
 
-        @php $qCount = $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions); @endphp
+        {{-- Actions --}}
         @if ($qCount > 0)
             <div class="pt-2 flex flex-row items-center justify-end gap-3">
                 <button type="submit" :disabled="submitting"
@@ -75,6 +81,7 @@
     </form>
 </div>
 
+{{-- Script --}}
 <script>
     function sectionQuizForm(wire) {
         return {

@@ -1,17 +1,20 @@
 @php
-    // $questions is provided by Livewire component; ensure it's a collection/array
+    // Initialize questions collection
     $questions = $questions ?? collect();
+
+    // Count questions
+    $qCount = $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions);
 @endphp
 
 <div x-data="pretestForm($wire)" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
-    <!-- Header -->
+    {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Pretest</h1>
         </div>
     </div>
 
-    <!-- Intro / Instructions -->
+    {{-- Instructions --}}
     <div class="rounded-xl border border-gray-200 bg-white p-4 md:p-6 shadow-sm mb-5 md:mb-6" x-data="{ open: true }">
         <button type="button"
             class="md:hidden inline-flex items-center gap-2 text-xs font-medium text-gray-600 transition"
@@ -44,7 +47,7 @@
         </div>
     </div>
 
-    <!-- Questions -->
+    {{-- Form Pretest --}}
     <form x-ref="formEl" @submit.prevent="submit" class="space-y-4 md:space-y-5"
         x-bind:aria-busy="submitting ? 'true' : 'false'">
         @forelse ($questions as $index => $q)
@@ -100,9 +103,8 @@
             </div>
         @endforelse
 
-        @php $qCount = $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions); @endphp
+        {{-- Actions --}}
         @if ($qCount > 0)
-            <!-- Actions -->
             <div class="pt-2 flex flex-row items-center justify-between md:justify-end gap-3">
                 <button type="button" @click="resetForm" :disabled="submitting"
                     class="inline-flex items-center justify-center gap-2 rounded-md bg-gray-100 text-gray-700 px-4 py-2.5 text-sm font-medium hover:bg-gray-200 focus:outline-none focus:ring-2 focus:ring-gray-300/50 transition disabled:opacity-50 disabled:cursor-not-allowed">
@@ -119,6 +121,7 @@
     </form>
 </div>
 
+{{-- Script --}}
 <script>
     function pretestForm(wire) {
         return {

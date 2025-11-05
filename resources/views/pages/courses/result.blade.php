@@ -1,36 +1,44 @@
+@php
+    // Calculate percentages and delta
+    $prePct = (int) ($pre['percent'] ?? 0 ?: 0);
+    $postPct = (int) ($post['percent'] ?? 0 ?: 0);
+    $delta = $postPct - $prePct;
+
+    // Determine top attempt status
+    $topAttempt = $post['attempt'] ?? null;
+    $topUnderReview = false;
+    $topPassed = false;
+    if ($topAttempt) {
+        $topUnderReview = $topAttempt->status === \App\Models\TestAttempt::STATUS_UNDER_REVIEW;
+        // Derive pass: is_passed OR 100% OR meets passing threshold
+        $passing = (int) ($post['passing'] ?? 0);
+        $derivedPass = false;
+        if (!$topUnderReview) {
+            if ($postPct === 100) {
+                $derivedPass = true;
+            } elseif ($passing > 0 && $postPct >= $passing) {
+                $derivedPass = true;
+            } elseif ((bool) $topAttempt->is_passed) {
+                $derivedPass = true;
+            }
+        }
+        $topPassed = $derivedPass;
+    }
+
+    // Posttest details
+    $mcTotal = (int) ($post['mc_total'] ?? 0);
+    $correct = (int) ($post['correct'] ?? 0);
+    $incorrect = max(0, $mcTotal - $correct);
+    $attempts = $post['attempts'] ?? [];
+@endphp
+
 <div class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
+    {{-- Heading --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
         <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Result</h1>
     </div>
 
-    @php
-        $prePct = (int) ($pre['percent'] ?? 0 ?: 0);
-        $postPct = (int) ($post['percent'] ?? 0 ?: 0);
-        $delta = $postPct - $prePct;
-    @endphp
-
-    @php
-        $topAttempt = $post['attempt'] ?? null;
-        $topUnderReview = false;
-        $topPassed = false;
-        if ($topAttempt) {
-            $topUnderReview = $topAttempt->status === \App\Models\TestAttempt::STATUS_UNDER_REVIEW;
-            // Derive pass: is_passed OR 100% OR meets passing threshold
-            $passing = (int) ($post['passing'] ?? 0);
-            $derivedPass = false;
-            if (!$topUnderReview) {
-                if ($postPct === 100) {
-                    $derivedPass = true;
-                } elseif ($passing > 0 && $postPct >= $passing) {
-                    $derivedPass = true;
-                } elseif ((bool) $topAttempt->is_passed) {
-                    $derivedPass = true;
-                }
-            }
-            $topPassed = $derivedPass;
-        }
-    @endphp
-
+    {{-- Posttest Status --}}
     @if ($topAttempt)
         @if ($topUnderReview)
             <div class="rounded-md border border-amber-200 bg-amber-50 text-amber-800 p-3 mb-4">
@@ -65,9 +73,8 @@
         @endif
     @endif
 
-    <!-- Grafik Perbandingan + Ringkasan di kanan -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 mb-6 md:mb-6">
-        <!-- Grafik Perbandingan -->
+        {{-- Grafik Perbandingan --}}
         <section class="rounded-xl border border-gray-200 bg-white p-4 md:p-6 md:col-span-2">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-base font-semibold text-gray-900">Perbandingan Nilai</h2>
@@ -121,7 +128,7 @@
             </div>
         </section>
 
-        <!-- Ringkasan Cepat (kanan) -->
+        {{-- Ringkasan --}}
         <div class="md:col-span-1">
             <div class="flex flex-row md:flex-col gap-3 md:gap-4 overflow-x-auto md:overflow-visible -mx-2 px-2 ">
                 <div class="rounded-xl border border-gray-200 bg-white p-4 min-w-[100px]">
@@ -143,21 +150,12 @@
         </div>
     </div>
 
-    <!-- Ringkasan Posttest: dihapus sesuai permintaan; status ditampilkan di paling atas -->
-
-    @php
-        $mcTotal = (int) ($post['mc_total'] ?? 0);
-        $correct = (int) ($post['correct'] ?? 0);
-        $incorrect = max(0, $mcTotal - $correct);
-        $attempts = $post['attempts'] ?? [];
-    @endphp
-
     @if ($mcTotal > 0)
-        <div class="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-            <!-- Hasil Pretest -->
-            <div class="rounded-lg border border-gray-200 p-4">
+        <div class="mt-6 flex flex-col md:flex-row md:items-start gap-4">
+            {{-- Hasil Posttest --}}
+            <div class="rounded-lg border border-gray-200 p-4 md:w-1/2">
                 <div class="flex items-center justify-between mb-5">
-                    <h3 class="text-sm font-semibold text-gray-900">Hasil Pretest</h3>
+                    <h3 class="text-sm font-semibold text-gray-900">Hasil Posttest</h3>
                     <div class="text-xs text-gray-500">Multiple Choice</div>
                 </div>
                 <div x-data="{ chart: null }" x-init="(() => {
@@ -198,8 +196,8 @@
                 </div>
             </div>
 
-            <!-- Riwayat Percobaan -->
-            <div class="rounded-lg border border-gray-200 p-4">
+            {{-- Riwayat Percobaan --}}
+            <div class="rounded-lg border border-gray-200 p-4 md:w-1/2">
                 <div class="flex items-center justify-between mb-2">
                     <h3 class="text-sm font-semibold text-gray-900">Riwayat Percobaan</h3>
                 </div>

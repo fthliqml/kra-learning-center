@@ -1,6 +1,6 @@
 <div class="w-full" x-data>
     <div class="max-w-6xl mx-auto px-4 md:px-6">
-        {{-- Breadcrumb (optional) --}}
+        {{-- Breadcrumb --}}
         <nav class="text-xs mb-4 text-gray-500 flex items-center gap-1" aria-label="Breadcrumb">
             <a wire:navigate href="{{ route('courses.index') }}" class="hover:text-primary">Courses</a>
             <span>/</span>
@@ -14,7 +14,7 @@
             {{ $course->title }}
         </h1>
 
-        {{-- Hero / Thumbnail --}}
+        {{-- Thumbnail --}}
         <div class="w-full mb-8">
             <div
                 class="relative w-full aspect-[16/6] md:aspect-[16/5] rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
@@ -43,7 +43,7 @@
                     </div>
                 </section>
 
-                {{-- Modules List --}}
+                {{-- Learning Modules List --}}
                 <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-base md:text-lg font-semibold">Learning Modules</h2>
@@ -155,7 +155,7 @@
                 </section>
             </div>
 
-            {{-- Right Sidebar --}}
+            {{-- Sidebar --}}
             <aside class="space-y-5">
                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                     <h2 class="text-base font-semibold mb-4">Course Content</h2>
