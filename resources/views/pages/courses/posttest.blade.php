@@ -6,20 +6,39 @@
     $qCount = $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions);
 @endphp
 
-<div x-data="pretestForm($wire)" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
+<div x-data="posttestForm($wire)" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Pretest</h1>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Posttest</h1>
         </div>
+        {{-- Learning Module Picker --}}
+        @if (!empty($showMaterialPicker))
+            <div class="flex items-center gap-2" x-data="{ sel: 'resume' }">
+                <label class="sr-only" for="material-select">Pilih materi</label>
+                <select id="material-select" x-model="sel"
+                    class="min-w-[220px] md:min-w-[340px] rounded-md border border-gray-300 bg-white text-gray-800 text-xs md:text-sm px-2.5 py-2 focus:outline-none focus:ring-2 focus:ring-primary/30">
+                    <option disabled selected value="resume">Pilih Materi</option>
+                    @foreach ($sectionsList ?? [] as $sec)
+                        <option value="{{ $sec['id'] }}">{{ $sec['module'] }} — {{ $sec['title'] }}</option>
+                    @endforeach
+                </select>
+                <a wire:navigate
+                    :href="sel === 'resume' ? '{{ route('courses-modules.index', $course) }}' : (sel === 'first' ?
+                            '{{ route('courses-modules.index', $course) }}?start=first' :
+                            '{{ route('courses-modules.index', $course) }}?section=' + sel)"
+                    class="inline-flex items-center gap-2 rounded-md bg-gray-800 text-white px-3 py-2 text-xs md:text-sm font-medium hover:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-gray-700/50">
+                    <x-icon name="o-arrow-right" class="size-4" />
+                    <span>Buka</span>
+                </a>
+            </div>
+        @endif
     </div>
 
     {{-- Instructions --}}
     <div class="rounded-xl border border-gray-200 bg-white p-4 md:p-6 shadow-sm mb-5 md:mb-6" x-data="{ open: true }">
-        <button type="button"
-            class="md:hidden inline-flex items-center gap-2 text-xs font-medium text-gray-600 transition"
-            @click="open = !open">
-            <span x-text="open ? 'Sembunyikan Instruksi' : 'Tampilkan Instruksi'"></span>
+        <button type="button" class="md:hidden inline-flex items-center gap-2 text-xs font-medium text-gray-600 transition" @click="open = !open">
+            <span x-text="open ? 'Sembunyikan Instruksi ' : 'Tampilkan Instruksi '"></span>
             <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
                 viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round" />
@@ -31,11 +50,8 @@
             </div>
             <div class="flex-1">
                 <h2 class="text-base font-semibold text-gray-900">Sebelum Memulai</h2>
-                <p class="text-sm text-gray-600 mt-1 leading-relaxed">
-                    Pretest ini membantu kami memahami titik awal pengetahuan Anda sehingga pembelajaran bisa lebih
-                    relevan.
-                    Jawablah sejujur mungkin. Hasil pretest tidak menurunkan progres Anda.
-                </p>
+                <p class="text-sm text-gray-600 mt-1 leading-relaxed">Posttest ini mengukur pemahaman Anda
+                    setelah menyelesaikan materi.</p>
                 <ul class="mt-3 text-xs text-gray-500 grid gap-1 grid-cols-1">
                     <li class="inline-flex items-center gap-1">
                         <span class="w-1.5 h-1.5 rounded-full bg-primary/60"></span>
@@ -47,7 +63,7 @@
         </div>
     </div>
 
-    {{-- Form Pretest --}}
+    {{-- Form Posttest --}}
     <form x-ref="formEl" @submit.prevent="submit" class="space-y-4 md:space-y-5"
         x-bind:aria-busy="submitting ? 'true' : 'false'">
         @forelse ($questions as $index => $q)
@@ -99,7 +115,7 @@
             </fieldset>
         @empty
             <div class="p-6 border border-dashed rounded-lg text-center text-sm text-gray-500 bg-white">
-                Belum ada soal pretest untuk course ini.
+                Belum ada soal posttest untuk course ini.
             </div>
         @endforelse
 
@@ -123,7 +139,7 @@
 
 {{-- Script --}}
 <script>
-    function pretestForm(wire) {
+    function posttestForm(wire) {
         return {
             lw: wire,
             answers: {},
@@ -138,18 +154,24 @@
                 return this.totalQuestions ? (this.answeredCount / this.totalQuestions) * 100 : 0;
             },
             key() {
-                // Unique key per user+pretest
-                return `pretest:${@json($userId)}:${@json($pretestId)}`;
+                return `posttest:${@json($userId)}:${@json($posttestId)}`;
             },
             init() {
-                // Restore saved answers
+                // Clear previous attempt's draft on first load in this session
+                try {
+                    const initKey =
+                        `posttest:initCleared:${@json($userId)}:${@json($posttestId)}`;
+                    if (!sessionStorage.getItem(initKey)) {
+                        localStorage.removeItem(this.key());
+                        sessionStorage.setItem(initKey, '1');
+                    }
+                } catch (e) {}
                 try {
                     const raw = localStorage.getItem(this.key());
                     if (raw) {
                         const parsed = JSON.parse(raw);
                         if (parsed && typeof parsed === 'object') {
                             this.answers = parsed;
-                            // Re-check radios
                             Object.entries(this.answers).forEach(([name, val]) => {
                                 const el = this.$refs.formEl?.querySelector(
                                     `input[type=radio][name='${name}'][value='${val}']`);
@@ -160,7 +182,6 @@
                         }
                     }
                 } catch (e) {}
-                // Autosave on input change
                 this.$nextTick(() => {
                     this.$refs.formEl?.addEventListener('input', this.saveDraft.bind(this));
                     this.$refs.formEl?.addEventListener('change', this.saveDraft.bind(this));
@@ -187,30 +208,22 @@
                 return Object.keys(this.errors).length === 0;
             },
             resetForm() {
-                // Reset native form elements (radio selections, textareas)
-                if (this.$refs.formEl) {
-                    this.$refs.formEl.reset();
-                }
-                // Clear reactive state
+                if (this.$refs.formEl) this.$refs.formEl.reset();
                 this.answers = {};
                 this.errors = {};
                 this.submitted = false;
                 this.saveDraft();
             },
             submit() {
-                if (!this.validate()) {
-                    return;
-                }
+                if (!this.validate()) return;
                 this.submitting = true;
                 this.submitted = true;
-                // Persist draft immediately before sending
                 this.saveDraft();
-                Promise.resolve(this.lw.submitPretest(this.answers))
+                Promise.resolve(this.lw.submitPosttest(this.answers))
                     .catch(() => {
                         this.submitting = false;
                     })
                     .finally(() => {
-                        // Livewire will redirect on success; on non-redirect, reset immediately
                         this.submitting = false;
                     });
             }

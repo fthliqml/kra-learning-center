@@ -63,29 +63,35 @@
             $assignment = $course->userCourses->first();
             $progress = (int) ($course->progress_percent ?? 0);
         @endphp
-        @if ($progress > 0)
-            <div class="mt-2 sm:mt-3" x-data>
-                <div class="h-1.5 sm:h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
-                    aria-label="Course progress" aria-valuemin="0" aria-valuemax="100"
-                    aria-valuenow="{{ $progress }}" aria-valuetext="{{ $progress }} percent">
-                    <div class="h-full bg-primary rounded-full transition-all" style="width: {{ $progress }}%">
-                    </div>
-                </div>
-                <div class="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-600 flex justify-between">
-                    <span>{{ $progress !== 100 ? 'In Progress' : 'Completed' }}</span>
-                    <span>{{ $progress }}%</span>
+        <div class="mt-2 sm:mt-3" x-data>
+            <div class="h-1.5 sm:h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
+                aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $progress }}"
+                aria-valuetext="{{ $progress }} percent">
+                <div class="h-full bg-primary rounded-full transition-all" style="width: {{ $progress }}%">
                 </div>
             </div>
-        @endif
+            <div class="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-600 flex justify-between">
+                <span>
+                    @if ($progress === 0)
+                        Not Started
+                    @elseif($progress === 100)
+                        Completed
+                    @else
+                        In Progress
+                    @endif
+                </span>
+                <span>{{ $progress }}%</span>
+            </div>
+        </div>
 
         {{-- Action --}}
         @if ($progress === 100)
-            <button type="button" data-card-action
-                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300 cursor-default"
-                aria-label="See results (coming soon)" @click.stop>
+            <a wire:navigate href="{{ route('courses-result.index', $course) }}" data-card-action
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
+                aria-label="See results" @click.stop>
                 <span>See Results</span>
                 <span aria-hidden="true">→</span>
-            </button>
+            </a>
         @elseif ($progress > 0)
             <a wire:navigate href="{{ route('courses-modules.index', $course) }}" data-card-action
                 class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"

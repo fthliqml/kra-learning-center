@@ -1,6 +1,6 @@
 <div class="w-full" x-data>
     <div class="max-w-6xl mx-auto px-4 md:px-6">
-        {{-- Breadcrumb (optional) --}}
+        {{-- Breadcrumb --}}
         <nav class="text-xs mb-4 text-gray-500 flex items-center gap-1" aria-label="Breadcrumb">
             <a wire:navigate href="{{ route('courses.index') }}" class="hover:text-primary">Courses</a>
             <span>/</span>
@@ -14,7 +14,7 @@
             {{ $course->title }}
         </h1>
 
-        {{-- Hero / Thumbnail --}}
+        {{-- Thumbnail --}}
         <div class="w-full mb-8">
             <div
                 class="relative w-full aspect-[16/6] md:aspect-[16/5] rounded-xl overflow-hidden bg-gray-100 border border-gray-200">
@@ -43,7 +43,7 @@
                     </div>
                 </section>
 
-                {{-- Modules List --}}
+                {{-- Learning Modules List --}}
                 <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                     <div class="flex items-center justify-between mb-4">
                         <h2 class="text-base md:text-lg font-semibold">Learning Modules</h2>
@@ -155,7 +155,7 @@
                 </section>
             </div>
 
-            {{-- Right Sidebar --}}
+            {{-- Sidebar --}}
             <aside class="space-y-5">
                 <div class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                     <h2 class="text-base font-semibold mb-4">Course Content</h2>
@@ -173,10 +173,26 @@
                             <span class="w-6 text-xs font-medium text-gray-500">4.</span><span>Result</span>
                         </li>
                     </ol>
-                    <a type="button" href="{{ route('courses-pretest.index', $course) }}"
-                        class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary">
-                        Start Course
-                    </a>
+                    @php $progress = (int) ($course->progressForUser() ?? 0); @endphp
+                    @if ($progress === 100)
+                        <a wire:navigate href="{{ route('courses-result.index', $course) }}"
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                            aria-label="See results">
+                            See Results
+                        </a>
+                    @elseif ($progress > 0)
+                        <a wire:navigate href="{{ route('courses-modules.index', $course) }}"
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                            aria-label="Continue learning">
+                            Continue Learning
+                        </a>
+                    @else
+                        <a wire:navigate href="{{ route('courses-pretest.index', $course) }}"
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                            aria-label="Start course">
+                            Start Course
+                        </a>
+                    @endif
                 </div>
             </aside>
         </div>
