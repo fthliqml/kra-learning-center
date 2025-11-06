@@ -71,8 +71,23 @@
             @endanyrole
 
             <div class="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-5">
-                <x-button wire:click="closeModal"
-                    class="btn btn-error bg-white hover:bg-red-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
+                @anyrole('admin', 'instructor')
+                    @php
+                        $typeUpperFooter = strtoupper(
+                            $selectedEvent['type'] ?? ($selectedEvent['training_type'] ?? ''),
+                        );
+                    @endphp
+                    @if (in_array($typeUpperFooter, ['IN', 'OUT']))
+                        <x-button wire:click="closeTraining" spinner="closeTraining"
+                            class="btn btn-primary w-full sm:w-auto">Close Training</x-button>
+                    @else
+                        <x-button wire:click="closeModal"
+                            class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
+                    @endif
+                @else
+                    <x-button wire:click="closeModal"
+                        class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
+                @endanyrole
                 @role('admin')
                     <div class="flex items-center sm:items-center justify-center gap-3 w-full sm:w-auto">
                         <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto"
