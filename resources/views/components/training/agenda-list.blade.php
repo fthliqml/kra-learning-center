@@ -12,18 +12,28 @@ $sessionForDay =
             @endphp
             @php
                 $type = strtoupper($item['type'] ?? '');
+                $isDone = strtolower($item['status'] ?? '') === 'done';
                 $colorClasses = match ($type) {
-                    'IN' => ['dot' => 'bg-green-500', 'badge' => 'border-green-500 bg-green-50'],
-                    'OUT' => ['dot' => 'bg-amber-500', 'badge' => 'border-amber-500 bg-amber-50'],
-                    'K-LEARN', 'KLEARN', 'KLEARNING' => [
-                        'dot' => 'bg-indigo-500',
-                        'badge' => 'border-indigo-500 bg-indigo-50',
+                    'IN' => [
+                        'dot' => $isDone ? 'bg-green-300' : 'bg-green-500',
+                        'badge' => $isDone ? 'border-green-300 bg-green-50' : 'border-green-500 bg-green-50',
                     ],
-                    default => ['dot' => 'bg-primary', 'badge' => 'border-primary bg-[#E4F3FF]'],
+                    'OUT' => [
+                        'dot' => $isDone ? 'bg-amber-300' : 'bg-amber-500',
+                        'badge' => $isDone ? 'border-amber-300 bg-amber-50' : 'border-amber-500 bg-amber-50',
+                    ],
+                    'K-LEARN', 'KLEARN', 'KLEARNING' => [
+                        'dot' => $isDone ? 'bg-indigo-300' : 'bg-indigo-500',
+                        'badge' => $isDone ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-500 bg-indigo-50',
+                    ],
+                    default => [
+                        'dot' => $isDone ? 'bg-primary/60' : 'bg-primary',
+                        'badge' => $isDone ? 'border-primary/50 bg-[#E4F3FF]' : 'border-primary bg-[#E4F3FF]',
+                    ],
                 };
             @endphp
             <div x-on:click="$dispatch('detail-loading-start')"
-                class="bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex gap-4 items-start hover:border-primary/40 transition cursor-pointer"
+                class="bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex gap-4 items-start hover:border-primary/40 transition cursor-pointer {{ $isDone ? 'opacity-80' : '' }}"
                 wire:click="open({{ $item['id'] }}, '{{ $item['iso'] }}')">
                 <div class="flex flex-col items-center w-12 sm:w-14">
                     <div class="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-500">

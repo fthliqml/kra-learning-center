@@ -39,6 +39,7 @@ class DetailTrainingModal extends Component
             'name' => $payload['name'] ?? null,
             'group_comp' => $payload['group_comp'] ?? null,
             'type' => $payload['type'] ?? ($payload['training_type'] ?? null),
+            'status' => $payload['status'] ?? null,
             'start_date' => $payload['start_date'] ?? null,
             'end_date' => $payload['end_date'] ?? null,
         ];

@@ -400,6 +400,7 @@ class ScheduleView extends Component
                 'name' => $t->name,
                 'group_comp' => $t->group_comp,
                 'type' => $t->type ?? null,
+                'status' => $t->status ?? null,
                 'start_date' => $t->start_date,
                 'end_date' => $t->end_date,
                 'sessions' => $t->sessions,
@@ -500,6 +501,7 @@ class ScheduleView extends Component
             'start_date' => $training->start_date,
             'end_date' => $training->end_date,
             'type' => $training->type, // include type so detail modal badge can render without extra query
+            'status' => $training->status, // include status so modal can hide close action when done
             'sessions' => $sessions,
             'employees' => $employees,
         ];

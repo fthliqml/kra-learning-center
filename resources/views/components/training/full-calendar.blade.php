@@ -32,20 +32,29 @@
                                 @endphp
                                 @php
                                     $type = strtoupper($training['type'] ?? '');
+                                    $isDone = strtolower($training['status'] ?? '') === 'done';
                                     switch ($type) {
                                         case 'IN':
-                                            $typeColor = 'border-green-500 bg-green-50 hover:bg-green-100';
+                                            $typeColor = $isDone
+                                                ? 'border-green-300 bg-green-50 hover:bg-green-50 opacity-70'
+                                                : 'border-green-500 bg-green-50 hover:bg-green-100';
                                             break;
                                         case 'OUT':
-                                            $typeColor = 'border-amber-500 bg-amber-50 hover:bg-amber-100';
+                                            $typeColor = $isDone
+                                                ? 'border-amber-300 bg-amber-50 hover:bg-amber-50 opacity-70'
+                                                : 'border-amber-500 bg-amber-50 hover:bg-amber-100';
                                             break;
                                         case 'K-LEARN':
                                         case 'KLEARN':
                                         case 'KLEARNING':
-                                            $typeColor = 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
+                                            $typeColor = $isDone
+                                                ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-50 opacity-70'
+                                                : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
                                             break;
                                         default:
-                                            $typeColor = 'border-primary bg-[#E4F3FF] hover:bg-[#d4ebfc]';
+                                            $typeColor = $isDone
+                                                ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#E4F3FF] opacity-70'
+                                                : 'border-primary bg-[#E4F3FF] hover:bg-[#d4ebfc]';
                                             break;
                                     }
                                     $typeLabel = $type ?: '';
@@ -94,20 +103,29 @@
                                 @endphp
                                 @php
                                     $type = strtoupper($training['type'] ?? '');
+                                    $isDone = strtolower($training['status'] ?? '') === 'done';
                                     switch ($type) {
                                         case 'IN':
-                                            $typeColor = 'border-green-500 bg-green-50 hover:bg-green-100';
+                                            $typeColor = $isDone
+                                                ? 'border-green-300 bg-green-50 hover:bg-green-50 opacity-70'
+                                                : 'border-green-500 bg-green-50 hover:bg-green-100';
                                             break;
                                         case 'OUT':
-                                            $typeColor = 'border-amber-500 bg-amber-50 hover:bg-amber-100';
+                                            $typeColor = $isDone
+                                                ? 'border-amber-300 bg-amber-50 hover:bg-amber-50 opacity-70'
+                                                : 'border-amber-500 bg-amber-50 hover:bg-amber-100';
                                             break;
                                         case 'K-LEARN':
                                         case 'KLEARN':
                                         case 'KLEARNING':
-                                            $typeColor = 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
+                                            $typeColor = $isDone
+                                                ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-50 opacity-70'
+                                                : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
                                             break;
                                         default:
-                                            $typeColor = 'border-primary bg-[#E4F3FF] hover:bg-[#d4ebfc]';
+                                            $typeColor = $isDone
+                                                ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#E4F3FF] opacity-70'
+                                                : 'border-primary bg-[#E4F3FF] hover:bg-[#d4ebfc]';
                                             break;
                                     }
                                     $typeLabel = $type ?: '';

@@ -76,8 +76,9 @@
                         $typeUpperFooter = strtoupper(
                             $selectedEvent['type'] ?? ($selectedEvent['training_type'] ?? ''),
                         );
+                        $isDoneFooter = strtolower($selectedEvent['status'] ?? '') === 'done';
                     @endphp
-                    @if (in_array($typeUpperFooter, ['IN', 'OUT']))
+                    @if (in_array($typeUpperFooter, ['IN', 'OUT']) && !$isDoneFooter)
                         <x-button wire:click="closeTraining" spinner="closeTraining"
                             class="btn btn-primary w-full sm:w-auto">Close Training</x-button>
                     @else
