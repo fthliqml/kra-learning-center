@@ -19,6 +19,8 @@ return new class extends Migration
             // Main Fields
             $table->string('name');
             $table->string('section');
+            $table->string('competency');
+            $table->string('reason');
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
 
             // Meta
