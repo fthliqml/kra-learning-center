@@ -13,7 +13,7 @@ return [
             'label' => 'Courses',
             'icon' => 'book-open',
             'href' => '/courses',
-            'roles' => ['employee', 'instructor'],
+            'roles' => ['employee'],
         ],
         [
             'id' => 'history',
@@ -48,9 +48,10 @@ return [
             'href' => '#',
             'roles' => ['admin', 'instructor', 'leader'],
             'submenu' => [
-                ['label' => 'Training History', 'href' => '/history/training', 'roles' => ['tbc']],
                 ['label' => 'Training Module', 'href' => '/training/module', 'roles' => ['admin', 'instructor']],
                 ['label' => 'Training Schedule', 'href' => '/training/schedule', 'roles' => ['admin', 'instructor']],
+                ['label' => 'Training Request', 'href' => '/training/request', 'roles' => ['admin', 'instructor']],
+                ['label' => 'Training History', 'href' => '/history/training', 'roles' => ['admin', 'instructor', 'leader']],
                 ['label' => 'Data Trainer', 'href' => '/training/trainer', 'roles' => ['admin']],
             ],
         ],
