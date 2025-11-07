@@ -11,8 +11,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  *
  * @property int $id
  * @property int $created_by
- * @property string $name
- * @property string $section
+ * @property int $user_id
+ * @property string $competency
+ * @property string $reason
  * @property string $status     pending|approved|rejected
  * @property \Illuminate\Support\Carbon|null $created_at
  * @property \Illuminate\Support\Carbon|null $updated_at
@@ -40,8 +41,7 @@ class Request extends Model
      */
     protected $fillable = [
         'created_by',
-        'name',
-        'section',
+        'user_id',
         'competency',
         'reason',
         'status',
@@ -52,11 +52,19 @@ class Request extends Model
      */
     protected $casts = [
         'created_by' => 'integer',
-        'name'       => 'string',
-        'section'    => 'string',
+        'user_id'    => 'integer',
         'competency' => 'string',
         'reason'     => 'string',
         'status'     => 'string',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    /**
+     * Default attributes mirroring DB defaults.
+     */
+    protected $attributes = [
+        'status' => self::STATUS_PENDING,
     ];
 
     /* ========================= Relationships ========================= */
@@ -64,6 +72,14 @@ class Request extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * The target user for whom the training is requested.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'user_id');
     }
 
     /* ========================= Helpers ========================= */
@@ -81,5 +97,18 @@ class Request extends Model
     public function isRejected(): bool
     {
         return $this->status === self::STATUS_REJECTED;
+    }
+
+    /* ========================= Mutators ========================= */
+
+    /**
+     * Normalize and validate status assignment against enum values.
+     */
+    public function setStatusAttribute($value): void
+    {
+        $val = is_string($value) ? strtolower(trim($value)) : null;
+        $this->attributes['status'] = in_array($val, self::STATUSES, true)
+            ? $val
+            : self::STATUS_PENDING;
     }
 }
