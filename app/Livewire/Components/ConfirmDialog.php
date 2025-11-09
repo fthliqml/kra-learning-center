@@ -12,6 +12,7 @@ class ConfirmDialog extends Component
     public $text;
     public $action;
     public $id;
+    public $processing = false;
 
     #[On('confirm')]
     public function confirm($title = 'Konfirmasi', $text = 'Apakah Anda yakin?', $action = null, $id = null)
@@ -21,15 +22,16 @@ class ConfirmDialog extends Component
         $this->action = $action;
         $this->id = $id;
 
+        $this->processing = false;
         $this->show = true;
     }
     public function proceed()
     {
+        $this->processing = true;
         if ($this->action) {
             $this->dispatch($this->action, $this->id);
         }
-
-        $this->resetDialog();
+        // wait for 'confirm-done' event to close
     }
 
     public function cancel()
@@ -39,7 +41,13 @@ class ConfirmDialog extends Component
 
     private function resetDialog()
     {
-        $this->reset(['show', 'title', 'text', 'action', 'id']);
+        $this->reset(['show', 'title', 'text', 'action', 'id', 'processing']);
+    }
+
+    #[On('confirm-done')]
+    public function done()
+    {
+        $this->resetDialog();
     }
 
     public function render()

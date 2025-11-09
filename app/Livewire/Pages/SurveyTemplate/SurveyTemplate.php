@@ -40,14 +40,15 @@ class SurveyTemplate extends Component
                 fn($q) =>
                 $q->where('level', $this->filter)
             )
+            ->orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
             ->orderBy('created_at', 'desc')
             ->paginate(9);
     }
 
     public function addPage(): void
     {
-        // TODO: Implement add/edit page
-
+        // Navigate to edit page in 'add' mode: pass level=1 and surveyId=0
+        $this->redirectRoute('survey-template.edit', ['level' => 1, 'surveyId' => 0], navigate: true);
     }
 
     public function render()

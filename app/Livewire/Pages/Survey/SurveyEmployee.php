@@ -26,39 +26,84 @@ class SurveyEmployee extends Component
     {
         $user = Auth::user();
         if (!$user) {
-            return collect(); // atau paginate kosong
+            return collect(); // atau paginator kosong
         }
 
-        $base = TrainingSurvey::forEmployeeId($user->id)
-            ->with(['training', 'training.assessments'])
+        // Ambil survey yang punya response untuk user ini
+        $base = TrainingSurvey::with([
+            'training',
+            'surveyResponses' => function ($q) use ($user) {
+                $q->where('employee_id', $user->id);
+            }
+        ])
+            ->whereHas('surveyResponses', function ($q) use ($user) {
+                $q->where('employee_id', $user->id)
+                    ->when($this->filterStatus, function ($q) {
+                        if ($this->filterStatus === 'complete') {
+                            $q->where('is_completed', 1);
+                        } elseif ($this->filterStatus === 'incomplete') {
+                            $q->where('is_completed', 0);
+                        }
+                    });
+            })
             ->when($this->surveyLevel, fn($q) => $q->where('level', (int) $this->surveyLevel))
-            ->when($this->filterStatus, fn($q) => $q->where('status', $this->filterStatus))
             ->when($this->search, fn($q) => $q->whereHas(
                 'training',
                 fn($tq) =>
                 $tq->where('name', 'like', "%{$this->search}%")
             ))
-            ->whereIn('status', [
-                TrainingSurvey::STATUS_INCOMPLETE,
-                TrainingSurvey::STATUS_COMPLETED,
-            ])
-            ->orderByRaw(
-                "CASE WHEN status = 'incomplete' THEN 0 WHEN status = 'completed' THEN 1 ELSE 2 END ASC"
-            )
+            // Urutkan berdasarkan status response user (incomplete, complete)
+            ->orderByRaw('(
+                SELECT CASE
+                    WHEN sr.is_completed = 0 THEN 0
+                    WHEN sr.is_completed = 1 THEN 1
+                    ELSE 2
+                END
+                FROM survey_responses sr
+                WHERE sr.survey_id = training_surveys.id AND sr.employee_id = ?
+                LIMIT 1
+            ) ASC', [$user->id])
+            ->orderByRaw("CASE WHEN status = 'draft' THEN 1 ELSE 0 END ASC")
             ->orderByDesc('id');
 
         $paginator = $base->paginate(9)->onEachSide(1);
 
-        return $paginator->through(function ($survey, $index) use ($paginator) {
+        return $paginator->through(function ($survey, $index) use ($paginator, $user) {
             $start = $paginator->firstItem() ?? 0;
             $survey->no = $start + $index;
             $survey->training_name = $survey->training?->name ?? '-';
-            $survey->participants = $survey->training?->assessments?->count() ?? 0;
+            $survey->participants = $survey->surveyResponses->count();
             $startDate = $survey->training?->start_date;
             $endDate = $survey->training?->end_date;
             $survey->date = ($startDate && $endDate)
                 ? formatRangeDate($startDate, $endDate)
                 : '-';
+            $survey->my_response = $survey->surveyResponses->first();
+            $survey->badge_status = null;
+            if ($survey->my_response) {
+                $survey->badge_status = $survey->my_response->is_completed ? 'complete' : 'incomplete';
+            }
+
+            // Compute badge label and class in controller (component) instead of Blade
+            $status = $survey->badge_status; // complete | incomplete | null
+            $isDraft = ($survey->status ?? '') === 'draft';
+            $trainingStatus = strtolower($survey->training?->status ?? '');
+
+            if ($status === 'complete') {
+                $survey->badge_label = 'Complete';
+                $survey->badge_class = 'badge-primary bg-primary/95';
+            } elseif ($isDraft || $trainingStatus !== 'done') {
+                $survey->badge_label = 'Not Ready';
+                $survey->badge_class = 'badge-warning';
+            } elseif ($status === 'incomplete') {
+                $survey->badge_label = 'Incomplete';
+                $survey->badge_class = 'badge primary badge-soft';
+            } else {
+                $survey->badge_label = 'Not Started';
+                $survey->badge_class = 'badge-ghost';
+            }
+            // Determine if Start Survey button should be disabled
+            $survey->start_disabled = $isDraft || $trainingStatus !== 'done';
             return $survey;
         });
     }

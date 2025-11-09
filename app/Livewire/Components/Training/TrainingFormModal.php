@@ -1,20 +1,24 @@
 <?php
 
+
 namespace App\Livewire\Components\Training;
 
-use App\Models\TrainingSession;
 use App\Models\Course;
-use App\Models\User;
+use App\Http\Requests\TrainingFormRequest;
+use App\Models\SurveyResponse;
 use App\Models\Trainer;
 use App\Models\Training;
 use App\Models\TrainingAssessment;
 use App\Models\TrainingAttendance;
+use App\Models\TrainingSession;
 use App\Models\TrainingSurvey;
-use Livewire\Component;
-use Illuminate\Support\Facades\DB;
+use App\Models\User;
+use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Livewire\Component;
 use Mary\Traits\Toast;
 
 class TrainingFormModal extends Component
@@ -72,63 +76,6 @@ class TrainingFormModal extends Component
     public bool $showTypeChangeConfirm = false;
     public ?string $pendingTrainingType = null;
 
-    /**
-     * Dynamic rules: adjust when K-LEARN (course based) vs regular training.
-     */
-    public function rules(): array
-    {
-        if ($this->training_type === 'K-LEARN') {
-            return [
-                'course_id' => 'required|integer|exists:courses,id',
-                'training_type' => 'required',
-                'group_comp' => 'required',
-                'date' => 'required|string|min:10',
-                'room.name' => 'nullable|string|max:100',
-                'room.location' => 'nullable|string|max:150',
-                // Trainer & times optional / ignored
-                'start_time' => 'nullable|date_format:H:i',
-                'end_time' => 'nullable|date_format:H:i',
-                'participants' => 'required|array|min:1',
-                'participants.*' => 'integer|exists:users,id',
-            ];
-        }
-        return [
-            'training_name' => 'required|string|min:3',
-            'training_type' => 'required',
-            'group_comp' => 'required',
-            'date' => 'required|string|min:10',
-            'trainerId' => 'required|integer|exists:trainer,id',
-            'room.name' => 'required|string|max:100',
-            'room.location' => 'required|string|max:150',
-            'start_time' => 'required|date_format:H:i',
-            'end_time' => 'required|date_format:H:i|after:start_time',
-            'participants' => 'required|array|min:1',
-            'participants.*' => 'integer|exists:users,id',
-        ];
-    }
-
-    protected $messages = [
-        'training_name.required' => 'Training name is required.',
-        'course_id.required' => 'Course must be selected for K-Learn.',
-        'training_type.required' => 'Training type is required.',
-        'group_comp.required' => 'Group competency is required.',
-        'training_name.min' => 'Training name must be at least 3 characters.',
-        'date.required' => 'Training date range is required.',
-        'date.min' => 'Training date range format is invalid.',
-        'room.name' => 'Room name is required',
-        'room.location' => 'Room location is required',
-        'trainerId.required' => 'Trainer must be selected.',
-        'trainerId.exists' => 'Selected trainer does not exist.',
-        'start_time.required' => 'Start time is required.',
-        'start_time.date_format' => 'Start time must be in HH:MM format.',
-        'end_time.required' => 'End time is required.',
-        'end_time.date_format' => 'End time must be in HH:MM format.',
-        'end_time.after' => 'End time must be after start time.',
-        'participants.required' => 'At least one participant must be selected.',
-        'participants.array' => 'Participants must be an array of user IDs.',
-        'participants.min' => 'Select at least one participant.',
-        'participants.*.exists' => 'One or more selected participants are invalid.',
-    ];
 
     protected $listeners = [
         'open-add-training-modal' => 'openModalWithDate',
@@ -432,30 +379,35 @@ class TrainingFormModal extends Component
             });
     }
 
+
     public function saveTraining()
     {
-        try {
-            $this->validate();
-        } catch (\Illuminate\Validation\ValidationException $e) {
-            $all = collect($e->validator->errors()->all());
+        // Validasi menggunakan FormRequest
+        $request = new TrainingFormRequest();
+        $request->merge($this->getValidationData());
+
+
+        $validator = Validator::make(
+            $request->all(),
+            $request->rules(),
+            $request->messages()
+        );
+        if ($validator->fails()) {
+            $all = collect($validator->errors()->all());
             if ($all->isNotEmpty()) {
-                // Gunakan <br> agar baris tampil vertikal di toast (beberapa komponen tidak render \n sebagai line break)
                 $lines = $all->take(8)->map(fn($m) => '• ' . $m)->implode('<br>');
                 if ($all->count() > 8) {
                     $lines .= '<br>• (' . ($all->count() - 8) . ' more ...)';
                 }
-                // Jika library toast escape HTML, bisa nanti diganti dengan join(' | ') atau custom view.
                 $this->error($lines, position: 'toast-top toast-center');
             }
-            throw $e; // tetap biarkan form menandai field
+            throw new \Illuminate\Validation\ValidationException($validator);
         }
 
         $range = $this->parseDateRange($this->date);
-
         $startDate = $range['start'];
         $endDate = $range['end'];
 
-        // Extra manual validation to ensure chronological order (after validation rule)
         if ($this->start_time && $this->end_time) {
             $startTime = Carbon::createFromFormat('H:i', $this->start_time);
             $endTime = Carbon::createFromFormat('H:i', $this->end_time);
@@ -466,7 +418,6 @@ class TrainingFormModal extends Component
             }
         }
 
-        // Determine effective name & course reference
         $courseTitle = null;
         if ($this->training_type === 'K-LEARN') {
             $course = Course::find($this->course_id);
@@ -474,115 +425,15 @@ class TrainingFormModal extends Component
         }
 
         if ($this->isEdit && $this->trainingId) {
-            DB::transaction(function () use ($courseTitle, $startDate, $endDate) {
-                $training = Training::with('sessions')->find($this->trainingId);
-                if (!$training) {
-                    $this->error('Training not found');
-                    DB::rollBack();
-                    return;
-                }
-
-                $originalType = $training->type;
-                $originalStart = $training->start_date ? Carbon::parse($training->start_date)->toDateString() : null;
-                $originalEnd = $training->end_date ? Carbon::parse($training->end_date)->toDateString() : null;
-
-                // Update type (now allowed) & name logic
-                $training->type = $this->training_type;
-                if ($this->training_type === 'K-LEARN') {
-                    $training->course_id = $this->course_id;
-                    $training->name = $courseTitle ?? $training->name;
-                } else {
-                    $training->course_id = null; // leaving K-LEARN
-                    $training->name = $this->training_name;
-                }
-                // Enforce group_comp sync: if K-LEARN, use the course's group_comp
-                if ($this->training_type === 'K-LEARN') {
-                    $syncedGroup = Course::where('id', $this->course_id)->value('group_comp');
-                    if ($syncedGroup) {
-                        $this->group_comp = $syncedGroup;
-                        $training->group_comp = $syncedGroup;
-                    } else {
-                        $training->group_comp = $this->group_comp;
-                    }
-                } else {
-                    $training->group_comp = $this->group_comp;
-                }
-                $training->start_date = $startDate;
-                $training->end_date = $endDate;
-                $training->save();
-
-                // Rebuild / adjust sessions if date range OR type changed
-                $dateChanged = ($originalStart !== $startDate) || ($originalEnd !== $endDate);
-                $typeChanged = $originalType !== $this->training_type;
-                if ($dateChanged || $typeChanged) {
-                    $this->rebuildSessions($training, $startDate, $endDate, $originalType);
-                } else {
-                    // Only field updates across existing sessions
-                    foreach ($training->sessions as $session) {
-                        if ($training->type === 'K-LEARN') {
-                            $session->room_name = $this->room['name'] ?: null;
-                            $session->room_location = $this->room['location'] ?: null;
-                            $session->trainer_id = null;
-                            $session->start_time = null;
-                            $session->end_time = null;
-                        } else {
-                            $session->trainer_id = $this->trainerId;
-                            $session->room_name = $this->room['name'];
-                            $session->room_location = $this->room['location'];
-                            $session->start_time = $this->start_time;
-                            $session->end_time = $this->end_time;
-                        }
-                        $session->save();
-                    }
-                }
-
-                // Participants diff (after potential session rebuild)
-                $existingParticipantIds = $training->assessments()->pluck('employee_id')->map(fn($id) => (int) $id)->toArray();
-                $newParticipantIds = array_map('intval', $this->participants);
-                $toAdd = array_diff($newParticipantIds, $existingParticipantIds);
-                $toRemove = array_diff($existingParticipantIds, $newParticipantIds);
-
-                foreach ($toAdd as $empId) {
-                    TrainingAssessment::create(["training_id" => $training->id, "employee_id" => $empId]);
-                }
-                if (!empty($toRemove)) {
-                    TrainingAssessment::where('training_id', $training->id)
-                        ->whereIn('employee_id', $toRemove)
-                        ->delete();
-                }
-
-                // Attendance regenerate rules:
-                // - If training is K-LEARN now: remove all attendance.
-                // - Else: recreate full matrix (simpler & consistent after date/type change)
-                $sessionIds = $training->sessions()->pluck('id');
-                TrainingAttendance::whereIn('session_id', $sessionIds)->delete();
-                if ($training->type !== 'K-LEARN') {
-                    foreach ($training->sessions as $session) {
-                        foreach ($newParticipantIds as $pid) {
-                            TrainingAttendance::create([
-                                'session_id' => $session->id,
-                                'employee_id' => $pid,
-                                'notes' => null,
-                                'recorded_at' => Carbon::now(),
-                            ]);
-                        }
-                    }
-                }
-
-                $this->success('Training updated successfully!', position: 'toast-top toast-center');
-                $this->dispatch('training-updated', id: $training->id);
-            });
-            $this->closeModal();
+            $this->updateTraining($courseTitle, $startDate, $endDate);
             return;
         }
 
-        // CREATE FLOW
-        // Determine group_comp to persist (auto from course for K-LEARN)
         $groupToPersist = $this->group_comp;
         if ($this->training_type === 'K-LEARN' && $this->course_id) {
             $syncedGroup = Course::where('id', $this->course_id)->value('group_comp');
             if ($syncedGroup) {
-                $this->group_comp = $syncedGroup; // sync UI model
+                $this->group_comp = $syncedGroup;
                 $groupToPersist = $syncedGroup;
             }
         }
@@ -596,33 +447,10 @@ class TrainingFormModal extends Component
             'course_id' => $this->training_type === 'K-LEARN' ? $this->course_id : null,
         ]);
 
-        // Create surveys for each level (1,2,3) with draft status and no questions yet
-        for ($level = 1; $level <= 3; $level++) {
-            TrainingSurvey::create([
-                'training_id' => $training->id,
-                'level' => $level,
-                'status' => TrainingSurvey::STATUS_DRAFT,
-            ]);
-        }
+        $surveys = $this->createSurveysForTraining($training);
+        $this->createSurveyResponsesForParticipants($surveys, $this->participants);
 
-        $sessions = [];
-        if ($startDate && $endDate) {
-            $period = CarbonPeriod::create($startDate, $endDate);
-            $day = 1;
-            foreach ($period as $dateObj) {
-                $sessions[] = TrainingSession::create([
-                    'training_id' => $training->id,
-                    'day_number' => $day,
-                    'date' => $dateObj->format('Y-m-d'),
-                    'trainer_id' => $this->training_type === 'K-LEARN' ? null : $this->trainerId,
-                    'room_name' => $this->training_type === 'K-LEARN' ? ($this->room['name'] ?: null) : $this->room['name'],
-                    'room_location' => $this->training_type === 'K-LEARN' ? ($this->room['location'] ?: null) : $this->room['location'],
-                    'start_time' => $this->training_type === 'K-LEARN' ? null : $this->start_time,
-                    'end_time' => $this->training_type === 'K-LEARN' ? null : $this->end_time,
-                ]);
-                $day++;
-            }
-        }
+        $sessions = $this->createSessionsForTraining($training, $startDate, $endDate);
 
         foreach ($this->participants as $participantId) {
             TrainingAssessment::create(["training_id" => $training->id, "employee_id" => $participantId]);
@@ -646,9 +474,238 @@ class TrainingFormModal extends Component
         $this->closeModal();
     }
 
-    public function render()
+    /**
+     * Ambil data validasi dari property Livewire
+     */
+    private function getValidationData(): array
     {
-        return view('components.training.training-form-modal');
+        return [
+            'training_name' => $this->training_name,
+            'training_type' => $this->training_type,
+            'group_comp' => $this->group_comp,
+            'date' => $this->date,
+            'trainerId' => $this->trainerId,
+            'course_id' => $this->course_id,
+            'room' => $this->room,
+            'start_time' => $this->start_time,
+            'end_time' => $this->end_time,
+            'participants' => $this->participants,
+        ];
+    }
+
+    /**
+     * Update existing training (edit mode)
+     */
+    private function updateTraining($courseTitle, $startDate, $endDate): void
+    {
+        DB::transaction(function () use ($courseTitle, $startDate, $endDate) {
+            $training = Training::with('sessions')->find($this->trainingId);
+            if (!$training) {
+                $this->error('Training not found');
+                DB::rollBack();
+                return;
+            }
+
+            $originalType = $training->type;
+            $originalStart = $training->start_date ? Carbon::parse($training->start_date)->toDateString() : null;
+            $originalEnd = $training->end_date ? Carbon::parse($training->end_date)->toDateString() : null;
+
+            // Update main training fields
+            $this->updateTrainingFields($training, $courseTitle, $startDate, $endDate);
+
+            // Update sessions if needed
+            $dateChanged = ($originalStart !== $startDate) || ($originalEnd !== $endDate);
+            $typeChanged = $originalType !== $this->training_type;
+            if ($dateChanged || $typeChanged) {
+                $this->rebuildSessions($training, $startDate, $endDate, $originalType);
+            } else {
+                $this->updateSessionFields($training);
+            }
+
+            // Update participants and survey responses
+            $this->updateParticipantsAndSurveyResponses($training);
+
+            // Update attendance
+            $this->updateAttendance($training);
+
+            $this->success('Training updated successfully!', position: 'toast-top toast-center');
+            $this->dispatch('training-updated', id: $training->id);
+        });
+        $this->closeModal();
+    }
+
+    /**
+     * Update main training fields (type, name, group, dates)
+     */
+    private function updateTrainingFields($training, $courseTitle, $startDate, $endDate): void
+    {
+        $training->type = $this->training_type;
+        if ($this->training_type === 'K-LEARN') {
+            $training->course_id = $this->course_id;
+            $training->name = $courseTitle ?? $training->name;
+        } else {
+            $training->course_id = null;
+            $training->name = $this->training_name;
+        }
+        if ($this->training_type === 'K-LEARN') {
+            $syncedGroup = Course::where('id', $this->course_id)->value('group_comp');
+            if ($syncedGroup) {
+                $this->group_comp = $syncedGroup;
+                $training->group_comp = $syncedGroup;
+            } else {
+                $training->group_comp = $this->group_comp;
+            }
+        } else {
+            $training->group_comp = $this->group_comp;
+        }
+        $training->start_date = $startDate;
+        $training->end_date = $endDate;
+        $training->save();
+    }
+
+    /**
+     * Update session fields if not rebuilding sessions
+     */
+    private function updateSessionFields($training): void
+    {
+        foreach ($training->sessions as $session) {
+            if ($training->type === 'K-LEARN') {
+                $session->room_name = $this->room['name'] ?: null;
+                $session->room_location = $this->room['location'] ?: null;
+                $session->trainer_id = null;
+                $session->start_time = null;
+                $session->end_time = null;
+            } else {
+                $session->trainer_id = $this->trainerId;
+                $session->room_name = $this->room['name'];
+                $session->room_location = $this->room['location'];
+                $session->start_time = $this->start_time;
+                $session->end_time = $this->end_time;
+            }
+            $session->save();
+        }
+    }
+
+    /**
+     * Update participants (assessments) and survey responses for this training
+     */
+    private function updateParticipantsAndSurveyResponses($training): void
+    {
+        $existingParticipantIds = $training->assessments()->pluck('employee_id')->map(fn($id) => (int) $id)->toArray();
+        $newParticipantIds = array_map('intval', $this->participants);
+        $toAdd = array_diff($newParticipantIds, $existingParticipantIds);
+        $toRemove = array_diff($existingParticipantIds, $newParticipantIds);
+
+        foreach ($toAdd as $empId) {
+            TrainingAssessment::create(["training_id" => $training->id, "employee_id" => $empId]);
+        }
+        if (!empty($toRemove)) {
+            TrainingAssessment::where('training_id', $training->id)
+                ->whereIn('employee_id', $toRemove)
+                ->delete();
+        }
+
+        // Update SurveyResponse for all surveys of this training
+        $surveys = TrainingSurvey::where('training_id', $training->id)->get();
+        // Add SurveyResponse for new participants
+        foreach ($toAdd as $empId) {
+            foreach ($surveys as $survey) {
+                SurveyResponse::firstOrCreate([
+                    'survey_id' => $survey->id,
+                    'employee_id' => $empId,
+                ]);
+            }
+        }
+        // Remove SurveyResponse for removed participants
+        if (!empty($toRemove)) {
+            foreach ($surveys as $survey) {
+                SurveyResponse::where('survey_id', $survey->id)
+                    ->whereIn('employee_id', $toRemove)
+                    ->delete();
+            }
+        }
+    }
+
+    /**
+     * Update attendance for all sessions and participants
+     */
+    private function updateAttendance($training): void
+    {
+        $newParticipantIds = array_map('intval', $this->participants);
+        $sessionIds = $training->sessions()->pluck('id');
+        TrainingAttendance::whereIn('session_id', $sessionIds)->delete();
+        if ($training->type !== 'K-LEARN') {
+            foreach ($training->sessions as $session) {
+                foreach ($newParticipantIds as $pid) {
+                    TrainingAttendance::create([
+                        'session_id' => $session->id,
+                        'employee_id' => $pid,
+                        'notes' => null,
+                        'recorded_at' => Carbon::now(),
+                    ]);
+                }
+            }
+        }
+    }
+
+    /**
+     * Create surveys for each level (1,2,3) for a training
+     */
+    private function createSurveysForTraining($training): array
+    {
+        $surveys = [];
+        for ($level = 1; $level <= 3; $level++) {
+            $surveys[$level] = TrainingSurvey::create([
+                'training_id' => $training->id,
+                'level' => $level,
+                'status' => TrainingSurvey::STATUS_DRAFT,
+            ]);
+        }
+        return $surveys;
+    }
+
+    /**
+     * Create survey responses for each participant for each survey
+     */
+    private function createSurveyResponsesForParticipants(array $surveys, array $participants): void
+    {
+        if (empty($participants) || empty($surveys)) {
+            return;
+        }
+        foreach ($participants as $participantId) {
+            foreach ($surveys as $survey) {
+                SurveyResponse::firstOrCreate([
+                    'survey_id' => $survey->id,
+                    'employee_id' => $participantId,
+                ]);
+            }
+        }
+    }
+
+    /**
+     * Create sessions for a training between start and end date
+     */
+    private function createSessionsForTraining($training, $startDate, $endDate): array
+    {
+        $sessions = [];
+        if ($startDate && $endDate) {
+            $period = CarbonPeriod::create($startDate, $endDate);
+            $day = 1;
+            foreach ($period as $dateObj) {
+                $sessions[] = TrainingSession::create([
+                    'training_id' => $training->id,
+                    'day_number' => $day,
+                    'date' => $dateObj->format('Y-m-d'),
+                    'trainer_id' => $this->training_type === 'K-LEARN' ? null : $this->trainerId,
+                    'room_name' => $this->training_type === 'K-LEARN' ? ($this->room['name'] ?: null) : $this->room['name'],
+                    'room_location' => $this->training_type === 'K-LEARN' ? ($this->room['location'] ?: null) : $this->room['location'],
+                    'start_time' => $this->training_type === 'K-LEARN' ? null : $this->start_time,
+                    'end_time' => $this->training_type === 'K-LEARN' ? null : $this->end_time,
+                ]);
+                $day++;
+            }
+        }
+        return $sessions;
     }
 
     /**
@@ -681,4 +738,10 @@ class TrainingFormModal extends Component
         // Reload relation for subsequent logic
         $training->load('sessions');
     }
+
+    public function render()
+    {
+        return view('components.training.training-form-modal');
+    }
+
 }

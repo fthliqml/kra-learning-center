@@ -29,29 +29,17 @@
                             <p class="text-xs md:text-sm text-base-content/60 mt-1">
                                 {{ $survey->date ?? '-' }}
                             </p>
-                            <p class="text-xs md:text-sm text-base-content/50 mt-1">
-                                {{ $survey->participants }} Participants
-                            </p>
                         </div>
-                        @php
-                            $status = $survey->status ?? 'incomplete';
-                            $badgeClass = match ($status) {
-                                'draft' => 'badge-warning',
-                                'completed' => 'badge-primary bg-primary/95',
-                                'incomplete' => 'badge primary badge-soft',
-                                default => 'badge-ghost',
-                            };
-                        @endphp
-                        <x-badge :value="str($status)->title()" class="{{ $badgeClass }} badge-xs sm:badge-sm" />
+                        <x-badge :value="$survey->badge_label" class="{{ $survey->badge_class }} badge-xs sm:badge-sm" />
                     </div>
 
                     @php
                         $type = strtoupper($survey->training?->type ?? '');
                         $groupComp = $survey->training?->group_comp ?? null;
                         $colorClasses = match ($type) {
-                            'IN' => ['badge' => 'border-green-700 bg-green-50'],
-                            'OUT' => ['badge' => 'border-amber-700 bg-amber-50'],
-                            'K-LEARN', 'KLEARN', 'KLEARNING' => ['badge' => 'border-indigo-700 bg-indigo-50'],
+                            'IN' => ['badge' => 'border-green-700 !bg-green-100'],
+                            'OUT' => ['badge' => 'border-amber-700 !bg-amber-100'],
+                            'K-LEARN', 'KLEARN', 'KLEARNING' => ['badge' => 'border-indigo-700 !bg-indigo-100'],
                             default => ['badge' => 'border-primary bg-[#E4F3FF]'],
                         };
                     @endphp
@@ -65,15 +53,28 @@
                             @endif
                             @if ($groupComp)
                                 <span
-                                    class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] border border-primary">
+                                    class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] border border-primary bg-primary/10">
                                     {{ $groupComp }}
                                 </span>
                             @endif
                         </div>
-                        <a href="{{ route('survey.take', ['level' => $survey->level, 'surveyId' => $survey->id]) }}">
-                            <x-button type="button" class="btn-xs sm:btn-sm border-primary/30 bg-success/10"
-                                icon="o-play" label="Start Survey" />
-                        </a>
+                        @if ($survey->badge_status === 'complete')
+                            <a
+                                href="{{ route('survey.preview', ['level' => $survey->level, 'surveyId' => $survey->id]) }}">
+                                <x-button type="button" class="btn-xs sm:btn-sm border-primary/30 bg-primary/10"
+                                    icon="o-eye" label="Preview Survey" />
+                            </a>
+                        @elseif ($survey->start_disabled)
+                            <x-button type="button"
+                                class="btn-xs sm:btn-sm border-primary/30 bg-gray-200 text-gray-400 cursor-not-allowed"
+                                icon="o-play" label="Start Survey" disabled />
+                        @else
+                            <a
+                                href="{{ route('survey.take', ['level' => $survey->level, 'surveyId' => $survey->id]) }}">
+                                <x-button type="button" class="btn-xs sm:btn-sm border-primary/30 bg-success/10"
+                                    icon="o-play" label="Start Survey" />
+                            </a>
+                        @endif
                     </div>
                 </div>
             </div>
@@ -90,4 +91,5 @@
     <div class="mt-6">
         {{ $surveys->links() }}
     </div>
+
 </div>

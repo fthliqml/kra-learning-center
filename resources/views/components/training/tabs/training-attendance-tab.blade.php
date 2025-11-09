@@ -2,7 +2,9 @@
     <!-- Header -->
     <div class="flex justify-between items-start sm:items-center gap-3 sm:gap-4 w-full">
         <h2 class="text-lg font-semibold">Attendance (Day {{ $dayNumber }})</h2>
-        <button wire:click="save" wire:loading.attr="disabled" class="btn btn-primary btn-sm gap-2">
+        <button @disabled($readOnly) wire:click="save" wire:loading.attr="disabled"
+            class="btn btn-primary btn-sm gap-2 {{ $readOnly ? 'btn-disabled opacity-60 cursor-not-allowed' : '' }}"
+            title="{{ $readOnly ? 'Training is closed' : '' }}">
             <span wire:loading.remove>Save Attendance</span>
             <span wire:loading class="loading loading-spinner loading-xs"></span>
             <span wire:loading>Saving</span>
@@ -43,12 +45,13 @@
                                         ['value' => 'absent', 'label' => 'Absent'],
                                     ]" option-value="value" option-label="label"
                                         wire:model.defer="attendance.{{ $emp['id'] }}.status" :placeholder="null"
-                                        class="!w-full !max-w-[9.5rem] !min-h-0 !h-7 [&_input]:!py-0 [&_.select-trigger]:!py-0 text-xs focus-within:outline-0" />
+                                        :disabled="$readOnly"
+                                        class="!w-full !max-w-[9.5rem] !min-h-0 !h-7 [&_input]:!py-0 [&_.select-trigger]:!py-0 text-xs focus-within:outline-0 {{ $readOnly ? 'opacity-60 cursor-not-allowed' : '' }}" />
                                 </td>
                                 <td class="py-2.5 px-2 text-center">
                                     <input type="text" wire:model.defer="attendance.{{ $emp['id'] }}.remark"
-                                        placeholder="Optional remark"
-                                        class="w-full max-w-[15rem] rounded-md border border-gray-300 text-xs px-2 py-1 focus:ring-1 focus:ring-primary focus:outline-none" />
+                                        @disabled($readOnly) placeholder="Optional remark"
+                                        class="w-full max-w-[15rem] rounded-md border border-gray-300 text-xs px-2 py-1 focus:ring-1 focus:ring-primary focus:outline-none {{ $readOnly ? 'opacity-60 cursor-not-allowed bg-gray-50' : '' }}" />
                                 </td>
                             </tr>
                         @empty

@@ -1,78 +1,52 @@
 <?php
 
-namespace App\Livewire\Components\Survey;
+namespace App\Livewire\Pages\SurveyTemplate;
 
 use App\Services\SurveyQuestionsValidator;
 use Illuminate\Support\Str;
 use Livewire\Component;
-use Livewire\Attributes\On;
 use Mary\Traits\Toast;
 use Illuminate\Support\Facades\DB;
-use App\Models\TrainingSurvey;
-use App\Models\SurveyQuestion;
-use App\Models\SurveyOption;
 use App\Models\SurveyTemplate;
+use App\Models\SurveyTemplateQuestion;
+use App\Models\SurveyTemplateOption;
 
-class EditSurveyForm extends Component
+class EditSurveyTemplate extends Component
 {
     use Toast;
     public $surveyLevel = 1;
-    public ?int $selectedTemplateId = null;
-
-    public function importFromTemplate($templateId = null)
-    {
-        $templateId = $templateId ?? $this->selectedTemplateId;
-        if (!$templateId) {
-            $this->error('Please select a template first.', timeout: 6000, position: 'toast-top toast-center');
-            return;
-        }
-
-        $template = SurveyTemplate::with(['questions.options'])
-            ->where('status', 'active')
-            ->where('level', $this->surveyLevel)
-            ->find($templateId);
-        if (!$template) {
-            $this->error('Template not found or not active.', timeout: 6000, position: 'toast-top toast-center');
-            return;
-        }
-        $imported = [];
-        foreach ($template->questions->sortBy('order')->values() as $qModel) {
-            $options = $qModel->options->sortBy('order')->values();
-            $opts = $options->map(fn($o) => $o->text)->all();
-            $imported[] = [
-                'id' => Str::uuid()->toString(),
-                'question_type' => $qModel->question_type ?? 'multiple',
-                'text' => $qModel->text ?? '',
-                'options' => ($qModel->question_type === 'multiple') ? $opts : [],
-            ];
-        }
-        $this->questions = array_merge($this->questions, $imported);
-        $this->success('Template questions imported and appended successfully.', timeout: 4000, position: 'toast-top toast-center');
-        // Close modal on UI
-        if (method_exists($this, 'dispatch')) {
-            // Livewire v3
-            $this->dispatch('close-import-template-modal');
-        } else {
-            // Livewire v2 fallback
-            $this->dispatchBrowserEvent('close-import-template-modal');
-        }
-    }
     public $surveyId = 1;
+
+    // UI state
+    public string $activeTab = 'template-info';
 
     public $questions = [];
 
     // Error highlighting: indexes of invalid questions
     public array $errorQuestionIndexes = [];
 
+    public $template = null;
+
+    // Template info form fields
+    public string $templateTitle = '';
+    public ?string $templateDescription = '';
+    public int|string $templateLevel = 1;
+
     protected function hydrateFromSurvey(): void
     {
-        $survey = TrainingSurvey::with(['questions.options'])->find($this->surveyId);
-        if (!$survey) {
+        $this->template = SurveyTemplate::with(['questions.options'])->find($this->surveyId);
+        if (!$this->template) {
             $this->questions = [];
             return;
         }
+        // Sync form fields for Template Information
+        $this->templateTitle = (string) ($this->template->title ?? '');
+        $this->templateDescription = $this->template->description ?? '';
+        $this->templateLevel = $this->template->level ?? $this->surveyLevel ?? 1;
+        // Keep route-provided level in sync with actual template level
+        $this->surveyLevel = (int) ($this->template->level ?? $this->surveyLevel ?? 1);
         $loaded = [];
-        foreach ($survey->questions->sortBy('order')->values() as $qModel) {
+        foreach ($this->template->questions->sortBy('order')->values() as $qModel) {
             $options = $qModel->options->sortBy('order')->values();
             $opts = $options->map(fn($o) => $o->text)->all();
             $loaded[] = [
@@ -98,17 +72,6 @@ class EditSurveyForm extends Component
     public function addQuestion(): void
     {
         $this->questions[] = $this->makeQuestion();
-    }
-
-    #[On('clearQuestions')]
-    public function clearQuestions(): void
-    {
-        // User confirmed: clear all questions
-        $this->questions = [];
-        $this->errorQuestionIndexes = [];
-        $this->success('All questions cleared.', timeout: 3000, position: 'toast-top toast-center');
-        // notify confirm dialog to close and stop processing state
-        $this->dispatch('confirm-done');
     }
 
     public function removeQuestion(int $index): void
@@ -200,7 +163,7 @@ class EditSurveyForm extends Component
         // If all questions removed somehow (should be caught earlier) block save
         if (empty($this->questions)) {
             $this->error(
-                'Cannot save empty survey. Add at least one question.',
+                'Cannot save empty survey template. Add at least one question.',
                 timeout: 6000,
                 position: 'toast-top toast-center'
             );
@@ -218,24 +181,23 @@ class EditSurveyForm extends Component
         }
         unset($q);
 
-
         DB::transaction(function () {
-            // Load the survey
-            $survey = TrainingSurvey::find($this->surveyId);
-            if (!$survey) {
-                $this->error('Survey not found.', timeout: 6000, position: 'toast-top toast-center');
+            // Load the template
+            $template = SurveyTemplate::find($this->surveyId);
+            if (!$template) {
+                $this->error('Survey template not found.', timeout: 6000, position: 'toast-top toast-center');
                 return;
             }
 
             // Wipe existing options first to avoid foreign key constraint
-            SurveyOption::whereHas('question', fn($q) => $q->where('training_survey_id', $survey->id))->delete();
+            SurveyTemplateOption::whereHas('question', fn($q) => $q->where('survey_template_id', $template->id))->delete();
 
             // Wipe existing questions (cascade deletes options if set, but we did it manually)
-            $survey->questions()->delete();
+            $template->questions()->delete();
 
             foreach ($this->questions as $qOrder => $q) {
-                $questionModel = SurveyQuestion::create([
-                    'training_survey_id' => $survey->id,
+                $questionModel = SurveyTemplateQuestion::create([
+                    'survey_template_id' => $template->id,
                     'question_type' => in_array($q['question_type'] ?? '', ['multiple', 'essay']) ? $q['question_type'] : 'multiple',
                     'text' => $q['text'] ?: 'Untitled Question',
                     'order' => $qOrder,
@@ -246,8 +208,8 @@ class EditSurveyForm extends Component
                         $optText = trim($optText);
                         if ($optText === '')
                             continue; // skip empty placeholder
-                        SurveyOption::create([
-                            'question_id' => $questionModel->id,
+                        SurveyTemplateOption::create([
+                            'survey_template_question_id' => $questionModel->id,
                             'text' => $optText,
                             'order' => $optIndex,
                         ]);
@@ -255,26 +217,67 @@ class EditSurveyForm extends Component
                 }
             }
 
-            // Status rules: if questions >= 5 => incomplete, else draft
+            // Status rules: >=5 => active, otherwise draft
             if (count($this->questions) >= 5) {
-                if ($survey->status !== TrainingSurvey::STATUS_INCOMPLETE) {
-                    $survey->status = TrainingSurvey::STATUS_INCOMPLETE;
-                    $survey->save();
+                if ($template->status !== 'active') {
+                    $template->status = 'active';
+                    $template->save();
                 }
             } else {
-                if ($survey->status !== TrainingSurvey::STATUS_DRAFT) {
-                    $survey->status = TrainingSurvey::STATUS_DRAFT;
-                    $survey->save();
+                if ($template->status !== 'draft') {
+                    $template->status = 'draft';
+                    $template->save();
                 }
             }
         });
 
         $this->errorQuestionIndexes = []; // clear highlights on success
         $this->success(
-            'Survey questions saved successfully',
+            'Survey template questions saved successfully',
             timeout: 4000,
             position: 'toast-top toast-center'
         );
+    }
+
+    public function saveTemplateInfo(): void
+    {
+        $this->validate([
+            'templateTitle' => 'required|string|max:255',
+            'templateDescription' => 'nullable|string|max:2000',
+            'templateLevel' => 'required|integer|in:1,2,3',
+        ]);
+
+        $previousLevel = (int) ($this->surveyLevel ?? $this->templateLevel ?? 1);
+
+        $template = SurveyTemplate::find($this->surveyId);
+        if (!$template) {
+            $this->error('Survey template not found.', timeout: 6000, position: 'toast-top toast-center');
+            return;
+        }
+
+        $template->title = trim($this->templateTitle);
+        $template->description = $this->templateDescription !== null ? trim($this->templateDescription) : null;
+        $template->level = (int) $this->templateLevel;
+        $template->save();
+
+        // Update local reference and header display
+        $this->template = $template->fresh(['questions.options']);
+        $this->surveyLevel = (int) $template->level;
+
+        $this->success(
+            'Template information saved successfully',
+            timeout: 4000,
+            position: 'toast-top toast-center'
+        );
+
+        // If level changed, navigate to canonical URL reflecting new level
+        if ($previousLevel !== (int) $template->level) {
+            $this->redirectRoute(
+                'survey-template.edit',
+                ['level' => (int) $template->level, 'surveyId' => $template->id],
+                navigate: true
+            );
+        }
     }
 
     public function mount()
@@ -287,14 +290,8 @@ class EditSurveyForm extends Component
 
     public function render()
     {
-        $templateOptions = SurveyTemplate::select('id', 'title')
-            ->where('level', $this->surveyLevel)
-            ->where('status', 'active')
-            ->orderBy('title')
-            ->get();
-
-        return view('components.survey.edit-survey-form', [
-            'templateOptions' => $templateOptions,
+        return view('pages.survey-template.edit-survey-template', [
+            'template' => $this->template,
         ]);
     }
 

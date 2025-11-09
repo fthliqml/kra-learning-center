@@ -39,6 +39,7 @@ class DetailTrainingModal extends Component
             'name' => $payload['name'] ?? null,
             'group_comp' => $payload['group_comp'] ?? null,
             'type' => $payload['type'] ?? ($payload['training_type'] ?? null),
+            'status' => $payload['status'] ?? null,
             'start_date' => $payload['start_date'] ?? null,
             'end_date' => $payload['end_date'] ?? null,
         ];
@@ -101,6 +102,60 @@ class DetailTrainingModal extends Component
         $this->dispatch('confirm', 'Delete Confirmation', 'Are you sure you want to delete this training along with all sessions and attendance?', 'confirm-delete-training', $id);
     }
 
+    public function closeTraining(): void
+    {
+        // Ensure a training is selected
+        if (!$this->selectedEvent || !isset($this->selectedEvent['id'])) {
+            return;
+        }
+
+        $trainingId = (int) $this->selectedEvent['id'];
+
+        // Load training first and validate type (only IN/OUT can be closed)
+        $training = Training::find($trainingId);
+        if (!$training) {
+            $this->error('Training not found.', position: 'toast-top toast-center');
+            return;
+        }
+        $typeUpper = strtoupper($training->type ?? '');
+        if (!in_array($typeUpper, ['IN', 'OUT'])) {
+            // Block closing for K-LEARN or any non IN/OUT types
+            $this->error('Close Training is only available for IN/OUT types.', position: 'toast-top toast-center');
+            return;
+        }
+
+        // Check if there is any pending attendance under any session of this training
+        $pendingSession = TrainingSession::where('training_id', $trainingId)
+            ->whereHas('attendances', function ($q) {
+                $q->where('status', 'pending');
+            })
+            ->orderBy('day_number')
+            ->first();
+
+        if ($pendingSession) {
+            // Cancel close, show error toast indicating the specific day number
+            $day = $pendingSession->day_number ?? '-';
+            $this->error('There are pending attendances on day ' . $day . '.', position: 'toast-top toast-center');
+            return;
+        }
+
+        // No pending attendance, mark training as done
+
+        try {
+            DB::transaction(function () use ($training) {
+                $training->status = 'done';
+                $training->save();
+            });
+
+            // Notify success and close modal
+            $this->success('Training has been closed.', position: 'toast-top toast-center');
+            $this->dispatch('training-closed', ['id' => $training->id]);
+            $this->modal = false;
+        } catch (\Throwable $e) {
+            $this->error('Failed to close training.', position: 'toast-top toast-center');
+        }
+    }
+
     public function onConfirmDelete($id = null): void
     {
         // Ensure the confirmation corresponds to the currently opened training (if id is passed)
@@ -142,8 +197,11 @@ class DetailTrainingModal extends Component
             $this->dispatch('training-deleted', ['id' => $id]);
             $this->success('Training deleted.', position: 'toast-top toast-center');
             $this->modal = false;
+            // Close confirm dialog and stop spinner
+            $this->dispatch('confirm-done');
         } catch (\Throwable $e) {
             $this->error('Failed to delete training.');
+            $this->dispatch('confirm-done');
         }
     }
 

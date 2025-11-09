@@ -43,6 +43,11 @@ class TrainingSurvey extends Model
         return $this->belongsTo(Training::class);
     }
 
+    public function surveyResponses()
+    {
+        return $this->hasMany(SurveyResponse::class, 'survey_id');
+    }
+
     /**
      * Summary of questions
      * @return \Illuminate\Database\Eloquent\Relations\HasMany<SurveyQuestion, TrainingSurvey>

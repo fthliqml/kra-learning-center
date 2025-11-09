@@ -12,8 +12,10 @@ use App\Livewire\Pages\EditCourse\CoursesManagement;
 use App\Livewire\Pages\EditCourse\EditCourse;
 use App\Livewire\Pages\Survey\SurveyEmployee;
 use App\Livewire\Pages\Survey\SurveyManagement;
+use App\Livewire\Pages\Survey\SurveyManagementDetail;
 use App\Livewire\Pages\Survey\SurveyPreview;
 use App\Livewire\Pages\Survey\TakeSurvey;
+use App\Livewire\Pages\SurveyTemplate\EditSurveyTemplate;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\Module;
@@ -55,9 +57,11 @@ Route::middleware('auth')->group(function () {
     // Survey
     Route::get('/survey/{level}', SurveyEmployee::class)->name('survey.index');
     Route::get('/survey/{level}/take/{surveyId}', TakeSurvey::class)->name('survey.take');
+    Route::get('/survey/{level}/preview/{surveyId}', SurveyPreview::class)->name('survey.preview');
     Route::get('/survey/{level}/management', SurveyManagement::class)->name('survey-management.index');
-    Route::get('/survey/{level}/edit/{surveyId}', SurveyPreview::class)->name('survey.edit');
+    Route::get('/survey/{level}/edit/{surveyId}', SurveyManagementDetail::class)->name('survey.edit');
 
     // Survey Templates
     Route::get('/survey-template', SurveyTemplate::class)->name('survey-template.index');
+    Route::get('/survey-template/{level}/edit/{surveyId}', EditSurveyTemplate::class)->name('survey-template.edit');
 });

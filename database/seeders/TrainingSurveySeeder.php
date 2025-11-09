@@ -10,6 +10,8 @@ use App\Models\SurveyQuestion;
 use App\Models\SurveyOption;
 use App\Models\Training;
 use App\Models\TrainingSurvey;
+use App\Models\SurveyResponse;
+use App\Models\User;
 
 class TrainingSurveySeeder extends Seeder
 {
@@ -72,6 +74,21 @@ class TrainingSurveySeeder extends Seeder
                             'order' => $oi + 1,
                         ]);
                     }
+                }
+
+                // Assign survey responses to all users with role employee (or at least 1 demo user)
+                $users = User::where('role', 'employee')->get();
+                if ($users->isEmpty()) {
+                    // fallback: assign to demo user
+                    $users = User::where('email', 'employee@example.com')->get();
+                }
+                foreach ($users as $user) {
+                    SurveyResponse::create([
+                        'survey_id' => $survey->id,
+                        'employee_id' => $user->id,
+                        'is_completed' => false,
+                        'submitted_at' => null,
+                    ]);
                 }
             }
         });

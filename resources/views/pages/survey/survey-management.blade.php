@@ -1,9 +1,9 @@
 <div>
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
-                grid-cols-1 lg:grid-cols-2 items-center">
+    <div class="w-full flex flex-col mb-5 lg:mb-9 gap-2">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
-            Survey {{ $surveyLevel }}
+            Survey Management
         </h1>
+        <span class="badge badge-primary badge-soft">Level {{ $surveyLevel }}</span>
     </div>
 
     {{-- Table --}}
