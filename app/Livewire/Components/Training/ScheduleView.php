@@ -37,6 +37,7 @@ class ScheduleView extends Component
         // Unified: any update triggers full refresh to keep sessions & counts consistent
         'training-updated' => 'refreshTrainings',
         'training-deleted' => 'removeTraining',
+        'training-closed' => 'onTrainingClosed',
         'fullcalendar-open-event' => 'openEventModal',
         'training-info-updated' => 'onTrainingInfoUpdated',
         'schedule-filters-updated' => 'onFiltersUpdated',
@@ -197,6 +198,31 @@ class ScheduleView extends Component
         }
         // If date range changed we rely on existing logic in applyTrainingUpdate
         $this->applyTrainingUpdate($payload);
+    }
+
+    public function onTrainingClosed($payload = null): void
+    {
+        if (!$payload || !isset($payload['id'])) {
+            return;
+        }
+        
+        // Update training status in memory
+        $id = $payload['id'];
+        foreach ($this->trainings as $t) {
+            if ($t->id == $id) {
+                $t->status = 'done';
+                break;
+            }
+        }
+        
+        // Update cached detail if exists
+        if (isset($this->trainingDetails[$id])) {
+            $this->trainingDetails[$id]['status'] = 'done';
+        }
+        
+        // Recompute days to reflect status change in UI
+        $this->recomputeDays();
+        $this->calendarVersion++;
     }
 
     private function calendarRange(): array

@@ -186,6 +186,11 @@ class TrainingFormModal extends Component
         $this->resetForm();
         $this->isEdit = false;
         $this->trainingId = null;
+        $this->originalTrainingType = null;
+        $this->activeTab = 'training';
+        $this->showTypeChangeConfirm = false;
+        $this->pendingTrainingType = null;
+        
         // Only set date if explicitly provided; otherwise leave blank for safety.
         if (!empty($data['date'])) {
             $this->date = $data['date'];
@@ -228,6 +233,8 @@ class TrainingFormModal extends Component
         $this->training_type = 'IN';
         $this->group_comp = 'BMC';
         $this->date = '';
+        $this->start_time = '';
+        $this->end_time = '';
         $this->course_id = null;
         $this->activeTab = 'training';
         $this->trainerId = null;
@@ -236,9 +243,20 @@ class TrainingFormModal extends Component
             "location" => "",
         ];
         $this->participants = [];
+        $this->originalTrainingType = null;
+        $this->showTypeChangeConfirm = false;
+        $this->pendingTrainingType = null;
+        
+        // Reset searchable collections
         $this->usersSearchable = collect([]);
         $this->trainersSearchable = collect([]);
+        
+        // Refresh searchable lists with fresh data
+        $this->userSearch();
+        $this->trainerSearch();
+        
         $this->resetErrorBag();
+        $this->resetValidation();
     }
 
     /**
