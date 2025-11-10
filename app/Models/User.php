@@ -113,6 +113,14 @@ class User extends Authenticatable
             ->withTimestamps();
     }
 
+    /**
+     * Training requests created by this user.
+     */
+    public function trainingRequests(): HasMany
+    {
+        return $this->hasMany(Request::class, 'created_by');
+    }
+
     /* =====================
      |  Role Utilities
      |  Single role stored on users.role (string)

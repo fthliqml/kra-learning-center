@@ -19,6 +19,7 @@ use App\Livewire\Pages\SurveyTemplate\EditSurveyTemplate;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\Module;
+use App\Livewire\Pages\Training\Request;
 use App\Livewire\Pages\Training\Schedule;
 use Illuminate\Support\Facades\Route;
 
@@ -40,6 +41,7 @@ Route::middleware('auth')->group(function () {
     // Training
     Route::get('/training/module', Module::class)->name('training-module.index');
     Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
+    Route::get('/training/request', Request::class)->name('training-request.index');
     Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
 
     // Courses
