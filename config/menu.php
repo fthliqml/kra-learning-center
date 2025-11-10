@@ -20,17 +20,17 @@ return [
             'label' => 'History',
             'icon' => 'clock',
             'href' => '#',
-            'roles' => ['employee'],
+            'roles' => ['employee', 'instructor', 'admin', 'leader'],
             'submenu' => [
                 [
                     'label' => 'Training History',
-                    'href' => '/history/training',
-                    'roles' => ['employee'],
+                    'href' => '/training/history',
+                    'roles' => ['employee', 'instructor', 'admin', 'leader'],
                 ],
                 [
                     'label' => 'Certification History',
-                    'href' => '/history/certification',
-                    'roles' => ['employee'],
+                    'href' => '/Certification/history',
+                    'roles' => ['employee', 'instructor', 'admin', 'leader'],
                 ],
             ],
         ],
