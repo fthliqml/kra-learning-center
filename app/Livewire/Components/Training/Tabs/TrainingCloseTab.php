@@ -260,6 +260,11 @@ class TrainingCloseTab extends Component
         }
     }
 
+    public function placeholder()
+    {
+        return view('components.skeletons.training-close-tab');
+    }
+
     public function render()
     {
         return view('components.training.tabs.training-close-tab', [
