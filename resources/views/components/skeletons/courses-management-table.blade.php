@@ -1,4 +1,6 @@
-<div wire:loading class="w-full p-4 overflow-x-auto">
+@props(['targets' => 'search'])
+
+<div wire:loading wire:target="{{ $targets }}" class="w-full p-4 overflow-x-auto">
     <table class="w-full table-auto border-collapse">
         <thead>
             <tr>
