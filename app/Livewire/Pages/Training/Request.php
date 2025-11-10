@@ -39,6 +39,9 @@ class Request extends Component
         ['value' => 'Rejected', 'label' => 'Rejected'],
     ];
 
+    /** Simple flash alert payload: ['type' => 'success|error|warning', 'message' => string] */
+    public ?array $flash = null;
+
     public function mount(): void
     {
         $auth = Auth::user();
@@ -220,6 +223,67 @@ class Request extends Component
         $this->resetValidation();
     }
 
+    /**
+     * Determine if the current authenticated user can moderate (approve/reject)
+     * a training request. Business rule: only the leader from section 'LID'.
+     */
+    protected function canModerate(): bool
+    {
+        $user = Auth::user();
+        if (!$user) return false;
+        // Assuming leader role stored in users.role as 'leader'
+        return strtolower(trim($user->role ?? '')) === 'leader' && strtolower(trim($user->section ?? '')) === 'lid';
+    }
+
+    /** Approve selected request */
+    public function approve(): void
+    {
+        if (!$this->selectedId) {
+            return; // nothing selected
+        }
+        if (!$this->canModerate()) {
+            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only LID leader can approve.');
+            return;
+        }
+        $req = TrainingRequestModel::find($this->selectedId);
+        if (!$req) {
+            $this->dispatch('toast', type: 'error', title: 'Not found', message: 'Request no longer exists.');
+            return;
+        }
+        if (strtolower($req->status) !== 'pending') {
+            $this->dispatch('toast', type: 'warning', title: 'Already processed', message: 'Request already resolved.');
+            return;
+        }
+        $req->update(['status' => 'approved']);
+        $this->formData['status'] = 'approved';
+        $this->flash = ['type' => 'success', 'message' => 'Training request approved'];
+    }
+
+    /** Reject selected request */
+    public function reject(): void
+    {
+        if (!$this->selectedId) {
+            return; // nothing selected
+        }
+        if (!$this->canModerate()) {
+            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only LID leader can reject.');
+            return;
+        }
+        $req = TrainingRequestModel::find($this->selectedId);
+        if (!$req) {
+            $this->dispatch('toast', type: 'error', title: 'Not found', message: 'Request no longer exists.');
+            return;
+        }
+        if (strtolower($req->status) !== 'pending') {
+            $this->dispatch('toast', type: 'warning', title: 'Already processed', message: 'Request already resolved.');
+            return;
+        }
+        $req->update(['status' => 'rejected']);
+        $this->formData['status'] = 'rejected';
+        // Rejection should trigger a red alert
+        $this->flash = ['type' => 'error', 'message' => 'Training request rejected'];
+    }
+
     public function save(): void
     {
         // Guard again on save
@@ -240,6 +304,6 @@ class Request extends Component
         ]);
 
         $this->modal = false;
-        $this->dispatch('toast', type: 'success', title: 'Training request created');
+        $this->flash = ['type' => 'success', 'message' => 'Training request created'];
     }
 }
