@@ -38,53 +38,56 @@
 
                 {{-- Custom cell untuk Pretest Score --}}
                 @scope('cell_pretest_score', $assessment)
-                    @php
-                        $trainingDone = strtolower($training->status ?? '') === 'done';
-                    @endphp
-                    @if ($trainingDone)
-                        <div class="text-center">{{ $assessment->pretest_score ?? '-' }}</div>
-                    @else
-                        <div class="flex justify-center">
+                    @php $trainingDone = $assessment->training_done ?? false; @endphp
+                    <div class="flex justify-center">
+                        @if ($trainingDone)
+                            <div tabindex="-1"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
+                                {{ $assessment->pretest_score ?? '-' }}
+                            </div>
+                        @else
                             <input type="number" min="0" max="100" step="0.1"
                                 wire:model.live.debounce.300ms="tempScores.{{ $assessment->id }}.pretest_score"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:outline-none focus-visible:outline-none focus:ring-1 focus:ring-primary focus:border-primary ring-0"
                                 placeholder="0-100">
-                        </div>
-                    @endif
+                        @endif
+                    </div>
                 @endscope
 
                 {{-- Custom cell untuk Posttest Score --}}
                 @scope('cell_posttest_score', $assessment)
-                    @php
-                        $trainingDone = strtolower($training->status ?? '') === 'done';
-                    @endphp
-                    @if ($trainingDone)
-                        <div class="text-center">{{ $assessment->posttest_score ?? '-' }}</div>
-                    @else
-                        <div class="flex justify-center">
+                    @php $trainingDone = $assessment->training_done ?? false; @endphp
+                    <div class="flex justify-center">
+                        @if ($trainingDone)
+                            <div tabindex="-1"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
+                                {{ $assessment->posttest_score ?? '-' }}
+                            </div>
+                        @else
                             <input type="number" min="0" max="100" step="0.1"
                                 wire:model.live.debounce.300ms="tempScores.{{ $assessment->id }}.posttest_score"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:outline-none focus-visible:outline-none focus:ring-1 focus:ring-primary focus:border-primary ring-0"
                                 placeholder="0-100">
-                        </div>
-                    @endif
+                        @endif
+                    </div>
                 @endscope
 
                 {{-- Custom cell untuk Practical Score --}}
                 @scope('cell_practical_score', $assessment)
-                    @php
-                        $trainingDone = strtolower($training->status ?? '') === 'done';
-                    @endphp
-                    @if ($trainingDone)
-                        <div class="text-center">{{ $assessment->practical_score ?? '-' }}</div>
-                    @else
-                        <div class="flex justify-center">
+                    @php $trainingDone = $assessment->training_done ?? false; @endphp
+                    <div class="flex justify-center">
+                        @if ($trainingDone)
+                            <div tabindex="-1"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
+                                {{ $assessment->practical_score ?? '-' }}
+                            </div>
+                        @else
                             <input type="number" min="0" max="100" step="0.1"
                                 wire:model.live.debounce.300ms="tempScores.{{ $assessment->id }}.practical_score"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:outline-none focus-visible:outline-none focus:ring-1 focus:ring-primary focus:border-primary ring-0"
                                 placeholder="0-100">
-                        </div>
-                    @endif
+                        @endif
+                    </div>
                 @endscope
 
                 {{-- Custom cell untuk Average Score --}}
@@ -103,9 +106,7 @@
 
                 {{-- Custom cell untuk Status --}}
                 @scope('cell_status', $assessment)
-                    @php
-                        $trainingDone = strtolower($training->status ?? '') === 'done';
-                    @endphp
+                    @php $trainingDone = $assessment->training_done ?? false; @endphp
                     <div class="flex justify-center" x-data="{
                         get status() {
                             @if ($trainingDone) return '{{ $assessment->status }}';

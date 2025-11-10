@@ -32,8 +32,15 @@ $sessionForDay =
                     ],
                 };
             @endphp
-            <div x-on:click="$dispatch('detail-loading-start')"
-                class="bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex gap-4 items-start hover:border-primary/40 transition cursor-pointer {{ $isDone ? 'opacity-80' : '' }}"
+            @php
+                $baseCard =
+                    'bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex gap-4 items-start transition';
+                // Closed trainings still clickable for details: keep pointer + subtle hover, but keep faded look
+                $interactive = $isDone
+                    ? 'opacity-80 cursor-pointer hover:border-primary/30'
+                    : 'cursor-pointer hover:border-primary/40';
+            @endphp
+            <div x-on:click="$dispatch('detail-loading-start')" class="{{ $baseCard }} {{ $interactive }}"
                 wire:click="open({{ $item['id'] }}, '{{ $item['iso'] }}')">
                 <div class="flex flex-col items-center w-12 sm:w-14">
                     <div class="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-500">

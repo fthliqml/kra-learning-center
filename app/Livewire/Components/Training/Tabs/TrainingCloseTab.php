@@ -130,6 +130,9 @@ class TrainingCloseTab extends Component
                 $assessment->temp_status = $assessment->status ?? 'in_progress';
             }
 
+            // Expose training done flag directly on assessment for blade scopes (avoid scope isolation issues)
+            $assessment->training_done = strtolower($this->training->status ?? '') === 'done';
+
             return $assessment;
         });
     }

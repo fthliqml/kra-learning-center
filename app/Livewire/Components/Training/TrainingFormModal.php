@@ -275,6 +275,7 @@ class TrainingFormModal extends Component
       $this->error('Invalid training reference.');
       return;
     }
+    
     $this->resetForm();
     $this->isEdit = true;
     $this->trainingId = (int) $id;
@@ -289,6 +290,12 @@ class TrainingFormModal extends Component
 
     if (!$training) {
       $this->error('Training not found');
+      return;
+    }
+    
+    // Check if training is closed - prevent editing
+    if ($training->status && strtolower($training->status) === 'done') {
+      $this->error('Cannot edit a closed training. Please view details instead.');
       return;
     }
 

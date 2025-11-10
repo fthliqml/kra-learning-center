@@ -452,22 +452,32 @@ class ScheduleView extends Component
     }
     $user = Auth::user();
     if ($user && strtolower($user->role ?? '') === 'admin') {
+      // Check if training is closed
+      $isClosed = isset($payload['status']) && strtolower($payload['status']) === 'done';
+      
+      // Build actions based on training status
+      $actions = [
+        [
+          'label' => 'View Detail',
+          'event' => 'open-detail-training-modal',
+          'variant' => 'outline'
+        ]
+      ];
+      
+      // Only allow edit if training is not closed
+      if (!$isClosed) {
+        $actions[] = [
+          'label' => 'Edit Training',
+          'event' => 'open-training-form-edit',
+          'variant' => 'primary'
+        ];
+      }
+      
       $this->dispatch('open-action-choice', [
         'title' => 'Training Action',
         'message' => 'What would you like to do with this training?',
         'payload' => $payload,
-        'actions' => [
-          [
-            'label' => 'View Detail',
-            'event' => 'open-detail-training-modal',
-            'variant' => 'outline'
-          ],
-          [
-            'label' => 'Edit Training',
-            'event' => 'open-training-form-edit',
-            'variant' => 'primary'
-          ]
-        ]
+        'actions' => $actions
       ]);
     } else {
       $this->dispatch('open-detail-training-modal', $payload);
