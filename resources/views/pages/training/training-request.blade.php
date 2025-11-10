@@ -1,6 +1,20 @@
 <div>
     @livewire('components.confirm-dialog')
 
+    {{-- Success Alert (auto hide) --}}
+    @if (!empty($flash))
+        <div x-data x-init="setTimeout(() => $wire.set('flash', null), 2500)" class="fixed top-4 inset-x-0 z-[60] flex justify-center">
+            @php
+                $isError = ($flash['type'] ?? '') === 'error';
+                $alertClass = $isError ? 'alert-error' : 'alert-success';
+                $icon = $isError ? 'o-x-circle' : 'o-check-badge';
+            @endphp
+            <x-alert :icon="$icon" :class="" class="shadow-lg {{ $alertClass }}">
+                {{ $flash['message'] ?? ($isError ? 'Failed' : 'Success') }}
+            </x-alert>
+        </div>
+    @endif
+
     {{-- Header --}}
     <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
                 grid-cols-1 lg:grid-cols-2 items-center">
@@ -11,36 +25,6 @@
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
-                <!-- Dropdown Export / Import -->
-                {{-- <x-dropdown no-x-anchor right>
-                    <x-slot:trigger>
-                        <x-button class="btn-success h-10" wire:target="file" wire:loading.attr="disabled">
-                            <span class="flex items-center gap-2" wire:loading.remove wire:target="file">
-                                <x-icon name="o-clipboard-document-list" class="size-4" />
-                                Excel
-                            </span>
-                            <span class="flex items-center gap-2" wire:loading wire:target="file">
-                                <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                            </span>
-                        </x-button>
-                    </x-slot:trigger>
-
-                    <x-menu-item title="Export" icon="o-arrow-down-on-square" wire:click.stop="export"
-                        spinner="export" />
-
-                    <label class="w-full cursor-pointer relative" wire:loading.class="opacity-60 pointer-events-none"
-                        wire:target="file">
-                        <x-menu-item title="Import" icon="o-arrow-up-on-square" />
-                        <div class="absolute right-2 top-2" wire:loading wire:target="file">
-                            <x-icon name="o-arrow-path" class="size-4 animate-spin text-gray-500" />
-                        </div>
-                        <input type="file" wire:model="file" class="hidden" />
-                    </label>
-
-                    <x-menu-item title="Download Template" icon="o-document-arrow-down"
-                        wire:click.stop="downloadTemplate" spinner="downloadTemplate" />
-                </x-dropdown> --}}
-
                 @if (auth()->check() && auth()->user()->hasRole('spv'))
                     <!-- Add Button (SPV only) -->
                     <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal" class="h-10"
@@ -151,16 +135,53 @@
                 @endif
             </div>
 
-            <x-slot:actions class="mt-5">
+            <x-slot:actions>
                 <x-ui.button @click="$wire.modal = false" type="button">{{ $mode === 'preview' ? 'Close' : 'Cancel' }}</x-ui.button>
-                @if ($mode !== 'preview')
-                    <x-ui.button variant="primary" type="submit" wire:target="save" wire:loading.attr="disabled">
-                        <span wire:loading.remove wire:target="save">Save</span>
-                        <span wire:loading wire:target="save">
-                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                        </span>
-                    </x-ui.button>
-                @endif
+                    @if ($mode !== 'preview')
+                        <x-ui.button variant="primary" type="submit" wire:target="save" wire:loading.attr="disabled">
+                            <span wire:loading.remove wire:target="save">Save</span>
+                            <span wire:loading wire:target="save">
+                                <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                            </span>
+                        </x-ui.button>
+                    @else
+                        @php
+                            $canModerate = auth()->check() && auth()->user()->hasRole('leader') && strtolower(auth()->user()->section ?? '') === 'lid';
+                            $isPending = strtolower($formData['status'] ?? 'pending') === 'pending';
+                        @endphp
+                        @if ($canModerate && $isPending)
+                            <x-ui.button
+                                variant="danger"
+                                type="button"
+                                wire:click="reject"
+                                wire:target="reject"
+                                wire:loading.attr="disabled"
+                                class="bg-rose-600 hover:bg-rose-700 border-rose-600 text-white">
+                                <span wire:loading.remove wire:target="reject" class="flex items-center gap-2">
+                                    <x-icon name="o-x-mark" class="size-4" />
+                                    Reject
+                                </span>
+                                <span wire:loading wire:target="reject">
+                                    <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                </span>
+                            </x-ui.button>
+                            <x-ui.button
+                                variant="success"
+                                type="button"
+                                wire:click="approve"
+                                wire:target="approve"
+                                wire:loading.attr="disabled"
+                                class="bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white">
+                                <span wire:loading.remove wire:target="approve" class="flex items-center gap-2">
+                                    <x-icon name="o-check" class="size-4" />
+                                    Approve
+                                </span>
+                                <span wire:loading wire:target="approve">
+                                    <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                </span>
+                            </x-ui.button>
+                        @endif
+                    @endif
             </x-slot:actions>
         </x-form>
     </x-modal>
