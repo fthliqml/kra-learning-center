@@ -42,19 +42,20 @@ class TrainingAssessment extends Model
     }
 
     /**
-     * Calculate the average score.
+     * Calculate the average score (only from posttest and practical, excluding pretest).
      */
-    public function averageScore(): Attribute
+    protected function averageScore(): Attribute
     {
         return Attribute::make(
             get: function () {
+                // Calculate average from only posttest and practical scores (exclude pretest)
                 $scores = array_filter([
-                    $this->pretest_score,
                     $this->posttest_score,
                     $this->practical_score
                 ]);
 
-                return count($scores) > 0 ? array_sum($scores) / count($scores) : 0;
+                // Return average with 1 decimal place
+                return count($scores) > 0 ? round(array_sum($scores) / count($scores), 1) : 0;
             }
         );
     }
