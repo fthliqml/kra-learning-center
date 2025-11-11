@@ -13,7 +13,7 @@ return [
             'label' => 'Courses',
             'icon' => 'book-open',
             'href' => '/courses',
-            'roles' => ['employee', 'instructor'],
+            'roles' => ['employee', 'spv'],
         ],
         [
             'id' => 'history',
@@ -35,11 +35,15 @@ return [
             ],
         ],
         [
-            'id' => 'training-schedule',
-            'label' => 'Training Schedule',
-            'icon' => 'book-open',
-            'href' => '/training/schedule',
-            'roles' => ['employee'],
+            'id' => 'training',
+            'label' => 'Training',
+            'icon' => 'academic-cap',
+            'href' => '#',
+            'roles' => ['employee', 'spv'],
+            'submenu' => [
+                ['label' => 'Training Schedule', 'href' => '/training/schedule', 'roles' => ['employee', 'spv']],
+                ['label' => 'Training Request', 'href' => '/training/request', 'roles' => ['spv']],
+            ],
         ],
         [
             'id' => 'training',
@@ -48,9 +52,10 @@ return [
             'href' => '#',
             'roles' => ['admin', 'instructor', 'leader'],
             'submenu' => [
-                ['label' => 'Training History', 'href' => '/history/training', 'roles' => ['tbc']],
                 ['label' => 'Training Module', 'href' => '/training/module', 'roles' => ['admin', 'instructor']],
                 ['label' => 'Training Schedule', 'href' => '/training/schedule', 'roles' => ['admin', 'instructor']],
+                ['label' => 'Training Request', 'href' => '/training/request', 'roles' => ['admin', 'instructor', 'leader']],
+                ['label' => 'Training History', 'href' => '/history/training', 'roles' => ['tbc']],
                 ['label' => 'Data Trainer', 'href' => '/training/trainer', 'roles' => ['admin']],
             ],
         ],
@@ -59,7 +64,7 @@ return [
             'label' => 'K-Learn',
             'icon' => 'folder-open',
             'href' => '/courses/management',
-            'roles' => ['admin', 'instructor'],
+            'roles' => ['admin', 'instructor', 'leader'],
         ],
         [
             'id' => 'survey-management',
@@ -85,11 +90,10 @@ return [
             'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
-            'roles' => ['employee'],
+            'roles' => ['employee', 'spv'],
             'submenu' => [
-                ['label' => 'Survey 1', 'href' => '/survey/1', 'roles' => ['employee']],
-                ['label' => 'Survey 2', 'href' => '/survey/2', 'roles' => ['employee']],
-                ['label' => 'Survey 3', 'href' => '/survey/3', 'roles' => ['employee']],
+                ['label' => 'Survey 1', 'href' => '/survey/1', 'roles' => ['employee', 'spv']],
+                ['label' => 'Survey 3', 'href' => '/survey/3', 'roles' => ['spv']],
             ],
         ],
         [

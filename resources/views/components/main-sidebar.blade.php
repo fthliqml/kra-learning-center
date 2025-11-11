@@ -3,6 +3,16 @@
     $user = auth()->user();
     $role = $user?->role;
     $menuItems = SidebarMenu::for($user);
+    // Precompute current path and a matcher for active states (supports wildcard)
+    $currentPath = trim(request()->path(), '/');
+    $isMatch = function ($url) use ($currentPath) {
+        $p = ltrim(parse_url($url, PHP_URL_PATH) ?? '/', '/');
+        if ($p === '') {
+            return $currentPath === '';
+        }
+        // Exact path or any subpath
+        return request()->is($p) || request()->is($p . '/*');
+    };
 @endphp
 
 <div x-data="{
@@ -60,12 +70,10 @@
                 @foreach ($menuItems as $item)
                     @php
                         $hasSub = isset($item['submenu']) && count(value: $item['submenu']) > 0;
-                        $path = ltrim(parse_url($item['href'], PHP_URL_PATH) ?? '/', '/');
-                        // Active only when exact path matches (no wildcard) for top-level items without submenu
-                        $currentPath = trim(request()->path(), '/');
-                        $isActiveTop =
-                            !$hasSub &&
-                            (($path === '' && $currentPath === '') || ($path !== '' && $currentPath === $path));
+                        // Active for parent if any child matches; otherwise match item itself
+                        $isActiveTop = $hasSub
+                            ? collect($item['submenu'])->contains(fn($sub) => $isMatch($sub['href']))
+                            : $isMatch($item['href']);
                     @endphp
 
                     <div class="transition-all duration-1000 ease-out">
@@ -111,12 +119,8 @@
                                 x-transition:leave-end="opacity-0 -translate-y-2">
                                 @foreach ($item['submenu'] as $index => $sub)
                                     @php
-                                        // Determine active state for submenu by comparing normalized paths (ignoring domain & query)
-                                        $subPath = ltrim(parse_url($sub['href'], PHP_URL_PATH) ?? '/', '/');
-                                        $currentPath = trim(request()->path(), '/');
-                                        $subActive =
-                                            ($subPath === '' && $currentPath === '') ||
-                                            ($subPath !== '' && $currentPath === $subPath);
+                                        // Determine active state for submenu using wildcard-friendly matcher
+                                        $subActive = $isMatch($sub['href']);
                                     @endphp
                                     <button @click="window.location.href='{{ $sub['href'] }}'"
                                         @class([

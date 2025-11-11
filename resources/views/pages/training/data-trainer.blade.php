@@ -11,6 +11,7 @@
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
+                {{-- Dropdown Export / Import --}}
                 <x-dropdown no-x-anchor right>
                     <x-slot:trigger>
                         <x-button class="btn-success h-10" wire:target="file" wire:loading.attr="disabled">
@@ -40,6 +41,7 @@
                         wire:click.stop="downloadTemplate" spinner="downloadTemplate" />
                 </x-dropdown>
 
+                {{-- Add Button --}}
                 <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal" class="h-10"
                     wire:loading.attr="readonly">
                     <span wire:loading.remove wire:target="openCreateModal" class="flex items-center gap-2">
@@ -51,12 +53,14 @@
                     </span>
                 </x-ui.button>
 
+                {{-- Filter --}}
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
                     placeholder="Filter"
                     class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                     icon-right="o-funnel" />
             </div>
 
+            {{-- Search --}}
             <x-search-input placeholder="Search..." class="max-w-72" wire:model.live="search" />
         </div>
     </div>

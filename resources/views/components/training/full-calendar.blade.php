@@ -36,24 +36,24 @@
                                     switch ($type) {
                                         case 'IN':
                                             $typeColor = $isDone
-                                                ? 'border-green-300 bg-green-50 hover:bg-green-50 opacity-70'
+                                                ? 'border-green-300 bg-green-50 hover:bg-green-100 opacity-70'
                                                 : 'border-green-500 bg-green-50 hover:bg-green-100';
                                             break;
                                         case 'OUT':
                                             $typeColor = $isDone
-                                                ? 'border-amber-300 bg-amber-50 hover:bg-amber-50 opacity-70'
+                                                ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 opacity-70'
                                                 : 'border-amber-500 bg-amber-50 hover:bg-amber-100';
                                             break;
                                         case 'K-LEARN':
                                         case 'KLEARN':
                                         case 'KLEARNING':
                                             $typeColor = $isDone
-                                                ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-50 opacity-70'
+                                                ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-70'
                                                 : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
                                             break;
                                         default:
                                             $typeColor = $isDone
-                                                ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#E4F3FF] opacity-70'
+                                                ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#d4ebfc] opacity-70'
                                                 : 'border-primary bg-[#E4F3FF] hover:bg-[#d4ebfc]';
                                             break;
                                     }
@@ -107,24 +107,24 @@
                                     switch ($type) {
                                         case 'IN':
                                             $typeColor = $isDone
-                                                ? 'border-green-300 bg-green-50 hover:bg-green-50 opacity-70'
+                                                ? 'border-green-300 bg-green-50 hover:bg-green-100 opacity-70'
                                                 : 'border-green-500 bg-green-50 hover:bg-green-100';
                                             break;
                                         case 'OUT':
                                             $typeColor = $isDone
-                                                ? 'border-amber-300 bg-amber-50 hover:bg-amber-50 opacity-70'
+                                                ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 opacity-70'
                                                 : 'border-amber-500 bg-amber-50 hover:bg-amber-100';
                                             break;
                                         case 'K-LEARN':
                                         case 'KLEARN':
                                         case 'KLEARNING':
                                             $typeColor = $isDone
-                                                ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-50 opacity-70'
+                                                ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-70'
                                                 : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
                                             break;
                                         default:
                                             $typeColor = $isDone
-                                                ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#E4F3FF] opacity-70'
+                                                ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#d4ebfc] opacity-70'
                                                 : 'border-primary bg-[#E4F3FF] hover:bg-[#d4ebfc]';
                                             break;
                                     }
