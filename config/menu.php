@@ -88,6 +88,7 @@ return [
             'roles' => ['certificator', 'admin', 'leader'],
             'submenu' => [
                 ['label' => 'Certification Module', 'href' => '/certification/module', 'roles' => ['certificator', 'admin', 'leader']],
+                ['label' => 'Certification Point', 'href' => '/certification/point', 'roles' => ['certificator', 'admin', 'leader']],
             ],
         ],
         [
