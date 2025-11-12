@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Livewire\Pages\Certification\CertificationPoint;
 use App\Livewire\Pages\Courses\Courses;
 use App\Livewire\Pages\Courses\Overview;
 use App\Livewire\Pages\Courses\Pretest;
@@ -66,4 +67,7 @@ Route::middleware('auth')->group(function () {
     // Survey Templates
     Route::get('/survey-template', SurveyTemplate::class)->name('survey-template.index');
     Route::get('/survey-template/{level}/edit/{surveyId}', EditSurveyTemplate::class)->name('survey-template.edit');
+
+    // Certification
+    Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
 });
