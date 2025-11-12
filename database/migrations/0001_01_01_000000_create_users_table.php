@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->string('password');
             $table->string('section');
             $table->integer('NRP');
-            $table->enum('role', ['employee', 'spv', 'instructor', 'admin', 'leader'])->default('employee');
+            $table->enum('role', ['employee', 'spv', 'instructor', 'certificator', 'admin', 'leader'])->default('employee');
 
             // Auth Helpers
             $table->rememberToken();
