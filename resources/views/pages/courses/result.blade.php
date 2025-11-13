@@ -25,7 +25,7 @@
     }
 
     // Status label/color for summary card
-    $statusLabel = 'Belum Posttest';
+    $statusLabel = 'Belum Post Test';
     $statusColor = 'gray';
     if ($topAttempt) {
         if ($topUnderReview) { $statusLabel = 'Review'; $statusColor = 'amber'; }
@@ -57,7 +57,7 @@
         <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Result</h1>
     </div>
 
-    {{-- Posttest Status dipindah ke kartu status besar --}}
+    {{-- Post Test Status dipindah ke kartu status besar --}}
 
     <div class="grid grid-cols-1 md:grid-cols-4 gap-3 md:gap-4 mb-6 md:mb-6">
         {{-- Status --}}
@@ -68,7 +68,7 @@
                         <x-icon :name="$statusIcon" class="size-9 text-{{ $statusColor }}-600" />
                     </div>
                 </div>
-                <div class="text-xs font-medium text-{{ $statusColor }}-700">Status Posttest</div>
+                <div class="text-xs font-medium text-{{ $statusColor }}-700">Status Post Test</div>
                 <div class="mt-1 text-xl md:text-2xl font-bold text-{{ $statusColor }}-800">{{ $statusLabel }}</div>
                 @if ($topAttempt)
                     <div class="mt-2 text-xs text-{{ $statusColor }}-700/80">Nilai: <span class="font-semibold">{{ $postPct }}%</span></div>
@@ -92,7 +92,7 @@
             <div x-data="{ pre: {{ $prePct }}, post: {{ $postPct }}, chart: null }" x-init="(() => {
                 const ctx = $refs.chart.getContext('2d');
                 const data = {
-                    labels: ['Pretest', 'Posttest'],
+                    labels: ['Pre Test', 'Post Test'],
                     datasets: [{
                         label: 'Persentase',
                         data: [{{ $prePct }}, {{ $postPct }}],
@@ -132,7 +132,7 @@
                 }
             })()">
                 <div class="h-64 md:h-50">
-                    <canvas x-ref="chart" aria-label="Grafik perbandingan nilai pretest dan posttest"
+                    <canvas x-ref="chart" aria-label="Grafik perbandingan nilai Pre Test dan Post Test"
                         role="img"></canvas>
                 </div>
             </div>
@@ -142,11 +142,11 @@
         <div class="md:col-span-1">
             <div class="flex flex-row md:flex-col gap-3 md:gap-4 overflow-x-auto md:overflow-visible -mx-2 px-2 ">
                 <div class="rounded-xl border border-gray-200 bg-white p-4 min-w-[100px]">
-                    <div class="text-[11px] font-medium text-gray-500">Pretest</div>
+                    <div class="text-[11px] font-medium text-gray-500">Pre Test</div>
                     <div class="mt-1 text-2xl font-bold text-gray-900">{{ $prePct }}%</div>
                 </div>
                 <div class="rounded-xl border border-gray-200 bg-white p-4 min-w-[100px]">
-                    <div class="text-[11px] font-medium text-gray-500">Posttest</div>
+                    <div class="text-[11px] font-medium text-gray-500">Post Test</div>
                     <div class="mt-1 text-2xl font-bold text-gray-900">{{ $postPct }}%</div>
                 </div>
                 <div
@@ -162,11 +162,11 @@
 
     @if ($preMcTotal > 0 || $mcTotal > 0)
         <div class="mt-6 flex flex-col md:flex-row md:items-start gap-4">
-            {{-- Hasil Pretest --}}
+            {{-- Hasil Pre Test --}}
             @if ($preMcTotal > 0)
                 <div class="rounded-lg border border-gray-200 p-4 w-full md:flex-1">
                     <div class="flex items-center justify-between mb-5">
-                        <h3 class="text-sm font-semibold text-gray-900">Hasil Pretest</h3>
+                        <h3 class="text-sm font-semibold text-gray-900">Hasil Pre Test</h3>
                         <div class="text-xs text-gray-500">Multiple Choice</div>
                     </div>
                     <div x-data="{ chart: null }" x-init="(() => {
@@ -198,7 +198,7 @@
                         }
                     })()">
                         <div class="h-52">
-                            <canvas x-ref="donutPre" aria-label="Donut jawaban benar vs salah (pretest)" role="img"></canvas>
+                            <canvas x-ref="donutPre" aria-label="Donut jawaban benar vs salah (Pre Test)" role="img"></canvas>
                         </div>
                         <div class="mt-5 text-sm text-gray-600 text-center">
                             <span class="font-semibold text-gray-900">{{ $preCorrect }}</span> benar dari
@@ -208,11 +208,11 @@
                 </div>
             @endif
 
-            {{-- Hasil Posttest --}}
+            {{-- Hasil Post Test --}}
             @if ($mcTotal > 0)
                 <div class="rounded-lg border border-gray-200 p-4 w-full md:flex-1">
                     <div class="flex items-center justify-between mb-5">
-                        <h3 class="text-sm font-semibold text-gray-900">Hasil Posttest</h3>
+                        <h3 class="text-sm font-semibold text-gray-900">Hasil Post Test</h3>
                         <div class="text-xs text-gray-500">Multiple Choice</div>
                     </div>
                     <div x-data="{ chart: null }" x-init="(() => {
@@ -244,7 +244,7 @@
                         }
                     })()">
                         <div class="h-52">
-                            <canvas x-ref="donutPost" aria-label="Donut jawaban benar vs salah (posttest)" role="img"></canvas>
+                            <canvas x-ref="donutPost" aria-label="Donut jawaban benar vs salah (Post Test)" role="img"></canvas>
                         </div>
                         <div class="mt-5 text-sm text-gray-600 text-center">
                             <span class="font-semibold text-gray-900">{{ $correct }}</span> benar dari

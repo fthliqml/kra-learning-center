@@ -10,7 +10,7 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Posttest</h1>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Post Test</h1>
         </div>
         {{-- Learning Module Picker --}}
         @if (!empty($showMaterialPicker))
@@ -50,7 +50,7 @@
             </div>
             <div class="flex-1">
                 <h2 class="text-base font-semibold text-gray-900">Sebelum Memulai</h2>
-                <p class="text-sm text-gray-600 mt-1 leading-relaxed">Posttest ini mengukur pemahaman Anda
+                <p class="text-sm text-gray-600 mt-1 leading-relaxed">Post Test ini mengukur pemahaman Anda
                     setelah menyelesaikan materi.</p>
                 <ul class="mt-3 text-xs text-gray-500 grid gap-1 grid-cols-1">
                     <li class="inline-flex items-center gap-1">
@@ -63,7 +63,7 @@
         </div>
     </div>
 
-    {{-- Form Posttest --}}
+    {{-- Form Post Test --}}
     <form x-ref="formEl" @submit.prevent="submit" class="space-y-4 md:space-y-5"
         x-bind:aria-busy="submitting ? 'true' : 'false'">
         @forelse ($questions as $index => $q)

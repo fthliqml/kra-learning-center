@@ -17,10 +17,10 @@
                     <div
                         class="mb-4 p-3 md:p-4 rounded-lg border border-green-200 bg-green-50 text-green-800 flex items-center justify-between">
                         <div class="text-sm md:text-[13px] font-medium">Semua materi selesai. Anda dapat melanjutkan ke
-                            Posttest.</div>
+                            Post Test.</div>
                         <a wire:navigate href="{{ route('courses-posttest.index', $course) }}"
                             class="inline-flex items-center gap-2 rounded-md bg-green-600 text-white px-3 py-1.5 text-xs md:text-sm font-medium hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-400/50">
-                            Mulai Posttest
+                            Mulai Post Test
                             <x-icon name="o-arrow-right" class="size-4" />
                         </a>
                     </div>
@@ -28,12 +28,12 @@
                     <div
                         class="mb-4 p-3 md:p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 flex items-center justify-between gap-2 flex-wrap">
                         <div class="text-sm md:text-[13px] font-medium">
-                            Anda dapat mencoba Posttest lagi kapan saja, atau kembali mempelajari materi.
+                            Anda dapat mencoba Post Test lagi kapan saja, atau kembali mempelajari materi.
                         </div>
                         <div class="flex items-center gap-2">
                             <a wire:navigate href="{{ route('courses-posttest.index', $course) }}"
                                 class="inline-flex items-center gap-2 rounded-md bg-amber-600 text-white px-3 py-1.5 text-xs md:text-sm font-medium hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400/50">
-                                Coba Lagi Posttest
+                                Coba Lagi Post Test
                                 <x-icon name="o-arrow-right" class="size-4" />
                             </a>
                         </div>
@@ -55,7 +55,7 @@
                                 @if (!empty($hasSectionQuiz) && empty($canRetakePosttest))
                                     Quiz
                                 @else
-                                    {{ $isLastSection ?? false ? 'Posttest' : 'Next' }}
+                                    {{ $isLastSection ?? false ? 'Post Test' : 'Next' }}
                                 @endif
                             </span>
                         </button>
