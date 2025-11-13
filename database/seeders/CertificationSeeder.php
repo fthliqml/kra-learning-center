@@ -125,6 +125,30 @@ class CertificationSeeder extends Seeder
                 'status' => 'rejected',
                 'created_at' => Carbon::now()->subMonths(3),
             ],
+            [
+                'module_id' => $modules->random()->id,
+                'name' => 'Equipment Maintenance Training Q3',
+                'status' => 'completed',
+                'created_at' => Carbon::now()->subMonths(3),
+            ],
+            [
+                'module_id' => $modules->random()->id,
+                'name' => 'Equipment Analysis',
+                'status' => 'completed',
+                'created_at' => Carbon::now()->subMonths(3),
+            ],
+            [
+                'module_id' => $modules->random()->id,
+                'name' => 'Tools Maintenance Training Q5',
+                'status' => 'completed',
+                'created_at' => Carbon::now()->subMonths(3),
+            ],
+            [
+                'module_id' => $modules->random()->id,
+                'name' => 'Equipment Management Training Q2',
+                'status' => 'completed',
+                'created_at' => Carbon::now()->subMonths(3),
+            ],
         ];
 
         foreach ($certifications as $index => $certData) {
