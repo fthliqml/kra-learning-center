@@ -6,7 +6,7 @@ use App\Models\CertificationModule as CertificationModuleModel;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-class Module extends Component
+class CertificationModule extends Component
 {
     use WithPagination;
 
@@ -69,7 +69,7 @@ class Module extends Component
 
     public function render()
     {
-        return view('pages.certification.module', [
+        return view('pages.certification.certification-module', [
             'headers' => $this->headers(),
             'modules' => $this->modules(),
         ]);

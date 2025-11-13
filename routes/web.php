@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\AuthController;
 use App\Livewire\Pages\Certification\CertificationApproval;
 use App\Livewire\Pages\Certification\CertificationPoint;
+use App\Livewire\Pages\Certification\CertificationModule;
 use App\Livewire\Pages\Courses\Courses;
 use App\Livewire\Pages\Courses\Overview;
 use App\Livewire\Pages\Courses\Pretest;
@@ -24,7 +25,6 @@ use App\Livewire\Pages\Training\History;
 use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\Request;
 use App\Livewire\Pages\Training\Schedule;
-use App\Livewire\Pages\Certification\Module as CertificationModule;
 use Illuminate\Support\Facades\Route;
 
 // Public (guest) routes
@@ -49,8 +49,6 @@ Route::middleware('auth')->group(function () {
     Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
     Route::get('/training/history', History::class)->name('training-history.index');
 
-    // Certification
-    Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
 
     // Courses
     Route::get('/courses', Courses::class)->name('courses.index');
@@ -76,6 +74,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/survey-template/{level}/edit/{surveyId}', EditSurveyTemplate::class)->name('survey-template.edit');
 
     // Certification
+    Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
     Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
     Route::get('/certification/approval', CertificationApproval::class)->name('certification-point.index');
 });
+
