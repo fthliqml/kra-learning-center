@@ -17,9 +17,12 @@ return new class extends Migration
             $table->string('name');
             $table->string('level');
             $table->string('competency');
+            $table->enum('group_certification', ['ENGINE', 'MACHINING', 'PPT AND PPM']);
             $table->integer('points_per_module');
             $table->double('new_gex');
             $table->integer('duration');
+            $table->text('major_component')->nullable();
+            $table->text('mach_model')->nullable();
             $table->double('theory_passing_score');
             $table->double('practical_passing_score');
             $table->boolean('is_active');
