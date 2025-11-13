@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Models\CertificationModule;
+use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
 class CertificationModuleSeeder extends Seeder

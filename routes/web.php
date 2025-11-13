@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Livewire\Pages\Certification\CertificationApproval;
+use App\Livewire\Pages\Certification\CertificationPoint;
 use App\Livewire\Pages\Courses\Courses;
 use App\Livewire\Pages\Courses\Overview;
 use App\Livewire\Pages\Courses\Pretest;
@@ -18,6 +20,7 @@ use App\Livewire\Pages\Survey\TakeSurvey;
 use App\Livewire\Pages\SurveyTemplate\EditSurveyTemplate;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Training\DataTrainer;
+use App\Livewire\Pages\Training\History;
 use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\Request;
 use App\Livewire\Pages\Training\Schedule;
@@ -44,6 +47,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
     Route::get('/training/request', Request::class)->name('training-request.index');
     Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
+    Route::get('/training/history', History::class)->name('training-history.index');
 
     // Certification
     Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
@@ -70,4 +74,8 @@ Route::middleware('auth')->group(function () {
     // Survey Templates
     Route::get('/survey-template', SurveyTemplate::class)->name('survey-template.index');
     Route::get('/survey-template/{level}/edit/{surveyId}', EditSurveyTemplate::class)->name('survey-template.edit');
+
+    // Certification
+    Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
+    Route::get('/certification/approval', CertificationApproval::class)->name('certification-point.index');
 });
