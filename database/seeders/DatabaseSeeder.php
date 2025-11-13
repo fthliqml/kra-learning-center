@@ -25,5 +25,7 @@ class DatabaseSeeder extends Seeder
         $this->call(CourseAssignmentSeeder::class);
         $this->call(SurveyTemplateSeeder::class);
         $this->call(TrainingRequestSeeder::class);
+        $this->call(CertificationModuleSeeder::class);
+        $this->call(CertificationSeeder::class);
     }
 }
