@@ -83,7 +83,7 @@ return [
         [
             'id' => 'certification',
             'label' => 'Certification',
-            'icon' => 'academic-cap',
+            'icon' => 'check-badge',
             'href' => '#',
             'roles' => ['certificator', 'admin', 'leader'],
             'submenu' => [

@@ -21,6 +21,7 @@ use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\Request;
 use App\Livewire\Pages\Training\Schedule;
+use App\Livewire\Pages\Certification\Module as CertificationModule;
 use Illuminate\Support\Facades\Route;
 
 // Public (guest) routes
@@ -43,6 +44,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
     Route::get('/training/request', Request::class)->name('training-request.index');
     Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
+
+    // Certification
+    Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
 
     // Courses
     Route::get('/courses', Courses::class)->name('courses.index');
