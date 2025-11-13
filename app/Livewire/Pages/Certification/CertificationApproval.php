@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages\Certification;
 
+use App\Models\Certification;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
@@ -19,33 +20,14 @@ class CertificationApproval extends Component
 
     public array $formData = [
         'certification_name' => '',
-        'competency' => '',
-        'reason' => '',
+        'module_name' => '',
+        'created_at' => '',
     ];
 
     public $groupOptions = [
         ['value' => 'Pending', 'label' => 'Pending'],
         ['value' => 'Approved', 'label' => 'Approved'],
         ['value' => 'Rejected', 'label' => 'Rejected'],
-    ];
-
-    // Dummy data untuk simulasi
-    protected $dummyData = [
-        ['id' => 1, 'certification_name' => 'Certified Welding Inspector', 'competency' => 'Welding Advanced', 'reason' => 'Need for new project', 'status' => 'pending', 'date' => '2024-11-01', 'created_at' => '2024-11-01'],
-        ['id' => 2, 'certification_name' => 'ISO 9001:2015 Lead Auditor', 'competency' => 'Quality Control', 'reason' => 'Skill improvement', 'status' => 'approved', 'date' => '2024-11-02', 'created_at' => '2024-11-02'],
-        ['id' => 3, 'certification_name' => 'NEBOSH International General Certificate', 'competency' => 'Safety Training', 'reason' => 'Mandatory certification', 'status' => 'pending', 'date' => '2024-11-03', 'created_at' => '2024-11-03'],
-        ['id' => 4, 'certification_name' => 'Certified Maintenance & Reliability Professional', 'competency' => 'Machine Operation', 'reason' => 'Job rotation', 'status' => 'rejected', 'date' => '2024-11-04', 'created_at' => '2024-11-04'],
-        ['id' => 5, 'certification_name' => 'Lean Six Sigma Black Belt', 'competency' => 'Lean Manufacturing', 'reason' => 'Process improvement', 'status' => 'pending', 'date' => '2024-11-05', 'created_at' => '2024-11-05'],
-        ['id' => 6, 'certification_name' => 'Certified Forklift Operator', 'competency' => 'Forklift Operation', 'reason' => 'License renewal', 'status' => 'approved', 'date' => '2024-11-06', 'created_at' => '2024-11-06'],
-        ['id' => 7, 'certification_name' => 'ISO 9001 Internal Auditor', 'competency' => 'ISO 9001 Auditor', 'reason' => 'Career development', 'status' => 'pending', 'date' => '2024-11-07', 'created_at' => '2024-11-07'],
-        ['id' => 8, 'certification_name' => 'Certified Electrical Safety Professional', 'competency' => 'Electrical Systems', 'reason' => 'Technical requirement', 'status' => 'approved', 'date' => '2024-11-08', 'created_at' => '2024-11-08'],
-        ['id' => 9, 'certification_name' => 'Project Management Professional (PMP)', 'competency' => 'Project Management', 'reason' => 'Promotion preparation', 'status' => 'pending', 'date' => '2024-11-09', 'created_at' => '2024-11-09'],
-        ['id' => 10, 'certification_name' => 'Six Sigma Green Belt', 'competency' => 'Six Sigma Green Belt', 'reason' => 'Quality initiative', 'status' => 'rejected', 'date' => '2024-11-10', 'created_at' => '2024-11-10'],
-        ['id' => 11, 'certification_name' => 'AutoCAD Certified Professional', 'competency' => 'AutoCAD Professional', 'reason' => 'Design work', 'status' => 'pending', 'date' => '2024-11-11', 'created_at' => '2024-11-11'],
-        ['id' => 12, 'certification_name' => 'Certified Hydraulic Specialist', 'competency' => 'Hydraulic Systems', 'reason' => 'Maintenance team', 'status' => 'approved', 'date' => '2024-11-12', 'created_at' => '2024-11-12'],
-        ['id' => 13, 'certification_name' => 'Statistical Process Control Practitioner', 'competency' => 'Statistical Process Control', 'reason' => 'Data analysis', 'status' => 'pending', 'date' => '2024-11-13', 'created_at' => '2024-11-13'],
-        ['id' => 14, 'certification_name' => 'Certified Leadership Development Program', 'competency' => 'Leadership Development', 'reason' => 'Team leader candidate', 'status' => 'approved', 'date' => '2024-11-14', 'created_at' => '2024-11-14'],
-        ['id' => 15, 'certification_name' => 'CNC Programming and Operations', 'competency' => 'CNC Programming', 'reason' => 'New machine introduction', 'status' => 'pending', 'date' => '2024-11-15', 'created_at' => '2024-11-15'],
     ];
 
     public function mount(): void
@@ -73,48 +55,50 @@ class CertificationApproval extends Component
 
     public function approvals()
     {
-        $filtered = collect($this->dummyData);
-
-        // Filter by status
-        if ($this->filter && strtolower($this->filter) !== 'all') {
-            $filtered = $filtered->filter(function ($item) {
-                return strtolower($item['status']) === strtolower($this->filter);
-            });
-        }
+        $query = Certification::with('certificationModule')
+            ->whereIn('status', ['completed', 'approved', 'rejected']);
 
         // Filter by search
         if ($this->search) {
-            $term = strtolower($this->search);
-            $filtered = $filtered->filter(function ($item) use ($term) {
-                return str_contains(strtolower($item['certification_name']), $term) ||
-                    str_contains(strtolower($item['competency']), $term) ||
-                    str_contains(strtolower($item['reason']), $term);
+            $term = $this->search;
+            $query->where(function ($q) use ($term) {
+                $q->where('name', 'like', "%{$term}%")
+                    ->orWhereHas('certificationModule', function ($moduleQuery) use ($term) {
+                        $moduleQuery->where('name', 'like', "%{$term}%")
+                            ->orWhere('competency', 'like', "%{$term}%");
+                    });
             });
         }
 
-        // Sort by created_at desc
-        $filtered = $filtered->sortByDesc('created_at')->values();
+        // Filter by display status (completed = pending for display)
+        if ($this->filter && strtolower($this->filter) !== 'all') {
+            $filterStatus = strtolower($this->filter);
 
-        // Manual pagination
-        $perPage = 10;
-        $currentPage = $this->getPage();
-        $total = $filtered->count();
+            if ($filterStatus === 'pending') {
+                $query->where('status', 'completed');
+            } else {
+                $query->where('status', $filterStatus);
+            }
+        }
 
-        $items = $filtered->slice(($currentPage - 1) * $perPage, $perPage)->values();
+        return $query
+            ->orderByRaw("CASE WHEN status = 'completed' THEN 0 WHEN status = 'approved' THEN 1 ELSE 2 END")
+            ->latest()
+            ->paginate(10)
+            ->through(function ($certification) {
+                // Map status: completed -> pending for display
+                $displayStatus = $certification->status === 'completed' ? 'pending' : $certification->status;
 
-        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
-            $items,
-            $total,
-            $perPage,
-            $currentPage,
-            ['path' => request()->url()]
-        );
-
-        return $paginator->through(function ($item, $index) use ($paginator) {
-            $start = $paginator->firstItem() ?? 0;
-            $item['no'] = $start + $index;
-            return (object) $item;
-        });
+                return (object) [
+                    'id' => $certification->id,
+                    'certification_name' => $certification->name,
+                    'module_name' => $certification->certificationModule->name ?? '-',
+                    'competency' => $certification->certificationModule->competency ?? '-',
+                    'date' => $certification->created_at,
+                    'status' => $displayStatus,
+                    'actual_status' => $certification->status, // Store actual status for updates
+                ];
+            });
     }
 
     public function render()
@@ -127,19 +111,23 @@ class CertificationApproval extends Component
 
     public function openDetailModal(int $id): void
     {
-        $approval = collect($this->dummyData)->firstWhere('id', $id);
+        $certification = Certification::with('certificationModule')->find($id);
 
-        if (!$approval) {
+        if (!$certification) {
             return;
         }
 
-        $this->selectedId = $approval['id'];
+        // Map status: completed -> pending for display
+        $displayStatus = $certification->status === 'completed' ? 'pending' : $certification->status;
+
+        $this->selectedId = $certification->id;
         $this->formData = [
-            'certification_name' => $approval['certification_name'],
-            'competency' => $approval['competency'],
-            'reason' => $approval['reason'],
-            'status' => $approval['status'],
-            'date' => $approval['date'],
+            'certification_name' => $certification->name,
+            'module_name' => $certification->certificationModule->name ?? '-',
+            'competency' => $certification->certificationModule->competency ?? '-',
+            'created_at' => $certification->created_at->format('d F Y'),
+            'status' => $displayStatus,
+            'actual_status' => $certification->status,
         ];
         $this->modal = true;
         $this->resetValidation();
@@ -167,9 +155,18 @@ class CertificationApproval extends Component
             return;
         }
 
-        // Simulate approve (in real app, update database)
+        $certification = Certification::find($this->selectedId);
+
+        if (!$certification) {
+            $this->error('Certification not found.', position: 'toast-top toast-center');
+            return;
+        }
+
+        // Update status to approved
+        $certification->update(['status' => 'approved']);
+
         $this->formData['status'] = 'approved';
-        $this->success('Certification request approved', position: 'toast-top toast-center');
+        $this->success('Certification approved successfully', position: 'toast-top toast-center');
 
         $this->modal = false;
     }
@@ -185,9 +182,18 @@ class CertificationApproval extends Component
             return;
         }
 
-        // Simulate reject (in real app, update database)
+        $certification = Certification::find($this->selectedId);
+
+        if (!$certification) {
+            $this->error('Certification not found.', position: 'toast-top toast-center');
+            return;
+        }
+
+        // Update status to rejected
+        $certification->update(['status' => 'rejected']);
+
         $this->formData['status'] = 'rejected';
-        $this->error('Certification request rejected', position: 'toast-top toast-center');
+        $this->error('Certification rejected', position: 'toast-top toast-center');
 
         $this->modal = false;
     }

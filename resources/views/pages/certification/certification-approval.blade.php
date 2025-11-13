@@ -76,20 +76,16 @@
         <x-form no-separator>
             <x-input label="Certification Name" :value="$formData['certification_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
 
-            <x-input label="Date" :value="\Carbon\Carbon::parse($formData['date'] ?? now())->format('d F Y')" class="focus-within:border-0" :readonly="true" />
+            <x-input label="Module" :value="$formData['module_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
 
-            <x-input label="Competency" placeholder="Enter competency..." wire:model.defer="formData.competency"
-                class="focus-within:border-0" :readonly="true" />
+            <x-input label="Date" :value="$formData['created_at'] ?? ''" class="focus-within:border-0" :readonly="true" />
 
-            <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
-                class="focus-within:border-0" :readonly="true" />
+            <x-input label="Competency" :value="$formData['competency'] ?? ''" class="focus-within:border-0" :readonly="true" />
 
             <div class="mt-3">
                 {{-- Status badge --}}
                 @php
-                    $status = strtolower(
-                        $formData['status'] ?? ($approvals->firstWhere('id', $selectedId)->status ?? 'pending'),
-                    );
+                    $status = strtolower($formData['status'] ?? 'pending');
                     $classes =
                         [
                             'pending' => 'bg-amber-100 text-amber-700',
