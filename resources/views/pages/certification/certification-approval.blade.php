@@ -1,20 +1,6 @@
 <div>
     @livewire('components.confirm-dialog')
 
-    {{-- Success Alert (auto hide) --}}
-    @if (!empty($flash))
-        <div x-data x-init="setTimeout(() => $wire.set('flash', null), 2500)" class="fixed top-4 inset-x-0 z-[60] flex justify-center">
-            @php
-                $isError = ($flash['type'] ?? '') === 'error';
-                $alertClass = $isError ? 'alert-error' : 'alert-success';
-                $icon = $isError ? 'o-x-circle' : 'o-check-badge';
-            @endphp
-            <x-alert :icon="$icon" :class="" class="shadow-lg {{ $alertClass }}">
-                {{ $flash['message'] ?? ($isError ? 'Failed' : 'Success') }}
-            </x-alert>
-        </div>
-    @endif
-
     {{-- Header --}}
     <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
                 grid-cols-1 lg:grid-cols-2 items-center">
@@ -28,11 +14,11 @@
                 <!-- Filter -->
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
                     placeholder="All"
-                    class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                    class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                     icon-right="o-funnel" />
             </div>
 
-            <x-search-input placeholder="Search..." class="max-w-72" wire:model.live="search" />
+            <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.600ms="search" />
         </div>
     </div>
 
@@ -40,7 +26,8 @@
     <x-skeletons.certification-approval-table />
 
     {{-- Table --}}
-    <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+    <div wire:loading.remove wire:target="search,filter,approve,reject"
+        class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
         <x-table :headers="$headers" :rows="$approvals" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
             with-pagination>
             {{-- No --}}

@@ -5,10 +5,11 @@ namespace App\Livewire\Pages\Certification;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
+use Mary\Traits\Toast;
 
 class CertificationApproval extends Component
 {
-    use WithPagination;
+    use WithPagination, Toast;
 
     public $modal = false;
     public $selectedId = null;
@@ -27,9 +28,6 @@ class CertificationApproval extends Component
         ['value' => 'Approved', 'label' => 'Approved'],
         ['value' => 'Rejected', 'label' => 'Rejected'],
     ];
-
-    /** Simple flash alert payload: ['type' => 'success|error|warning', 'message' => string] */
-    public ?array $flash = null;
 
     // Dummy data untuk simulasi
     protected $dummyData = [
@@ -165,13 +163,15 @@ class CertificationApproval extends Component
             return;
         }
         if (!$this->canModerate()) {
-            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only LID leader can approve.');
+            $this->error('Only LID leader can approve.', position: 'toast-top toast-center');
             return;
         }
 
         // Simulate approve (in real app, update database)
         $this->formData['status'] = 'approved';
-        $this->flash = ['type' => 'success', 'message' => 'Certification request approved'];
+        $this->success('Certification request approved', position: 'toast-top toast-center');
+
+        $this->modal = false;
     }
 
     /** Reject selected request */
@@ -181,12 +181,14 @@ class CertificationApproval extends Component
             return;
         }
         if (!$this->canModerate()) {
-            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only LID leader can reject.');
+            $this->error('Only LID leader can reject.', position: 'toast-top toast-center');
             return;
         }
 
         // Simulate reject (in real app, update database)
         $this->formData['status'] = 'rejected';
-        $this->flash = ['type' => 'error', 'message' => 'Certification request rejected'];
+        $this->error('Certification request rejected', position: 'toast-top toast-center');
+
+        $this->modal = false;
     }
 }
