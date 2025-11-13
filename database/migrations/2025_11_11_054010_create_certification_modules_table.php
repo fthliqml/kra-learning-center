@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('certification_modules', function (Blueprint $table) {
             $table->id();
             $table->string('code');
-            $table->string('name');
+            $table->string('module_title');
             $table->string('level');
             $table->string('competency');
             $table->enum('group_certification', ['ENGINE', 'MACHINING', 'PPT AND PPM']);

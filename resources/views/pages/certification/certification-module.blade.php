@@ -1,6 +1,24 @@
 <div>
     @livewire('components.confirm-dialog')
 
+    <!-- Alerts -->
+        <div x-data="{show:false,type:'success',message:''}"
+         @notify.window="type=$event.detail.type||'success';message=$event.detail.message||'';show=true;setTimeout(()=>show=false,3000)"
+         x-show="show" x-transition
+            class="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+        <div class="flex items-center gap-2 text-white px-4 py-3 rounded shadow-lg"
+             :class="{
+                 'bg-green-600': type==='success',
+                 'bg-red-600': type==='error',
+                 'bg-blue-600': type==='info'
+             }">
+            <template x-if="type==='success'"><x-icon name="o-check-circle" class="size-5" /></template>
+            <template x-if="type==='error'"><x-icon name="o-x-circle" class="size-5" /></template>
+            <template x-if="type==='info'"><x-icon name="o-information-circle" class="size-5" /></template>
+            <span x-text="message"></span>
+        </div>
+    </div>
+
     <!-- Header -->
     <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
                 grid-cols-1 lg:grid-cols-2 items-center">
@@ -120,38 +138,63 @@
     </div>
 
     <!-- Modal -->
-    {{-- <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Certification Module' : ($mode === 'edit' ? 'Edit Certification Module' : 'Preview Certification Module')" separator box-class="max-w-3xl h-fit">
+    <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Certification Module' : ($mode === 'edit' ? 'Edit Certification Module' : 'Preview Certification Module')" separator box-class="max-w-3xl h-fit">
 
         <x-form wire:submit.prevent="save" no-separator>
-            <!-- Title -->
-            <x-input label="Title" placeholder="Title of the certification module..." wire:model.defer="formData.title"
-                class="focus-within:border-0" :error="$errors->first('formData.title')" :readonly="$mode === 'preview'" />
-
-            <x-select label="Group Competency" wire:model.defer="formData.group_comp" :options="$groupOptions"
-                option-value="value" option-label="label" placeholder="Select Group Competency" :error="$errors->first('formData.group_comp')"
-                :disabled="$mode === 'preview'" />
-
-            <x-textarea label="Objective" placeholder="Describe the training objectives..."
-                class="focus-within:border-0" wire:model.defer="formData.objective" :error="$errors->first('formData.objective')"
-                :readonly="$mode === 'preview'" />
-
-            <x-textarea label="Training Content" placeholder="Outline the main topics..." class="focus-within:border-0"
-                wire:model.defer="formData.training_content" :error="$errors->first('formData.training_content')" :readonly="$mode === 'preview'" />
-
-            <x-input label="Method" placeholder="Describe the development concept..." wire:model.defer="formData.method"
-                class="focus-within:border-0" :error="$errors->first('formData.method')" :readonly="$mode === 'preview'" />
+            <x-input label="Competency" placeholder="Enter competency title" wire:model.defer="form.competency"
+                class="focus-within:border-0" :error="$errors->first('form.competency')" :readonly="$mode === 'preview'" />
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <x-input label="Duration" type="number" wire:model.defer="formData.duration" placeholder="6 Hours"
-                    class="focus-within:border-0" min="1" step="0.5" :error="$errors->first('formData.duration')"
-                    :readonly="$mode === 'preview'" />
+                <x-input label="Code" placeholder="BIP_1" wire:model.defer="form.code"
+                    class="focus-within:border-0" :error="$errors->first('form.code')" :readonly="$mode === 'preview'" />
 
-                <x-input label="Frequency" type="number" wire:model.defer="formData.frequency"
-                    placeholder="15 Days" class="focus-within:border-0" min="1" :error="$errors->first('formData.frequency')"
+                @if ($mode === 'preview')
+                    <x-input label="Level" wire:model="form.level" readonly class="focus-within:border-0" />
+                @else
+                    <x-select label="Level" wire:model.defer="form.level" :options="$groupOptions"
+                        option-value="value" option-label="label" placeholder="Select level"
+                        :error="$errors->first('form.level')" />
+                @endif
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                @if ($mode === 'preview')
+                    <x-input label="Group Certification" wire:model="form.group_certification" readonly class="focus-within:border-0" />
+                @else
+                    <x-select label="Group Certification" wire:model.defer="form.group_certification" :options="$groupCertificationOptions"
+                        option-value="value" option-label="label" placeholder="Select group"
+                        :error="$errors->first('form.group_certification')" />
+                @endif
+
+                <x-input label="Point" type="number" min="0" wire:model.defer="form.points_per_module"
+                    class="focus-within:border-0" :error="$errors->first('form.points_per_module')"
                     :readonly="$mode === 'preview'" />
             </div>
 
-            <!-- Actions -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-input label="New Gex" type="number" step="0.01" min="0" wire:model.defer="form.new_gex"
+                    class="focus-within:border-0" :error="$errors->first('form.new_gex')" :readonly="$mode === 'preview'" />
+
+                <x-input label="Duration (minutes)" type="number" min="1" wire:model.defer="form.duration"
+                    class="focus-within:border-0" :error="$errors->first('form.duration')" :readonly="$mode === 'preview'" />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-input label="Theory Passing Score (%)" type="number" step="0.01" min="0" max="100"
+                    wire:model.defer="form.theory_passing_score"
+                    class="focus-within:border-0" :error="$errors->first('form.theory_passing_score')" :readonly="$mode === 'preview'" />
+
+                <x-input label="Practical Passing Score (%)" type="number" step="0.01" min="0" max="100"
+                    wire:model.defer="form.practical_passing_score"
+                    class="focus-within:border-0" :error="$errors->first('form.practical_passing_score')" :readonly="$mode === 'preview'" />
+            </div>
+
+            <x-textarea label="Major Component" placeholder="ALL INNER & OUTER PARTS" class="focus-within:border-0"
+                wire:model.defer="form.major_component" :error="$errors->first('form.major_component')" :readonly="$mode === 'preview'" />
+
+            <x-textarea label="Mach Model" placeholder="ALL UNIT MODEL" class="focus-within:border-0"
+                wire:model.defer="form.mach_model" :error="$errors->first('form.mach_model')" :readonly="$mode === 'preview'" />
+
             <x-slot:actions>
                 <x-ui.button @click="$wire.modal = false" type="button">
                     {{ $mode === 'preview' ? 'Close' : 'Cancel' }}
@@ -164,5 +207,5 @@
                 @endif
             </x-slot:actions>
         </x-form>
-    </x-modal> --}}
+    </x-modal>
 </div>

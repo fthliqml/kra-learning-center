@@ -22,7 +22,7 @@ class CertificationModule extends Model
      */
     protected $fillable = [
         'code',
-        'name',
+        'module_title',
         'level',
         'competency',
         'group_certification',

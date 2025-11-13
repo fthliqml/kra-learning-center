@@ -16,7 +16,7 @@ class CertificationModuleSeeder extends Seeder
         $rows = [
             [
                 'code' => 'CM001',
-                'name' => 'Foundation Safety',
+                'module_title' => 'Foundation Safety',
                 'level' => 'Basic',
                 'competency' => 'Safety',
                 'group_certification' => 'PPT AND PPM',
@@ -31,7 +31,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM002',
-                'name' => 'Quality Essentials',
+                'module_title' => 'Quality Essentials',
                 'level' => 'Basic',
                 'competency' => 'Quality',
                 'group_certification' => 'PPT AND PPM',
@@ -46,7 +46,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM003',
-                'name' => 'Tools Handling',
+                'module_title' => 'Tools Handling',
                 'level' => 'Basic',
                 'competency' => 'Operations',
                 'group_certification' => 'PPT AND PPM',
@@ -61,7 +61,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM004',
-                'name' => 'Maintenance 101',
+                'module_title' => 'Maintenance 101',
                 'level' => 'Basic',
                 'competency' => 'Maintenance',
                 'group_certification' => 'PPT AND PPM',
@@ -76,7 +76,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM005',
-                'name' => 'Operational Basics',
+                'module_title' => 'Operational Basics',
                 'level' => 'Basic',
                 'competency' => 'Operations',
                 'group_certification' => 'PPT AND PPM',
@@ -91,7 +91,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM006',
-                'name' => 'Advanced Safety',
+                'module_title' => 'Advanced Safety',
                 'level' => 'Intermediate',
                 'competency' => 'Safety',
                 'group_certification' => 'PPT AND PPM',
@@ -106,7 +106,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM007',
-                'name' => 'Quality Control',
+                'module_title' => 'Quality Control',
                 'level' => 'Intermediate',
                 'competency' => 'Quality',
                 'group_certification' => 'PPT AND PPM',
@@ -121,7 +121,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM008',
-                'name' => 'Diagnostics',
+                'module_title' => 'Diagnostics',
                 'level' => 'Intermediate',
                 'competency' => 'Maintenance',
                 'group_certification' => 'PPT AND PPM',
@@ -136,7 +136,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM009',
-                'name' => 'Process Optimization',
+                'module_title' => 'Process Optimization',
                 'level' => 'Intermediate',
                 'competency' => 'Operations',
                 'group_certification' => 'PPT AND PPM',
@@ -151,7 +151,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM010',
-                'name' => 'Advanced Tools',
+                'module_title' => 'Advanced Tools',
                 'level' => 'Intermediate',
                 'competency' => 'Operations',
                 'group_certification' => 'PPT AND PPM',
@@ -166,7 +166,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM011',
-                'name' => 'Safety Leadership',
+                'module_title' => 'Safety Leadership',
                 'level' => 'Advanced',
                 'competency' => 'Safety',
                 'group_certification' => 'PPT AND PPM',
@@ -181,7 +181,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM012',
-                'name' => 'Quality Assurance',
+                'module_title' => 'Quality Assurance',
                 'level' => 'Advanced',
                 'competency' => 'Quality',
                 'group_certification' => 'PPT AND PPM',
@@ -196,7 +196,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM013',
-                'name' => 'Predictive Maintenance',
+                'module_title' => 'Predictive Maintenance',
                 'level' => 'Advanced',
                 'competency' => 'Maintenance',
                 'group_certification' => 'PPT AND PPM',
@@ -211,7 +211,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM014',
-                'name' => 'Lean Operations',
+                'module_title' => 'Lean Operations',
                 'level' => 'Advanced',
                 'competency' => 'Operations',
                 'group_certification' => 'PPT AND PPM',
@@ -226,7 +226,7 @@ class CertificationModuleSeeder extends Seeder
             ],
             [
                 'code' => 'CM015',
-                'name' => 'Expert Review',
+                'module_title' => 'Expert Review',
                 'level' => 'Advanced',
                 'competency' => 'Quality',
                 'group_certification' => 'PPT AND PPM',
