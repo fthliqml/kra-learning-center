@@ -5,8 +5,8 @@
             <livewire:components.edit-course.course-info :courseId="$course->id" lazy />
         </x-tab>
 
-        {{-- TAB: Pretest --}}
-        <x-tab name="pretest" label="Pretest" icon="m-clipboard-document-list" :disabled="!$courseId">
+        {{-- TAB: Pre Test --}}
+        <x-tab name="pretest" label="Pre Test" icon="m-clipboard-document-list" :disabled="!$courseId">
             <livewire:components.edit-course.pretest-questions :courseId="$course->id" lazy />
         </x-tab>
 
