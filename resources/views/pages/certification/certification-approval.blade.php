@@ -36,8 +36,11 @@
         </div>
     </div>
 
+    {{-- Skeleton Loading --}}
+    <x-skeletons.certification-approval-table />
+
     {{-- Table --}}
-    <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+    <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
         <x-table :headers="$headers" :rows="$approvals" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
             with-pagination>
             {{-- No --}}
@@ -45,16 +48,9 @@
                 {{ $loop->iteration }}
             @endscope
 
-            {{-- User --}}
-            @scope('cell_user', $approval)
-                <div class="truncate max-w-[40ch] xl:max-w-[52ch]">{{ $approval->user_name ?? '-' }}</div>
-            @endscope
-
-            {{-- Section --}}
-            @scope('cell_section', $approval)
-                <span class="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium">
-                    {{ $approval->section ?? '-' }}
-                </span>
+            {{-- Certification Name --}}
+            @scope('cell_certification_name', $approval)
+                <div class="truncate max-w-[50ch] xl:max-w-[60ch]">{{ $approval->certification_name ?? '-' }}</div>
             @endscope
 
             {{-- Date --}}
@@ -91,10 +87,7 @@
     {{-- Modal Certification Approval --}}
     <x-modal wire:model="modal" title="Certification Request Detail" separator box-class="max-w-3xl h-fit">
         <x-form no-separator>
-            <x-input label="Name" :value="$formData['user_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
-
-            <x-input label="Section" placeholder="Auto filled from user" wire:model.defer="formData.section"
-                class="focus-within:border-0" :readonly="true" />
+            <x-input label="Certification Name" :value="$formData['certification_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
 
             <x-input label="Date" :value="\Carbon\Carbon::parse($formData['date'] ?? now())->format('d F Y')" class="focus-within:border-0" :readonly="true" />
 

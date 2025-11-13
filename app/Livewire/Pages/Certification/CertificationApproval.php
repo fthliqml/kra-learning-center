@@ -17,9 +17,7 @@ class CertificationApproval extends Component
     public $filter = 'All';
 
     public array $formData = [
-        'user_id' => '',
-        'user_name' => '',
-        'section' => '',
+        'certification_name' => '',
         'competency' => '',
         'reason' => '',
     ];
@@ -35,21 +33,21 @@ class CertificationApproval extends Component
 
     // Dummy data untuk simulasi
     protected $dummyData = [
-        ['id' => 1, 'user_id' => 1, 'user_name' => 'Andi Wijaya', 'section' => 'Sub-Assy 3 and 4', 'competency' => 'Welding Advanced', 'reason' => 'Need for new project', 'status' => 'pending', 'date' => '2024-11-01', 'created_at' => '2024-11-01'],
-        ['id' => 2, 'user_id' => 2, 'user_name' => 'Budi Santoso', 'section' => 'Main Disassy Power Train', 'competency' => 'Quality Control', 'reason' => 'Skill improvement', 'status' => 'approved', 'date' => '2024-11-02', 'created_at' => '2024-11-02'],
-        ['id' => 3, 'user_id' => 3, 'user_name' => 'Citra Dewi', 'section' => 'Sub-Assy 3 and 4', 'competency' => 'Safety Training', 'reason' => 'Mandatory certification', 'status' => 'pending', 'date' => '2024-11-03', 'created_at' => '2024-11-03'],
-        ['id' => 4, 'user_id' => 4, 'user_name' => 'Dani Pratama', 'section' => 'Final Assy and Inspection', 'competency' => 'Machine Operation', 'reason' => 'Job rotation', 'status' => 'rejected', 'date' => '2024-11-04', 'created_at' => '2024-11-04'],
-        ['id' => 5, 'user_id' => 5, 'user_name' => 'Eka Putri', 'section' => 'Main Disassy Power Train', 'competency' => 'Lean Manufacturing', 'reason' => 'Process improvement', 'status' => 'pending', 'date' => '2024-11-05', 'created_at' => '2024-11-05'],
-        ['id' => 6, 'user_id' => 6, 'user_name' => 'Fajar Ramadan', 'section' => 'Sub-Assy 1 and 2', 'competency' => 'Forklift Operation', 'reason' => 'License renewal', 'status' => 'approved', 'date' => '2024-11-06', 'created_at' => '2024-11-06'],
-        ['id' => 7, 'user_id' => 7, 'user_name' => 'Gita Sari', 'section' => 'Sub-Assy 3 and 4', 'competency' => 'ISO 9001 Auditor', 'reason' => 'Career development', 'status' => 'pending', 'date' => '2024-11-07', 'created_at' => '2024-11-07'],
-        ['id' => 8, 'user_id' => 8, 'user_name' => 'Hendra Kusuma', 'section' => 'Main Disassy Power Train', 'competency' => 'Electrical Systems', 'reason' => 'Technical requirement', 'status' => 'approved', 'date' => '2024-11-08', 'created_at' => '2024-11-08'],
-        ['id' => 9, 'user_id' => 9, 'user_name' => 'Indah Permata', 'section' => 'Final Assy and Inspection', 'competency' => 'Project Management', 'reason' => 'Promotion preparation', 'status' => 'pending', 'date' => '2024-11-09', 'created_at' => '2024-11-09'],
-        ['id' => 10, 'user_id' => 10, 'user_name' => 'Joko Widodo', 'section' => 'Sub-Assy 1 and 2', 'competency' => 'Six Sigma Green Belt', 'reason' => 'Quality initiative', 'status' => 'rejected', 'date' => '2024-11-10', 'created_at' => '2024-11-10'],
-        ['id' => 11, 'user_id' => 11, 'user_name' => 'Kartika Sari', 'section' => 'Main Disassy Power Train', 'competency' => 'AutoCAD Professional', 'reason' => 'Design work', 'status' => 'pending', 'date' => '2024-11-11', 'created_at' => '2024-11-11'],
-        ['id' => 12, 'user_id' => 12, 'user_name' => 'Lukman Hakim', 'section' => 'Sub-Assy 3 and 4', 'competency' => 'Hydraulic Systems', 'reason' => 'Maintenance team', 'status' => 'approved', 'date' => '2024-11-12', 'created_at' => '2024-11-12'],
-        ['id' => 13, 'user_id' => 13, 'user_name' => 'Maya Anggraini', 'section' => 'Final Assy and Inspection', 'competency' => 'Statistical Process Control', 'reason' => 'Data analysis', 'status' => 'pending', 'date' => '2024-11-13', 'created_at' => '2024-11-13'],
-        ['id' => 14, 'user_id' => 14, 'user_name' => 'Nugroho Adi', 'section' => 'Sub-Assy 1 and 2', 'competency' => 'Leadership Development', 'reason' => 'Team leader candidate', 'status' => 'approved', 'date' => '2024-11-14', 'created_at' => '2024-11-14'],
-        ['id' => 15, 'user_id' => 15, 'user_name' => 'Olivia Tan', 'section' => 'Main Disassy Power Train', 'competency' => 'CNC Programming', 'reason' => 'New machine introduction', 'status' => 'pending', 'date' => '2024-11-15', 'created_at' => '2024-11-15'],
+        ['id' => 1, 'certification_name' => 'Certified Welding Inspector', 'competency' => 'Welding Advanced', 'reason' => 'Need for new project', 'status' => 'pending', 'date' => '2024-11-01', 'created_at' => '2024-11-01'],
+        ['id' => 2, 'certification_name' => 'ISO 9001:2015 Lead Auditor', 'competency' => 'Quality Control', 'reason' => 'Skill improvement', 'status' => 'approved', 'date' => '2024-11-02', 'created_at' => '2024-11-02'],
+        ['id' => 3, 'certification_name' => 'NEBOSH International General Certificate', 'competency' => 'Safety Training', 'reason' => 'Mandatory certification', 'status' => 'pending', 'date' => '2024-11-03', 'created_at' => '2024-11-03'],
+        ['id' => 4, 'certification_name' => 'Certified Maintenance & Reliability Professional', 'competency' => 'Machine Operation', 'reason' => 'Job rotation', 'status' => 'rejected', 'date' => '2024-11-04', 'created_at' => '2024-11-04'],
+        ['id' => 5, 'certification_name' => 'Lean Six Sigma Black Belt', 'competency' => 'Lean Manufacturing', 'reason' => 'Process improvement', 'status' => 'pending', 'date' => '2024-11-05', 'created_at' => '2024-11-05'],
+        ['id' => 6, 'certification_name' => 'Certified Forklift Operator', 'competency' => 'Forklift Operation', 'reason' => 'License renewal', 'status' => 'approved', 'date' => '2024-11-06', 'created_at' => '2024-11-06'],
+        ['id' => 7, 'certification_name' => 'ISO 9001 Internal Auditor', 'competency' => 'ISO 9001 Auditor', 'reason' => 'Career development', 'status' => 'pending', 'date' => '2024-11-07', 'created_at' => '2024-11-07'],
+        ['id' => 8, 'certification_name' => 'Certified Electrical Safety Professional', 'competency' => 'Electrical Systems', 'reason' => 'Technical requirement', 'status' => 'approved', 'date' => '2024-11-08', 'created_at' => '2024-11-08'],
+        ['id' => 9, 'certification_name' => 'Project Management Professional (PMP)', 'competency' => 'Project Management', 'reason' => 'Promotion preparation', 'status' => 'pending', 'date' => '2024-11-09', 'created_at' => '2024-11-09'],
+        ['id' => 10, 'certification_name' => 'Six Sigma Green Belt', 'competency' => 'Six Sigma Green Belt', 'reason' => 'Quality initiative', 'status' => 'rejected', 'date' => '2024-11-10', 'created_at' => '2024-11-10'],
+        ['id' => 11, 'certification_name' => 'AutoCAD Certified Professional', 'competency' => 'AutoCAD Professional', 'reason' => 'Design work', 'status' => 'pending', 'date' => '2024-11-11', 'created_at' => '2024-11-11'],
+        ['id' => 12, 'certification_name' => 'Certified Hydraulic Specialist', 'competency' => 'Hydraulic Systems', 'reason' => 'Maintenance team', 'status' => 'approved', 'date' => '2024-11-12', 'created_at' => '2024-11-12'],
+        ['id' => 13, 'certification_name' => 'Statistical Process Control Practitioner', 'competency' => 'Statistical Process Control', 'reason' => 'Data analysis', 'status' => 'pending', 'date' => '2024-11-13', 'created_at' => '2024-11-13'],
+        ['id' => 14, 'certification_name' => 'Certified Leadership Development Program', 'competency' => 'Leadership Development', 'reason' => 'Team leader candidate', 'status' => 'approved', 'date' => '2024-11-14', 'created_at' => '2024-11-14'],
+        ['id' => 15, 'certification_name' => 'CNC Programming and Operations', 'competency' => 'CNC Programming', 'reason' => 'New machine introduction', 'status' => 'pending', 'date' => '2024-11-15', 'created_at' => '2024-11-15'],
     ];
 
     public function mount(): void
@@ -68,8 +66,7 @@ class CertificationApproval extends Component
     {
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-12 !md:w-[8%]'],
-            ['key' => 'user', 'label' => 'Name', 'class' => '!text-center !md:w-[27%]'],
-            ['key' => 'section', 'label' => 'Section', 'class' => '!text-center !md:w-[21%]'],
+            ['key' => 'certification_name', 'label' => 'Certification Name', 'class' => '!md:w-[50%]'],
             ['key' => 'date', 'label' => 'Date', 'class' => '!text-center !md:w-[12%]'],
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center !md:w-[14%]'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center !md:w-[10%]'],
@@ -91,8 +88,7 @@ class CertificationApproval extends Component
         if ($this->search) {
             $term = strtolower($this->search);
             $filtered = $filtered->filter(function ($item) use ($term) {
-                return str_contains(strtolower($item['user_name']), $term) ||
-                    str_contains(strtolower($item['section']), $term) ||
+                return str_contains(strtolower($item['certification_name']), $term) ||
                     str_contains(strtolower($item['competency']), $term) ||
                     str_contains(strtolower($item['reason']), $term);
             });
@@ -141,9 +137,7 @@ class CertificationApproval extends Component
 
         $this->selectedId = $approval['id'];
         $this->formData = [
-            'user_id' => $approval['user_id'],
-            'user_name' => $approval['user_name'],
-            'section' => $approval['section'],
+            'certification_name' => $approval['certification_name'],
             'competency' => $approval['competency'],
             'reason' => $approval['reason'],
             'status' => $approval['status'],
