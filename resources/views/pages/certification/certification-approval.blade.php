@@ -25,51 +25,68 @@
     {{-- Skeleton Loading --}}
     <x-skeletons.certification-approval-table />
 
-    {{-- Table --}}
-    <div wire:loading.remove wire:target="search,filter,approve,reject"
-        class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
-        <x-table :headers="$headers" :rows="$approvals" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
-            with-pagination>
-            {{-- No --}}
-            @scope('cell_no', $approval)
-                {{ $loop->iteration }}
-            @endscope
+    {{-- No Data State --}}
+    @if ($approvals->isEmpty())
+        <div wire:loading.remove wire:target="search,filter,approve,reject"
+            class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
+            <div class="flex flex-col items-center justify-center py-16 px-4">
+                <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-700 mb-1">No Data Available</h3>
+                <p class="text-sm text-gray-500 text-center">
+                    There are no certification records to display at the moment.
+                </p>
+            </div>
+        </div>
+    @else
+        {{-- Table --}}
+        <div wire:loading.remove wire:target="search,filter,approve,reject"
+            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+            <x-table :headers="$headers" :rows="$approvals" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
+                with-pagination>
+                {{-- No --}}
+                @scope('cell_no', $approval)
+                    {{ $loop->iteration }}
+                @endscope
 
-            {{-- Certification Name --}}
-            @scope('cell_certification_name', $approval)
-                <div class="truncate max-w-[50ch] xl:max-w-[60ch]">{{ $approval->certification_name ?? '-' }}</div>
-            @endscope
+                {{-- Certification Name --}}
+                @scope('cell_certification_name', $approval)
+                    <div class="truncate max-w-[50ch] xl:max-w-[60ch]">{{ $approval->certification_name ?? '-' }}</div>
+                @endscope
 
-            {{-- Date --}}
-            @scope('cell_date', $approval)
-                <div class="text-sm">{{ \Carbon\Carbon::parse($approval->date)->format('d M Y') }}</div>
-            @endscope
+                {{-- Date --}}
+                @scope('cell_date', $approval)
+                    <div class="text-sm">{{ \Carbon\Carbon::parse($approval->date)->format('d M Y') }}</div>
+                @endscope
 
-            {{-- Status --}}
-            @scope('cell_status', $approval)
-                @php
-                    $status = strtolower($approval->status ?? 'pending');
-                    $classes =
-                        [
-                            'pending' => 'bg-amber-100 text-amber-700',
-                            'approved' => 'bg-emerald-100 text-emerald-700',
-                            'rejected' => 'bg-rose-100 text-rose-700',
-                        ][$status] ?? 'bg-gray-100 text-gray-700';
-                @endphp
-                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
-                    {{ ucfirst($status) }}
-                </span>
-            @endscope
+                {{-- Status --}}
+                @scope('cell_status', $approval)
+                    @php
+                        $status = strtolower($approval->status ?? 'pending');
+                        $classes =
+                            [
+                                'pending' => 'bg-amber-100 text-amber-700',
+                                'approved' => 'bg-emerald-100 text-emerald-700',
+                                'rejected' => 'bg-rose-100 text-rose-700',
+                            ][$status] ?? 'bg-gray-100 text-gray-700';
+                    @endphp
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
+                        {{ ucfirst($status) }}
+                    </span>
+                @endscope
 
-            {{-- Action --}}
-            @scope('cell_action', $approval)
-                <div class="flex justify-center">
-                    <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
-                        wire:click="openDetailModal({{ $approval->id }})" />
-                </div>
-            @endscope
-        </x-table>
-    </div>
+                {{-- Action --}}
+                @scope('cell_action', $approval)
+                    <div class="flex justify-center">
+                        <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
+                            wire:click="openDetailModal({{ $approval->id }})" />
+                    </div>
+                @endscope
+            </x-table>
+        </div>
+    @endif
 
     {{-- Modal Certification Approval --}}
     <x-modal wire:model="modal" title="Certification Request Detail" separator box-class="max-w-3xl h-fit">
