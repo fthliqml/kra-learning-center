@@ -31,11 +31,13 @@
         </div>
     </div>
 
-    <x-skeletons.courses-management-table />
+    {{-- Skeleton scoped to specific reactive targets (search & filters actions) --}}
+    <x-skeletons.courses-management-table targets="search,filterGroup,filterStatus,applyFilters,clearFilters" />
 
     {{-- Table --}}
     @if ($courses->isNotEmpty())
-        <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+        <div wire:loading.remove wire:target="search,filterGroup,filterStatus,applyFilters,clearFilters"
+            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$courses" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- Custom cell untuk kolom Nomor --}}

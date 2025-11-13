@@ -5,10 +5,28 @@
     @else
         @foreach ($items as $item)
             @php
-                // Pick the session that matches this agenda item's date; fallback to the earliest by day_number
-$sessionForDay =
-    $item['sessions']->firstWhere('iso_date', $item['iso']) ??
-    $item['sessions']->sortBy('day_number')->first();
+                // Treat item as single training (unique). Compute display date from start_date
+                $start = \Carbon\Carbon::parse($item['start_date']);
+                $end = \Carbon\Carbon::parse($item['end_date']);
+                $rangeText = $start->isSameDay($end)
+                    ? $start->format('d M Y')
+                    : $start->format('d M') . ' - ' . $end->format('d M Y');
+                // Aggregate trainer names (already provided if parent passed trainings)
+                $trainerNames = collect($item['trainer_names'] ?? [])
+                    ->filter()
+                    ->values();
+                if ($trainerNames->isEmpty()) {
+                    // Fallback derive from sessions array
+                    $trainerNames = collect($item['sessions'] ?? [])
+                        ->map(
+                            fn($s) => is_array($s)
+                                ? $s['trainer']['name'] ?? null
+                                : $s->trainer->name ?? ($s->trainer->user->name ?? null),
+                        )
+                        ->filter()
+                        ->unique()
+                        ->values();
+                }
             @endphp
             @php
                 $type = strtoupper($item['type'] ?? '');
@@ -32,15 +50,22 @@ $sessionForDay =
                     ],
                 };
             @endphp
-            <div x-on:click="$dispatch('detail-loading-start')"
-                class="bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex gap-4 items-start hover:border-primary/40 transition cursor-pointer {{ $isDone ? 'opacity-80' : '' }}"
-                wire:click="open({{ $item['id'] }}, '{{ $item['iso'] }}')">
+            @php
+                $baseCard =
+                    'bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex gap-4 items-start transition';
+                // Closed trainings still clickable for details: keep pointer + subtle hover, but keep faded look
+                $interactive = $isDone
+                    ? 'opacity-80 cursor-pointer hover:border-primary/30'
+                    : 'cursor-pointer hover:border-primary/40';
+            @endphp
+            <div x-on:click="$dispatch('detail-loading-start')" class="{{ $baseCard }} {{ $interactive }}"
+                wire:click="open({{ $item['id'] }}, '{{ $item['start_iso'] ?? $start->format('Y-m-d') }}')">
                 <div class="flex flex-col items-center w-12 sm:w-14">
                     <div class="text-[10px] sm:text-[11px] uppercase tracking-wide text-gray-500">
-                        {{ $item['date']->format('D') }}</div>
-                    <div class="text-lg sm:text-2xl font-bold {{ $item['isToday'] ? 'text-primary' : 'text-gray-800' }}">
-                        {{ $item['date']->format('d') }}</div>
-                    <div class="text-[10px] text-gray-400">{{ $item['date']->format('M') }}</div>
+                        {{ $start->format('D') }}</div>
+                    <div class="text-lg sm:text-2xl font-bold text-gray-800">
+                        {{ $start->format('d') }}</div>
+                    <div class="text-[10px] text-gray-400">{{ $start->format('M') }}</div>
                 </div>
                 <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
@@ -53,22 +78,23 @@ $sessionForDay =
                             <span class="truncate">{{ $item['name'] }}</span>
                         </h3>
                     </div>
-                    @if ($sessionForDay && ($sessionForDay->trainer || $sessionForDay->trainer_display_name))
-                        @php $trainerName = $sessionForDay->trainer_display_name ?? ($sessionForDay->trainer->name ?? ($sessionForDay->trainer->user->name ?? '')); @endphp
+                    @if ($trainerNames->isNotEmpty())
+                        @php $firstTrainer = $trainerNames->first(); @endphp
                         <div class="text-[11px] sm:text-xs text-gray-600 flex items-center gap-1">
                             <span
                                 class="inline-flex items-center justify-center w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 text-primary text-[10px] sm:text-[11px] font-semibold">
-                                {{ $sessionForDay->trainer_initials ?? Str::of($trainerName)->explode(' ')->map(fn($p) => Str::substr($p, 0, 1))->take(2)->implode('') }}
+                                {{ collect(explode(' ', $firstTrainer))->map(fn($p) => Str::substr($p, 0, 1))->take(2)->implode('') }}
                             </span>
-                            <span class="truncate max-w-[150px] sm:max-w-[260px]">{{ $trainerName }}</span>
+                            <span class="truncate max-w-[150px] sm:max-w-[260px]">
+                                {{ $trainerNames->take(2)->implode(', ') }}@if ($trainerNames->count() > 2)
+                                    , +{{ $trainerNames->count() - 2 }} others
+                                @endif
+                            </span>
                         </div>
                     @endif
-                    @if ($sessionForDay)
-                        <div class="text-[10px] sm:text-[11px] text-gray-500 mt-1">
-                            Day {{ $sessionForDay->day_number ?? '-' }} • {{ $sessionForDay->room_name ?? '-' }}
-                            {{ $sessionForDay->room_location ? '(' . $sessionForDay->room_location . ')' : '' }}
-                        </div>
-                    @endif
+                    <div class="text-[10px] sm:text-[11px] text-gray-500 mt-1">
+                        {{ $rangeText }} • {{ $item['day_span'] }} day(s)
+                    </div>
                 </div>
                 <div class="self-center text-gray-400">
                     <svg class="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">

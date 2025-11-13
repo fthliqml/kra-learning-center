@@ -22,6 +22,13 @@
                                 <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
                             @endif
                         </button>
+                        <button type="button" wire:click="$set('activeTab','close-training')"
+                            class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'close-training' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
+                            Close Training
+                            @if ($activeTab === 'close-training')
+                                <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
+                            @endif
+                        </button>
                     @endanyrole
                 </div>
                 <div class="flex items-center gap-3 pb-1">
@@ -68,27 +75,16 @@
                     <livewire:components.training.tabs.training-attendance-tab :training-id="$selectedEvent['id']" :day-number="$dayNumber"
                         :key="'att-' . $selectedEvent['id'] . '-' . $dayNumber" lazy />
                 @endif
+
+                {{-- Close Training Section --}}
+                @if ($activeTab === 'close-training')
+                    <livewire:components.training.tabs.training-close-tab :training-id="$selectedEvent['id']" :key="'close-' . $selectedEvent['id']" lazy />
+                @endif
             @endanyrole
 
             <div class="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-5">
-                @anyrole('admin', 'instructor')
-                    @php
-                        $typeUpperFooter = strtoupper(
-                            $selectedEvent['type'] ?? ($selectedEvent['training_type'] ?? ''),
-                        );
-                        $isDoneFooter = strtolower($selectedEvent['status'] ?? '') === 'done';
-                    @endphp
-                    @if (in_array($typeUpperFooter, ['IN', 'OUT']) && !$isDoneFooter)
-                        <x-button wire:click="closeTraining" spinner="closeTraining"
-                            class="btn btn-primary w-full sm:w-auto">Close Training</x-button>
-                    @else
-                        <x-button wire:click="closeModal"
-                            class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
-                    @endif
-                @else
-                    <x-button wire:click="closeModal"
-                        class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
-                @endanyrole
+                <x-button wire:click="closeModal"
+                    class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
                 @role('admin')
                     <div class="flex items-center sm:items-center justify-center gap-3 w-full sm:w-auto">
                         <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto"
