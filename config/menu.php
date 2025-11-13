@@ -89,6 +89,7 @@ return [
             'submenu' => [
                 ['label' => 'Certification Module', 'href' => '/certification/module', 'roles' => ['certificator', 'admin', 'leader']],
                 ['label' => 'Certification Point', 'href' => '/certification/point', 'roles' => ['certificator', 'admin', 'leader']],
+                ['label' => 'Certification Approval', 'href' => '/certification/approval', 'roles' => ['leader']],
             ],
         ],
         [

@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Livewire\Pages\Certification\CertificationApproval;
 use App\Livewire\Pages\Certification\CertificationPoint;
 use App\Livewire\Pages\Courses\Courses;
 use App\Livewire\Pages\Courses\Overview;
@@ -70,4 +71,5 @@ Route::middleware('auth')->group(function () {
 
     // Certification
     Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
+    Route::get('/certification/approval', CertificationApproval::class)->name('certification-point.index');
 });
