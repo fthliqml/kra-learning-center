@@ -97,24 +97,19 @@
                 <div class="font-semibold text-gray-800">{{ $module->code }}</div>
             @endscope
 
+            <!-- Module Title -->
+            @scope('cell_module_title', $module)
+                <div class="truncate max-w-[40ch]" title="{{ $module->module_title }}">{{ $module->module_title }}</div>
+            @endscope
+
+            <!-- Certif Group -->
+            @scope('cell_group_certification', $module)
+                <span class="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium">{{ $module->group_certification }}</span>
+            @endscope
+
             <!-- Level -->
             @scope('cell_level', $module)
                 <span class="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium">{{ $module->level }}</span>
-            @endscope
-
-            <!-- Competency -->
-            @scope('cell_competency', $module)
-                <div class="truncate max-w-[28ch]" title="{{ $module->competency }}">{{ $module->competency }}</div>
-            @endscope
-
-            <!-- Point -->
-            @scope('cell_point', $module)
-                <span class="text-sm font-semibold text-indigo-600">{{ $module->points_per_module }}</span>
-            @endscope
-
-            <!-- New GEX -->
-            @scope('cell_new_gex', $module)
-                <span class="text-sm font-medium">{{ number_format($module->new_gex, 2) }}</span>
             @endscope
 
             <!-- Duration -->
@@ -141,11 +136,20 @@
     <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Certification Module' : ($mode === 'edit' ? 'Edit Certification Module' : 'Preview Certification Module')" separator box-class="max-w-3xl h-fit">
 
         <x-form wire:submit.prevent="save" no-separator>
-            <x-input label="Competency" placeholder="Enter competency title" wire:model.defer="form.competency"
+
+            @if ($mode === 'preview')
+                <x-input label="Module Title" placeholder="Enter module title" wire:model="form.module_title"
+                    class="focus-within:border-0" readonly />
+            @else
+                <x-input label="Module Title" placeholder="E.g. Basic Industrial Process" wire:model.defer="form.module_title"
+                    class="focus-within:border-0" :error="$errors->first('form.module_title')" />
+            @endif
+
+            <x-input label="Competency" placeholder="E.g. Mechanical Engineering" wire:model.defer="form.competency"
                 class="focus-within:border-0" :error="$errors->first('form.competency')" :readonly="$mode === 'preview'" />
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <x-input label="Code" placeholder="BIP_1" wire:model.defer="form.code"
+                <x-input label="Code" placeholder="E.g. BIP_1" wire:model.defer="form.code"
                     class="focus-within:border-0" :error="$errors->first('form.code')" :readonly="$mode === 'preview'" />
 
                 @if ($mode === 'preview')
@@ -168,31 +172,31 @@
 
                 <x-input label="Point" type="number" min="0" wire:model.defer="form.points_per_module"
                     class="focus-within:border-0" :error="$errors->first('form.points_per_module')"
-                    :readonly="$mode === 'preview'" />
+                    :readonly="$mode === 'preview'" placeholder="E.g. 10" />
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-input label="New Gex" type="number" step="0.01" min="0" wire:model.defer="form.new_gex"
-                    class="focus-within:border-0" :error="$errors->first('form.new_gex')" :readonly="$mode === 'preview'" />
+                    class="focus-within:border-0" :error="$errors->first('form.new_gex')" :readonly="$mode === 'preview'" placeholder="E.g. 1.25" />
 
                 <x-input label="Duration (minutes)" type="number" min="1" wire:model.defer="form.duration"
-                    class="focus-within:border-0" :error="$errors->first('form.duration')" :readonly="$mode === 'preview'" />
+                    class="focus-within:border-0" :error="$errors->first('form.duration')" :readonly="$mode === 'preview'" placeholder="E.g. 60" />
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-input label="Theory Passing Score (%)" type="number" step="0.01" min="0" max="100"
                     wire:model.defer="form.theory_passing_score"
-                    class="focus-within:border-0" :error="$errors->first('form.theory_passing_score')" :readonly="$mode === 'preview'" />
+                    class="focus-within:border-0" :error="$errors->first('form.theory_passing_score')" :readonly="$mode === 'preview'" placeholder="E.g. 70" />
 
                 <x-input label="Practical Passing Score (%)" type="number" step="0.01" min="0" max="100"
                     wire:model.defer="form.practical_passing_score"
-                    class="focus-within:border-0" :error="$errors->first('form.practical_passing_score')" :readonly="$mode === 'preview'" />
+                    class="focus-within:border-0" :error="$errors->first('form.practical_passing_score')" :readonly="$mode === 'preview'" placeholder="E.g. 80" />
             </div>
 
-            <x-textarea label="Major Component" placeholder="ALL INNER & OUTER PARTS" class="focus-within:border-0"
+            <x-textarea label="Major Component" placeholder="Describe major components, e.g. All inner & outer parts" class="focus-within:border-0"
                 wire:model.defer="form.major_component" :error="$errors->first('form.major_component')" :readonly="$mode === 'preview'" />
 
-            <x-textarea label="Mach Model" placeholder="ALL UNIT MODEL" class="focus-within:border-0"
+            <x-textarea label="Mach Model" placeholder="List machine models, e.g. All unit models" class="focus-within:border-0"
                 wire:model.defer="form.mach_model" :error="$errors->first('form.mach_model')" :readonly="$mode === 'preview'" />
 
             <x-slot:actions>

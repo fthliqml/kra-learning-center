@@ -3,18 +3,25 @@
 namespace App\Livewire\Pages\Certification;
 
 use App\Models\CertificationModule as CertificationModuleModel;
+use App\Exports\CertificationModuleExport;
+use App\Exports\CertificationModuleTemplateExport;
+use App\Imports\CertificationModuleImport;
+use Maatwebsite\Excel\Facades\Excel;
 use Livewire\Component;
+use Livewire\Attributes\On;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 
 class CertificationModule extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public string $search = '';
     public string $filter = '';
     public bool $modal = false;
     public string $mode = 'create'; // create|edit|preview
     public ?int $editingId = null;
+    public $file;
 
     /**
      * Form state for the modal
@@ -22,6 +29,7 @@ class CertificationModule extends Component
      */
     public array $form = [
         'code' => '',
+        'module_title' => '',
         'competency' => '',
         'level' => '',
         'group_certification' => '',
@@ -57,11 +65,10 @@ class CertificationModule extends Component
     {
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-12 md:w-[8%]'],
-            ['key' => 'code', 'label' => 'Code', 'class' => 'md:w-[5%]'],
-            ['key' => 'level', 'label' => 'Level', 'class' => '!text-center md:w-[16%]'],
-            ['key' => 'competency', 'label' => 'Competency', 'class' => 'md:w-[18%]'],
-            ['key' => 'point', 'label' => 'Point', 'class' => '!text-center md:w-[10%]'],
-            ['key' => 'new_gex', 'label' => 'New GEX', 'class' => '!text-center md:w-[12%]'],
+            ['key' => 'code', 'label' => 'Code', 'class' => 'md:w-[10%]'],
+            ['key' => 'module_title', 'label' => 'Module Title', 'class' => 'md:w-[28%]'],
+            ['key' => 'group_certification', 'label' => 'Certif Group', 'class' => '!text-center md:w-[16%]'],
+            ['key' => 'level', 'label' => 'Level', 'class' => '!text-center md:w-[12%]'],
             ['key' => 'duration', 'label' => 'Duration', 'class' => '!text-center md:w-[12%]'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center md:w-[14%]'],
         ];
@@ -102,6 +109,32 @@ class CertificationModule extends Component
         ]);
     }
 
+    public function export()
+    {
+        return Excel::download(new CertificationModuleExport(), 'certification_modules.xlsx');
+    }
+
+    public function downloadTemplate()
+    {
+        return Excel::download(new CertificationModuleTemplateExport(), 'certification_modules_template.xlsx');
+    }
+
+    public function updatedFile()
+    {
+        try {
+            $this->validate([
+                'file' => 'required|file|mimes:xlsx,xls|max:10240',
+            ]);
+
+            Excel::import(new CertificationModuleImport(), $this->file);
+            $this->dispatch('notify', type: 'success', message: 'Import completed');
+        } catch (\Throwable $e) {
+            $this->dispatch('notify', type: 'error', message: 'Import failed: ' . $e->getMessage());
+        } finally {
+            $this->file = null;
+        }
+    }
+
     public function rules(): array
     {
         $uniqueCode = 'unique:certification_modules,code';
@@ -111,6 +144,7 @@ class CertificationModule extends Component
 
         return [
             'form.code' => ['required', 'string', 'max:50', $uniqueCode],
+            'form.module_title' => ['required', 'string', 'max:255'],
             'form.competency' => ['required', 'string', 'max:255'],
             'form.level' => ['required', 'in:Basic,Intermediate,Advanced'],
             'form.group_certification' => ['required', 'in:ENGINE,MACHINING,PPT AND PPM'],
@@ -128,6 +162,7 @@ class CertificationModule extends Component
     {
         $this->form = [
             'code' => '',
+            'module_title' => '',
             'competency' => '',
             'level' => '',
             'group_certification' => '',
@@ -155,6 +190,7 @@ class CertificationModule extends Component
         $this->editingId = $model->id;
         $this->form = [
             'code' => $model->code,
+            'module_title' => $model->module_title,
             'competency' => $model->competency,
             'level' => $model->level,
             'group_certification' => $model->group_certification,
@@ -183,7 +219,7 @@ class CertificationModule extends Component
 
             $attrs = [
                 'code' => $this->form['code'],
-                'module_title' => $this->form['competency'],
+                'module_title' => $this->form['module_title'],
                 'level' => $this->form['level'],
                 'competency' => $this->form['competency'],
                 'group_certification' => $this->form['group_certification'],
@@ -212,15 +248,22 @@ class CertificationModule extends Component
         }
     }
 
+    #[On('deleteModule')]
     public function deleteModule(int $id): void
     {
         try {
             $model = CertificationModuleModel::find($id);
             if ($model) {
                 $model->delete();
+                // Close the confirm dialog and notify
+                $this->dispatch('confirm-done');
                 $this->dispatch('notify', type: 'success', message: 'Module deleted');
+            } else {
+                $this->dispatch('confirm-done');
+                $this->dispatch('notify', type: 'error', message: 'Module not found');
             }
         } catch (\Throwable $e) {
+            $this->dispatch('confirm-done');
             $this->dispatch('notify', type: 'error', message: 'Failed to delete: ' . $e->getMessage());
         }
     }
