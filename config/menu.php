@@ -49,8 +49,16 @@ return [
             'href' => '#',
             'roles' => ['employee', 'spv'],
             'submenu' => [
-                ['label' => 'Training Schedule', 'href' => '/training/schedule', 'roles' => ['employee', 'spv']],
-                ['label' => 'Training Request', 'href' => '/training/request', 'roles' => ['spv']],
+                [
+                    'label' => 'Training Schedule',
+                    'href' => '/training/schedule',
+                    'roles' => ['employee', 'spv']
+                ],
+                [
+                    'label' => 'Training Request',
+                    'href' => '/training/request',
+                    'roles' => ['spv']
+                ],
             ],
         ],
         [
@@ -60,8 +68,16 @@ return [
             'href' => '#',
             'roles' => ['employee', 'spv'],
             'submenu' => [
-                ['label' => 'Survey 1', 'href' => '/survey/1', 'roles' => ['employee', 'spv']],
-                ['label' => 'Survey 3', 'href' => '/survey/3', 'roles' => ['spv']],
+                [
+                    'label' => 'Survey 1',
+                    'href' => '/survey/1',
+                    'roles' => ['employee', 'spv']
+                ],
+                [
+                    'label' => 'Survey 3',
+                    'href' => '/survey/3',
+                    'roles' => ['spv']
+                ],
             ],
         ],
 
@@ -73,11 +89,31 @@ return [
             'href' => '#',
             'roles' => ['admin', 'instructor', 'certificator', 'leader'],
             'submenu' => [
-                ['label' => 'Training Module', 'href' => '/training/module', 'roles' => ['instructor', 'certificator', 'admin', 'leader']],
-                ['label' => 'Training Schedule', 'href' => '/training/schedule', 'roles' => ['instructor', 'certificator', 'admin', 'leader']],
-                ['label' => 'Training Request', 'href' => '/training/request', 'roles' => ['instructor', 'certificator', 'admin', 'leader']],
-                ['label' => 'Training History', 'href' => '/history/training', 'roles' => ['tbc']],
-                ['label' => 'Data Trainer', 'href' => '/training/trainer', 'roles' => ['instructor', 'certificator', 'admin', 'leader']],
+                [
+                    'label' => 'Training Module',
+                    'href' => '/training/module',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Training Schedule',
+                    'href' => '/training/schedule',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Training Request',
+                    'href' => '/training/request',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Training History',
+                    'href' => '/history/training',
+                    'roles' => ['tbc']
+                ],
+                [
+                    'label' => 'Data Trainer',
+                    'href' => '/training/trainer',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
             ],
         ],
         [
@@ -87,9 +123,26 @@ return [
             'href' => '#',
             'roles' => ['certificator', 'admin', 'leader'],
             'submenu' => [
-                ['label' => 'Certification Module', 'href' => '/certification/module', 'roles' => ['certificator', 'admin', 'leader']],
-                ['label' => 'Certification Point', 'href' => '/certification/point', 'roles' => ['certificator', 'admin', 'leader']],
-                ['label' => 'Certification Approval', 'href' => '/certification/approval', 'roles' => ['leader']],
+                [
+                    'label' => 'Certification Module',
+                    'href' => '/certification/module',
+                    'roles' => ['certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Certification Schedule',
+                    'href' => '/certification/schedule',
+                    'roles' => ['certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Certification Point',
+                    'href' => '/certification/point',
+                    'roles' => ['certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Certification Approval',
+                    'href' => '/certification/approval',
+                    'roles' => ['leader']
+                ],
             ],
         ],
         [
@@ -106,9 +159,21 @@ return [
             'href' => '#',
             'roles' => ['instructor', 'certificator', 'admin'],
             'submenu' => [
-                ['label' => 'Survey 1', 'href' => '/survey/1/management', 'roles' => ['instructor', 'certificator', 'admin']],
-                ['label' => 'Survey 2', 'href' => '/survey/2/management', 'roles' => ['instructor', 'certificator', 'admin']],
-                ['label' => 'Survey 3', 'href' => '/survey/3/management', 'roles' => ['instructor', 'certificator', 'admin']],
+                [
+                    'label' => 'Survey 1',
+                    'href' => '/survey/1/management',
+                    'roles' => ['instructor', 'certificator', 'admin']
+                ],
+                [
+                    'label' => 'Survey 2',
+                    'href' => '/survey/2/management',
+                    'roles' => ['instructor', 'certificator', 'admin']
+                ],
+                [
+                    'label' => 'Survey 3',
+                    'href' => '/survey/3/management',
+                    'roles' => ['instructor', 'certificator', 'admin']
+                ],
             ],
         ],
         [
