@@ -24,8 +24,15 @@ class DetailCertificationModal extends Component
         'confirm-delete-certification' => 'onConfirmDelete',
     ];
 
-    public function open($sessionId)
+    public function open($payload)
     {
+        $sessionId = null;
+        if (is_array($payload)) {
+            $sessionId = $payload['session_id'] ?? $payload['id'] ?? null;
+        } else {
+            $sessionId = (int) $payload;
+        }
+        if (!$sessionId) return;
         $this->modal = true;
         $this->loadSessionData((int) $sessionId);
         $this->activeTab = 'information';
