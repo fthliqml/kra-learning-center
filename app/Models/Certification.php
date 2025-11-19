@@ -12,6 +12,11 @@ class Certification extends Model
     'module_id',
     'name',
     'status',
+    'approved_at',
+  ];
+
+  protected $casts = [
+    'approved_at' => 'datetime',
   ];
 
   /**

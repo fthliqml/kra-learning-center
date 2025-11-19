@@ -35,12 +35,14 @@ class CertificationSeeder extends Seeder
                 'module_id' => $modules->random()->id,
                 'name' => 'Welding Inspector Batch 2024-Q1',
                 'status' => 'approved',
+                'approved_at' => Carbon::now()->subMonths(3)->addDays(rand(1, 5)),
                 'created_at' => Carbon::now()->subMonths(3),
             ],
             [
                 'module_id' => $modules->random()->id,
                 'name' => 'ISO 9001 Lead Auditor Program 2024',
                 'status' => 'approved',
+                'approved_at' => Carbon::now()->subMonths(4)->addDays(rand(1, 5)),
                 'created_at' => Carbon::now()->subMonths(4),
             ],
             [
@@ -53,18 +55,21 @@ class CertificationSeeder extends Seeder
                 'module_id' => $modules->random()->id,
                 'name' => 'Forklift Operator Training Batch 15',
                 'status' => 'approved',
+                'approved_at' => Carbon::now()->subMonths(5)->addDays(rand(1, 5)),
                 'created_at' => Carbon::now()->subMonths(5),
             ],
             [
                 'module_id' => $modules->random()->id,
                 'name' => 'Electrical Safety Professional 2024',
                 'status' => 'approved',
+                'approved_at' => Carbon::now()->subMonths(3)->addDays(rand(1, 5)),
                 'created_at' => Carbon::now()->subMonths(3),
             ],
             [
                 'module_id' => $modules->random()->id,
                 'name' => 'Six Sigma Green Belt Batch 8',
                 'status' => 'approved',
+                'approved_at' => Carbon::now()->subMonths(4)->addDays(rand(1, 5)),
                 'created_at' => Carbon::now()->subMonths(4),
             ],
 
