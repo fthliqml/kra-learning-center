@@ -14,6 +14,7 @@ class CertificationApproval extends Component
 
     public $modal = false;
     public $selectedId = null;
+    public $activeTab = 'information';
 
     public $search = '';
     public $filter = 'All';
@@ -51,6 +52,82 @@ class CertificationApproval extends Component
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center !md:w-[14%]'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center !md:w-[10%]'],
         ];
+    }
+
+    public function participantHeaders(): array
+    {
+        return [
+            ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-[60px]'],
+            ['key' => 'nrp', 'label' => 'NRP', 'class' => 'w-[120px]'],
+            ['key' => 'name', 'label' => 'Name', 'class' => 'w-[200px]'],
+            ['key' => 'section', 'label' => 'Section', 'class' => '!text-center w-[100px]'],
+            ['key' => 'theory_score', 'label' => 'Theory', 'class' => '!text-center w-[80px]'],
+            ['key' => 'practical_score', 'label' => 'Practical', 'class' => '!text-center w-[80px]'],
+            ['key' => 'status', 'label' => 'Status', 'class' => '!text-center w-[100px]'],
+            ['key' => 'earned_point', 'label' => 'Point', 'class' => '!text-center w-[80px]'],
+        ];
+    }
+
+    public function getParticipantsProperty()
+    {
+        if (!$this->selectedId) {
+            return collect();
+        }
+
+        $certification = Certification::with([
+            'certificationModule',
+            'participants.employee',
+            'participants.scores.session',
+        ])->find($this->selectedId);
+
+        if (!$certification) {
+            return collect();
+        }
+
+        // Get passing scores from module
+        $theoryPassingScore = $certification->certificationModule->theory_passing_score ?? 70;
+        $practicalPassingScore = $certification->certificationModule->practical_passing_score ?? 75;
+        $modulePoints = $certification->certificationModule->points_per_module ?? 0;
+
+        return $certification->participants->map(function ($participant, $index) use ($certification, $theoryPassingScore, $practicalPassingScore, $modulePoints) {
+            $employee = $participant->employee;
+            $scores = $participant->scores;
+
+            // Separate theory and practical scores
+            $theoryScore = $scores->first(function ($score) {
+                return $score->session && $score->session->type === 'theory';
+            });
+
+            $practicalScore = $scores->first(function ($score) {
+                return $score->session && $score->session->type === 'practical';
+            });
+
+            // Determine overall status based on module passing scores
+            // Both theory and practical must exist AND pass to overall pass
+            $theoryPassed = $theoryScore && $theoryScore->score >= $theoryPassingScore;
+            $practicalPassed = $practicalScore && $practicalScore->score >= $practicalPassingScore;
+
+            // If either theory or practical is missing, status is failed
+            $overallStatus = ($theoryScore && $practicalScore && $theoryPassed && $practicalPassed) ? 'passed' : 'failed';
+
+            // Calculate earned points
+            $earnedPoint = $overallStatus === 'passed' ? $modulePoints : 0;
+
+            return (object) [
+                'no' => $index + 1,
+                'nrp' => $employee->nrp ?? '-',
+                'name' => $employee->name ?? '-',
+                'section' => $employee->section ?? '-',
+                'theory_score' => $theoryScore ? number_format($theoryScore->score, 1) : '-',
+                'practical_score' => $practicalScore ? number_format($practicalScore->score, 1) : '-',
+                'status' => $overallStatus,
+                'earned_point' => $earnedPoint,
+                'theory_raw' => $theoryScore ? $theoryScore->score : null,
+                'practical_raw' => $practicalScore ? $practicalScore->score : null,
+                'theory_threshold' => $theoryPassingScore,
+                'practical_threshold' => $practicalPassingScore,
+            ];
+        });
     }
 
     public function approvals()
@@ -121,6 +198,7 @@ class CertificationApproval extends Component
         $displayStatus = $certification->status === 'completed' ? 'pending' : $certification->status;
 
         $this->selectedId = $certification->id;
+        $this->activeTab = 'information'; // Reset to information tab
         $this->formData = [
             'certification_name' => $certification->name,
             'module_name' => $certification->certificationModule->module_title ?? '-',
