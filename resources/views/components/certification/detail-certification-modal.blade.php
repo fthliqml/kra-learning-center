@@ -5,8 +5,19 @@
             box-class="w-[calc(100vw-2rem)] max-w-full sm:max-w-4xl h-fit">
             <div class="px-1 pt-2 mb-4 border-b border-gray-200 flex items-end justify-between gap-4 text-sm font-medium">
                 <div class="flex gap-6">
-                    <button type="button" class="pb-3 relative text-primary">Information
-                        <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
+                    <button type="button" wire:click="setActiveTab('information')"
+                        class="pb-3 relative cursor-pointer focus:outline-none transition {{ $activeTab === 'information' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
+                        Information
+                        @if ($activeTab === 'information')
+                            <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
+                        @endif
+                    </button>
+                    <button type="button" wire:click="setActiveTab('attendance')"
+                        class="pb-3 relative cursor-pointer focus:outline-none transition {{ $activeTab === 'attendance' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
+                        Attendance
+                        @if ($activeTab === 'attendance')
+                            <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
+                        @endif
                     </button>
                 </div>
                 <div class="flex items-center gap-3 pb-1">
@@ -37,78 +48,87 @@
             </div>
 
             @php $mod = $selected['module'] ?? []; @endphp
-            <div class="space-y-6">
-                <!-- Title -->
-                <div class="p-4 border rounded-md">
-                    <div class="flex items-start gap-2">
-                        <x-icon name="o-academic-cap" class="w-4 h-4 text-primary/70 mt-0.5" />
-                        <div>
-                            <p class="text-xs uppercase tracking-wide text-gray-500">Title</p>
-                            <p class="font-semibold text-gray-800 break-words mt-1">{{ $selected['title'] }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Date -->
-                <div class="p-4 border rounded-md">
-                    <div class="flex items-start gap-2">
-                        <x-icon name="o-calendar" class="w-4 h-4 text-primary/70 mt-0.5" />
-                        <div class="flex-1">
-                            <p class="text-xs uppercase tracking-wide text-gray-500">Date</p>
-                            <p class="font-semibold text-gray-800 mt-1">{{ \Carbon\Carbon::parse($selected['date'])->format('d M Y') }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Group -->
+            @if ($activeTab === 'information')
+                <div class="space-y-6">
+                    <!-- Title -->
                     <div class="p-4 border rounded-md">
                         <div class="flex items-start gap-2">
-                            <x-icon name="o-squares-2x2" class="w-4 h-4 text-primary/70 mt-0.5" />
-                            <div class="flex-1">
-                                <p class="text-xs uppercase tracking-wide text-gray-500">Group</p>
-                                <p class="font-semibold text-gray-800 mt-1">{{ $mod['group_certification'] ?? '—' }}</p>
+                            <x-icon name="o-academic-cap" class="w-4 h-4 text-primary/70 mt-0.5" />
+                            <div>
+                                <p class="text-xs uppercase tracking-wide text-gray-500">Title</p>
+                                <p class="font-semibold text-gray-800 break-words mt-1">{{ $selected['title'] }}</p>
                             </div>
                         </div>
                     </div>
-                    <!-- Level -->
+                    <!-- Date -->
                     <div class="p-4 border rounded-md">
                         <div class="flex items-start gap-2">
-                            <x-icon name="o-chart-bar" class="w-4 h-4 text-primary/70 mt-0.5" />
+                            <x-icon name="o-calendar" class="w-4 h-4 text-primary/70 mt-0.5" />
                             <div class="flex-1">
-                                <p class="text-xs uppercase tracking-wide text-gray-500">Level</p>
-                                <p class="font-semibold text-gray-800 mt-1">{{ $mod['level'] ?? '—' }}</p>
+                                <p class="text-xs uppercase tracking-wide text-gray-500">Date</p>
+                                <p class="font-semibold text-gray-800 mt-1">{{ \Carbon\Carbon::parse($selected['date'])->format('d M Y') }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Group -->
+                        <div class="p-4 border rounded-md">
+                            <div class="flex items-start gap-2">
+                                <x-icon name="o-squares-2x2" class="w-4 h-4 text-primary/70 mt-0.5" />
+                                <div class="flex-1">
+                                    <p class="text-xs uppercase tracking-wide text-gray-500">Group</p>
+                                    <p class="font-semibold text-gray-800 mt-1">{{ $mod['group_certification'] ?? '—' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Level -->
+                        <div class="p-4 border rounded-md">
+                            <div class="flex items-start gap-2">
+                                <x-icon name="o-chart-bar" class="w-4 h-4 text-primary/70 mt-0.5" />
+                                <div class="flex-1">
+                                    <p class="text-xs uppercase tracking-wide text-gray-500">Level</p>
+                                    <p class="font-semibold text-gray-800 mt-1">{{ $mod['level'] ?? '—' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Location -->
+                        <div class="p-4 border rounded-md">
+                            <div class="flex items-start gap-2">
+                                <x-icon name="o-map-pin" class="w-4 h-4 text-primary/70 mt-0.5" />
+                                <div class="flex-1">
+                                    <p class="text-xs uppercase tracking-wide text-gray-500">Location</p>
+                                    <p class="font-semibold text-gray-800 mt-1">{{ $selected['location'] ?: '—' }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Time -->
+                        <div class="p-4 border rounded-md">
+                            <div class="flex items-start gap-2">
+                                <x-icon name="o-clock" class="w-4 h-4 text-primary/70 mt-0.5" />
+                                <div class="flex-1">
+                                    <p class="text-xs uppercase tracking-wide text-gray-500">Time</p>
+                                    <p class="font-semibold text-gray-800 mt-1">{{ \Carbon\Carbon::parse($selected['start_time'])->format('H:i') }} - {{ \Carbon\Carbon::parse($selected['end_time'])->format('H:i') }}<br><span class="text-xs text-gray-500">WITA</span></p>
+                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <!-- Location -->
-                    <div class="p-4 border rounded-md">
-                        <div class="flex items-start gap-2">
-                            <x-icon name="o-map-pin" class="w-4 h-4 text-primary/70 mt-0.5" />
-                            <div class="flex-1">
-                                <p class="text-xs uppercase tracking-wide text-gray-500">Location</p>
-                                <p class="font-semibold text-gray-800 mt-1">{{ $selected['location'] ?: '—' }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <!-- Time -->
-                    <div class="p-4 border rounded-md">
-                        <div class="flex items-start gap-2">
-                            <x-icon name="o-clock" class="w-4 h-4 text-primary/70 mt-0.5" />
-                            <div class="flex-1">
-                                <p class="text-xs uppercase tracking-wide text-gray-500">Time</p>
-                                <p class="font-semibold text-gray-800 mt-1">{{ \Carbon\Carbon::parse($selected['start_time'])->format('H:i') }} - {{ \Carbon\Carbon::parse($selected['end_time'])->format('H:i') }}<br><span class="text-xs text-gray-500">WITA</span></p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
+            @endif
+            @if ($activeTab === 'attendance')
+                <livewire:components.certification.tabs.certification-attendance-tab :session-id="$selected['session_id']" :key="'cert-att-'.$selected['session_id']" />
+            @endif
 
             <div class="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-6">
                 <x-button wire:click="closeModal" class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
+                @role('admin')
+                    <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                        <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto" spinner="requestDeleteConfirm">
+                            <x-icon name="o-trash" /><span>Delete</span>
+                        </x-button>
+                    </div>
+                @endrole
             </div>
         </x-modal>
     @endif
