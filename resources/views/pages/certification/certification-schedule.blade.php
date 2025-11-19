@@ -4,7 +4,7 @@
     </div>
 
     <livewire:components.certification.schedule-view />
-    <livewire:components.confirm-dialog />
     <livewire:components.certification.detail-certification-modal />
+    <livewire:components.confirm-dialog />
 
 </div>

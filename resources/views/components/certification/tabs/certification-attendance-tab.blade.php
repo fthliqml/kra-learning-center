@@ -16,7 +16,7 @@
     <div class="rounded-lg border border-gray-200 shadow">
         <div class="p-2 overflow-x-auto">
             <div class="max-h-[400px] overflow-y-auto thin-scrollbar">
-                <table class="w-full text-sm border-collapse">
+                    <table class="w-full text-sm border-collapse">
                     <thead class="bg-gray-100 sticky top-0 z-10">
                         <tr class="text-xs uppercase tracking-wide text-gray-600">
                             <th class="py-3 px-2 text-center w-12 border-b border-gray-200">No</th>
