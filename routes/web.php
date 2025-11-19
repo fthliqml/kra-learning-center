@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\AuthController;
 use App\Livewire\Pages\Certification\CertificationApproval;
 use App\Livewire\Pages\Certification\CertificationPoint;
 use App\Livewire\Pages\Certification\CertificationModule;
+use App\Livewire\Pages\Certification\CertificationSchedule;
 use App\Livewire\Pages\Courses\Courses;
 use App\Livewire\Pages\Courses\Overview;
 use App\Livewire\Pages\Courses\Pretest;
@@ -75,7 +76,7 @@ Route::middleware('auth')->group(function () {
 
     // Certification
     Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
+    Route::get('/certification/schedule', CertificationSchedule::class)->name('certification-schedule.index');
     Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
     Route::get('/certification/approval', CertificationApproval::class)->name('certification-point.index');
 });
-
