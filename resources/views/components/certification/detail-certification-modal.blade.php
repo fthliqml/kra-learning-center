@@ -30,7 +30,7 @@
                     @if (!empty($sessionOptions))
                         <div class="flex items-center gap-2">
                             <span class="text-xs text-gray-500">Session</span>
-                            <x-select wire:model="selectedSessionId" wire:change="selectSession($event.detail.value)" :options="$sessionOptions" option-label="name" option-value="id" class="w-56 !h-8 !text-sm" />
+                            <x-select wire:model="selectedSessionId" wire:change="selectSession()" :options="$sessionOptions" option-label="name" option-value="id" class="w-56 !h-8 !text-sm" />
                         </div>
                     @endif
                 </div>
@@ -60,17 +60,7 @@
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <!-- Module -->
-                    <div class="p-4 border rounded-md">
-                        <div class="flex items-start gap-2">
-                            <x-icon name="o-rectangle-group" class="w-4 h-4 text-primary/70 mt-0.5" />
-                            <div class="flex-1">
-                                <p class="text-xs uppercase tracking-wide text-gray-500">Module</p>
-                                <p class="font-semibold text-gray-800 mt-1">{{ $mod['module_title'] ?? '—' }}</p>
-                            </div>
-                        </div>
-                    </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <!-- Group -->
                     <div class="p-4 border rounded-md">
                         <div class="flex items-start gap-2">

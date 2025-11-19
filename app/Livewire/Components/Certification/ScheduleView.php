@@ -9,7 +9,7 @@ use Livewire\Component;
 
 class ScheduleView extends Component
 {
-    public string $activeView = 'agenda';
+    public string $activeView = 'month';
     public int $currentMonth;
     public int $currentYear;
     public int $calendarVersion = 0;

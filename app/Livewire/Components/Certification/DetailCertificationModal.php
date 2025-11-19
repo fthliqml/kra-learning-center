@@ -24,8 +24,10 @@ class DetailCertificationModal extends Component
         $this->loadSessionData((int) $sessionId);
     }
 
-    public function selectSession(int $id): void
+    public function selectSession(?int $id = null): void
     {
+        $id = $id ?? ($this->selectedSessionId ? (int) $this->selectedSessionId : null);
+        if (!$id) return;
         $this->loadSessionData($id);
     }
 
@@ -90,6 +92,8 @@ class DetailCertificationModal extends Component
         })->toArray() ?? [];
 
         $this->selectedSessionId = $session->id;
+        // Ensure re-render even with custom select components
+        $this->dispatch('$refresh');
     }
 
     public function render()
