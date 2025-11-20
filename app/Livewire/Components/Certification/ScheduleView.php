@@ -4,6 +4,7 @@ namespace App\Livewire\Components\Certification;
 
 use App\Models\CertificationSession;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Collection;
 use Livewire\Component;
 
@@ -168,5 +169,16 @@ class ScheduleView extends Component
     public function render()
     {
         return view('components.certification.schedule-view');
+    }
+
+    public function addCertificationForDate(string $isoDate): void
+    {
+        $user = Auth::user();
+        if (!$user || strtolower($user->role ?? '') !== 'admin') {
+            return; // only admin can quick-add
+        }
+        // Basic guard: ensure date looks like YYYY-MM-DD
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $isoDate)) return;
+        $this->dispatch('open-certification-form-date', date: $isoDate);
     }
 }

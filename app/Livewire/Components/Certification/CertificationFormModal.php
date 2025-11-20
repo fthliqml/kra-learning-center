@@ -48,6 +48,7 @@ class CertificationFormModal extends Component
     protected $listeners = [
         'open-certification-form' => 'openModal',
         'open-certification-form-edit' => 'openEdit',
+        'open-certification-form-date' => 'openModalWithDate',
     ];
 
     public function mount(): void
@@ -119,6 +120,25 @@ class CertificationFormModal extends Component
     public function openModal(): void
     {
         $this->resetForm();
+        $this->showModal = true;
+    }
+
+    public function openModalWithDate($payload): void
+    {
+        $date = null;
+        if (is_array($payload)) {
+            $date = $payload['date'] ?? null;
+        } elseif (is_string($payload)) {
+            $date = $payload;
+        }
+        $this->resetForm();
+        if ($date) {
+            // Normalize and prefill both session dates
+            $normalized = $this->normalizeDate($date);
+            $this->theory['date'] = $normalized ?? '';
+            $this->practical['date'] = $normalized ?? '';
+        }
+        $this->activeTab = 'session'; // Jump directly to session config for faster scheduling
         $this->showModal = true;
     }
 
