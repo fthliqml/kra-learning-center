@@ -137,8 +137,12 @@ class CertificationFormModal extends Component
         $this->module_id = $cert->module_id;
         $this->autoModuleTitle = $cert->certificationModule?->module_title;
         $this->certification_name = $cert->name ?: ($this->autoModuleTitle ?? '');
-        $theory = $cert->sessions->firstWhere('type', 'THEORY');
-        $practical = $cert->sessions->firstWhere('type', 'PRACTICAL');
+        $theory = $cert->sessions->first(function ($s) {
+            return strtoupper((string) $s->type) === 'THEORY';
+        });
+        $practical = $cert->sessions->first(function ($s) {
+            return strtoupper((string) $s->type) === 'PRACTICAL';
+        });
         if ($theory) {
             $this->theory = [
                 'date' => $theory->date instanceof Carbon ? $theory->date->format('Y-m-d') : ($theory->date ? Carbon::parse($theory->date)->format('Y-m-d') : ''),
@@ -318,7 +322,7 @@ class CertificationFormModal extends Component
         CertificationSession::create([
             'certification_id' => $certId,
             'type' => 'THEORY',
-            'date' => $theoryArr['date'] ?: null,
+            'date' => $this->normalizeDate($theoryArr['date'] ?? null),
             'start_time' => $theoryArr['start_time'] ?: null,
             'end_time' => $theoryArr['end_time'] ?: null,
             'location' => $theoryArr['location'] ?: null,
@@ -327,7 +331,7 @@ class CertificationFormModal extends Component
         CertificationSession::create([
             'certification_id' => $certId,
             'type' => 'PRACTICAL',
-            'date' => $practicalArr['date'] ?: null,
+            'date' => $this->normalizeDate($practicalArr['date'] ?? null),
             'start_time' => $practicalArr['start_time'] ?: null,
             'end_time' => $practicalArr['end_time'] ?: null,
             'location' => $practicalArr['location'] ?: null,
@@ -337,35 +341,47 @@ class CertificationFormModal extends Component
     private function updateSessions(Certification $cert): void
     {
         $sessions = $cert->sessions;
-        $theory = $sessions->firstWhere('type', 'THEORY');
-        $practical = $sessions->firstWhere('type', 'PRACTICAL');
+        $theory = $sessions->first(function ($s) {
+            return strtoupper((string) $s->type) === 'THEORY';
+        });
+        $practical = $sessions->first(function ($s) {
+            return strtoupper((string) $s->type) === 'PRACTICAL';
+        });
         $t = $this->theory;
         if ($theory) {
-            $theory->date = ($t['date'] ?? '') !== '' ? $t['date'] : $theory->date;
-            if (($t['start_time'] ?? '') !== '') {
-                $theory->start_time = $t['start_time'];
+            $newDate = $this->normalizeDate($t['date'] ?? null);
+            if ($newDate) {
+                $theory->date = $newDate;
             }
-            if (($t['end_time'] ?? '') !== '') {
-                $theory->end_time = $t['end_time'];
-            }
-            if (($t['location'] ?? '') !== '') {
-                $theory->location = $t['location'];
-            }
+            $theory->start_time = ($t['start_time'] ?? '') !== '' ? $t['start_time'] : null;
+            $theory->end_time = ($t['end_time'] ?? '') !== '' ? $t['end_time'] : null;
+            $theory->location = ($t['location'] ?? '') !== '' ? $t['location'] : null;
             $theory->save();
         }
         $p = $this->practical;
         if ($practical) {
-            $practical->date = ($p['date'] ?? '') !== '' ? $p['date'] : $practical->date;
-            if (($p['start_time'] ?? '') !== '') {
-                $practical->start_time = $p['start_time'];
+            $newDate = $this->normalizeDate($p['date'] ?? null);
+            if ($newDate) {
+                $practical->date = $newDate;
             }
-            if (($p['end_time'] ?? '') !== '') {
-                $practical->end_time = $p['end_time'];
-            }
-            if (($p['location'] ?? '') !== '') {
-                $practical->location = $p['location'];
-            }
+            $practical->start_time = ($p['start_time'] ?? '') !== '' ? $p['start_time'] : null;
+            $practical->end_time = ($p['end_time'] ?? '') !== '' ? $p['end_time'] : null;
+            $practical->location = ($p['location'] ?? '') !== '' ? $p['location'] : null;
             $practical->save();
+        }
+    }
+
+    private function normalizeDate($value): ?string
+    {
+        if (empty($value)) return null;
+        $str = is_string($value) ? $value : (string) $value;
+        if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $str, $m)) {
+            return $m[1];
+        }
+        try {
+            return Carbon::parse($str)->format('Y-m-d');
+        } catch (\Throwable $e) {
+            return null;
         }
     }
 

@@ -16,7 +16,11 @@ class ScheduleView extends Component
     public array $days = [];
     /** Counts of sessions per month for the current year (1..12) */
     public array $monthlySessionCounts = [];
-    protected $listeners = ['certification-deleted' => 'refresh', 'certification-created' => 'refresh'];
+    protected $listeners = [
+        'certification-deleted' => 'refresh',
+        'certification-created' => 'refresh',
+        'certification-updated' => 'refresh',
+    ];
 
     public function mount(): void
     {

@@ -21,27 +21,30 @@ class MonthGrid extends Component
             'session_id' => $session->id,
             'certification_id' => $cert?->id,
         ];
-        $actions = [
-            [
-                'label' => 'View Detail',
-                'event' => 'open-detail-certification-modal',
-                'variant' => 'outline',
-            ],
-        ];
         $user = Auth::user();
-        if ($user && strtolower($user->role ?? '') === 'admin') {
-            $actions[] = [
-                'label' => 'Edit Certification',
-                'event' => 'open-certification-form-edit',
-                'variant' => 'primary',
-            ];
+        $isAdmin = $user && strtolower($user->role ?? '') === 'admin';
+        if ($isAdmin) {
+            $this->dispatch('open-action-choice', [
+                'title' => 'Certification Action',
+                'message' => 'What would you like to do with this certification?',
+                'payload' => $payload,
+                'actions' => [
+                    [
+                        'label' => 'View Detail',
+                        'event' => 'open-detail-certification-modal',
+                        'variant' => 'outline',
+                    ],
+                    [
+                        'label' => 'Edit Certification',
+                        'event' => 'open-certification-form-edit',
+                        'variant' => 'primary',
+                    ],
+                ],
+            ]);
+        } else {
+            // Non-admins go straight to details
+            $this->dispatch('open-detail-certification-modal', $payload);
         }
-        $this->dispatch('open-action-choice', [
-            'title' => 'Certification Action',
-            'message' => 'What would you like to do with this certification?',
-            'payload' => $payload,
-            'actions' => $actions,
-        ]);
     }
 
     public function placeholder()
