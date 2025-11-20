@@ -2,16 +2,8 @@
     @livewire('components.confirm-dialog')
 
     <!-- Alerts -->
-        <div x-data="{show:false,type:'success',message:''}"
-         @notify.window="type=$event.detail.type||'success';message=$event.detail.message||'';show=true;setTimeout(()=>show=false,3000)"
-         x-show="show" x-transition
-            class="fixed top-4 left-1/2 -translate-x-1/2 z-50">
-        <div class="flex items-center gap-2 text-white px-4 py-3 rounded shadow-lg"
-             :class="{
-                 'bg-green-600': type==='success',
-                 'bg-red-600': type==='error',
-                 'bg-blue-600': type==='info'
-             }">
+    <div x-data="{show:false,type:'success',message:''}" @notify.window="type=$event.detail.type||'success';message=$event.detail.message||'';show=true;setTimeout(()=>show=false,3000)" x-show="show" x-transition class="fixed top-4 left-1/2 -translate-x-1/2 z-50">
+        <div class="flex items-center gap-2 text-white px-4 py-3 rounded shadow-lg" :class="{'bg-green-600': type==='success', 'bg-red-600': type==='error', 'bg-blue-600': type==='info'}">
             <template x-if="type==='success'"><x-icon name="o-check-circle" class="size-5" /></template>
             <template x-if="type==='error'"><x-icon name="o-x-circle" class="size-5" /></template>
             <template x-if="type==='info'"><x-icon name="o-information-circle" class="size-5" /></template>

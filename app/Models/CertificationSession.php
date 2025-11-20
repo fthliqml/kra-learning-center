@@ -17,6 +17,10 @@ class CertificationSession extends Model
     'location',
   ];
 
+  protected $casts = [
+    'date' => 'date',
+  ];
+
   /**
    * Get the certification that owns the session.
    */

@@ -37,7 +37,7 @@ return [
                 ],
                 [
                     'label' => 'Certification History',
-                    'href' => '/Certification/history',
+                    'href' => '/certification/history',
                     'roles' => ['employee', 'instructor', 'admin', 'leader'],
                 ],
             ],
@@ -103,11 +103,6 @@ return [
                     'label' => 'Training Request',
                     'href' => '/training/request',
                     'roles' => ['instructor', 'certificator', 'admin', 'leader']
-                ],
-                [
-                    'label' => 'Training History',
-                    'href' => '/history/training',
-                    'roles' => ['tbc']
                 ],
                 [
                     'label' => 'Data Trainer',

@@ -15,6 +15,7 @@ return new class extends Migration {
             $table->foreignId('module_id')->constrained('certification_modules')->onDelete('cascade');
             $table->string('name');
             $table->enum('status', ['scheduled', 'completed', 'cancelled', 'approved', 'rejected'])->default('scheduled');
+            $table->timestamp('approved_at')->nullable();
             $table->timestamps();
         });
     }
