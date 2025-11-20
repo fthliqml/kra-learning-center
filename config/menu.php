@@ -9,6 +9,14 @@ return [
             'href' => '/',
         ],
         [
+            'id' => 'development',
+            'label' => 'Development',
+            'icon' => 'trophy',
+            'href' => '/development',
+        ],
+
+        // Employee and Supervisor Menu Items
+        [
             'id' => 'courses',
             'label' => 'Courses',
             'icon' => 'book-open',
@@ -20,17 +28,17 @@ return [
             'label' => 'History',
             'icon' => 'clock',
             'href' => '#',
-            'roles' => ['employee', 'spv'],
+            'roles' => ['employee', 'instructor', 'admin', 'leader'],
             'submenu' => [
                 [
                     'label' => 'Training History',
-                    'href' => '/history/training',
-                    'roles' => ['employee', 'spv'],
+                    'href' => '/training/history',
+                    'roles' => ['employee', 'instructor', 'admin', 'leader'],
                 ],
                 [
                     'label' => 'Certification History',
-                    'href' => '/history/certification',
-                    'roles' => ['employee', 'spv'],
+                    'href' => '/certification/history',
+                    'roles' => ['employee', 'instructor', 'admin', 'leader'],
                 ],
             ],
         ],
@@ -41,49 +49,17 @@ return [
             'href' => '#',
             'roles' => ['employee', 'spv'],
             'submenu' => [
-                ['label' => 'Training Schedule', 'href' => '/training/schedule', 'roles' => ['employee', 'spv']],
-                ['label' => 'Training Request', 'href' => '/training/request', 'roles' => ['spv']],
+                [
+                    'label' => 'Training Schedule',
+                    'href' => '/training/schedule',
+                    'roles' => ['employee', 'spv']
+                ],
+                [
+                    'label' => 'Training Request',
+                    'href' => '/training/request',
+                    'roles' => ['spv']
+                ],
             ],
-        ],
-        [
-            'id' => 'training',
-            'label' => 'Training',
-            'icon' => 'academic-cap',
-            'href' => '#',
-            'roles' => ['admin', 'instructor', 'leader'],
-            'submenu' => [
-                ['label' => 'Training Module', 'href' => '/training/module', 'roles' => ['admin', 'instructor']],
-                ['label' => 'Training Schedule', 'href' => '/training/schedule', 'roles' => ['admin', 'instructor']],
-                ['label' => 'Training Request', 'href' => '/training/request', 'roles' => ['admin', 'instructor', 'leader']],
-                ['label' => 'Training History', 'href' => '/history/training', 'roles' => ['tbc']],
-                ['label' => 'Data Trainer', 'href' => '/training/trainer', 'roles' => ['admin']],
-            ],
-        ],
-        [
-            'id' => 'k-learn',
-            'label' => 'K-Learn',
-            'icon' => 'folder-open',
-            'href' => '/courses/management',
-            'roles' => ['admin', 'instructor', 'leader'],
-        ],
-        [
-            'id' => 'survey-management',
-            'label' => 'Survey Management',
-            'icon' => 'document-text',
-            'href' => '#',
-            'roles' => ['admin', 'instructor'],
-            'submenu' => [
-                ['label' => 'Survey 1', 'href' => '/survey/1/management', 'roles' => ['admin', 'instructor']],
-                ['label' => 'Survey 2', 'href' => '/survey/2/management', 'roles' => ['admin', 'instructor']],
-                ['label' => 'Survey 3', 'href' => '/survey/3/management', 'roles' => ['admin', 'instructor']],
-            ],
-        ],
-        [
-            'id' => 'survey-template',
-            'label' => 'Survey Template',
-            'icon' => 'document-duplicate',
-            'href' => '/survey-template',
-            'roles' => ['admin', 'instructor'],
         ],
         [
             'id' => 'survey',
@@ -92,16 +68,115 @@ return [
             'href' => '#',
             'roles' => ['employee', 'spv'],
             'submenu' => [
-                ['label' => 'Survey 1', 'href' => '/survey/1', 'roles' => ['employee', 'spv']],
-                ['label' => 'Survey 3', 'href' => '/survey/3', 'roles' => ['spv']],
+                [
+                    'label' => 'Survey 1',
+                    'href' => '/survey/1',
+                    'roles' => ['employee', 'spv']
+                ],
+                [
+                    'label' => 'Survey 3',
+                    'href' => '/survey/3',
+                    'roles' => ['spv']
+                ],
+            ],
+        ],
+
+        // Admin, Instructor, Certificator, and Leader Menu Items
+        [
+            'id' => 'training',
+            'label' => 'Training',
+            'icon' => 'academic-cap',
+            'href' => '#',
+            'roles' => ['admin', 'instructor', 'certificator', 'leader'],
+            'submenu' => [
+                [
+                    'label' => 'Training Module',
+                    'href' => '/training/module',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Training Schedule',
+                    'href' => '/training/schedule',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Training Request',
+                    'href' => '/training/request',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Data Trainer',
+                    'href' => '/training/trainer',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
             ],
         ],
         [
-            'id' => 'development',
-            'label' => 'Development',
-            'icon' => 'trophy',
-            'href' => '/development',
-            'roles' => ['employee', 'admin', 'instructor'],
+            'id' => 'certification',
+            'label' => 'Certification',
+            'icon' => 'check-badge',
+            'href' => '#',
+            'roles' => ['certificator', 'admin', 'leader'],
+            'submenu' => [
+                [
+                    'label' => 'Certification Module',
+                    'href' => '/certification/module',
+                    'roles' => ['certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Certification Schedule',
+                    'href' => '/certification/schedule',
+                    'roles' => ['certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Certification Point',
+                    'href' => '/certification/point',
+                    'roles' => ['certificator', 'admin', 'leader']
+                ],
+                [
+                    'label' => 'Certification Approval',
+                    'href' => '/certification/approval',
+                    'roles' => ['leader']
+                ],
+            ],
+        ],
+        [
+            'id' => 'k-learn',
+            'label' => 'K-Learn',
+            'icon' => 'folder-open',
+            'href' => '/courses/management',
+            'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+        ],
+        [
+            'id' => 'survey-management',
+            'label' => 'Survey Management',
+            'icon' => 'document-text',
+            'href' => '#',
+            'roles' => ['instructor', 'certificator', 'admin'],
+            'submenu' => [
+                [
+                    'label' => 'Survey 1',
+                    'href' => '/survey/1/management',
+                    'roles' => ['instructor', 'certificator', 'admin']
+                ],
+                [
+                    'label' => 'Survey 2',
+                    'href' => '/survey/2/management',
+                    'roles' => ['instructor', 'certificator', 'admin']
+                ],
+                [
+                    'label' => 'Survey 3',
+                    'href' => '/survey/3/management',
+                    'roles' => ['instructor', 'certificator', 'admin']
+                ],
+            ],
+        ],
+        [
+            'id' => 'survey-template',
+            'label' => 'Survey Template',
+            'icon' => 'document-duplicate',
+            'href' => '/survey-template',
+            'roles' => ['instructor', 'certificator', 'admin'],
         ],
     ],
     // Sidebar behavior options

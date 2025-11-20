@@ -10,7 +10,7 @@
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Pretest</h1>
+            <h1 class="text-2xl font-bold text-gray-900 tracking-tight">Pre Test</h1>
         </div>
     </div>
 
@@ -32,9 +32,9 @@
             <div class="flex-1">
                 <h2 class="text-base font-semibold text-gray-900">Sebelum Memulai</h2>
                 <p class="text-sm text-gray-600 mt-1 leading-relaxed">
-                    Pretest ini membantu kami memahami titik awal pengetahuan Anda sehingga pembelajaran bisa lebih
+                    Pre Test ini membantu kami memahami titik awal pengetahuan Anda sehingga pembelajaran bisa lebih
                     relevan.
-                    Jawablah sejujur mungkin. Hasil pretest tidak menurunkan progres Anda.
+                    Jawablah sejujur mungkin. Hasil Pre Test tidak menurunkan progres Anda.
                 </p>
                 <ul class="mt-3 text-xs text-gray-500 grid gap-1 grid-cols-1">
                     <li class="inline-flex items-center gap-1">
@@ -47,7 +47,7 @@
         </div>
     </div>
 
-    {{-- Form Pretest --}}
+    {{-- Form Pre Test --}}
     <form x-ref="formEl" @submit.prevent="submit" class="space-y-4 md:space-y-5"
         x-bind:aria-busy="submitting ? 'true' : 'false'">
         @forelse ($questions as $index => $q)

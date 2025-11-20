@@ -1,6 +1,5 @@
 <div>
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
-                grid-cols-1 lg:grid-cols-2 items-center">
+    <div class="w-full flex gap-5 mb-5 lg:mb-9 items-center">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
             Survey Template
         </h1>
@@ -35,11 +34,14 @@
                 class="card bg-base-100 border border-primary/20 shadow h-44 transition duration-200 hover:shadow-md hover:border-primary/60 hover:bg-primary/5 hover:-translate-y-1 cursor-pointer block">
                 <div class="card-body p-4 md:p-5 flex flex-col h-full">
                     <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <h3 class="text-sm sm:text-base md:text-lg font-semibold text-base-content/90 leading-snug">
+                        <div class="min-w-0 flex-1">
+                            <h3 class="text-sm sm:text-base md:text-lg font-semibold text-base-content/90 leading-snug truncate"
+                                title="{{ $surveyTemplate->title }}">
                                 {{ $surveyTemplate->title }}
                             </h3>
-                            <p class="text-xs md:text-sm text-base-content/60 mt-1">
+                            <p class="text-[11px] md:text-xs text-base-content/60 mt-1 break-words"
+                                style="display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;"
+                                title="{{ $surveyTemplate->description }}">
                                 {{ $surveyTemplate->description }}
                             </p>
                         </div>

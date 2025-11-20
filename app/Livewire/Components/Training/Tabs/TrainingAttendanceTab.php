@@ -48,10 +48,9 @@ class TrainingAttendanceTab extends Component
             $this->loading = false;
             return;
         }
-        // Determine read-only mode: if user is instructor and training already done
-        $user = Auth::user();
-        $isInstructor = $user && (method_exists($user, 'hasRole') ? $user->hasRole('instructor') : (strtolower($user->role ?? '') === 'instructor'));
-        $this->readOnly = $isInstructor && strtolower($this->training->status ?? '') === 'done';
+        // Determine read-only mode: training is closed (done)
+        // Everyone (including admin) cannot edit attendance for closed training
+        $this->readOnly = strtolower($this->training->status ?? '') === 'done';
         $this->sessions = $this->training->sessions->sortBy('day_number')->values()->toArray();
 
         // derive employees from all attendance records across sessions
