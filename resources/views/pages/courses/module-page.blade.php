@@ -122,7 +122,19 @@
                             </div>
                             <div class="space-y-4">
                                 @foreach ($readingResources as $doc)
-                                    @php $url = rsrc_url($doc->url ?? ''); @endphp
+                                    @php
+                                        $url = rsrc_url($doc->url ?? '');
+                                        // Force same-origin relative path for PDF to avoid CORS issues when APP_URL differs
+                                        if ($url) {
+                                            $parts = @parse_url($url) ?: [];
+                                            // If host differs from current request host, use path component only
+                                            if (($parts['host'] ?? '') && ($parts['host'] ?? '') !== request()->getHost()) {
+                                                // Reconstruct path with query if present
+                                                $rel = ($parts['path'] ?? '') . (isset($parts['query']) ? ('?' . $parts['query']) : '');
+                                                if ($rel) $url = $rel; // keep relative path
+                                            }
+                                        }
+                                    @endphp
                                     <article class="px-4 pb-4 rounded-lg text-sm text-gray-800">
                                         @if ($url)
                                             @if (Str::endsWith(strtolower($url), ['.pdf']))
@@ -166,6 +178,7 @@
     </div>
 
     {{-- Quiz Modal --}}
+    <div x-data="{ quizOpen: @entangle('showQuizModal') }">
     <div x-cloak x-show="quizOpen" x-transition.opacity class="fixed inset-0 z-40 bg-black/40"></div>
     <div x-cloak x-show="quizOpen" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="w-full max-w-3xl bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden"
@@ -317,6 +330,7 @@
                 @endif
             </div>
         </div>
+    </div>
     </div>
 </div>
 
