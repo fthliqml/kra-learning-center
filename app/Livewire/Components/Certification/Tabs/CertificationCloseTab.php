@@ -200,7 +200,8 @@ class CertificationCloseTab extends Component
             ['key' => 'employee_name', 'label' => 'Employee Name', 'class' => 'min-w-[150px]'],
             ['key' => 'theory_score', 'label' => 'Theory Score', 'class' => '!text-center min-w-[120px]'],
             ['key' => 'practical_score', 'label' => 'Practical Score', 'class' => '!text-center min-w-[120px]'],
-            ['key' => 'average_score', 'label' => 'Average', 'class' => '!text-center min-w-[100px]'],
+            ['key' => 'status', 'label' => 'Status', 'class' => '!text-center min-w-[110px]'],
+            ['key' => 'earned_point', 'label' => 'Point', 'class' => '!text-center min-w-[90px]'],
             ['key' => 'note', 'label' => 'Note', 'class' => 'min-w-[160px]'],
         ];
     }
@@ -208,23 +209,33 @@ class CertificationCloseTab extends Component
     private function filteredRows()
     {
         $search = trim($this->search);
+        $theoryPassingScore = $this->certification?->certificationModule->theory_passing_score ?? 0;
+        $practicalPassingScore = $this->certification?->certificationModule->practical_passing_score ?? 0;
+        $modulePoints = $this->certification?->certificationModule->points_per_module ?? 0;
         $out = [];
         foreach ($this->rows as $index => $r) {
             $vals = $this->tempScores[$r['participant_id']] ?? ['theory' => null, 'practical' => null, 'note' => null];
             $theory = $vals['theory'];
             $practical = $vals['practical'];
-            $avg = null;
-            if ($theory !== null && $theory !== '' && $practical !== null && $practical !== '') {
-                $avg = ((float)$theory + (float)$practical) / 2;
+            // Determine participant status ONLY from persisted scores (current temp mirrors loaded scores until saved)
+            $hasTheory = $theory !== null && $theory !== '';
+            $hasPractical = $practical !== null && $practical !== '';
+            if (!$hasTheory || !$hasPractical) {
+                $status = 'pending';
+            } else {
+                $theoryPassed = (float)$theory >= $theoryPassingScore;
+                $practicalPassed = (float)$practical >= $practicalPassingScore;
+                $status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
             }
-            // Status calculation removed per request.
+            $earnedPoint = $status === 'passed' ? $modulePoints : 0;
             $row = [
                 'id' => $r['participant_id'],
                 'no' => $index + 1,
                 'employee_name' => $r['name'],
                 'theory_score' => $theory,
                 'practical_score' => $practical,
-                'average_score' => $avg !== null ? round($avg, 1) : null,
+                'status' => $status,
+                'earned_point' => $earnedPoint,
                 'note' => $vals['note'] ?? null,
                 'participant_id' => $r['participant_id'],
                 'cert_done' => $this->isClosed,

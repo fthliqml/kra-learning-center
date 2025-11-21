@@ -42,18 +42,24 @@
                         @endif
                     </div>
                 @endscope
-                @scope('cell_average_score', $row)
-                    @php $get = fn($k,$d=null) => is_array($row) ? ($row[$k] ?? $d) : (is_object($row) ? ($row->{$k} ?? $d) : $d); @endphp
-                    <div class="text-center font-medium" x-data="{ get avg(){ let t=parseFloat(tempScores[{{ $get('participant_id') }}]?.theory)||0; let p=parseFloat(tempScores[{{ $get('participant_id') }}]?.practical)||0; if(!t||!p) return '-'; return Math.round(((t+p)/2)*10)/10; } }" x-text="avg"></div>
-                @endscope
                 @scope('cell_status', $row)
                     @php $get = fn($k,$d=null) => is_array($row) ? ($row[$k] ?? $d) : (is_object($row) ? ($row->{$k} ?? $d) : $d); @endphp
-                    <div class="flex justify-center" x-data="{ get status(){ if({{ $get('cert_done') ? 'true':'false' }}) return '{{ $get('status', 'in_progress') }}'; let t=parseFloat(tempScores[{{ $get('participant_id') }}]?.theory)||0; let p=parseFloat(tempScores[{{ $get('participant_id') }}]?.practical)||0; if(!t||!p) return 'pending'; let avg=(t+p)/2; return avg>=60?'passed':'failed'; } }">
-                        <span x-show="status==='passed'" class="badge badge-success badge-sm">Passed</span>
-                        <span x-show="status==='failed'" class="badge badge-error badge-sm">Failed</span>
-                        <span x-show="status==='in_progress'" class="badge badge-warning badge-sm">In Progress</span>
-                        <span x-show="status==='pending'" class="badge badge-neutral badge-sm">Pending</span>
+                    @php $status = $get('status', 'pending'); @endphp
+                    <div class="flex justify-center">
+                        @if($status==='passed')
+                            <span class="badge badge-success badge-sm">Passed</span>
+                        @elseif($status==='failed')
+                            <span class="badge badge-error badge-sm">Failed</span>
+                        @elseif($status==='in_progress')
+                            <span class="badge badge-warning badge-sm">In Progress</span>
+                        @else
+                            <span class="badge badge-neutral badge-sm">Pending</span>
+                        @endif
                     </div>
+                @endscope
+                @scope('cell_earned_point', $row)
+                    @php $get = fn($k,$d=null) => is_array($row) ? ($row[$k] ?? $d) : (is_object($row) ? ($row->{$k} ?? $d) : $d); @endphp
+                    <div class="text-center font-medium">{{ $get('earned_point', 0) }}</div>
                 @endscope
                 @scope('cell_note', $row)
                     @php $get = fn($k,$d=null) => is_array($row) ? ($row[$k] ?? $d) : (is_object($row) ? ($row->{$k} ?? $d) : $d); @endphp
