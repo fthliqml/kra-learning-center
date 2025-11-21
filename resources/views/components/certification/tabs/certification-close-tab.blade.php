@@ -1,9 +1,29 @@
 <div class="space-y-4" x-data="{ tempScores: @entangle('tempScores') }">
     @if ($certification)
-        @php $isDone = $isClosed; @endphp
+        @php
+            $isDone = $isClosed;
+            $theoryMin = $certification->certificationModule->theory_passing_score ?? null;
+            $practicalMin = $certification->certificationModule->practical_passing_score ?? null;
+            $pointsPerModule = $certification->certificationModule->points_per_module ?? null;
+        @endphp
         @if ($isDone)
             <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
                 <p class="text-sm text-green-700"><strong>Certification Closed:</strong> This certification has been completed and marked as done.</p>
+            </div>
+        @elseif($theoryMin !== null || $practicalMin !== null)
+            <div class="p-3 md:p-4 rounded-lg border border-blue-200 bg-blue-50 text-xs md:text-sm text-blue-700 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                <div class="font-medium">Minimum Passing Scores:</div>
+                <div class="flex flex-wrap items-center gap-3">
+                    @if($theoryMin !== null)
+                        <span class="inline-flex items-center gap-1"><span class="font-semibold">Theory</span><span>&ge; {{ rtrim(rtrim(number_format((float)$theoryMin,2,'.',''), '0'), '.') }}</span></span>
+                    @endif
+                    @if($practicalMin !== null)
+                        <span class="inline-flex items-center gap-1"><span class="font-semibold">Practical</span><span>&ge; {{ rtrim(rtrim(number_format((float)$practicalMin,2,'.',''), '0'), '.') }}</span></span>
+                    @endif
+                    @if($pointsPerModule !== null)
+                        <span class="inline-flex items-center gap-1"><span class="font-semibold">Points Awarded if Passed</span><span>{{ $pointsPerModule }}</span></span>
+                    @endif
+                </div>
             </div>
         @endif
 
@@ -28,7 +48,7 @@
                         @if($get('cert_done'))
                             <div tabindex="-1" class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">{{ $get('theory_score', '-') }}</div>
                         @else
-                            <input type="number" min="0" max="100" step="0.1" wire:model.live.debounce.300ms="tempScores.{{ $get('participant_id') }}.theory" class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="0-100">
+                            <input type="number" min="0" max="100" step="0.1" wire:model.debounce.300ms="tempScores.{{ $get('participant_id') }}.theory" wire:input="$refresh" class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="0-100">
                         @endif
                     </div>
                 @endscope
@@ -38,7 +58,7 @@
                         @if($get('cert_done'))
                             <div tabindex="-1" class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">{{ $get('practical_score', '-') }}</div>
                         @else
-                            <input type="number" min="0" max="100" step="0.1" wire:model.live.debounce.300ms="tempScores.{{ $get('participant_id') }}.practical" class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="0-100">
+                            <input type="number" min="0" max="100" step="0.1" wire:model.debounce.300ms="tempScores.{{ $get('participant_id') }}.practical" wire:input="$refresh" class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary" placeholder="0-100">
                         @endif
                     </div>
                 @endscope

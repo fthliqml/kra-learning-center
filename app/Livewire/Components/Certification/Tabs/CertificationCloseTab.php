@@ -217,14 +217,17 @@ class CertificationCloseTab extends Component
             $vals = $this->tempScores[$r['participant_id']] ?? ['theory' => null, 'practical' => null, 'note' => null];
             $theory = $vals['theory'];
             $practical = $vals['practical'];
-            // Determine participant status ONLY from persisted scores (current temp mirrors loaded scores until saved)
-            $hasTheory = $theory !== null && $theory !== '';
-            $hasPractical = $practical !== null && $practical !== '';
+            // Determine required session types (some certifications may have only theory or only practical)
+            $requiresTheory = !empty($r['theory_session_id']);
+            $requiresPractical = !empty($r['practical_session_id']);
+            // Has score only if session required OR treat as automatically satisfied when not required
+            $hasTheory = $requiresTheory ? ($theory !== null && $theory !== '') : true;
+            $hasPractical = $requiresPractical ? ($practical !== null && $practical !== '') : true;
             if (!$hasTheory || !$hasPractical) {
                 $status = 'pending';
             } else {
-                $theoryPassed = (float)$theory >= $theoryPassingScore;
-                $practicalPassed = (float)$practical >= $practicalPassingScore;
+                $theoryPassed = $requiresTheory ? ((float)$theory >= $theoryPassingScore) : true;
+                $practicalPassed = $requiresPractical ? ((float)$practical >= $practicalPassingScore) : true;
                 $status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
             }
             $earnedPoint = $status === 'passed' ? $modulePoints : 0;
