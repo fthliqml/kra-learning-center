@@ -21,6 +21,7 @@ class ScheduleView extends Component
         'certification-deleted' => 'refresh',
         'certification-created' => 'refresh',
         'certification-updated' => 'refresh',
+        'cert-add-for-date' => 'addCertificationForDate',
     ];
 
     public function mount(): void
@@ -179,6 +180,6 @@ class ScheduleView extends Component
         }
         // Basic guard: ensure date looks like YYYY-MM-DD
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $isoDate)) return;
-        $this->dispatch('open-certification-form-date', date: $isoDate);
+        $this->dispatch('open-certification-form-date', ['date' => $isoDate]);
     }
 }

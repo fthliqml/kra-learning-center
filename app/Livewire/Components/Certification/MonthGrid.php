@@ -52,6 +52,15 @@ class MonthGrid extends Component
         return view('components.skeletons.full-calendar');
     }
 
+    public function addForDate(string $isoDate): void
+    {
+        $user = Auth::user();
+        $isAdmin = $user && strtolower($user->role ?? '') === 'admin';
+        if (!$isAdmin) return;
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $isoDate)) return;
+        $this->dispatch('open-certification-form-date', ['date' => $isoDate]);
+    }
+
     public function render()
     {
         return view('components.certification.month-grid');

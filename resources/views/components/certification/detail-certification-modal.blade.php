@@ -19,6 +19,15 @@
                             <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
                         @endif
                     </button>
+                    @role('admin')
+                        <button type="button" wire:click="setActiveTab('close-certification')"
+                            class="pb-3 relative cursor-pointer focus:outline-none transition {{ $activeTab === 'close-certification' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
+                            Close Certification
+                            @if ($activeTab === 'close-certification')
+                                <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
+                            @endif
+                        </button>
+                    @endrole
                 </div>
                 <div class="flex items-center gap-3 pb-1">
                     @php
@@ -119,14 +128,30 @@
             @if ($activeTab === 'attendance')
                 <livewire:components.certification.tabs.certification-attendance-tab :session-id="$selected['session_id']" :key="'cert-att-'.$selected['session_id']" />
             @endif
+            @if ($activeTab === 'close-certification')
+                <livewire:components.certification.tabs.certification-close-tab :certification-id="$selected['certification_id']" :key="'cert-close-'.$selected['certification_id']" />
+            @endif
 
             <div class="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-6">
-                <x-button wire:click="closeModal" class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
+                <x-button wire:click="closeModal" class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">
+                    Close
+                </x-button>
                 @role('admin')
                     <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
                         <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto" spinner="requestDeleteConfirm">
                             <x-icon name="o-trash" /><span>Delete</span>
                         </x-button>
+                        @if ($activeTab === 'close-certification')
+                            <x-button wire:click="triggerSaveDraft" spinner="triggerSaveDraft" class="btn btn-outline btn-primary">
+                                <x-icon name="o-document-text" />
+                                <span>Save Draft</span>
+                            </x-button>
+                            <x-button wire:click="triggerCloseCertification" spinner="triggerCloseCertification" class="btn btn-primary">
+                                <x-icon name="o-check-circle" />
+                                <span>Close Certification</span>
+                            </x-button>
+                        @endif
+
                     </div>
                 @endrole
             </div>

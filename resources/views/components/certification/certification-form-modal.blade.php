@@ -8,6 +8,16 @@
     <!-- Modal -->
     <x-modal wire:model="showModal" :title="$isEdit ? 'Edit Certification' : 'New Certification'" :subtitle="$isEdit ? 'Modify existing certification and sessions' : 'Create certification and sessions'" box-class="backdrop-blur max-w-3xl">
         <div class="space-y-6">
+            @php $theoryDate = $theory['date'] ?? null; $practicalDate = $practical['date'] ?? null; @endphp
+            @if (empty($theoryDate) || empty($practicalDate))
+                <div class="p-3 border border-amber-200 bg-amber-50 rounded-md text-amber-800 text-sm flex items-start gap-2">
+                    <x-icon name="o-exclamation-triangle" class="w-4 h-4 mt-0.5" />
+                    <div>
+                        <span class="font-semibold">Session config incomplete.</span>
+                        <div class="text-amber-700">Please set both Theory and Practical dates in the Session Config tab before saving.</div>
+                    </div>
+                </div>
+            @endif
             <x-tabs wire:model="activeTab">
                 <x-tab name="config" label="Certification Config" icon="o-academic-cap">
                     <div class="space-y-4">

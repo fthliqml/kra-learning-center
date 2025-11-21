@@ -64,6 +64,18 @@ class DetailCertificationModal extends Component
         $this->modal = false;
     }
 
+    public function triggerSaveDraft(): void
+    {
+        // Forward action to Close tab component
+        $this->dispatch('cert-close-save-draft');
+    }
+
+    public function triggerCloseCertification(): void
+    {
+        // Forward action to Close tab component
+        $this->dispatch('cert-close-close');
+    }
+
     private function resetState(): void
     {
         $this->modal = false;
@@ -115,7 +127,7 @@ class DetailCertificationModal extends Component
 
     public function setActiveTab(string $tab): void
     {
-        if (!in_array($tab, ['information', 'attendance'])) return;
+        if (!in_array($tab, ['information', 'attendance', 'close-certification'])) return;
         $this->activeTab = $tab;
     }
 

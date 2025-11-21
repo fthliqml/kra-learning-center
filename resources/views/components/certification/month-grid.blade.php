@@ -9,11 +9,11 @@
         @foreach ($days as $day)
             @php $isoDate = $day['date']->format('Y-m-d'); @endphp
             @role('admin')
-                <div wire:click="$emitTo('components.certification.schedule-view','addCertificationForDate','{{ $isoDate }}')"
+                <div wire:click="addForDate('{{ $isoDate }}')"
                     class="border-b border-r border-gray-200 relative flex flex-col h-20 sm:h-56 bg-white hover:bg-gray-100 transition cursor-pointer group">
                     <div class="flex justify-between items-start p-1 sm:p-2">
                         <span class="font-medium text-[10px] sm:text-sm w-5 h-5 sm:w-7 sm:h-7 flex items-center justify-center rounded-full {{ $day['isToday'] ? 'bg-primary text-white' : ($day['isCurrentMonth'] ? 'text-gray-800' : 'text-gray-400') }}">{{ $day['date']->format('j') }}</span>
-                        <button class="opacity-0 group-hover:opacity-100 transition text-gray-400 hover:text-primary" title="Add certification" wire:click.stop="$emitTo('components.certification.schedule-view','addCertificationForDate','{{ $isoDate }}')">
+                        <button class="opacity-0 group-hover:opacity-100 transition text-gray-400 hover:text-primary" title="Add certification" wire:click.stop="addForDate('{{ $isoDate }}')">
                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                             </svg>
