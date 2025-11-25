@@ -17,6 +17,7 @@ class DetailCertificationModal extends Component
     public array $selected = [];
     public array $sessionOptions = [];
     public string $activeTab = 'information';
+    public bool $isClosed = false;
 
     protected $listeners = [
         'open-detail-certification-modal' => 'open',
@@ -84,6 +85,7 @@ class DetailCertificationModal extends Component
         $this->selected = [];
         $this->sessionOptions = [];
         $this->activeTab = 'information';
+        $this->isClosed = false;
     }
 
     private function loadSessionData(int $id): void
@@ -95,6 +97,9 @@ class DetailCertificationModal extends Component
 
         $cert = $session->certification;
         $module = $cert?->certificationModule;
+
+        // Check if certification is closed
+        $this->isClosed = in_array(strtolower($cert?->status ?? ''), ['closed', 'done', 'completed']);
 
         $this->selected = [
             'session_id' => $session->id,

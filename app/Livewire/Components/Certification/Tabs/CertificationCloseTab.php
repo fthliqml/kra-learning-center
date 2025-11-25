@@ -5,24 +5,23 @@ namespace App\Livewire\Components\Certification\Tabs;
 use App\Models\Certification;
 use App\Models\CertificationParticipant;
 use App\Models\CertificationScore;
-use App\Models\CertificationSession;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Component;
 use Mary\Traits\Toast;
-use Carbon\Carbon;
 
 class CertificationCloseTab extends Component
 {
     use Toast;
 
     public int $certificationId;
-    public $certification; // Certification model instance
-    public array $sessions = []; // simplified session info for display
-    public array $rows = []; // participant base rows
+    public $certification;
+    public array $sessions = [];
+    public array $participantsData = []; // Renamed from $rows to avoid conflict
     public bool $isClosed = false;
     public string $search = '';
-    public bool $saving = false;
-    public array $tempScores = []; // temp input scores keyed by participant_id
+    public array $tempScores = [];
 
     protected $listeners = [
         'cert-close-save-draft' => 'saveDraft',
@@ -37,12 +36,12 @@ class CertificationCloseTab extends Component
 
     public function loadData(): void
     {
-        $this->certification = Certification::with(['certificationModule', 'sessions', 'participants'])->find($this->certificationId);
+        $this->certification = Certification::with(['certificationModule', 'participants'])->find($this->certificationId);
         if (!$this->certification) {
             $this->error('Certification not found.', position: 'toast-top toast-center');
             return;
         }
-        $this->isClosed = strtolower($this->certification->status ?? '') === 'done';
+        $this->isClosed = in_array(strtolower($this->certification->status ?? ''), ['done', 'completed']);
 
         $sessions = $this->certification->sessions->sortBy('date')->values();
         $this->sessions = $sessions->map(function ($s) {
@@ -66,12 +65,12 @@ class CertificationCloseTab extends Component
                 ->when($practicalId, fn($qq) => $qq->orWhere('session_id', $practicalId));
         }])->where('certification_id', $this->certificationId)->get();
 
-        $this->rows = [];
+        $this->participantsData = [];
         $this->tempScores = [];
         foreach ($participants as $p) {
             $theoryScore = $p->scores->first(fn($sc) => $sc->session_id === $theoryId);
             $practicalScore = $p->scores->first(fn($sc) => $sc->session_id === $practicalId);
-            $this->rows[] = [
+            $this->participantsData[] = [
                 'participant_id' => $p->id,
                 'employee_id' => $p->employee_id,
                 'name' => $p->employee?->name ?? 'Unknown',
@@ -80,6 +79,7 @@ class CertificationCloseTab extends Component
                 'theory' => $theoryScore?->score,
                 'practical' => $practicalScore?->score,
                 'note' => null,
+                // Don't include status here - will be calculated in filteredRows()
             ];
             $this->tempScores[$p->id] = [
                 'theory' => $theoryScore?->score,
@@ -87,11 +87,6 @@ class CertificationCloseTab extends Component
                 'note' => null,
             ];
         }
-    }
-
-    public function updatedSearch(): void
-    {
-        // Could implement filtering; for now trigger render
     }
 
     private function validateTemp(): void
@@ -116,39 +111,118 @@ class CertificationCloseTab extends Component
     public function saveDraft(): void
     {
         if ($this->isClosed) return;
+
         $this->validateTemp();
+
         try {
             DB::transaction(function () {
-                foreach ($this->rows as $row) {
-                    $pid = $row['participant_id'];
-                    $vals = $this->tempScores[$pid] ?? [];
-                    if ($row['theory_session_id'] && ($vals['theory'] !== null && $vals['theory'] !== '')) {
-                        CertificationScore::updateOrCreate([
-                            'participant_id' => $pid,
-                            'session_id' => $row['theory_session_id'],
-                        ], [
-                            'score' => (float)$vals['theory'],
-                            'status' => 'passed',
-                            'recorded_at' => Carbon::now(),
-                        ]);
-                    }
-                    if ($row['practical_session_id'] && ($vals['practical'] !== null && $vals['practical'] !== '')) {
-                        CertificationScore::updateOrCreate([
-                            'participant_id' => $pid,
-                            'session_id' => $row['practical_session_id'],
-                        ], [
-                            'score' => (float)$vals['practical'],
-                            'status' => 'passed',
-                            'recorded_at' => Carbon::now(),
-                        ]);
-                    }
+                $module = $this->certification->certificationModule;
+                $theoryPassingScore = $module->theory_passing_score ?? 0;
+                $practicalPassingScore = $module->practical_passing_score ?? 0;
+                $pointsPerModule = $module->points_per_module ?? 0;
+
+                foreach ($this->participantsData as $row) {
+                    $participantId = $row['participant_id'];
+                    $scores = $this->tempScores[$participantId] ?? [];
+
+                    $theoryScore = $this->getNumericScore($scores['theory'] ?? null);
+                    $practicalScore = $this->getNumericScore($scores['practical'] ?? null);
+
+                    $theoryStatus = $this->saveSessionScore(
+                        $participantId,
+                        $row['theory_session_id'],
+                        $theoryScore,
+                        $theoryPassingScore
+                    );
+
+                    $practicalStatus = $this->saveSessionScore(
+                        $participantId,
+                        $row['practical_session_id'],
+                        $practicalScore,
+                        $practicalPassingScore
+                    );
+
+                    $this->updateParticipantStatus(
+                        $participantId,
+                        $theoryStatus,
+                        $practicalStatus,
+                        $row['theory_session_id'],
+                        $row['practical_session_id'],
+                        $pointsPerModule
+                    );
                 }
             });
+
             $this->success('Draft saved.', position: 'toast-top toast-center');
             $this->loadData();
         } catch (\Throwable $e) {
+            Log::error('Failed to save draft: ' . $e->getMessage());
             $this->error('Failed to save draft.', position: 'toast-top toast-center');
         }
+    }
+
+    private function getNumericScore($value): ?float
+    {
+        if ($value === null || $value === '') return null;
+        return is_numeric($value) ? (float)$value : null;
+    }
+
+    private function saveSessionScore(int $participantId, ?int $sessionId, ?float $score, float $passingScore): ?string
+    {
+        if (!$sessionId || $score === null) return null;
+
+        $status = $score >= $passingScore ? 'passed' : 'failed';
+
+        CertificationScore::updateOrCreate(
+            [
+                'participant_id' => $participantId,
+                'session_id' => $sessionId,
+            ],
+            [
+                'score' => $score,
+                'status' => $status,
+                'recorded_at' => Carbon::now(),
+            ]
+        );
+
+        return $status;
+    }
+
+    private function updateParticipantStatus(
+        int $participantId,
+        ?string $theoryStatus,
+        ?string $practicalStatus,
+        ?int $theorySessionId,
+        ?int $practicalSessionId,
+        int $pointsPerModule
+    ): void {
+        $finalStatus = 'pending';
+        $earnedPoints = 0;
+
+        // Both sessions exist
+        if ($theorySessionId && $practicalSessionId) {
+            if ($theoryStatus === 'passed' && $practicalStatus === 'passed') {
+                $finalStatus = 'passed';
+                $earnedPoints = $pointsPerModule;
+            } elseif ($theoryStatus === 'failed' || $practicalStatus === 'failed') {
+                $finalStatus = 'failed';
+            }
+        }
+        // Only theory session
+        elseif ($theorySessionId && !$practicalSessionId && $theoryStatus) {
+            $finalStatus = $theoryStatus;
+            $earnedPoints = $theoryStatus === 'passed' ? $pointsPerModule : 0;
+        }
+        // Only practical session
+        elseif (!$theorySessionId && $practicalSessionId && $practicalStatus) {
+            $finalStatus = $practicalStatus;
+            $earnedPoints = $practicalStatus === 'passed' ? $pointsPerModule : 0;
+        }
+
+        CertificationParticipant::where('id', $participantId)->update([
+            'final_status' => $finalStatus,
+            'earned_points' => $earnedPoints,
+        ]);
     }
 
     public function closeCertification(): void
@@ -157,36 +231,79 @@ class CertificationCloseTab extends Component
             $this->error('Certification not found.', position: 'toast-top toast-center');
             return;
         }
+
         if ($this->isClosed) {
             $this->error('Certification already closed.', position: 'toast-top toast-center');
             return;
         }
-        // Ensure all participants have both scores filled
-        $incomplete = collect($this->tempScores)->filter(fn($v) => ($v['theory'] === null || $v['theory'] === '') || ($v['practical'] === null || $v['practical'] === ''));
-        if ($incomplete->isNotEmpty()) {
-            $this->error('All participants must have theory and practical scores before closing.', position: 'toast-top toast-center');
+
+        $incomplete = $this->validateAllScoresFilled();
+
+        if (!empty($incomplete)) {
+            $message = $this->formatIncompleteMessage($incomplete);
+            $this->error($message, position: 'toast-top toast-center');
             return;
         }
-        // Persist any unsaved scores first
+
         $this->saveDraft();
+
         try {
-            $this->certification->status = 'done';
-            $this->certification->approved_at = Carbon::now();
-            $this->certification->save();
+            $this->certification->update([
+                'status' => 'completed',
+                'approved_at' => Carbon::now(),
+            ]);
+
             $this->isClosed = true;
             $this->success('Certification closed successfully.', position: 'toast-top toast-center');
             $this->dispatch('certification-updated', id: $this->certification->id);
             $this->dispatch('close-modal');
         } catch (\Throwable $e) {
+            Log::error('Failed to close certification: ' . $e->getMessage());
             $this->error('Failed to close certification.', position: 'toast-top toast-center');
         }
+    }
+
+    private function validateAllScoresFilled(): array
+    {
+        $incomplete = [];
+
+        foreach ($this->rows as $row) {
+            $scores = $this->tempScores[$row['participant_id']] ?? [];
+            $hasTheorySession = !empty($row['theory_session_id']);
+            $hasPracticalSession = !empty($row['practical_session_id']);
+
+            if ($hasTheorySession && !is_numeric($scores['theory'] ?? null)) {
+                $incomplete[] = $row['name'] . ' (theory)';
+            }
+
+            if ($hasPracticalSession && !is_numeric($scores['practical'] ?? null)) {
+                $incomplete[] = $row['name'] . ' (practical)';
+            }
+        }
+
+        return $incomplete;
+    }
+
+    private function formatIncompleteMessage(array $incomplete): string
+    {
+        $names = implode(', ', array_slice($incomplete, 0, 3));
+
+        if (count($incomplete) > 3) {
+            $names .= ' and ' . (count($incomplete) - 3) . ' more';
+        }
+
+        return "Missing scores for: {$names}";
+    }
+    public function getRowsProperty()
+    {
+        return $this->filteredRows();
     }
 
     public function render()
     {
         return view('components.certification.tabs.certification-close-tab', [
             'sessions' => $this->sessions,
-            'rows' => $this->filteredRows(),
+            'rows' => $this->rows, // This will call getRowsProperty()
             'headers' => $this->headers(),
             'isClosed' => $this->isClosed,
             'certification' => $this->certification,
@@ -209,45 +326,78 @@ class CertificationCloseTab extends Component
     private function filteredRows()
     {
         $search = trim($this->search);
-        $theoryPassingScore = $this->certification?->certificationModule->theory_passing_score ?? 0;
-        $practicalPassingScore = $this->certification?->certificationModule->practical_passing_score ?? 0;
-        $modulePoints = $this->certification?->certificationModule->points_per_module ?? 0;
-        $out = [];
-        foreach ($this->rows as $index => $r) {
-            $vals = $this->tempScores[$r['participant_id']] ?? ['theory' => null, 'practical' => null, 'note' => null];
-            $theory = $vals['theory'];
-            $practical = $vals['practical'];
-            // Determine required session types (some certifications may have only theory or only practical)
-            $requiresTheory = !empty($r['theory_session_id']);
-            $requiresPractical = !empty($r['practical_session_id']);
-            // Has score only if session required OR treat as automatically satisfied when not required
-            $hasTheory = $requiresTheory ? ($theory !== null && $theory !== '') : true;
-            $hasPractical = $requiresPractical ? ($practical !== null && $practical !== '') : true;
-            if (!$hasTheory || !$hasPractical) {
-                $status = 'pending';
-            } else {
-                $theoryPassed = $requiresTheory ? ((float)$theory >= $theoryPassingScore) : true;
-                $practicalPassed = $requiresPractical ? ((float)$practical >= $practicalPassingScore) : true;
-                $status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
-            }
+        $module = $this->certification?->certificationModule;
+        $theoryPassingScore = $module->theory_passing_score ?? 0;
+        $practicalPassingScore = $module->practical_passing_score ?? 0;
+        $modulePoints = $module->points_per_module ?? 0;
+
+        $filtered = [];
+
+        foreach ($this->participantsData as $index => $participant) {
+            $scores = $this->tempScores[$participant['participant_id']] ?? [];
+            $theoryScore = $scores['theory'] ?? null;
+            $practicalScore = $scores['practical'] ?? null;
+
+            $hasTheorySession = !empty($participant['theory_session_id']);
+            $hasPracticalSession = !empty($participant['practical_session_id']);
+
+            $status = $this->calculateStatus(
+                $theoryScore,
+                $practicalScore,
+                $hasTheorySession,
+                $hasPracticalSession,
+                $theoryPassingScore,
+                $practicalPassingScore
+            );
+
             $earnedPoint = $status === 'passed' ? $modulePoints : 0;
+
+            // Create clean row data - don't include original participant data to avoid merge issues
             $row = [
-                'id' => $r['participant_id'],
+                'id' => $participant['participant_id'],
                 'no' => $index + 1,
-                'employee_name' => $r['name'],
-                'theory_score' => $theory,
-                'practical_score' => $practical,
-                'status' => $status,
+                'employee_name' => $participant['name'],
+                'theory_score' => $theoryScore,
+                'practical_score' => $practicalScore,
+                'status' => $status, // This is the calculated status
                 'earned_point' => $earnedPoint,
-                'note' => $vals['note'] ?? null,
-                'participant_id' => $r['participant_id'],
+                'note' => $scores['note'] ?? null,
+                'participant_id' => $participant['participant_id'],
                 'cert_done' => $this->isClosed,
+                // Don't include these to avoid confusion:
+                // 'theory_session_id', 'practical_session_id', 'final_status', 'earned_points'
             ];
+
             if ($search && stripos($row['employee_name'], $search) === false) {
                 continue;
             }
-            $out[] = $row; // use associative array for blade compatibility
+
+            $filtered[] = $row;
         }
-        return collect($out);
+
+        return collect($filtered);
+    }
+
+    private function calculateStatus(
+        $theoryScore,
+        $practicalScore,
+        bool $hasTheorySession,
+        bool $hasPracticalSession,
+        float $theoryPassingScore,
+        float $practicalPassingScore
+    ): string {
+        $hasTheoryScore = $hasTheorySession ? is_numeric($theoryScore) : true;
+        $hasPracticalScore = $hasPracticalSession ? is_numeric($practicalScore) : true;
+
+        if (!$hasTheoryScore || !$hasPracticalScore) {
+            return 'pending';
+        }
+
+        $theoryValue = (float)$theoryScore;
+        $practicalValue = (float)$practicalScore;
+        $theoryPassed = $hasTheorySession ? ($theoryValue >= $theoryPassingScore) : true;
+        $practicalPassed = $hasPracticalSession ? ($practicalValue >= $practicalPassingScore) : true;
+
+        return ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
     }
 }
