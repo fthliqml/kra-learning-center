@@ -12,7 +12,7 @@
 
 <aside x-cloak
     class="hidden md:flex shrink-0 border-r border-gray-200 bg-white flex-col shadow-[2px_0px_14px_-6px_rgba(0,0,0,0.10)] h-full relative transition-[width] duration-500 ease-in-out overflow-hidden"
-    :class="openSidebar ? 'w-80' : 'w-0'" :aria-hidden="!openSidebar" :tabindex="openSidebar ? '0' : '-1'">
+    :class="openSidebar ? 'w-65' : 'w-0'" :aria-hidden="!openSidebar" :tabindex="openSidebar ? '0' : '-1'">
     <div class="flex-1 flex flex-col"
         :class="openSidebar ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 pointer-events-none'"
         style="transition:opacity 240ms ease, transform 300ms ease;">
