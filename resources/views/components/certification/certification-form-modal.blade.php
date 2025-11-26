@@ -103,14 +103,14 @@
                     class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">
                     Close
                 </x-button>
-                <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <div class="flex flex-col-reverse sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                     @if ($isEdit)
-                        <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto"
+                        <x-button wire:click="requestDeleteConfirm" class="btn-error w-full sm:w-auto"
                             spinner="requestDeleteConfirm">
                             <x-icon name="o-trash" /><span>Delete</span>
                         </x-button>
                     @endif
-                    <x-button :label="$isEdit ? 'Update Certification' : 'Save Certification'" wire:click="save" class="btn-primary" spinner="save"
+                    <x-button :label="$isEdit ? 'Update Certification' : 'Save Certification'" wire:click="save" class="btn-primary w-full sm:w-auto" spinner="save"
                         title="Fix the validation errors first" />
                 </div>
             </div>
