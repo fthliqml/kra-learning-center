@@ -178,6 +178,20 @@ return [
             'href' => '/survey-template',
             'roles' => ['instructor', 'certificator', 'admin'],
         ],
+        [
+            'id' => 'reports',
+            'label' => 'Reports',
+            'icon' => 'chart-bar',
+            'href' => '#',
+            'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+            'submenu' => [
+                [
+                    'label' => 'Training Activity',
+                    'href' => '/reports/training-activity',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
+            ],
+        ],
     ],
     // Sidebar behavior options
     'flatten_child_when_parent_hidden' => true,
