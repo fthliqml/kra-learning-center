@@ -16,10 +16,10 @@
         x-transition:leave-end="opacity-0 backdrop-blur-none"
         class="absolute inset-0 bg-black/40 will-change-[opacity,filter] z-0"></div>
     <aside x-show="mobileSidebar" x-transition:enter="transform transition ease-out duration-300"
-        x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
+        x-transition:enter-start="-translate-x-full" x-transition:enter-end="translate-x-0"
         x-transition:leave="transform transition ease-in duration-200" x-transition:leave-start="translate-x-0"
-        x-transition:leave-end="translate-x-full"
-        class="absolute top-0 right-0 h-full w-72 bg-white shadow-xl flex flex-col will-change-transform z-10">
+        x-transition:leave-end="-translate-x-full"
+        class="absolute top-0 left-0 h-full w-72 bg-white shadow-xl flex flex-col will-change-transform z-10">
 
         {{-- Course Content Title --}}
         <div class="p-4 border-b flex items-center justify-between">
