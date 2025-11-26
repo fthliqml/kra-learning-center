@@ -49,6 +49,7 @@ class CertificationFormModal extends Component
         'open-certification-form' => 'openModal',
         'open-certification-form-edit' => 'openEdit',
         'open-certification-form-date' => 'openModalWithDate',
+        'confirm-delete-certification' => 'onConfirmDelete',
     ];
 
     public function mount(): void
@@ -138,7 +139,7 @@ class CertificationFormModal extends Component
             $this->theory['date'] = $normalized ?? '';
             $this->practical['date'] = $normalized ?? '';
         }
-        $this->activeTab = 'session'; // Jump directly to session config for faster scheduling
+        $this->activeTab = 'config'; // Default to Certification Config as requested
         $this->showModal = true;
     }
 
@@ -230,13 +231,13 @@ class CertificationFormModal extends Component
             'module_id' => 'required|integer|exists:certification_modules,id',
             'certification_name' => 'nullable|string|max:255',
             'theory.date' => 'required|date',
-            'theory.start_time' => 'nullable|date_format:H:i',
-            'theory.end_time' => 'nullable|date_format:H:i',
-            'theory.location' => 'nullable|string|max:255',
+            'theory.start_time' => 'required|date_format:H:i',
+            'theory.end_time' => 'required|date_format:H:i',
+            'theory.location' => 'required|string|max:255',
             'practical.date' => 'required|date',
-            'practical.start_time' => 'nullable|date_format:H:i',
-            'practical.end_time' => 'nullable|date_format:H:i',
-            'practical.location' => 'nullable|string|max:255',
+            'practical.start_time' => 'required|date_format:H:i',
+            'practical.end_time' => 'required|date_format:H:i',
+            'practical.location' => 'required|string|max:255',
             'participants' => 'array',
             'participants.*' => 'integer|exists:users,id',
         ];
@@ -341,20 +342,20 @@ class CertificationFormModal extends Component
         $theoryArr = $this->theory;
         CertificationSession::create([
             'certification_id' => $certId,
-            'type' => 'THEORY',
+            'type' => 'theory',
             'date' => $this->normalizeDate($theoryArr['date'] ?? null),
-            'start_time' => $theoryArr['start_time'] ?: null,
-            'end_time' => $theoryArr['end_time'] ?: null,
-            'location' => $theoryArr['location'] ?: null,
+            'start_time' => $theoryArr['start_time'],
+            'end_time' => $theoryArr['end_time'],
+            'location' => $theoryArr['location'],
         ]);
         $practicalArr = $this->practical;
         CertificationSession::create([
             'certification_id' => $certId,
-            'type' => 'PRACTICAL',
+            'type' => 'practical',
             'date' => $this->normalizeDate($practicalArr['date'] ?? null),
-            'start_time' => $practicalArr['start_time'] ?: null,
-            'end_time' => $practicalArr['end_time'] ?: null,
-            'location' => $practicalArr['location'] ?: null,
+            'start_time' => $practicalArr['start_time'],
+            'end_time' => $practicalArr['end_time'],
+            'location' => $practicalArr['location'],
         ]);
     }
 
@@ -373,9 +374,9 @@ class CertificationFormModal extends Component
             if ($newDate) {
                 $theory->date = $newDate;
             }
-            $theory->start_time = ($t['start_time'] ?? '') !== '' ? $t['start_time'] : null;
-            $theory->end_time = ($t['end_time'] ?? '') !== '' ? $t['end_time'] : null;
-            $theory->location = ($t['location'] ?? '') !== '' ? $t['location'] : null;
+            $theory->start_time = $t['start_time'] ?? $theory->start_time;
+            $theory->end_time = $t['end_time'] ?? $theory->end_time;
+            $theory->location = $t['location'] ?? $theory->location;
             $theory->save();
         }
         $p = $this->practical;
@@ -384,9 +385,9 @@ class CertificationFormModal extends Component
             if ($newDate) {
                 $practical->date = $newDate;
             }
-            $practical->start_time = ($p['start_time'] ?? '') !== '' ? $p['start_time'] : null;
-            $practical->end_time = ($p['end_time'] ?? '') !== '' ? $p['end_time'] : null;
-            $practical->location = ($p['location'] ?? '') !== '' ? $p['location'] : null;
+            $practical->start_time = $p['start_time'] ?? $practical->start_time;
+            $practical->end_time = $p['end_time'] ?? $practical->end_time;
+            $practical->location = $p['location'] ?? $practical->location;
             $practical->save();
         }
     }
@@ -433,6 +434,47 @@ class CertificationFormModal extends Component
         }
         if ($toRemove) {
             CertificationParticipant::where('certification_id', $cert->id)->whereIn('employee_id', $toRemove)->delete();
+        }
+    }
+
+    public function requestDeleteConfirm(): void
+    {
+        if (!$this->isEdit || !$this->certificationId) return;
+        $this->dispatch('confirm', 'Delete Confirmation', 'Are you sure you want to delete this certification schedule? All theory & practical sessions plus attendance and scores will be removed.', 'confirm-delete-certification', $this->certificationId);
+    }
+
+    public function onConfirmDelete($id = null): void
+    {
+        if (!$this->isEdit || !$this->certificationId) return;
+        if ($id && (int)$id !== (int)$this->certificationId) return;
+        $this->deleteCertification();
+    }
+
+    public function deleteCertification(): void
+    {
+        if (!$this->isEdit || !$this->certificationId) return;
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () {
+                $cert = Certification::with(['sessions.attendances', 'sessions.scores', 'participants.attendances', 'participants.scores'])->find($this->certificationId);
+                if (!$cert) return;
+                // Delete session-linked records first
+                foreach ($cert->sessions as $session) {
+                    $session->attendances()->delete();
+                    $session->scores()->delete();
+                }
+                // Delete sessions
+                CertificationSession::where('certification_id', $this->certificationId)->delete();
+                // Remove participants
+                $cert->participants()->delete();
+                // Finally delete certification
+                $cert->delete();
+            });
+            $this->dispatch('certification-deleted', ['id' => $this->certificationId]);
+            $this->dispatch('confirm-done');
+            $this->success('Certification schedule deleted.');
+            $this->closeModal();
+        } catch (\Throwable $e) {
+            $this->error('Failed to delete certification.');
         }
     }
 

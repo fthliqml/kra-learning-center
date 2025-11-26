@@ -17,11 +17,11 @@ class DetailCertificationModal extends Component
     public array $selected = [];
     public array $sessionOptions = [];
     public string $activeTab = 'information';
+    public bool $isClosed = false;
 
     protected $listeners = [
         'open-detail-certification-modal' => 'open',
         'close-modal' => 'closeModal',
-        'confirm-delete-certification' => 'onConfirmDelete',
     ];
 
     public function open($payload)
@@ -64,6 +64,18 @@ class DetailCertificationModal extends Component
         $this->modal = false;
     }
 
+    public function triggerSaveDraft(): void
+    {
+        // Forward action to Close tab component
+        $this->dispatch('cert-close-save-draft');
+    }
+
+    public function triggerCloseCertification(): void
+    {
+        // Forward action to Close tab component
+        $this->dispatch('cert-close-close');
+    }
+
     private function resetState(): void
     {
         $this->modal = false;
@@ -72,6 +84,7 @@ class DetailCertificationModal extends Component
         $this->selected = [];
         $this->sessionOptions = [];
         $this->activeTab = 'information';
+        $this->isClosed = false;
     }
 
     private function loadSessionData(int $id): void
@@ -83,6 +96,9 @@ class DetailCertificationModal extends Component
 
         $cert = $session->certification;
         $module = $cert?->certificationModule;
+
+        // Check if certification is closed
+        $this->isClosed = in_array(strtolower($cert?->status ?? ''), ['closed', 'done', 'completed']);
 
         $this->selected = [
             'session_id' => $session->id,
@@ -115,7 +131,7 @@ class DetailCertificationModal extends Component
 
     public function setActiveTab(string $tab): void
     {
-        if (!in_array($tab, ['information', 'attendance'])) return;
+        if (!in_array($tab, ['information', 'attendance', 'close-certification'])) return;
         $this->activeTab = $tab;
     }
 
@@ -124,48 +140,5 @@ class DetailCertificationModal extends Component
         return view('components.certification.detail-certification-modal', [
             'sessionOptions' => $this->sessionOptions,
         ]);
-    }
-
-    public function requestDeleteConfirm(): void
-    {
-        $certId = $this->selected['certification_id'] ?? null;
-        if (!$certId) return;
-        $this->dispatch('confirm', 'Delete Confirmation', 'Are you sure you want to delete this certification schedule? All theory & practical sessions plus attendance and scores will be removed.', 'confirm-delete-certification', $certId);
-    }
-
-    public function onConfirmDelete($id = null): void
-    {
-        $certId = $this->selected['certification_id'] ?? null;
-        if ($id && $certId && (int)$id !== (int)$certId) return; // mismatch
-        $this->deleteCertification();
-    }
-
-    public function deleteCertification(): void
-    {
-        $certId = $this->selected['certification_id'] ?? null;
-        if (!$certId) return;
-        try {
-            DB::transaction(function () use ($certId) {
-                $cert = Certification::with(['sessions.attendances', 'sessions.scores', 'participants.attendances', 'participants.scores'])->find($certId);
-                if (!$cert) return;
-                // Delete session-linked records first
-                foreach ($cert->sessions as $session) {
-                    $session->attendances()->delete();
-                    $session->scores()->delete();
-                }
-                // Delete sessions
-                CertificationSession::where('certification_id', $certId)->delete();
-                // Optionally remove participant-related scores/attendances already handled via sessions; remove participants
-                $cert->participants()->delete();
-                // Finally delete certification
-                $cert->delete();
-            });
-            $this->dispatch('certification-deleted', ['id' => $certId]);
-            $this->dispatch('confirm-done');
-            $this->dispatch('notify', type: 'success', message: 'Certification schedule deleted.');
-            $this->closeModal();
-        } catch (\Throwable $e) {
-            $this->dispatch('notify', type: 'error', message: 'Failed to delete certification.');
-        }
     }
 }

@@ -23,6 +23,16 @@ class MonthGrid extends Component
         ];
         $user = Auth::user();
         $isAdmin = $user && strtolower($user->role ?? '') === 'admin';
+
+        // Check if certification is closed
+        $isClosed = in_array(strtolower($cert?->status ?? ''), ['closed', 'done', 'completed']);
+
+        // If closed, go directly to detail modal
+        if ($isClosed) {
+            $this->dispatch('open-detail-certification-modal', $payload);
+            return;
+        }
+
         if ($isAdmin) {
             $this->dispatch('open-action-choice', [
                 'title' => 'Certification Action',
@@ -50,6 +60,15 @@ class MonthGrid extends Component
     public function placeholder()
     {
         return view('components.skeletons.full-calendar');
+    }
+
+    public function addForDate(string $isoDate): void
+    {
+        $user = Auth::user();
+        $isAdmin = $user && strtolower($user->role ?? '') === 'admin';
+        if (!$isAdmin) return;
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $isoDate)) return;
+        $this->dispatch('open-certification-form-date', ['date' => $isoDate]);
     }
 
     public function render()
