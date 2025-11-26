@@ -115,6 +115,9 @@ class ScheduleView extends Component
                 $title = $s->certification?->name
                     ?? $s->certification?->certificationModule?->module_title
                     ?? 'Certification';
+                $status = strtolower($s->certification?->status ?? '');
+                $isClosed = in_array($status, ['closed', 'done', 'completed']);
+                $isPast = Carbon::parse($iso)->endOfDay()->isPast();
                 return [
                     'id' => $s->id,
                     'title' => $title,
@@ -125,6 +128,9 @@ class ScheduleView extends Component
                         'end' => $s->end_time,
                     ],
                     'iso_date' => $iso,
+                    'is_closed' => $isClosed,
+                    'is_past' => $isPast,
+                    'is_faded' => $isClosed || $isPast,
                 ];
             })->values();
 

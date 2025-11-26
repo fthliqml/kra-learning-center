@@ -23,6 +23,16 @@ class MonthGrid extends Component
         ];
         $user = Auth::user();
         $isAdmin = $user && strtolower($user->role ?? '') === 'admin';
+
+        // Check if certification is closed
+        $isClosed = in_array(strtolower($cert?->status ?? ''), ['closed', 'done', 'completed']);
+
+        // If closed, go directly to detail modal
+        if ($isClosed) {
+            $this->dispatch('open-detail-certification-modal', $payload);
+            return;
+        }
+
         if ($isAdmin) {
             $this->dispatch('open-action-choice', [
                 'title' => 'Certification Action',

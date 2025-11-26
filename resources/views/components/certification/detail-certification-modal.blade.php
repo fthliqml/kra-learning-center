@@ -62,6 +62,12 @@
             @php $mod = $selected['module'] ?? []; @endphp
             @if ($activeTab === 'information')
                 <div class="space-y-6">
+                    @if ($isClosed)
+                        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <p class="text-sm text-green-700"><strong>Certification Closed:</strong> This certification
+                                has been completed and marked as done.</p>
+                        </div>
+                    @endif
                     <!-- Title -->
                     <div class="p-4 border rounded-md">
                         <div class="flex items-start gap-2">
@@ -147,25 +153,18 @@
                     Close
                 </x-button>
                 @role('admin')
-                    @if (!$isClosed)
+                    @if (!$isClosed && $activeTab === 'close-certification')
                         <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-                            <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto"
-                                spinner="requestDeleteConfirm">
-                                <x-icon name="o-trash" /><span>Delete</span>
+                            <x-button wire:click="triggerSaveDraft" spinner="triggerSaveDraft"
+                                class="btn btn-outline btn-primary">
+                                <x-icon name="o-document-text" />
+                                <span>Save Draft</span>
                             </x-button>
-                            @if ($activeTab === 'close-certification')
-                                <x-button wire:click="triggerSaveDraft" spinner="triggerSaveDraft"
-                                    class="btn btn-outline btn-primary">
-                                    <x-icon name="o-document-text" />
-                                    <span>Save Draft</span>
-                                </x-button>
-                                <x-button wire:click="triggerCloseCertification" spinner="triggerCloseCertification"
-                                    class="btn btn-primary">
-                                    <x-icon name="o-check-circle" />
-                                    <span>Close Certification</span>
-                                </x-button>
-                            @endif
-
+                            <x-button wire:click="triggerCloseCertification" spinner="triggerCloseCertification"
+                                class="btn btn-primary">
+                                <x-icon name="o-check-circle" />
+                                <span>Close Certification</span>
+                            </x-button>
                         </div>
                     @endif
                 @endrole

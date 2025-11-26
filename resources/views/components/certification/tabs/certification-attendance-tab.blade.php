@@ -1,4 +1,10 @@
 <div class="space-y-4">
+    @if ($readOnly && !auth()->user()?->hasRole('leader'))
+        <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
+            <p class="text-sm text-green-700"><strong>Certification Closed:</strong> This certification has been
+                completed and marked as done.</p>
+        </div>
+    @endif
     <div class="flex justify-between items-start sm:items-center gap-3 sm:gap-4 w-full">
         <h2 class="text-lg font-semibold">Attendance (Session {{ $sessionId }})</h2>
         @php $isLeader = auth()->user()?->hasRole('leader'); @endphp

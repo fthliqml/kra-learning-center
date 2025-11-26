@@ -67,8 +67,17 @@
 
         <!-- Modal Actions -->
         <x-slot:actions>
-            <x-button label="Cancel" wire:click="closeModal" class="btn-ghost" />
-            <x-button :label="$isEdit ? 'Update Certification' : 'Save Certification'" wire:click="save" class="btn-primary" spinner="save" title="Fix the validation errors first" />
+            <div class="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 w-full">
+                <x-button label="Cancel" wire:click="closeModal" class="btn-ghost w-full sm:w-auto" />
+                <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                    @if($isEdit)
+                        <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto" spinner="requestDeleteConfirm">
+                            <x-icon name="o-trash" /><span>Delete</span>
+                        </x-button>
+                    @endif
+                    <x-button :label="$isEdit ? 'Update Certification' : 'Save Certification'" wire:click="save" class="btn-primary" spinner="save" title="Fix the validation errors first" />
+                </div>
+            </div>
         </x-slot:actions>
     </x-modal>
 </div>

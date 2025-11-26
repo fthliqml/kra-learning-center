@@ -49,6 +49,7 @@ class CertificationFormModal extends Component
         'open-certification-form' => 'openModal',
         'open-certification-form-edit' => 'openEdit',
         'open-certification-form-date' => 'openModalWithDate',
+        'confirm-delete-certification' => 'onConfirmDelete',
     ];
 
     public function mount(): void
@@ -433,6 +434,47 @@ class CertificationFormModal extends Component
         }
         if ($toRemove) {
             CertificationParticipant::where('certification_id', $cert->id)->whereIn('employee_id', $toRemove)->delete();
+        }
+    }
+
+    public function requestDeleteConfirm(): void
+    {
+        if (!$this->isEdit || !$this->certificationId) return;
+        $this->dispatch('confirm', 'Delete Confirmation', 'Are you sure you want to delete this certification schedule? All theory & practical sessions plus attendance and scores will be removed.', 'confirm-delete-certification', $this->certificationId);
+    }
+
+    public function onConfirmDelete($id = null): void
+    {
+        if (!$this->isEdit || !$this->certificationId) return;
+        if ($id && (int)$id !== (int)$this->certificationId) return;
+        $this->deleteCertification();
+    }
+
+    public function deleteCertification(): void
+    {
+        if (!$this->isEdit || !$this->certificationId) return;
+        try {
+            \Illuminate\Support\Facades\DB::transaction(function () {
+                $cert = Certification::with(['sessions.attendances', 'sessions.scores', 'participants.attendances', 'participants.scores'])->find($this->certificationId);
+                if (!$cert) return;
+                // Delete session-linked records first
+                foreach ($cert->sessions as $session) {
+                    $session->attendances()->delete();
+                    $session->scores()->delete();
+                }
+                // Delete sessions
+                CertificationSession::where('certification_id', $this->certificationId)->delete();
+                // Remove participants
+                $cert->participants()->delete();
+                // Finally delete certification
+                $cert->delete();
+            });
+            $this->dispatch('certification-deleted', ['id' => $this->certificationId]);
+            $this->dispatch('confirm-done');
+            $this->success('Certification schedule deleted.');
+            $this->closeModal();
+        } catch (\Throwable $e) {
+            $this->error('Failed to delete certification.');
         }
     }
 
