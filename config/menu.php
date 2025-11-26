@@ -90,6 +90,11 @@ return [
             'roles' => ['admin', 'instructor', 'certificator', 'leader'],
             'submenu' => [
                 [
+                    'label' => 'Trainer',
+                    'href' => '/training/trainer',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
+                [
                     'label' => 'Training Module',
                     'href' => '/training/module',
                     'roles' => ['instructor', 'certificator', 'admin', 'leader']
@@ -105,9 +110,9 @@ return [
                     'roles' => ['instructor', 'certificator', 'admin', 'leader']
                 ],
                 [
-                    'label' => 'Data Trainer',
-                    'href' => '/training/trainer',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                    'label' => 'Training Approval',
+                    'href' => '/training/approval',
+                    'roles' => ['leader']
                 ],
             ],
         ],
