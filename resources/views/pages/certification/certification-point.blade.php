@@ -12,7 +12,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.certification-point-table />
+    <x-skeletons.table :columns="6" :rows="10" targets="search" />
 
     {{-- Table --}}
     <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">

@@ -32,7 +32,8 @@
     </div>
 
     {{-- Skeleton scoped to specific reactive targets (search & filters actions) --}}
-    <x-skeletons.courses-management-table targets="search,filterGroup,filterStatus,applyFilters,clearFilters" />
+    <x-skeletons.table :columns="5" :rows="10"
+        targets="search,filterGroup,filterStatus,applyFilters,clearFilters" />
 
     {{-- Table --}}
     @if ($courses->isNotEmpty())

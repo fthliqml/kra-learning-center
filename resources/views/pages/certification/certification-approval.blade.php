@@ -14,7 +14,7 @@
                 <!-- Filter -->
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
                     placeholder="All"
-                    class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                    class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
             </div>
 
@@ -23,7 +23,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.certification-approval-table />
+    <x-skeletons.table :columns="5" :rows="10" targets="search,filter,approve,reject" />
 
     {{-- No Data State --}}
     @if ($approvals->isEmpty())

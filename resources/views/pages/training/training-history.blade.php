@@ -9,17 +9,17 @@
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
             <div class="flex items-center justify-center gap-2">
                 <x-select wire:model.live="filter" :options="$typeOptions" option-value="value" option-label="label"
-                    placeholder="Type"
-                    class="!w-40 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                    placeholder="All"
+                    class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
             </div>
 
-            <x-search-input placeholder="Search training..." class="max-w-md" wire:model.live.debounce.600ms="search" />
+            <x-search-input placeholder="Search training..." class="max-w-72" wire:model.live.debounce.600ms="search" />
         </div>
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.training-history-table />
+    <x-skeletons.table :columns="7" :rows="10" targets="search,filter" />
 
     {{-- Table --}}
     <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
