@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Models\CertificationParticipant;
+use App\Models\CertificationPoint;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
@@ -28,7 +29,6 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
   {
     $query = CertificationParticipant::with([
       'certification.certificationModule',
-      'certification.sessions',
       'employee',
       'scores.session',
     ])
@@ -66,21 +66,15 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
       }
     }
 
-    // Get passing scores from module
-    $theoryPassingScore = $module?->theory_passing_score ?? 70;
-    $practicalPassingScore = $module?->practical_passing_score ?? 70;
-
-    // Determine remarks based on final_status or calculate from scores
+    // Remarks from final_status
     $remarks = $participant->final_status ?? 'pending';
-    if ($remarks === 'pending') {
-      $theoryPassed = $theoryScore !== null && $theoryScore >= $theoryPassingScore;
-      $practicalPassed = $practicalScore !== null && $practicalScore >= $practicalPassingScore;
-      $remarks = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
-    }
 
-    // Earned points from participant or module
-    $earnedPoint = $participant->earned_points ?? 0;
-    $totalPoint = $module?->points_per_module ?? 0;
+    // Earned points: if passed, get from module's points_per_module
+    $earnedPoint = $remarks === 'passed' ? ($module?->points_per_module ?? 0) : 0;
+
+    // Total points: get accumulated points from certification_points table
+    $certPoint = CertificationPoint::where('employee_id', $employee?->id)->first();
+    $totalPoint = $certPoint?->total_points ?? 0;
 
     // Completion date
     $completionDate = $certification?->approved_at
