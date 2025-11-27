@@ -182,18 +182,37 @@
                                 <div class="flex justify-center">
                                     @php
                                         $participantStatus = strtolower($participant->status);
-                                        $statusClasses =
-                                            [
-                                                'passed' => 'bg-emerald-100 text-emerald-700',
-                                                'failed' => 'bg-rose-100 text-rose-700',
-                                                'in_progress' => 'bg-amber-100 text-amber-700',
-                                                'pending' => 'bg-gray-100 text-gray-700',
-                                            ][$participantStatus] ?? 'bg-gray-100 text-gray-700';
                                     @endphp
-                                    <span
-                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $statusClasses }}">
-                                        {{ ucfirst(str_replace('_', ' ', $participant->status)) }}
-                                    </span>
+                                    @if ($participantStatus === 'passed')
+                                        <span
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700 gap-1">
+                                            <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor"
+                                                stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                                            </svg>
+                                            Passed
+                                        </span>
+                                    @elseif ($participantStatus === 'failed')
+                                        <span
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-rose-600 text-white border border-rose-700 gap-1 shadow-sm">
+                                            <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
+                                                stroke-width="2" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                            Failed
+                                        </span>
+                                    @elseif ($participantStatus === 'in_progress')
+                                        <span
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700">
+                                            In Progress
+                                        </span>
+                                    @else
+                                        <span
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">
+                                            {{ ucfirst(str_replace('_', ' ', $participant->status)) }}
+                                        </span>
+                                    @endif
                                 </div>
                             @endscope
                         </x-table>
