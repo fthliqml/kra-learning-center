@@ -24,7 +24,7 @@ return new class extends Migration {
             $table->date('end_date')->nullable();
 
             // Status Fields
-            $table->enum('status', ['canceled', 'in_progress', 'done'])->default('in_progress');
+            $table->enum('status', ['canceled', 'in_progress', 'done', 'approved', 'rejected'])->default('in_progress');
 
             // Meta
             $table->timestamps();

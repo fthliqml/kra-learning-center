@@ -2,13 +2,13 @@
     @livewire('components.confirm-dialog')
 
     {{-- Header --}}
-    <div class="w-full flex flex-col lg:flex-row gap-5 mb-5 lg:mb-9 items-center justify-between">
+    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
+                grid-cols-1 lg:grid-cols-2 items-center">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
             Data Trainer
         </h1>
 
-        <div
-            class="flex gap-3 flex-col w-full lg:w-auto items-center justify-center lg:justify-end md:gap-2 md:flex-row">
+        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
                 {{-- Dropdown Export / Import --}}
@@ -55,77 +55,54 @@
 
                 {{-- Filter --}}
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
-                    placeholder="All"
-                    class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                    placeholder="Filter"
+                    class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                     icon-right="o-funnel" />
             </div>
-
 
             {{-- Search --}}
             <x-search-input placeholder="Search..." class="max-w-72" wire:model.live="search" />
         </div>
     </div>
 
-    {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="7" :rows="10" targets="search,filter,file,openCreateModal" />
+    {{-- Table --}}
+    <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+        <x-table :headers="$headers" :rows="$trainers" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
+            with-pagination>
+            {{-- Custom cell untuk kolom Nomor --}}
+            @scope('cell_no', $trainer)
+                {{ $trainer->no ?? $loop->iteration }}
+            @endscope
 
-    {{-- No Data State --}}
-    @if ($trainers->isEmpty())
-        <div wire:loading.remove wire:target="search,filter,file,openCreateModal"
-            class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
-            <div class="flex flex-col items-center justify-center py-16 px-4">
-                <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-                </svg>
-                <h3 class="text-lg font-semibold text-gray-700 mb-1">No Data Available</h3>
-                <p class="text-sm text-gray-500 text-center">
-                    There are no trainer records to display at the moment.
-                </p>
-            </div>
-        </div>
-    @else
-        {{-- Table --}}
-        <div wire:loading.remove wire:target="search,filter,file,openCreateModal"
-            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
-            <x-table :headers="$headers" :rows="$trainers" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
-                with-pagination>
-                {{-- Custom cell untuk kolom Nomor --}}
-                @scope('cell_no', $trainer)
-                    {{ $trainer->no ?? $loop->iteration }}
-                @endscope
+            {{-- Custom cell untuk kolom Trainer Name --}}
+            @scope('cell_name', $trainer)
+                {{ optional($trainer->user)->name ?? $trainer->name }}
+            @endscope
 
-                {{-- Custom cell untuk kolom Trainer Name --}}
-                @scope('cell_name', $trainer)
-                    {{ optional($trainer->user)->name ?? $trainer->name }}
-                @endscope
+            {{-- Custom cell untuk kolom Action --}}
+            @scope('cell_action', $trainer)
+                <div class="flex gap-2 justify-center">
 
-                {{-- Custom cell untuk kolom Action --}}
-                @scope('cell_action', $trainer)
-                    <div class="flex gap-2 justify-center">
+                    <!-- Details -->
+                    <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
+                        wire:click="openDetailModal({{ $trainer->id }})" />
 
-                        <!-- Details -->
-                        <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
-                            wire:click="openDetailModal({{ $trainer->id }})" />
+                    <!-- Edit -->
+                    <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
+                        wire:click="openEditModal({{ $trainer->id }})" />
 
-                        <!-- Edit -->
-                        <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
-                            wire:click="openEditModal({{ $trainer->id }})" />
-
-                        <!-- Delete -->
-                        <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85"
-                            spinner
-                            wire:click="$dispatch('confirm', {
+                    <!-- Delete -->
+                    <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
+                        wire:click="$dispatch('confirm', {
                             title: 'Are you sure you want to delete?',
                             text: 'This action is permanent and cannot be undone.',
                             action: 'deleteTrainer',
                             id: {{ $trainer->id }}
                         })" />
-                    </div>
-                @endscope
-            </x-table>
-        </div>
-    @endif
+                </div>
+            @endscope
+        </x-table>
+    </div>
 
     {{-- Modal --}}
     <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Data Trainer' : ($mode === 'edit' ? 'Edit Data Trainer' : 'Preview Data Trainer')" separator box-class="max-w-3xl h-fit">
@@ -147,8 +124,7 @@
                     <x-choices label="Trainer Name" wire:model.live="formData.user_id" :options="$trainersSearchable"
                         search-function="trainerSearch" debounce="300ms" option-value="id" option-label="name"
                         placeholder="Search trainer name..." class="focus-within:border-0" min-chars=2
-                        hint="Type at least 2 chars" searchable single clearable
-                        wire:change="checkDuplicateTrainer" />
+                        hint="Type at least 2 chars" searchable single clearable wire:change="checkDuplicateTrainer" />
                 @else
                     <x-input label="Trainer Name" placeholder="Name of the trainer..."
                         wire:model.live.debounce.500ms="formData.name" class="focus-within:border-0"

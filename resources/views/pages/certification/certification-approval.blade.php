@@ -23,7 +23,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="5" :rows="10" targets="search,filter,approve,reject" />
+    <x-skeletons.certification-approval-table />
 
     {{-- No Data State --}}
     @if ($approvals->isEmpty())

@@ -22,6 +22,7 @@ use App\Livewire\Pages\Survey\TakeSurvey;
 use App\Livewire\Pages\SurveyTemplate\EditSurveyTemplate;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Certification\CertificationHistory;
+use App\Livewire\Pages\Training\Approval;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\History;
 use App\Livewire\Pages\Training\Module;
@@ -48,6 +49,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/training/module', Module::class)->name('training-module.index');
     Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
     Route::get('/training/request', Request::class)->name('training-request.index');
+    Route::get('/training/approval', Approval::class)->name('training-approval.index');
     Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
     Route::get('/training/history', History::class)->name('training-history.index');
 
