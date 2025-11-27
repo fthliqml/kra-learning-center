@@ -5,7 +5,7 @@
     <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
                 grid-cols-1 lg:grid-cols-2 items-center">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
-            Certification Approval
+            Training Approval
         </h1>
 
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
@@ -36,7 +36,7 @@
                 </svg>
                 <h3 class="text-lg font-semibold text-gray-700 mb-1">No Data Available</h3>
                 <p class="text-sm text-gray-500 text-center">
-                    There are no certification records to display at the moment.
+                    There are no training records to display at the moment.
                 </p>
             </div>
         </div>
@@ -51,14 +51,20 @@
                     {{ $loop->iteration }}
                 @endscope
 
-                {{-- Certification Name --}}
-                @scope('cell_certification_name', $approval)
-                    <div class="truncate max-w-[50ch] xl:max-w-[60ch]">{{ $approval->certification_name ?? '-' }}</div>
+                {{-- Training Name --}}
+                @scope('cell_training_name', $approval)
+                    <div class="truncate max-w-[50ch] xl:max-w-[60ch]">{{ $approval->training_name ?? '-' }}</div>
                 @endscope
 
                 {{-- Date --}}
                 @scope('cell_date', $approval)
-                    <div class="text-sm">{{ \Carbon\Carbon::parse($approval->date)->format('d M Y') }}</div>
+                    <div class="text-sm">
+                        {{ $approval->start_date ? \Carbon\Carbon::parse($approval->start_date)->format('d M Y') : '-' }}
+                        @if ($approval->start_date && $approval->end_date && $approval->start_date != $approval->end_date)
+                            <span class="text-gray-400">-</span>
+                            {{ \Carbon\Carbon::parse($approval->end_date)->format('d M Y') }}
+                        @endif
+                    </div>
                 @endscope
 
                 {{-- Status --}}
@@ -88,20 +94,27 @@
         </div>
     @endif
 
-    {{-- Modal Certification Approval --}}
-    <x-modal wire:model="modal" title="Certification Request Detail" separator box-class="max-w-5xl h-fit">
+    {{-- Modal Training Approval --}}
+    <x-modal wire:model="modal" title="Training Request Detail" separator box-class="max-w-5xl h-fit">
         {{-- Tabs --}}
         <x-tabs wire:model="activeTab">
             <x-tab name="information" label="Information" icon="o-information-circle">
                 <x-form no-separator>
-                    <x-input label="Certification Name" :value="$formData['certification_name'] ?? ''" class="focus-within:border-0"
-                        :readonly="true" />
+                    <x-input label="Training Name" :value="$formData['training_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
 
-                    <x-input label="Module" :value="$formData['module_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-input label="Type" :value="$formData['type'] ?? ''" class="focus-within:border-0" :readonly="true" />
 
-                    <x-input label="Date" :value="$formData['created_at'] ?? ''" class="focus-within:border-0" :readonly="true" />
+                        <x-input label="Group/Competency" :value="$formData['group_comp'] ?? ''" class="focus-within:border-0"
+                            :readonly="true" />
+                    </div>
 
-                    <x-input label="Competency" :value="$formData['competency'] ?? ''" class="focus-within:border-0" :readonly="true" />
+                    <div class="grid grid-cols-2 gap-4">
+                        <x-input label="Start Date" :value="$formData['start_date'] ?? ''" class="focus-within:border-0"
+                            :readonly="true" />
+
+                        <x-input label="End Date" :value="$formData['end_date'] ?? ''" class="focus-within:border-0" :readonly="true" />
+                    </div>
 
                     <div class="mt-3">
                         {{-- Status badge --}}
@@ -156,44 +169,31 @@
                                 <div class="text-center text-sm">{{ $participant->section }}</div>
                             @endscope
 
-                            {{-- Theory Score --}}
-                            @scope('cell_theory_score', $participant)
+                            {{-- Score --}}
+                            @scope('cell_score', $participant)
                                 <div
-                                    class="text-center font-semibold {{ $participant->theory_raw >= $participant->theory_threshold ? 'text-emerald-600' : ($participant->theory_raw ? 'text-rose-600' : 'text-gray-400') }}">
-                                    {{ $participant->theory_score }}
-                                </div>
-                            @endscope
-
-                            {{-- Practical Score --}}
-                            @scope('cell_practical_score', $participant)
-                                <div
-                                    class="text-center font-semibold {{ $participant->practical_raw >= $participant->practical_threshold ? 'text-emerald-600' : ($participant->practical_raw ? 'text-rose-600' : 'text-gray-400') }}">
-                                    {{ $participant->practical_score }}
+                                    class="text-center font-semibold {{ $participant->score_raw !== null ? 'text-primary' : 'text-gray-400' }}">
+                                    {{ $participant->score }}
                                 </div>
                             @endscope
 
                             {{-- Status --}}
                             @scope('cell_status', $participant)
                                 <div class="flex justify-center">
-                                    @if ($participant->status === 'passed')
-                                        <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
-                                            Passed
-                                        </span>
-                                    @else
-                                        <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-700">
-                                            Failed
-                                        </span>
-                                    @endif
-                                </div>
-                            @endscope
-
-                            {{-- Earned Point --}}
-                            @scope('cell_earned_point', $participant)
-                                <div
-                                    class="text-center font-bold {{ $participant->earned_point > 0 ? 'text-emerald-600' : 'text-gray-400' }}">
-                                    {{ $participant->earned_point }}
+                                    @php
+                                        $participantStatus = strtolower($participant->status);
+                                        $statusClasses =
+                                            [
+                                                'passed' => 'bg-emerald-100 text-emerald-700',
+                                                'failed' => 'bg-rose-100 text-rose-700',
+                                                'in_progress' => 'bg-amber-100 text-amber-700',
+                                                'pending' => 'bg-gray-100 text-gray-700',
+                                            ][$participantStatus] ?? 'bg-gray-100 text-gray-700';
+                                    @endphp
+                                    <span
+                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $statusClasses }}">
+                                        {{ ucfirst(str_replace('_', ' ', $participant->status)) }}
+                                    </span>
                                 </div>
                             @endscope
                         </x-table>

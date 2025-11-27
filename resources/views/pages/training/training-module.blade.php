@@ -2,13 +2,13 @@
     @livewire('components.confirm-dialog')
 
     {{-- Header --}}
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
-                grid-cols-1 lg:grid-cols-2 items-center">
+    <div class="w-full flex flex-col lg:flex-row gap-5 mb-5 lg:mb-9 items-center justify-between">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
             Training Module
         </h1>
 
-        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
+        <div
+            class="flex gap-3 flex-col w-full lg:w-auto items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
                 <x-dropdown no-x-anchor right>
@@ -52,45 +52,69 @@
                     </span>
                 </x-ui.button>
 
+                {{-- Filter --}}
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
-                    placeholder="Filter"
-                    class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                    placeholder="All"
+                    class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                     icon-right="o-funnel" />
             </div>
 
-            <x-search-input placeholder="Search..." class="max-w-md" wire:model.live="search" />
+
+            <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.600ms="search" />
         </div>
     </div>
 
-    {{-- Table --}}
-    <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
-        <x-table :headers="$headers" :rows="$modules" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
-            with-pagination>
-            {{-- Custom cell untuk kolom Nomor --}}
-            @scope('cell_no', $module)
-                {{ $module->no ?? $loop->iteration }}
-            @endscope
+    {{-- Skeleton Loading --}}
+    <x-skeletons.table :columns="5" :rows="10" targets="search,filter,file,openCreateModal" />
 
-            {{-- Custom cell untuk kolom Action --}}
-            @scope('cell_action', $module)
-                <div class="flex gap-2 justify-center">
+    {{-- No Data State --}}
+    @if ($modules->isEmpty())
+        <div wire:loading.remove wire:target="search,filter,file,openCreateModal"
+            class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
+            <div class="flex flex-col items-center justify-center py-16 px-4">
+                <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-700 mb-1">No Data Available</h3>
+                <p class="text-sm text-gray-500 text-center">
+                    There are no training module records to display at the moment.
+                </p>
+            </div>
+        </div>
+    @else
+        {{-- Table --}}
+        <div wire:loading.remove wire:target="search,filter,file,openCreateModal"
+            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+            <x-table :headers="$headers" :rows="$modules" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
+                with-pagination>
+                {{-- Custom cell untuk kolom Nomor --}}
+                @scope('cell_no', $module)
+                    {{ $module->no ?? $loop->iteration }}
+                @endscope
 
-                    <!-- Edit -->
-                    <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
-                        wire:click="openEditModal({{ $module->id }})" />
+                {{-- Custom cell untuk kolom Action --}}
+                @scope('cell_action', $module)
+                    <div class="flex gap-2 justify-center">
 
-                    <!-- Delete -->
-                    <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
-                        wire:click="$dispatch('confirm', {
+                        <!-- Edit -->
+                        <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
+                            wire:click="openEditModal({{ $module->id }})" />
+
+                        <!-- Delete -->
+                        <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85"
+                            spinner
+                            wire:click="$dispatch('confirm', {
                             title: 'Are you sure you want to delete?',
                             text: 'This action is permanent and cannot be undone.',
                             action: 'deleteModule',
                             id: {{ $module->id }}
                         })" />
-                </div>
-            @endscope
-        </x-table>
-    </div>
+                    </div>
+                @endscope
+            </x-table>
+        </div>
+    @endif
 
     {{-- Modal --}}
     <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Training Module' : ($mode === 'edit' ? 'Edit Training Module' : 'Preview Training Module')" separator box-class="max-w-3xl h-fit">
@@ -108,11 +132,13 @@
                 class="focus-within:border-0" wire:model.defer="formData.objective" :error="$errors->first('formData.objective')"
                 :readonly="$mode === 'preview'" />
 
-            <x-textarea label="Training Content" placeholder="Outline the main topics..." class="focus-within:border-0"
-                wire:model.defer="formData.training_content" :error="$errors->first('formData.training_content')" :readonly="$mode === 'preview'" />
+            <x-textarea label="Training Content" placeholder="Outline the main topics..."
+                class="focus-within:border-0" wire:model.defer="formData.training_content" :error="$errors->first('formData.training_content')"
+                :readonly="$mode === 'preview'" />
 
-            <x-input label="Method" placeholder="Describe the development concept..." wire:model.defer="formData.method"
-                class="focus-within:border-0" :error="$errors->first('formData.method')" :readonly="$mode === 'preview'" />
+            <x-input label="Method" placeholder="Describe the development concept..."
+                wire:model.defer="formData.method" class="focus-within:border-0" :error="$errors->first('formData.method')"
+                :readonly="$mode === 'preview'" />
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-input label="Duration" type="number" wire:model.defer="formData.duration" placeholder="6 Hours"
