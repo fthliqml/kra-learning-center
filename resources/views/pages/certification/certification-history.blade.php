@@ -13,7 +13,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.certification-history-table />
+    <x-skeletons.table :columns="5" :rows="10" targets="search" />
 
     {{-- No Data State --}}
     @if ($histories->isEmpty())

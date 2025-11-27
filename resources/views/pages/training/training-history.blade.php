@@ -19,7 +19,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.training-history-table />
+    <x-skeletons.table :columns="7" :rows="10" targets="search,filter" />
 
     {{-- Table --}}
     <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
