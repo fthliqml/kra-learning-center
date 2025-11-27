@@ -15,13 +15,13 @@
     </div>
 
     <!-- Header -->
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
-                grid-cols-1 lg:grid-cols-2 items-center">
+    <div class="w-full flex flex-col lg:flex-row gap-5 mb-5 lg:mb-9 items-center justify-between">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
             Certification Module
         </h1>
 
-        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
+        <div
+            class="flex gap-3 flex-col w-full lg:w-auto items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
                 <!-- Dropdown for Excel actions -->
@@ -70,12 +70,13 @@
                 <!-- Filter -->
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
                     placeholder="All"
-                    class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                    class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                     icon-right="o-funnel" />
             </div>
 
+
             <!-- Search -->
-            <x-search-input placeholder="Search..." class="max-w-md" wire:model.live="search" />
+            <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.600ms="search" />
         </div>
     </div>
 
