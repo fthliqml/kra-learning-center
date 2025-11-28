@@ -58,13 +58,15 @@ class Approval extends Component
     public function participantHeaders(): array
     {
         return [
-            ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-[60px]'],
-            ['key' => 'nrp', 'label' => 'NRP', 'class' => 'w-[120px]'],
-            ['key' => 'name', 'label' => 'Name', 'class' => 'w-[200px]'],
-            ['key' => 'section', 'label' => 'Section', 'class' => '!text-center w-[100px]'],
-            ['key' => 'score', 'label' => 'Score', 'class' => '!text-center w-[80px]'],
-            ['key' => 'status', 'label' => 'Status', 'class' => '!text-center w-[100px]'],
-            ['key' => 'certificate', 'label' => 'Certificate', 'class' => '!text-center w-[120px]'],
+            ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-[50px]'],
+            ['key' => 'nrp', 'label' => 'NRP', 'class' => 'w-[100px]'],
+            ['key' => 'name', 'label' => 'Name', 'class' => 'w-[150px]'],
+            ['key' => 'section', 'label' => 'Section', 'class' => 'w-[150px]'],
+            ['key' => 'absent', 'label' => 'Absent', 'class' => '!text-center w-[70px]'],
+            ['key' => 'theory_score', 'label' => 'Theory Score', 'class' => '!text-center w-[100px]'],
+            ['key' => 'practice_score', 'label' => 'Practice Score', 'class' => '!text-center w-[100px]'],
+            ['key' => 'status', 'label' => 'Status', 'class' => '!text-center w-[80px]'],
+            ['key' => 'certificate', 'label' => 'Certificate', 'class' => '!text-center w-[140px]'],
         ];
     }
 
@@ -75,6 +77,7 @@ class Approval extends Component
         }
 
         $training = Training::with([
+            'sessions',
             'attendances.employee',
             'assessments.employee',
         ])->find($this->selectedId);
@@ -90,9 +93,15 @@ class Approval extends Component
             // Get assessment for this employee
             $assessment = $training->assessments->firstWhere('employee_id', $employee->id);
 
+            // Count absent (sessions not attended)
+            $totalSessions = $training->sessions->count();
+            $attendedSessions = $training->attendances->where('employee_id', $employee->id)->count();
+            $absentCount = max(0, $totalSessions - $attendedSessions);
+
             // Determine status
             $status = $assessment ? $assessment->status : 'pending';
-            $score = $assessment ? $assessment->score : null;
+            $theoryScore = $assessment ? $assessment->posttest_score : null;
+            $practiceScore = $assessment ? $assessment->practical_score : null;
             $certificatePath = $assessment ? $assessment->certificate_path : null;
             $assessmentId = $assessment ? $assessment->id : null;
 
@@ -101,9 +110,10 @@ class Approval extends Component
                 'nrp' => $employee->nrp ?? '-',
                 'name' => $employee->name ?? '-',
                 'section' => $employee->section ?? '-',
-                'score' => $score !== null ? number_format($score, 1) : '-',
+                'absent' => $absentCount,
+                'theory_score' => $theoryScore,
+                'practice_score' => $practiceScore,
                 'status' => $status,
-                'score_raw' => $score,
                 'certificate_path' => $certificatePath,
                 'employee_id' => $employee->id,
                 'assessment_id' => $assessmentId,
