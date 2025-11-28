@@ -1,8 +1,7 @@
 <div>
     {{-- Header --}}
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
-                grid-cols-1 lg:grid-cols-2 items-center">
-        <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
+    <div class="w-full flex gap-10 lg:gap-5 mb-5 lg:mb-9 items-center">
+        <h1 class="text-primary text-4xl font-bold text-center lg:text-start flex-1 whitespace-nowrap">
             Certification Point
         </h1>
 
@@ -18,7 +17,7 @@
             {{-- Sort Order Filter --}}
             <x-select wire:model.live="sortOrder" :options="$sortOptions" option-value="value" option-label="label"
                 placeholder="Sort By"
-                class="!w-40 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                class="!h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                 icon-right="o-funnel" />
 
             <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.500ms="search" />
@@ -30,7 +29,7 @@
 
     {{-- Table --}}
     <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
-        <x-table :headers="$headers" :rows="$certificationPoints" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
+        <x-table :headers="$headers" :rows="$certificationPoints" striped class="[&>tbody>tr>td]:py-4 [&>thead>tr>th]:!py-4"
             with-pagination>
             {{-- No --}}
             @scope('cell_no', $point)
