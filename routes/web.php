@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\CertificateController;
 use App\Livewire\Pages\Certification\CertificationApproval;
 use App\Livewire\Pages\Certification\CertificationPoint;
 use App\Livewire\Pages\Certification\CertificationModule;
@@ -52,6 +53,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/training/approval', Approval::class)->name('training-approval.index');
     Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
     Route::get('/training/history', History::class)->name('training-history.index');
+
+    // Certificate Download
+    Route::get('/certificate/training/{assessment}/download', [CertificateController::class, 'downloadTrainingCertificate'])
+        ->name('certificate.training.download');
 
 
     // Courses

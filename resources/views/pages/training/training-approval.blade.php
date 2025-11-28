@@ -47,8 +47,8 @@
             <x-table :headers="$headers" :rows="$approvals" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- No --}}
-                @scope('cell_no', $approval)
-                    {{ $loop->iteration }}
+                @scope('cell_no', $approval, $approvals)
+                    {{ ($approvals->currentPage() - 1) * $approvals->perPage() + $loop->iteration }}
                 @endscope
 
                 {{-- Training Name --}}
@@ -95,7 +95,7 @@
     @endif
 
     {{-- Modal Training Approval --}}
-    <x-modal wire:model="modal" title="Training Request Detail" separator box-class="max-w-5xl h-fit">
+    <x-modal wire:model="modal" title="Training Detail" separator box-class="max-w-5xl h-fit">
         <div class="p-4 bg-green-50 border border-green-200 rounded-lg mb-4 flex items-center gap-2">
             <p class="text-sm text-green-700">
                 Participants marked as <span class="font-bold text-rose-600">Failed</span> will
@@ -157,7 +157,7 @@
                             class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3">
                             {{-- No --}}
                             @scope('cell_no', $participant)
-                                <div class="text-center">{{ $participant->no }}</div>
+                                <div class="text-center">{{ $participant->no ?? $loop->iteration }}</div>
                             @endscope
 
                             {{-- NRP --}}
@@ -172,14 +172,40 @@
 
                             {{-- Section --}}
                             @scope('cell_section', $participant)
-                                <div class="text-center text-sm">{{ $participant->section }}</div>
+                                <div class="text-sm">{{ $participant->section }}</div>
                             @endscope
 
-                            {{-- Score --}}
-                            @scope('cell_score', $participant)
+                            {{-- Absent --}}
+                            @scope('cell_absent', $participant)
+                                <div class="text-center text-sm">{{ $participant->absent }}</div>
+                            @endscope
+
+                            {{-- Theory Score --}}
+                            @scope('cell_theory_score', $participant)
                                 <div
-                                    class="text-center font-semibold {{ $participant->score_raw !== null ? 'text-primary' : 'text-gray-400' }}">
-                                    {{ $participant->score }}
+                                    class="text-center font-semibold {{ $participant->theory_score !== null ? 'text-primary' : 'text-gray-400' }}">
+                                    {{ $participant->theory_score !== null ? number_format($participant->theory_score, 0) : '-' }}
+                                </div>
+                            @endscope
+
+                            {{-- Practice Score --}}
+                            @scope('cell_practice_score', $participant)
+                                <div
+                                    class="text-center font-semibold {{ $participant->practice_score !== null ? 'text-primary' : 'text-gray-400' }}">
+                                    @if ($participant->practice_score !== null)
+                                        @php
+                                            $grade = match (true) {
+                                                $participant->practice_score >= 90 => 'A',
+                                                $participant->practice_score >= 81 => 'B',
+                                                $participant->practice_score >= 71 => 'C',
+                                                $participant->practice_score >= 61 => 'D',
+                                                default => 'E',
+                                            };
+                                        @endphp
+                                        {{ $grade }}
+                                    @else
+                                        -
+                                    @endif
                                 </div>
                             @endscope
 
@@ -218,6 +244,43 @@
                                             class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">
                                             {{ ucfirst(str_replace('_', ' ', $participant->status)) }}
                                         </span>
+                                    @endif
+                                </div>
+                            @endscope
+
+                            {{-- Certificate Download --}}
+                            @scope('cell_certificate', $participant)
+                                <div class="flex justify-center">
+                                    @php
+                                        $participantStatus = strtolower($participant->status);
+                                        $hasCertificate =
+                                            $participantStatus === 'passed' &&
+                                            !empty($participant->certificate_path) &&
+                                            !empty($participant->assessment_id);
+
+                                        // Generate certificate number format
+                                        $certNumber = null;
+                                        if ($hasCertificate && $participant->assessment_id) {
+                                            $groupComp = $formData['group_comp'] ?? 'BMC';
+                                            $certNumber =
+                                                $groupComp .
+                                                '/C/' .
+                                                date('Y') .
+                                                '/' .
+                                                str_pad($participant->assessment_id, 4, '0', STR_PAD_LEFT);
+                                        }
+                                    @endphp
+                                    @if ($hasCertificate && $certNumber)
+                                        <a href="{{ route('certificate.training.download', $participant->assessment_id) }}"
+                                            target="_blank"
+                                            class="text-primary hover:text-primary/80 hover:underline text-xs font-medium transition-colors"
+                                            title="View Certificate">
+                                            {{ $certNumber }}
+                                        </a>
+                                    @elseif ($participantStatus === 'passed')
+                                        <span class="text-xs text-amber-600 italic">Pending</span>
+                                    @else
+                                        <span class="text-xs text-gray-400">-</span>
                                     @endif
                                 </div>
                             @endscope

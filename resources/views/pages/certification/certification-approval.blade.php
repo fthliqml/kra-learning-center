@@ -47,8 +47,8 @@
             <x-table :headers="$headers" :rows="$approvals" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- No --}}
-                @scope('cell_no', $approval)
-                    {{ $loop->iteration }}
+                @scope('cell_no', $approval, $approvals)
+                    {{ ($approvals->currentPage() - 1) * $approvals->perPage() + $loop->iteration }}
                 @endscope
 
                 {{-- Certification Name --}}
