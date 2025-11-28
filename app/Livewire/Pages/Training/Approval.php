@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Training;
 
 use App\Models\Training;
+use App\Services\TrainingCertificateService;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
@@ -63,6 +64,7 @@ class Approval extends Component
             ['key' => 'section', 'label' => 'Section', 'class' => '!text-center w-[100px]'],
             ['key' => 'score', 'label' => 'Score', 'class' => '!text-center w-[80px]'],
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center w-[100px]'],
+            ['key' => 'certificate', 'label' => 'Certificate', 'class' => '!text-center w-[120px]'],
         ];
     }
 
@@ -91,6 +93,8 @@ class Approval extends Component
             // Determine status
             $status = $assessment ? $assessment->status : 'pending';
             $score = $assessment ? $assessment->score : null;
+            $certificatePath = $assessment ? $assessment->certificate_path : null;
+            $assessmentId = $assessment ? $assessment->id : null;
 
             return (object) [
                 'no' => $index + 1,
@@ -100,6 +104,9 @@ class Approval extends Component
                 'score' => $score !== null ? number_format($score, 1) : '-',
                 'status' => $status,
                 'score_raw' => $score,
+                'certificate_path' => $certificatePath,
+                'employee_id' => $employee->id,
+                'assessment_id' => $assessmentId,
             ];
         });
 
@@ -133,8 +140,7 @@ class Approval extends Component
         }
 
         return $query
-            ->orderByRaw("CASE WHEN status = 'done' THEN 0 WHEN status = 'approved' THEN 1 ELSE 2 END")
-            ->latest()
+            ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->through(function ($training) {
                 // Map status: done -> pending for display
@@ -222,8 +228,17 @@ class Approval extends Component
             'status' => 'approved',
         ]);
 
+        // Generate certificates for passed participants
+        $certificateService = new TrainingCertificateService();
+        $certificatesGenerated = $certificateService->generateCertificatesForTraining($training);
+
         $this->formData['status'] = 'approved';
-        $this->success('Training approved successfully', position: 'toast-top toast-center');
+
+        if ($certificatesGenerated > 0) {
+            $this->success("Training approved successfully. {$certificatesGenerated} certificate(s) generated.", position: 'toast-top toast-center');
+        } else {
+            $this->success('Training approved successfully', position: 'toast-top toast-center');
+        }
 
         $this->modal = false;
     }

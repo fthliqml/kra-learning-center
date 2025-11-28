@@ -17,6 +17,7 @@ class TrainingAssessment extends Model
         'posttest_score',
         'practical_score',
         'status',
+        'certificate_path',
     ];
 
     protected $casts = [

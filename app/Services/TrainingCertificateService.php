@@ -1,0 +1,286 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\Training;
+use App\Models\TrainingAssessment;
+use App\Models\User;
+use Illuminate\Support\Facades\Storage;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Log;
+
+class TrainingCertificateService
+{
+    /**
+     * Generate certificate for a passed participant
+     *
+     * @param Training $training
+     * @param User $employee
+     * @param TrainingAssessment $assessment
+     * @return string|null Certificate path on success, null on failure
+     */
+    public function generateCertificate(Training $training, User $employee, TrainingAssessment $assessment): ?string
+    {
+        try {
+            // Check if participant passed
+            if ($assessment->status !== 'passed') {
+                return null;
+            }
+
+            // Template paths (PNG)
+            $template1Path = storage_path('app/private/template/Template-Certificate-1.png');
+            $template2Path = storage_path('app/private/template/Template-Certificate-2.png');
+
+            if (!file_exists($template1Path) || !file_exists($template2Path)) {
+                Log::error("Certificate template not found");
+                return null;
+            }
+
+            // Create FPDF instance
+            $pdf = new \FPDF('L', 'mm', 'A4');
+
+            // === PAGE 1: Certificate ===
+            $pdf->AddPage();
+            // Add background image (full page)
+            $pdf->Image($template1Path, 0, 0, 297, 210);
+
+            // Add certificate number (top right, after "NOMOR SERTIFIKAT")
+            $groupComp = $training->group_comp ?? 'BMC';
+            $certificateNumber = $groupComp . '/C/' . date('Y') . '/' . str_pad($assessment->id, 4, '0', STR_PAD_LEFT);
+            $pdf->SetFont('Times', 'I', 11);
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->SetXY(245.5, 13);
+            $pdf->Cell(45, 5, $certificateNumber, 0, 0, 'L');
+
+            // Add participant name (after "Nama/Name :")
+            $pdf->SetFont('Times', 'B', 14);
+            $pdf->SetXY(156, 85);
+            $pdf->Cell(120, 6, strtoupper($employee->name ?? '-'), 0, 0, 'L');
+
+            // Add training name (after "Telah Mengikuti/Had joined :")
+            $pdf->SetXY(156, 104.5);
+            $pdf->Cell(120, 6, strtoupper($training->name ?? '-'), 0, 0, 'L');
+
+            // Add period dates (after "Periode/Period :")
+            $startDate = $training->start_date ? Carbon::parse($training->start_date)->format('d M Y') : '-';
+            $endDate = $training->end_date ? Carbon::parse($training->end_date)->format('d M Y') : '-';
+            $periodText = $startDate . ' s.d. ' . $endDate;
+            $pdf->SetXY(156, 123.3);
+            $pdf->Cell(120, 6, $periodText, 0, 0, 'L');
+
+            // Add issue location and date (Balikpapan, dd Month YYYY) - right side
+            $issueDate = Carbon::now()->format('d F Y');
+            $pdf->SetFont('Times', '', 11);
+            $pdf->SetXY(185, 151.5);
+            $pdf->Cell(110, 5, 'Balikpapan, ' . $issueDate, 0, 0, 'C');
+
+            // === PAGE 2: Daftar Nilai ===
+            $pdf->AddPage();
+            // Add background image (full page)
+            $pdf->Image($template2Path, 0, 0, 297, 210);
+
+            // Add training material name (Materi Training column)
+            $pdf->SetFont('Times', '', 12);
+            $pdf->SetTextColor(0, 0, 0);
+            $pdf->SetXY(27, 79);
+            $pdf->Cell(120, 20, $training->name ?? '', 0, 0, 'C');
+
+            // Add theory score in words (Teori - Huruf column)
+            if ($assessment->posttest_score !== null) {
+                $theoryWords = $this->getScoreInWords($assessment->posttest_score);
+                $pdf->SetFont('Times', 'I', 12);
+                $pdf->SetXY(145.3, 79);
+                $pdf->Cell(25, 20, $theoryWords, 0, 0, 'C');
+            }
+
+            // Add theory score number (Teori - Angka column)
+            if ($assessment->posttest_score !== null) {
+                $pdf->SetFont('Times', '', 12);
+                $pdf->SetXY(180.2, 79);
+                $pdf->Cell(20, 20, number_format($assessment->posttest_score, 0), 0, 0, 'C');
+            }
+
+            // Add practical score grade letter (Praktik - Angka column)
+            if ($assessment->practical_score !== null) {
+                $practicalGrade = $this->getGrade($assessment->practical_score);
+                $pdf->SetXY(200, 79);
+                $pdf->Cell(20, 20, $practicalGrade, 0, 0, 'C');
+            }
+
+            // Add practical score range (Praktik - Range Angka column)
+            if ($assessment->practical_score !== null) {
+                $rangeText = $this->getScoreRange($assessment->practical_score);
+                $pdf->SetXY(225, 79);
+                $pdf->Cell(30, 20, $rangeText, 0, 0, 'C');
+            }
+
+            // Add average score (Nilai Rata-Rata Peserta)
+            $avgScore = $this->calculateAverageScore($assessment);
+            $pdf->SetXY(180.2, 133);
+            $pdf->Cell(20, 6, number_format($avgScore, 0), 0, 0, 'C');
+
+            // Add class average (Nilai Rata-Rata Kelas)
+            $pdf->SetXY(180.2, 142.7);
+            $pdf->Cell(20, 6, number_format($avgScore, 2), 0, 0, 'C');
+
+            // Add instructor name (bottom right)
+            $instructorName = $training->sessions()
+                ->whereHas('trainer')
+                ->with('trainer')
+                ->first()?->trainer?->name ?? 'Instructor';
+            $pdf->SetFont('Times', 'BU', 10);
+            $pdf->SetXY(201.6, 180);
+            $pdf->Cell(60, 5, $instructorName, 0, 0, 'C');
+
+            // Generate unique filename
+            $fileName = 'certificate_' . $training->id . '_' . $employee->id . '_' . time() . '.pdf';
+            $filePath = 'certificates/' . $fileName;
+
+            // Save to storage
+            $pdfContent = $pdf->Output('S'); // Output as string
+            Storage::put($filePath, $pdfContent);
+
+            return $filePath;
+        } catch (\Exception $e) {
+            Log::error('Certificate generation failed: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            return null;
+        }
+    }
+
+    /**
+     * Calculate average score from assessment
+     */
+    protected function calculateAverageScore(TrainingAssessment $assessment): float
+    {
+        $scores = [];
+        if ($assessment->posttest_score !== null) {
+            $scores[] = $assessment->posttest_score;
+        }
+        if ($assessment->practical_score !== null) {
+            $scores[] = $assessment->practical_score;
+        }
+
+        return count($scores) > 0 ? array_sum($scores) / count($scores) : 0;
+    }
+
+    /**
+     * Get grade letter from score
+     */
+    protected function getGrade(float $score): string
+    {
+        if ($score >= 90) return 'A';
+        if ($score >= 81) return 'B';
+        if ($score >= 71) return 'C';
+        if ($score >= 61) return 'D';
+        return 'E';
+    }
+
+    /**
+     * Get score range text
+     */
+    protected function getScoreRange(float $score): string
+    {
+        if ($score >= 90) return '90-100';
+        if ($score >= 81) return '81-90';
+        if ($score >= 71) return '71-80';
+        if ($score >= 61) return '61-70';
+        return '0-60';
+    }
+
+    /**
+     * Get score in Indonesian words
+     */
+    protected function getScoreInWords(float $score): string
+    {
+        $words = [
+            0 => 'Nol',
+            1 => 'Satu',
+            2 => 'Dua',
+            3 => 'Tiga',
+            4 => 'Empat',
+            5 => 'Lima',
+            6 => 'Enam',
+            7 => 'Tujuh',
+            8 => 'Delapan',
+            9 => 'Sembilan',
+            10 => 'Sepuluh',
+            11 => 'Sebelas'
+        ];
+
+        $score = (int) $score;
+
+        if ($score <= 11) {
+            return $words[$score];
+        } elseif ($score < 20) {
+            return $words[$score - 10] . ' Belas';
+        } elseif ($score < 100) {
+            $tens = (int) ($score / 10);
+            $units = $score % 10;
+            $result = $words[$tens] . ' Puluh';
+            if ($units > 0) {
+                $result .= ' ' . $words[$units];
+            }
+            return $result;
+        } elseif ($score == 100) {
+            return 'Seratus';
+        }
+
+        return (string) $score;
+    }
+
+    /**
+     * Generate certificates for all passed participants
+     *
+     * @param Training $training
+     * @return int Number of certificates generated
+     */
+    public function generateCertificatesForTraining(Training $training): int
+    {
+        $count = 0;
+
+        // Get all passed participants
+        $passedAssessments = TrainingAssessment::where('training_id', $training->id)
+            ->where('status', 'passed')
+            ->whereNull('certificate_path') // Only generate if not already generated
+            ->with('employee')
+            ->get();
+
+        foreach ($passedAssessments as $assessment) {
+            $employee = $assessment->employee;
+
+            if (!$employee) {
+                Log::warning("Assessment ID {$assessment->id} has no employee, skipping");
+                continue;
+            }
+
+            $certificatePath = $this->generateCertificate($training, $employee, $assessment);
+
+            if ($certificatePath) {
+                // Update assessment with certificate path
+                $assessment->update([
+                    'certificate_path' => $certificatePath
+                ]);
+                $count++;
+            } else {
+                Log::error("Failed to generate certificate for Assessment ID {$assessment->id}");
+            }
+        }
+
+        return $count;
+    }
+
+    /**
+     * Delete certificate file
+     *
+     * @param string $certificatePath
+     * @return bool
+     */
+    public function deleteCertificate(string $certificatePath): bool
+    {
+        if (Storage::exists($certificatePath)) {
+            return Storage::delete($certificatePath);
+        }
+        return false;
+    }
+}

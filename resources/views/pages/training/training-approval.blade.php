@@ -47,8 +47,8 @@
             <x-table :headers="$headers" :rows="$approvals" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- No --}}
-                @scope('cell_no', $approval)
-                    {{ $loop->iteration }}
+                @scope('cell_no', $approval, $approvals)
+                    {{ ($approvals->currentPage() - 1) * $approvals->perPage() + $loop->iteration }}
                 @endscope
 
                 {{-- Training Name --}}
@@ -157,7 +157,7 @@
                             class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3">
                             {{-- No --}}
                             @scope('cell_no', $participant)
-                                <div class="text-center">{{ $participant->no }}</div>
+                                <div class="text-center">{{ $participant->no ?? $loop->iteration }}</div>
                             @endscope
 
                             {{-- NRP --}}
@@ -218,6 +218,38 @@
                                             class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">
                                             {{ ucfirst(str_replace('_', ' ', $participant->status)) }}
                                         </span>
+                                    @endif
+                                </div>
+                            @endscope
+
+                            {{-- Certificate Download --}}
+                            @scope('cell_certificate', $participant)
+                                <div class="flex justify-center">
+                                    @php
+                                        $participantStatus = strtolower($participant->status);
+                                        $hasCertificate =
+                                            $participantStatus === 'passed' &&
+                                            !empty($participant->certificate_path) &&
+                                            !empty($participant->assessment_id);
+                                    @endphp
+                                    @if ($hasCertificate)
+                                        <a href="{{ route('certificate.training.download', $participant->assessment_id) }}"
+                                            target="_blank"
+                                            class="inline-flex items-center px-3 py-1 text-xs font-medium text-white bg-primary hover:bg-primary/90 rounded transition-colors gap-1"
+                                            title="View Certificate">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2"
+                                                viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                <path stroke-linecap="round" stroke-linejoin="round"
+                                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                            </svg>
+                                            View
+                                        </a>
+                                    @elseif ($participantStatus === 'passed')
+                                        <span class="text-xs text-amber-600 italic">Pending</span>
+                                    @else
+                                        <span class="text-xs text-gray-400">-</span>
                                     @endif
                                 </div>
                             @endscope
