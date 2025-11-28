@@ -145,13 +145,6 @@
                     </div>
                 @endscope
 
-                {{-- Total Point --}}
-                @scope('cell_total_point', $report)
-                    <div class="text-center font-semibold text-blue-600">
-                        {{ $report->total_point }}
-                    </div>
-                @endscope
-
                 {{-- Note --}}
                 @scope('cell_note', $report)
                     <div class="truncate max-w-[150px] text-xs" title="{{ $report->note }}">

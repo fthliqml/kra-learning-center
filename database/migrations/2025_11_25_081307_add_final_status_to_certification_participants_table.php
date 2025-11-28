@@ -12,6 +12,7 @@ return new class extends Migration {
     {
         Schema::table('certification_participants', function (Blueprint $table) {
             $table->enum('final_status', ['pending', 'passed', 'failed'])->default('pending')->after('employee_id');
+            $table->integer('earned_points')->default(0)->after('final_status');
         });
     }
 
@@ -21,7 +22,7 @@ return new class extends Migration {
     public function down(): void
     {
         Schema::table('certification_participants', function (Blueprint $table) {
-            $table->dropColumn(['final_status']);
+            $table->dropColumn(['final_status', 'earned_points']);
         });
     }
 };

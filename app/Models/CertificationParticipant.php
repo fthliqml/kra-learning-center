@@ -13,6 +13,7 @@ class CertificationParticipant extends Model
     'certification_id',
     'employee_id',
     'final_status',
+    'earned_points',
     'assigned_at',
   ];
 
