@@ -12,7 +12,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int $id
  * @property int $created_by
  * @property int $user_id
- * @property string $competency
+ * @property int $competency_id
  * @property string $reason
  * @property string $status     pending|approved|rejected
  * @property \Illuminate\Support\Carbon|null $created_at
@@ -42,7 +42,7 @@ class Request extends Model
     protected $fillable = [
         'created_by',
         'user_id',
-        'competency',
+        'competency_id',
         'reason',
         'status',
     ];
@@ -51,10 +51,10 @@ class Request extends Model
      * Attribute casting.
      */
     protected $casts = [
-        'created_by' => 'integer',
-        'user_id'    => 'integer',
-        'competency' => 'string',
-        'reason'     => 'string',
+        'created_by'    => 'integer',
+        'user_id'       => 'integer',
+        'competency_id' => 'integer',
+        'reason'        => 'string',
         'status'     => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
@@ -80,6 +80,14 @@ class Request extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id');
+    }
+
+    /**
+     * The competency associated with the training request.
+     */
+    public function competency(): BelongsTo
+    {
+        return $this->belongsTo(Competency::class);
     }
 
     /* ========================= Helpers ========================= */

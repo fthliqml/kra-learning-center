@@ -17,9 +17,9 @@ return new class extends Migration
             // Foreign keys
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('competency_id')->constrained('competency')->cascadeOnDelete();
 
             // Request details
-            $table->string('competency');
             $table->string('reason');
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
 
