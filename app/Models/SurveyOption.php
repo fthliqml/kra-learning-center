@@ -14,6 +14,7 @@ class SurveyOption extends Model
 
     protected $casts = [
         'question_id' => 'integer',
+        'order' => 'integer',
     ];
 
     /**

@@ -40,6 +40,6 @@ class SectionQuizAttempt extends Model
 
   public function answers()
   {
-    return $this->hasMany(SectionQuizAttemptAnswer::class, 'section_quiz_attempt_id');
+    return $this->hasMany(SectionQuizAttemptAnswer::class, 'quiz_attempt_id');
   }
 }

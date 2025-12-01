@@ -16,6 +16,10 @@ class SurveyQuestion extends Model
         'order',
     ];
 
+    protected $casts = [
+        'order' => 'integer',
+    ];
+
     /**
      * Summary of trainingSurvey
      * @return \Illuminate\Database\Eloquent\Relations\BelongsTo<TrainingSurvey, SurveyQuestion>
