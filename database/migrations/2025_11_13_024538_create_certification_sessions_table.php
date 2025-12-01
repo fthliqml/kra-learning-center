@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
   /**
    * Run the migrations.
    */
@@ -12,12 +13,18 @@ return new class extends Migration {
   {
     Schema::create('certification_sessions', function (Blueprint $table) {
       $table->id();
-      $table->foreignId('certification_id')->constrained('certifications')->onDelete('cascade');
+
+      // Foreign keys
+      $table->foreignId('certification_id')->constrained('certifications')->cascadeOnDelete();
+
+      // Session details
       $table->enum('type', ['theory', 'practical']);
       $table->date('date');
       $table->time('start_time');
       $table->time('end_time');
       $table->string('location');
+
+      // Timestamps
       $table->timestamps();
     });
   }

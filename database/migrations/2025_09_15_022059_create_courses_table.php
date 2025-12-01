@@ -4,31 +4,30 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
-     * Membuat tabel courses (konten pembelajaran turunan dari training).
+     * Run the migrations.
      */
     public function up(): void
     {
         Schema::create('courses', function (Blueprint $table) {
             $table->id();
 
-            // Core Fields
+            // Details
             $table->string('title');
             $table->text('description');
             $table->string('thumbnail_url')->nullable();
             $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
-
-            // Status Fields
             $table->enum('status', ['draft', 'inactive', 'assigned']);
 
-            // Meta
+            // Timestamps
             $table->timestamps();
         });
     }
 
     /**
-     * Menghapus tabel courses.
+     * Reverse the migrations.
      */
     public function down(): void
     {

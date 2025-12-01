@@ -11,6 +11,7 @@ class Competency extends Model
     protected $table = 'competency';
 
     protected $fillable = [
+        'name',
         'description',
     ];
 

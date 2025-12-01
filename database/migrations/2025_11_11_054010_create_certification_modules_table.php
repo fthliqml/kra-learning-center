@@ -13,6 +13,8 @@ return new class extends Migration
     {
         Schema::create('certification_modules', function (Blueprint $table) {
             $table->id();
+
+            // Module details
             $table->string('code');
             $table->string('module_title');
             $table->string('level');
@@ -26,6 +28,8 @@ return new class extends Migration
             $table->double('theory_passing_score');
             $table->double('practical_passing_score');
             $table->boolean('is_active');
+
+            // Timestamps
             $table->timestamps();
         });
     }
