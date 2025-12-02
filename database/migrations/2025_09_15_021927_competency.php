@@ -15,6 +15,7 @@ return new class extends Migration
             $table->id();
 
             // Details
+            $table->string('code')->unique();
             $table->string('name');
             $table->enum('type', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
             $table->string('description');
