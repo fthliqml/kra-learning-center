@@ -13,7 +13,7 @@ class TrainingFormRequest extends FormRequest
 
     public function rules(): array
     {
-        if ($this->input('training_type') === 'K-LEARN') {
+        if ($this->input('training_type') === 'LMS') {
             return [
                 'course_id' => 'required|integer|exists:courses,id',
                 'training_type' => 'required',
@@ -46,7 +46,7 @@ class TrainingFormRequest extends FormRequest
     {
         return [
             'training_name.required' => 'Training name is required.',
-            'course_id.required' => 'Course must be selected for K-Learn.',
+            'course_id.required' => 'Course must be selected for LMS.',
             'training_type.required' => 'Training type is required.',
             'group_comp.required' => 'Group competency is required.',
             'training_name.min' => 'Training name must be at least 3 characters.',

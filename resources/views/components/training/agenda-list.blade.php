@@ -40,7 +40,7 @@
                         'dot' => $isDone ? 'bg-amber-300' : 'bg-amber-500',
                         'badge' => $isDone ? 'border-amber-300 bg-amber-50' : 'border-amber-500 bg-amber-50',
                     ],
-                    'K-LEARN', 'KLEARN', 'KLEARNING' => [
+                    'LMS' => [
                         'dot' => $isDone ? 'bg-indigo-300' : 'bg-indigo-500',
                         'badge' => $isDone ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-500 bg-indigo-50',
                     ],

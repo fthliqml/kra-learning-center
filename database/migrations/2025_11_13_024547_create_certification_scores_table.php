@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
   /**
    * Run the migrations.
    */
@@ -12,10 +13,16 @@ return new class extends Migration {
   {
     Schema::create('certification_scores', function (Blueprint $table) {
       $table->id();
-      $table->foreignId('participant_id')->constrained('certification_participants')->onDelete('cascade');
-      $table->foreignId('session_id')->constrained('certification_sessions')->onDelete('cascade');
+
+      // Foreign keys
+      $table->foreignId('participant_id')->constrained('certification_participants')->cascadeOnDelete();
+      $table->foreignId('session_id')->constrained('certification_sessions')->cascadeOnDelete();
+
+      // Score details
       $table->double('score');
       $table->enum('status', ['passed', 'failed']);
+
+      // Timestamps
       $table->timestamp('recorded_at')->useCurrent();
       $table->timestamp('updated_at')->useCurrent()->useCurrentOnUpdate();
     });

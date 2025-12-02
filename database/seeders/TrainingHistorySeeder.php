@@ -40,7 +40,7 @@ class TrainingHistorySeeder extends Seeder
       ]);
     }
 
-    $trainingTypes = ['IN', 'OUT', 'K-LEARN'];
+    $trainingTypes = ['IN', 'OUT', 'LMS'];
     $groupComps = ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC'];
     $trainingNames = [
       'Spring Boot Fundamentals',

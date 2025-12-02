@@ -48,6 +48,23 @@ class DataTrainer extends Component
             ->map(fn($u) => ['id' => $u['value'], 'name' => $u['label']])
             ->values()
             ->all();
+
+        $this->loadCompetencyOptions();
+    }
+
+    /**
+     * Load competency options from Competency Book
+     */
+    public function loadCompetencyOptions(): void
+    {
+        $this->competencyOptions = Competency::orderBy('code')
+            ->get()
+            ->map(fn($c) => [
+                'id' => $c->id,
+                'name' => "[{$c->code}] {$c->name}",
+                'display_name' => $c->name, // For preview without code
+            ])
+            ->toArray();
     }
 
     public $groupOptions = [
@@ -55,12 +72,14 @@ class DataTrainer extends Component
         ['value' => 'External', 'label' => 'External'],
     ];
 
+    public array $competencyOptions = [];
+
     public $formData = [
         'trainer_type' => '',
         'name' => '',
         'user_id' => '',
         'institution' => '',
-        'competencies' => [''],
+        'competencies' => [],
     ];
 
     protected function rules()
@@ -75,13 +94,13 @@ class DataTrainer extends Component
                 'required',
                 'array',
                 function ($attr, $value, $fail) {
-                    $nonEmpty = collect($value)->filter(fn($v) => is_string($v) && trim($v) !== '');
+                    $nonEmpty = collect($value)->filter(fn($v) => !empty($v));
                     if ($nonEmpty->isEmpty()) {
-                        $fail('Add at least one competency.');
+                        $fail('Select at least one competency.');
                     }
                 }
             ],
-            'formData.competencies.*' => 'nullable|string|max:255',
+            'formData.competencies.*' => 'nullable|integer|exists:competency,id',
         ];
     }
 
@@ -97,10 +116,10 @@ class DataTrainer extends Component
             'formData.name.required' => 'Trainer name is required.',
             'formData.name.max' => 'Trainer name may not exceed 255 characters.',
             'formData.institution.required' => 'Institution is required.',
-            'formData.competencies.required' => 'Add at least one competency.',
+            'formData.competencies.required' => 'Select at least one competency.',
             'formData.competencies.array' => 'Invalid competencies data.',
-            'formData.competencies.min' => 'Add at least one competency.',
-            'formData.competencies.*.max' => 'A competency description may not exceed 255 characters.',
+            'formData.competencies.min' => 'Select at least one competency.',
+            'formData.competencies.*.exists' => 'Selected competency is invalid.',
         ];
     }
 
@@ -134,7 +153,7 @@ class DataTrainer extends Component
             'name' => '',
             'user_id' => '',
             'institution' => '',
-            'competencies' => [''],
+            'competencies' => [],
         ];
         $this->mode = 'create';
         $this->modal = true;
@@ -231,7 +250,7 @@ class DataTrainer extends Component
     {
         $trainer = Trainer::findOrFail($id);
 
-        $competencyDescs = $trainer->competencies->pluck('description')->toArray();
+        $competencyIds = $trainer->competencies->pluck('id')->toArray();
 
         $this->selectedId = $id;
         $isInternal = !is_null($trainer->user_id);
@@ -240,7 +259,7 @@ class DataTrainer extends Component
             'name' => $isInternal ? ($trainer->user->name ?? '') : ($trainer->name ?? ''),
             'user_id' => $trainer->user_id,
             'institution' => $trainer->institution,
-            'competencies' => !empty($competencyDescs) ? $competencyDescs : [''],
+            'competencies' => $competencyIds,
         ];
 
         $this->mode = 'preview';
@@ -262,7 +281,7 @@ class DataTrainer extends Component
     {
         $trainer = Trainer::findOrFail($id);
 
-        $competencyDescs = $trainer->competencies->pluck('description')->toArray();
+        $competencyIds = $trainer->competencies->pluck('id')->toArray();
 
         $this->selectedId = $id;
         $isInternal = !is_null($trainer->user_id);
@@ -271,7 +290,7 @@ class DataTrainer extends Component
             'name' => $isInternal ? '' : ($trainer->name ?? ''),
             'user_id' => $trainer->user_id,
             'institution' => $trainer->institution,
-            'competencies' => !empty($competencyDescs) ? $competencyDescs : [''],
+            'competencies' => $competencyIds,
         ];
 
         $this->duplicateWarning = '';
@@ -295,15 +314,12 @@ class DataTrainer extends Component
     {
         $this->validate();
 
-        $descs = collect($this->formData['competencies'] ?? [])
-            ->map(fn($v) => is_string($v) ? trim($v) : $v)
-            ->filter()
+        // Get competency IDs directly (already IDs from dropdown)
+        $competencyIds = collect($this->formData['competencies'] ?? [])
+            ->filter(fn($v) => !empty($v))
             ->unique()
-            ->values();
-
-        $competencyIds = $descs->map(function ($desc) {
-            return Competency::firstOrCreate(['description' => $desc])->id;
-        })->all();
+            ->values()
+            ->all();
 
         $isInternal = ($this->formData['trainer_type'] ?? 'internal') === 'internal';
         $trainerData = [
@@ -348,25 +364,6 @@ class DataTrainer extends Component
     public function closeModal(): void
     {
         $this->modal = false;
-    }
-
-    /**
-     * Add new competency input row
-     */
-    public function addCompetencyRow(): void
-    {
-        $this->formData['competencies'][] = '';
-    }
-
-    /**
-     * Remove competency input row by index
-     */
-    public function removeCompetencyRow(int $index): void
-    {
-        if (!isset($this->formData['competencies'][$index]))
-            return;
-        unset($this->formData['competencies'][$index]);
-        $this->formData['competencies'] = array_values($this->formData['competencies']);
     }
 
     #[On('deleteTrainer')]

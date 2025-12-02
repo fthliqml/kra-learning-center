@@ -4,39 +4,35 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
-     * Membuat tabel users beserta tabel pendukung autentikasi (password_reset_tokens, sessions).
+     * Run the migrations.
      */
     public function up(): void
     {
-        // Tabel utama users
         Schema::create('users', function (Blueprint $table) {
             $table->id();
 
-            // Identitas & Akun
+            // User details
             $table->string('name');
             $table->string('email')->unique();
             $table->string('password');
             $table->string('section');
             $table->integer('NRP');
             $table->enum('role', ['employee', 'spv', 'instructor', 'certificator', 'admin', 'leader'])->default('employee');
-
-            // Auth Helpers
             $table->rememberToken();
 
-            // Meta
+            // Timestamps
             $table->timestamps();
         });
 
-        // Token reset password
         Schema::create('password_reset_tokens', function (Blueprint $table) {
             $table->string('email')->primary();
             $table->string('token');
             $table->timestamp('created_at')->nullable();
         });
 
-        // Session store (untuk session berbasis database)
         Schema::create('sessions', function (Blueprint $table) {
             $table->string('id')->primary();
             $table->foreignId('user_id')->nullable()->index();
@@ -48,7 +44,7 @@ return new class extends Migration {
     }
 
     /**
-     * Menghapus tabel users dan tabel pendukung autentikasi.
+     * Reverse the migrations.
      */
     public function down(): void
     {

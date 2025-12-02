@@ -38,7 +38,7 @@ class TrainingFormModal extends Component
   public $date = '';
   public $start_time = '';
   public $end_time = '';
-  public $course_id = null; // Only for K-LEARN type
+  public $course_id = null; // Only for LMS type
 
   // id trainer
   public $trainerId = null;
@@ -58,7 +58,7 @@ class TrainingFormModal extends Component
   public $trainingTypeOptions = [
     ['id' => 'IN', 'name' => 'In-House'],
     ['id' => 'OUT', 'name' => 'Out-House'],
-    ['id' => 'K-LEARN', 'name' => 'K-Learn']
+    ['id' => 'LMS', 'name' => 'LMS']
   ];
 
   public $groupCompOptions = [
@@ -70,9 +70,9 @@ class TrainingFormModal extends Component
     ['id' => 'TOC', 'name' => 'TOC'],
   ];
 
-  // Original type (from DB) for edit scenario to detect transitions to K-LEARN
+  // Original type (from DB) for edit scenario to detect transitions to LMS
   public ?string $originalTrainingType = null;
-  // Confirmation dialog state when changing to K-LEARN
+  // Confirmation dialog state when changing to LMS
   public bool $showTypeChangeConfirm = false;
   public ?string $pendingTrainingType = null;
 
@@ -96,14 +96,14 @@ class TrainingFormModal extends Component
 
   private function loadCourseOptions(): void
   {
-    // Include group_comp so we can auto-sync training group_comp for K-LEARN
+    // Include group_comp so we can auto-sync training group_comp for LMS
     $this->courseOptions = Course::select('id', 'title', 'group_comp')->orderBy('title')->get()
       ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->group_comp])->toArray();
   }
 
   public function updatedCourseId($value): void
   {
-    if ($this->training_type === 'K-LEARN' && $value) {
+    if ($this->training_type === 'LMS' && $value) {
       $course = collect($this->courseOptions)->firstWhere('id', (int) $value);
       $this->training_name = $course['title'] ?? '';
       // Auto-sync group competency with selected course
@@ -119,26 +119,26 @@ class TrainingFormModal extends Component
   public function updatedTrainingType($value): void
   {
     $this->resetValidation();
-    // If editing and moving from a non K-LEARN -> K-LEARN, require confirmation
-    if ($this->isEdit && $value === 'K-LEARN' && $this->originalTrainingType !== 'K-LEARN') {
-      $this->pendingTrainingType = 'K-LEARN';
+    // If editing and moving from a non LMS -> LMS, require confirmation
+    if ($this->isEdit && $value === 'LMS' && $this->originalTrainingType !== 'LMS') {
+      $this->pendingTrainingType = 'LMS';
       $this->showTypeChangeConfirm = true;
       // Revert visible value until user confirms (Livewire already set it, so set back):
       $this->training_type = $this->originalTrainingType;
       return;
     }
-    // Normal immediate transitions (create mode or switching away from K-LEARN)
-    if ($value === 'K-LEARN') {
-      $this->applyKLearnSwitch();
+    // Normal immediate transitions (create mode or switching away from LMS)
+    if ($value === 'LMS') {
+      $this->applyLmsSwitch();
     } else {
-      // Leaving K-LEARN
+      // Leaving LMS
       $this->course_id = null;
     }
   }
 
-  private function applyKLearnSwitch(): void
+  private function applyLmsSwitch(): void
   {
-    $this->training_type = 'K-LEARN';
+    $this->training_type = 'LMS';
     $this->training_name = '';
     $this->course_id = null;
     $this->trainerId = null;
@@ -150,8 +150,8 @@ class TrainingFormModal extends Component
 
   public function confirmTypeChange(): void
   {
-    if ($this->pendingTrainingType === 'K-LEARN') {
-      $this->applyKLearnSwitch();
+    if ($this->pendingTrainingType === 'LMS') {
+      $this->applyLmsSwitch();
       $this->showTypeChangeConfirm = false;
       $this->pendingTrainingType = null;
       // Note: actual attendance deletion occurs on saveTraining when type persisted.
@@ -275,7 +275,7 @@ class TrainingFormModal extends Component
       $this->error('Invalid training reference.');
       return;
     }
-    
+
     $this->resetForm();
     $this->isEdit = true;
     $this->trainingId = (int) $id;
@@ -292,7 +292,7 @@ class TrainingFormModal extends Component
       $this->error('Training not found');
       return;
     }
-    
+
     // Check if training is closed - prevent editing
     if ($training->status && strtolower($training->status) === 'done') {
       $this->error('Cannot edit a closed training. Please view details instead.');
@@ -304,7 +304,7 @@ class TrainingFormModal extends Component
     $this->originalTrainingType = $training->type;
     $this->group_comp = $training->group_comp;
     $this->course_id = $training->course_id;
-    if ($training->type !== 'K-LEARN') {
+    if ($training->type !== 'LMS') {
       $this->training_name = $training->name;
     } else {
       $this->training_name = $training->course?->title ?? $training->name;
@@ -444,7 +444,7 @@ class TrainingFormModal extends Component
     }
 
     $courseTitle = null;
-    if ($this->training_type === 'K-LEARN') {
+    if ($this->training_type === 'LMS') {
       $course = Course::find($this->course_id);
       $courseTitle = $course?->title;
     }
@@ -455,7 +455,7 @@ class TrainingFormModal extends Component
     }
 
     $groupToPersist = $this->group_comp;
-    if ($this->training_type === 'K-LEARN' && $this->course_id) {
+    if ($this->training_type === 'LMS' && $this->course_id) {
       $syncedGroup = Course::where('id', $this->course_id)->value('group_comp');
       if ($syncedGroup) {
         $this->group_comp = $syncedGroup;
@@ -464,12 +464,12 @@ class TrainingFormModal extends Component
     }
 
     $training = Training::create([
-      'name' => $this->training_type === 'K-LEARN' ? ($courseTitle ?? 'K-Learn') : $this->training_name,
+      'name' => $this->training_type === 'LMS' ? ($courseTitle ?? 'LMS') : $this->training_name,
       'type' => $this->training_type,
       'group_comp' => $groupToPersist,
       'start_date' => $startDate,
       'end_date' => $endDate,
-      'course_id' => $this->training_type === 'K-LEARN' ? $this->course_id : null,
+      'course_id' => $this->training_type === 'LMS' ? $this->course_id : null,
     ]);
 
     $surveys = $this->createSurveysForTraining($training);
@@ -481,7 +481,7 @@ class TrainingFormModal extends Component
       TrainingAssessment::create(["training_id" => $training->id, "employee_id" => $participantId]);
     }
 
-    if ($this->training_type !== 'K-LEARN') {
+    if ($this->training_type !== 'LMS') {
       foreach ($sessions as $session) {
         foreach ($this->participants as $participantId) {
           TrainingAttendance::create([
@@ -565,14 +565,14 @@ class TrainingFormModal extends Component
   private function updateTrainingFields($training, $courseTitle, $startDate, $endDate): void
   {
     $training->type = $this->training_type;
-    if ($this->training_type === 'K-LEARN') {
+    if ($this->training_type === 'LMS') {
       $training->course_id = $this->course_id;
       $training->name = $courseTitle ?? $training->name;
     } else {
       $training->course_id = null;
       $training->name = $this->training_name;
     }
-    if ($this->training_type === 'K-LEARN') {
+    if ($this->training_type === 'LMS') {
       $syncedGroup = Course::where('id', $this->course_id)->value('group_comp');
       if ($syncedGroup) {
         $this->group_comp = $syncedGroup;
@@ -594,7 +594,7 @@ class TrainingFormModal extends Component
   private function updateSessionFields($training): void
   {
     foreach ($training->sessions as $session) {
-      if ($training->type === 'K-LEARN') {
+      if ($training->type === 'LMS') {
         $session->room_name = $this->room['name'] ?: null;
         $session->room_location = $this->room['location'] ?: null;
         $session->trainer_id = null;
@@ -659,7 +659,7 @@ class TrainingFormModal extends Component
     $newParticipantIds = array_map('intval', $this->participants);
     $sessionIds = $training->sessions()->pluck('id');
     TrainingAttendance::whereIn('session_id', $sessionIds)->delete();
-    if ($training->type !== 'K-LEARN') {
+    if ($training->type !== 'LMS') {
       foreach ($training->sessions as $session) {
         foreach ($newParticipantIds as $pid) {
           TrainingAttendance::create([
@@ -721,11 +721,11 @@ class TrainingFormModal extends Component
           'training_id' => $training->id,
           'day_number' => $day,
           'date' => $dateObj->format('Y-m-d'),
-          'trainer_id' => $this->training_type === 'K-LEARN' ? null : $this->trainerId,
-          'room_name' => $this->training_type === 'K-LEARN' ? ($this->room['name'] ?: null) : $this->room['name'],
-          'room_location' => $this->training_type === 'K-LEARN' ? ($this->room['location'] ?: null) : $this->room['location'],
-          'start_time' => $this->training_type === 'K-LEARN' ? null : $this->start_time,
-          'end_time' => $this->training_type === 'K-LEARN' ? null : $this->end_time,
+          'trainer_id' => $this->training_type === 'LMS' ? null : $this->trainerId,
+          'room_name' => $this->training_type === 'LMS' ? ($this->room['name'] ?: null) : $this->room['name'],
+          'room_location' => $this->training_type === 'LMS' ? ($this->room['location'] ?: null) : $this->room['location'],
+          'start_time' => $this->training_type === 'LMS' ? null : $this->start_time,
+          'end_time' => $this->training_type === 'LMS' ? null : $this->end_time,
         ]);
         $day++;
       }
@@ -736,8 +736,8 @@ class TrainingFormModal extends Component
   /**
    * Rebuild sessions when date range or type changes. Removes old sessions and recreates sequential days.
    * Keeps semantics:
-   *  - K-LEARN: no trainer / times (null), optional room.
-   *  - Non K-LEARN: apply trainer/time/room values from form.
+   *  - LMS: no trainer / times (null), optional room.
+   *  - Non LMS: apply trainer/time/room values from form.
    */
   private function rebuildSessions(Training $training, ?string $startDate, ?string $endDate, string $previousType): void
   {
@@ -752,11 +752,11 @@ class TrainingFormModal extends Component
         'training_id' => $training->id,
         'day_number' => $day,
         'date' => $dateObj->format('Y-m-d'),
-        'trainer_id' => $training->type === 'K-LEARN' ? null : $this->trainerId,
-        'room_name' => $training->type === 'K-LEARN' ? ($this->room['name'] ?: null) : $this->room['name'],
-        'room_location' => $training->type === 'K-LEARN' ? ($this->room['location'] ?: null) : $this->room['location'],
-        'start_time' => $training->type === 'K-LEARN' ? null : $this->start_time,
-        'end_time' => $training->type === 'K-LEARN' ? null : $this->end_time,
+        'trainer_id' => $training->type === 'LMS' ? null : $this->trainerId,
+        'room_name' => $training->type === 'LMS' ? ($this->room['name'] ?: null) : $this->room['name'],
+        'room_location' => $training->type === 'LMS' ? ($this->room['location'] ?: null) : $this->room['location'],
+        'start_time' => $training->type === 'LMS' ? null : $this->start_time,
+        'end_time' => $training->type === 'LMS' ? null : $this->end_time,
       ]);
       $day++;
     }
@@ -768,5 +768,4 @@ class TrainingFormModal extends Component
   {
     return view('components.training.training-form-modal');
   }
-
 }

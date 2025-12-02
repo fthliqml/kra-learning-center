@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
   /**
    * Run the migrations.
    */
@@ -12,8 +13,16 @@ return new class extends Migration {
   {
     Schema::create('certification_participants', function (Blueprint $table) {
       $table->id();
-      $table->foreignId('certification_id')->constrained('certifications')->onDelete('cascade');
-      $table->integer('employee_id');
+
+      // Foreign keys
+      $table->foreignId('certification_id')->constrained('certifications')->cascadeOnDelete();
+      $table->foreignId('employee_id')->constrained('users')->cascadeOnDelete();
+
+      // Status
+      $table->enum('final_status', ['pending', 'passed', 'failed'])->default('pending');
+      $table->integer('earned_points')->default(0);
+
+      // Timestamps
       $table->timestamp('assigned_at')->useCurrent();
       $table->timestamps();
     });

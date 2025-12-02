@@ -4,7 +4,7 @@
             <x-select label="Trainer" :options="$trainerOptions" placeholder="Select Trainer" option-label="label"
                 option-value="value" wire:model="trainerId" />
             <x-select label="Training Type" :options="[
-                ['label' => 'K-LEARN', 'value' => 'K-LEARN'],
+                ['label' => 'LMS', 'value' => 'LMS'],
                 ['label' => 'IN', 'value' => 'IN'],
                 ['label' => 'OUT', 'value' => 'OUT'],
             ]" placeholder="Select Type" option-label="label"

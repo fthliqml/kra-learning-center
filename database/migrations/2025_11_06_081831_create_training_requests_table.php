@@ -13,16 +13,17 @@ return new class extends Migration
     {
         Schema::create('training_requests', function (Blueprint $table) {
             $table->id();
-            // Foreign Keys
+
+            // Foreign keys
             $table->foreignId('created_by')->constrained('users')->cascadeOnDelete();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('competency_id')->constrained('competency')->cascadeOnDelete();
 
-            // Main Fields
-            $table->string('competency');
+            // Request details
             $table->string('reason');
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
 
-            // Meta
+            // Timestamps
             $table->timestamps();
         });
     }

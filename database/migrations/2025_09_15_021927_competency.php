@@ -4,25 +4,29 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
-     * Membuat tabel competency (master daftar kompetensi).
+     * Run the migrations.
      */
     public function up(): void
     {
         Schema::create('competency', function (Blueprint $table) {
             $table->id();
 
-            // Core Fields
+            // Details
+            $table->string('code')->unique();
+            $table->string('name');
+            $table->enum('type', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
             $table->string('description');
 
-            // Meta
+            // Timestamps
             $table->timestamps();
         });
     }
 
     /**
-     * Menghapus tabel competency.
+     * Reverse the migrations.
      */
     public function down(): void
     {
