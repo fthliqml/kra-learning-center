@@ -1,0 +1,30 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+  /**
+   * Run the migrations.
+   */
+  public function up(): void
+  {
+    Schema::create('certification_points', function (Blueprint $table) {
+      $table->id();
+      $table->integer('employee_id')->unique(); // Akan diubah ke external API user_id nanti
+      $table->integer('total_points')->default(0);
+      $table->timestamps();
+
+      $table->index('employee_id');
+    });
+  }
+
+  /**
+   * Reverse the migrations.
+   */
+  public function down(): void
+  {
+    Schema::dropIfExists('certification_points');
+  }
+};

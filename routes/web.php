@@ -30,6 +30,8 @@ use App\Livewire\Pages\Training\History;
 use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\Request;
 use App\Livewire\Pages\Training\Schedule;
+use App\Livewire\Pages\Reports\TrainingActivityReport;
+use App\Livewire\Pages\Reports\CertificationActivityReport;
 use Illuminate\Support\Facades\Route;
 
 // Public (guest) routes
@@ -86,6 +88,16 @@ Route::middleware('auth')->group(function () {
     Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
     Route::get('/certification/approval', CertificationApproval::class)->name('certification-approval.index');
     Route::get('/certification/history', CertificationHistory::class)->name('certification-history.index');
+
+    // Reports
+    Route::get('/reports/training-activity', TrainingActivityReport::class)->name('reports.training-activity');
+    Route::get('/reports/certification-activity', CertificationActivityReport::class)->name('reports.certification-activity');
+
+    // Certificate (placeholder route for training certificates)
+    Route::get('/certificate/training/{training}/employee/{employee}', function ($training, $employee) {
+        // TODO: Implement certificate generation/download
+        return response()->json(['message' => 'Certificate route - To be implemented']);
+    })->name('certificate.training');
 
     // Development
     Route::get('/development/competency-book', CompetencyBook::class)->name('competency-book.index');
