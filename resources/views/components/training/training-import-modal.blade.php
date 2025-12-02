@@ -9,9 +9,9 @@
                 <div class="text-xs text-gray-600 space-y-2">
                     <p>Upload an Excel file (.xlsx / .xls) following the template headers.</p>
                     <ul class="list-disc pl-4 space-y-1">
-                        <li>Type: IN / OUT / K-LEARN</li>
+                        <li>Type: IN / OUT / LMS</li>
                         <li>Participants separated by comma</li>
-                        <li>K-LEARN: fill Course Title (K-LEARN), leave Training Name / Trainer / Times blank</li>
+                        <li>LMS: fill Course Title (LMS), leave Training Name / Trainer / Times blank</li>
                         <li>IN/OUT: require Training Name, Trainer Name, Room, Start & End Time (HH:MM)</li>
                     </ul>
                 </div>

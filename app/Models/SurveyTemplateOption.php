@@ -7,10 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 class SurveyTemplateOption extends Model
 {
   protected $table = 'survey_template_options';
+
   protected $fillable = [
     'survey_template_question_id',
     'text',
     'order',
+  ];
+
+  protected $casts = [
+    'order' => 'integer',
   ];
 
   public function question()

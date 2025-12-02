@@ -4,35 +4,34 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
-     * Membuat tabel trainings (master event/sesi pelatihan utama).
+     * Run the migrations.
      */
     public function up(): void
     {
         Schema::create('trainings', function (Blueprint $table) {
             $table->id();
 
-            // Foreign Keys
+            // Foreign keys
             $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
 
-            // Core Fields
+            // Details
             $table->string('name');
-            $table->enum('type', ['IN', 'OUT', 'K-LEARN']);
+            $table->enum('type', ['IN', 'OUT', 'LMS']);
             $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
             $table->date('start_date');
             $table->date('end_date')->nullable();
-
-            // Status Fields
             $table->enum('status', ['canceled', 'in_progress', 'done', 'approved', 'rejected'])->default('in_progress');
 
-            // Meta
+            // Timestamps
             $table->timestamps();
         });
     }
 
     /**
-     * Menghapus tabel trainings.
+     * Reverse the migrations.
      */
     public function down(): void
     {

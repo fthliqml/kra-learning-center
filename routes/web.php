@@ -53,11 +53,8 @@ Route::middleware('auth')->group(function () {
     Route::get('/training/approval', Approval::class)->name('training-approval.index');
     Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
     Route::get('/training/history', History::class)->name('training-history.index');
-
-    // Certificate Download
-    Route::get('/certificate/training/{assessment}/download', [CertificateController::class, 'downloadTrainingCertificate'])
-        ->name('certificate.training.download');
-
+    Route::get('/training/{assessment}/certificate', [CertificateController::class, 'viewTrainingCertificate'])
+        ->name('certificate.training.view');
 
     // Courses
     Route::get('/courses', Courses::class)->name('courses.index');

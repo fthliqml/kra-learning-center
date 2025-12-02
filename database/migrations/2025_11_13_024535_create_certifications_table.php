@@ -4,7 +4,8 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
      * Run the migrations.
      */
@@ -12,10 +13,16 @@ return new class extends Migration {
     {
         Schema::create('certifications', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('module_id')->constrained('certification_modules')->onDelete('cascade');
+
+            // Foreign keys
+            $table->foreignId('module_id')->constrained('certification_modules')->cascadeOnDelete();
+
+            // Details
             $table->string('name');
             $table->enum('status', ['scheduled', 'completed', 'cancelled', 'approved', 'rejected'])->default('scheduled');
             $table->timestamp('approved_at')->nullable();
+
+            // Timestamps
             $table->timestamps();
         });
     }

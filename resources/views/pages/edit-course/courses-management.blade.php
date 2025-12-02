@@ -3,7 +3,7 @@
 
     {{-- Header --}}
     <div class="w-full flex flex-col lg:flex-row gap-6 lg:gap-5 mb-5 lg:mb-9 items-start lg:items-center">
-        <h1 class="text-primary text-4xl font-bold text-center lg:text-start w-fit shrink-0">K-Learn Management</h1>
+        <h1 class="text-primary text-4xl font-bold text-center lg:text-start w-fit shrink-0">Course Management</h1>
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row flex-1">
             <div class="flex items-center gap-2">
                 <x-ui.button variant="primary" size="lg" href="{{ route('add-course.index') }}"
