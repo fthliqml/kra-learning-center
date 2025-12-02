@@ -271,7 +271,7 @@
                                         }
                                     @endphp
                                     @if ($hasCertificate && $certNumber)
-                                        <a href="{{ route('certificate.training.download', $participant->assessment_id) }}"
+                                        <a href="{{ route('certificate.training.view', $participant->assessment_id) }}"
                                             target="_blank"
                                             class="text-primary hover:text-primary/80 hover:underline text-xs font-medium transition-colors"
                                             title="View Certificate">

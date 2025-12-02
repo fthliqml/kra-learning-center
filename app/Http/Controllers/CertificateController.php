@@ -10,26 +10,26 @@ use Illuminate\Support\Facades\Auth;
 class CertificateController extends Controller
 {
     /**
-     * Download training certificate
+     * View training certificate (inline in browser)
      */
-    public function downloadTrainingCertificate($assessmentId)
+    public function viewTrainingCertificate($assessmentId)
     {
         $assessment = TrainingAssessment::with(['training', 'employee'])->findOrFail($assessmentId);
 
-        // Check if user is authorized to download
+        // Check if user is authorized to view
         $user = Auth::user();
         if (!$user) {
             abort(403, 'Unauthorized');
         }
 
-        // Allow download if:
+        // Allow view if:
         // 1. User is the participant themselves
         // 2. User is a leader
-        $canDownload = $user->id === $assessment->employee_id ||
+        $canView = $user->id === $assessment->employee_id ||
             strtolower($user->role ?? '') === 'leader';
 
-        if (!$canDownload) {
-            abort(403, 'You are not authorized to download this certificate');
+        if (!$canView) {
+            abort(403, 'You are not authorized to view this certificate');
         }
 
         // Check if certificate exists
