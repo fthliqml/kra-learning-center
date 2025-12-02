@@ -11,14 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('competency', function (Blueprint $table) {
+        Schema::create('competency_matrixs', function (Blueprint $table) {
             $table->id();
 
-            // Details
-            $table->string('code')->unique();
-            $table->string('name');
-            $table->enum('type', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
-            $table->string('description');
+            // Foreign keys
+            $table->foreignId('competency_id')->constrained('competency')->cascadeOnDelete();
+            $table->foreignId('employees_trained_id')->constrained('users')->cascadeOnDelete();
 
             // Timestamps
             $table->timestamps();
@@ -30,6 +28,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('competency');
+        Schema::dropIfExists('competency_matrixs');
     }
 };

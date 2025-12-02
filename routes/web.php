@@ -23,6 +23,7 @@ use App\Livewire\Pages\Survey\TakeSurvey;
 use App\Livewire\Pages\SurveyTemplate\EditSurveyTemplate;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Certification\CertificationHistory;
+use App\Livewire\Pages\Development\CompetencyBook;
 use App\Livewire\Pages\Training\Approval;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\History;
@@ -85,4 +86,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
     Route::get('/certification/approval', CertificationApproval::class)->name('certification-approval.index');
     Route::get('/certification/history', CertificationHistory::class)->name('certification-history.index');
+
+    // Development
+    Route::get('/development/competency-book', CompetencyBook::class)->name('competency-book.index');
 });
