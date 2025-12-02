@@ -4,31 +4,32 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration {
+return new class extends Migration
+{
     /**
-     * Membuat tabel training_attendances (kehadiran peserta per session).
+     * Run the migrations.
      */
     public function up(): void
     {
         Schema::create('training_attendances', function (Blueprint $table) {
             $table->id();
 
-            // Foreign Keys
+            // Foreign keys
             $table->foreignId('session_id')->constrained('training_sessions')->cascadeOnDelete();
             $table->foreignId('employee_id')->constrained('users')->cascadeOnDelete();
 
-            // Core Fields
+            // Attendance details
             $table->enum('status', ['present', 'absent', 'pending'])->default('pending');
             $table->string('notes')->nullable();
             $table->timestamp('recorded_at')->useCurrent();
 
-            // Meta
+            // Timestamps
             $table->timestamps();
         });
     }
 
     /**
-     * Menghapus tabel training_attendances.
+     * Reverse the migrations.
      */
     public function down(): void
     {

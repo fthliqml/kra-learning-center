@@ -14,7 +14,7 @@
                 <!-- Filter -->
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
                     placeholder="All"
-                    class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                    class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
             </div>
 
@@ -23,7 +23,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.certification-approval-table />
+    <x-skeletons.table :columns="5" :rows="10" targets="search,filter,approve,reject" />
 
     {{-- No Data State --}}
     @if ($approvals->isEmpty())
@@ -47,8 +47,8 @@
             <x-table :headers="$headers" :rows="$approvals" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- No --}}
-                @scope('cell_no', $approval)
-                    {{ $loop->iteration }}
+                @scope('cell_no', $approval, $approvals)
+                    {{ ($approvals->currentPage() - 1) * $approvals->perPage() + $loop->iteration }}
                 @endscope
 
                 {{-- Certification Name --}}

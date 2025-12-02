@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
 
             // Foreign keys
-            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
-            $table->foreignId('test_id')->constrained('tests')->onDelete('cascade');
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('test_id')->constrained('tests')->cascadeOnDelete();
 
             // Attempt details
             $table->unsignedInteger('attempt_number');
@@ -29,10 +29,15 @@ return new class extends Migration
             $table->boolean('is_passed')->default(false);
 
             // Timestamps
-            $table->timestamp('started_at');
-            $table->timestamp('submitted_at');
-            $table->timestamp('expired_at');
+            $table->timestamp('started_at')->nullable();
+            $table->timestamp('submitted_at')->nullable();
+            $table->timestamp('expired_at')->nullable();
             $table->timestamps();
+
+            // Indexes
+            $table->unique(['user_id', 'test_id', 'attempt_number'], 'test_attempts_user_test_attempt_unique');
+            $table->index(['user_id', 'test_id'], 'test_attempts_user_test_idx');
+            $table->index(['test_id', 'user_id', 'status'], 'test_attempts_test_user_status_idx');
         });
     }
 

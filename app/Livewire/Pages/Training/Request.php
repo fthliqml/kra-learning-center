@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Pages\Training;
 
+use App\Models\Competency;
 use App\Models\Request as TrainingRequestModel;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -25,11 +26,14 @@ class Request extends Component
     /** Cached users list (id, name, section) */
     public array $users = [];
 
+    /** Competency options for x-choices */
+    public array $competencies = [];
+
     public array $formData = [
         'user_id' => '',
         'user_name' => '',
         'section' => '',
-        'competency' => '',
+        'competency_id' => '',
         'reason' => '',
     ];
 
@@ -67,11 +71,19 @@ class Request extends Component
             ->map(fn($u) => ['id' => $u['id'], 'name' => $u['name']])
             ->values()
             ->all();
+
+        // Load competencies for dropdown
+        $this->competencies = Competency::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn($c) => ['id' => $c->id, 'name' => $c->name])
+            ->all();
     }
 
     public function updated($property): void
     {
-        if (!is_array($property) && $property != "") {
+        // Only reset page for search/filter, not for modal or form data
+        if (in_array($property, ['search', 'filter'])) {
             $this->resetPage();
         }
     }
@@ -105,7 +117,7 @@ class Request extends Component
             'user_id' => '',
             'user_name' => '',
             'section' => '',
-            'competency' => '',
+            'competency_id' => '',
             'reason' => '',
         ];
         $this->mode = 'create';
@@ -140,7 +152,7 @@ class Request extends Component
                     }
                 }
             ],
-            'formData.competency' => 'required|string|max:255',
+            'formData.competency_id' => 'required|integer|exists:competency,id',
             'formData.reason' => 'required|string|max:255',
             'formData.section' => 'nullable|string',
         ];
@@ -168,15 +180,16 @@ class Request extends Component
             ->when($this->search, function ($q) {
                 $term = '%' . $this->search . '%';
                 $q->where(function ($inner) use ($term) {
-                    $inner->where('training_requests.competency', 'like', $term)
+                    $inner->where('competency.name', 'like', $term)
                         ->orWhere('training_requests.reason', 'like', $term)
                         ->orWhere('users.name', 'like', $term)
                         ->orWhere('u2.name', 'like', $term)
                         ->orWhere('u2.section', 'like', $term);
                 });
             })
+            ->leftJoin('competency', 'training_requests.competency_id', '=', 'competency.id')
             ->orderBy('training_requests.created_at', 'desc')
-            ->select('training_requests.*', 'users.name as created_by_name', 'u2.name as user_name', 'u2.section as section');
+            ->select('training_requests.*', 'users.name as created_by_name', 'u2.name as user_name', 'u2.section as section', 'competency.name as competency_name');
 
         $paginator = $query->paginate(10);
 
@@ -193,6 +206,7 @@ class Request extends Component
             'headers' => $this->headers(),
             'requests' => $this->requests(),
             'usersSearchable' => $this->usersSearchable,
+            'competencies' => $this->competencies,
         ]);
     }
 
@@ -201,11 +215,13 @@ class Request extends Component
         $request = TrainingRequestModel::query()
             ->leftJoin('users as creator', 'training_requests.created_by', '=', 'creator.id')
             ->leftJoin('users as target', 'training_requests.user_id', '=', 'target.id')
+            ->leftJoin('competency', 'training_requests.competency_id', '=', 'competency.id')
             ->where('training_requests.id', $id)
             ->select([
                 'training_requests.*',
                 'target.name as user_name',
                 'target.section as user_section',
+                'competency.name as competency_name',
             ])
             ->firstOrFail();
 
@@ -214,7 +230,8 @@ class Request extends Component
             'user_id' => $request->user_id,
             'user_name' => $request->user_name,
             'section' => $request->user_section,
-            'competency' => $request->competency,
+            'competency_id' => $request->competency_id,
+            'competency_name' => $request->competency_name ?? '',
             'reason' => $request->reason,
             'status' => $request->status,
         ];
@@ -298,7 +315,7 @@ class Request extends Component
         TrainingRequestModel::create([
             'created_by' => $creatorId,
             'user_id' => (int)$this->formData['user_id'],
-            'competency' => $this->formData['competency'],
+            'competency_id' => (int)$this->formData['competency_id'],
             'reason' => $this->formData['reason'],
             'status' => 'pending',
         ]);

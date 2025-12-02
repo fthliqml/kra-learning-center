@@ -5,10 +5,10 @@
             $isDone = strtolower($training->status ?? '') === 'done';
         @endphp
 
-        @if ($typeUpper === 'K-LEARN')
+        @if ($typeUpper === 'LMS')
             <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                 <p class="text-sm text-amber-700">
-                    <strong>Note:</strong> K-Learn trainings are managed through the learning platform and cannot be
+                    <strong>Note:</strong> LMS trainings are managed through the learning platform and cannot be
                     closed
                     manually from here.
                 </p>
@@ -128,7 +128,7 @@
         </div>
 
         {{-- Action Buttons --}}
-        @if (!$isDone && $typeUpper !== 'K-LEARN')
+        @if (!$isDone && $typeUpper !== 'LMS')
             <div class="flex justify-end gap-2 pt-4">
                 <x-button wire:click="saveDraft" spinner="saveDraft" class="btn btn-outline btn-primary">
                     <x-icon name="o-document-text" class="w-5 h-5" />

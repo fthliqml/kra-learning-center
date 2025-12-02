@@ -12,11 +12,14 @@ class CertificationParticipant extends Model
     protected $fillable = [
         'certification_id',
         'employee_id',
+        'final_status',
+        'earned_points',
         'assigned_at',
     ];
 
     protected $casts = [
         'assigned_at' => 'datetime',
+        'earned_points' => 'integer',
     ];
 
     /**

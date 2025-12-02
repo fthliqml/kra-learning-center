@@ -11,13 +11,13 @@
             @if ($showTypeChangeConfirm)
                 <div class="p-4 rounded-md border border-amber-300 bg-amber-50 text-amber-800 text-sm space-y-2">
                     <p class="font-semibold">Confirm Training Type Change</p>
-                    <p>Switching to <strong>K-LEARN</strong> will remove all trainer & session time fields and
+                    <p>Switching to <strong>LMS</strong> will remove all trainer & session time fields and
                         <strong>delete existing attendance records</strong> when you save. Participants (assessments)
                         will stay.
                     </p>
                     <div class="flex gap-2">
                         <x-button label="Cancel" class="btn-ghost btn-sm" wire:click="cancelTypeChange" />
-                        <x-button label="Yes, switch to K-LEARN" class="btn-warning btn-sm"
+                        <x-button label="Yes, switch to LMS" class="btn-warning btn-sm"
                             wire:click="confirmTypeChange" />
                     </div>
                 </div>
@@ -26,8 +26,8 @@
             <x-tabs wire:model="activeTab">
                 <x-tab name="training" label="Training Config" icon="o-academic-cap">
                     <div class="{{ $errors->any() ? 'space-y-1' : 'space-y-4' }}">
-                        <!-- Training Name / Course Select for K-LEARN -->
-                        @if ($training_type === 'K-LEARN')
+                        <!-- Training Name / Course Select for LMS -->
+                        @if ($training_type === 'LMS')
                             <x-select label="Course" wire:model="course_id" :options="$courseOptions" option-value="id"
                                 option-label="title" placeholder="Select course" icon="o-rectangle-group" />
                             @if ($training_name)
@@ -48,8 +48,8 @@
                             <div>
                                 <x-select label="Group Competency" wire:model="group_comp" :options="$groupCompOptions"
                                     option-value="id" option-label="name" icon="o-clipboard-document"
-                                    :disabled="$training_type === 'K-LEARN'" />
-                                @if ($training_type === 'K-LEARN')
+                                    :disabled="$training_type === 'LMS'" />
+                                @if ($training_type === 'LMS')
                                     <p class="text-xs text-gray-500 mt-1">Synced from selected Course.</p>
                                 @endif
                             </div>
@@ -69,8 +69,8 @@
 
                 <x-tab name="session" label="Session Config" icon="o-cog-6-tooth">
                     <div class="{{ $errors->any() ? 'space-y-1' : 'space-y-4' }}">
-                        @if ($training_type === 'K-LEARN')
-                            <!-- Participants first for K-LEARN -->
+                        @if ($training_type === 'LMS')
+                            <!-- Participants first for LMS -->
                             <x-choices label="Select Participants" wire:model="participants" :options="$usersSearchable"
                                 search-function="userSearch" debounce="300ms" option-value="id" option-label="name"
                                 class="focus-within:border-0" placeholder="Search name of participant..." min-chars=2
@@ -78,15 +78,15 @@
 
                             <!-- Room fields immediately after participants -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full mt-2">
-                                <x-input :label="$training_type === 'K-LEARN' ? 'Room Name (Optional)' : 'Room Name'" placeholder="Room name" class="focus-within:border-0"
+                                <x-input :label="$training_type === 'LMS' ? 'Room Name (Optional)' : 'Room Name'" placeholder="Room name" class="focus-within:border-0"
                                     wire:model="room.name" />
-                                <x-input :label="$training_type === 'K-LEARN' ? 'Room Location/Office (Optional)' : 'Room Location/Office'" placeholder="Room location" class="focus-within:border-0"
+                                <x-input :label="$training_type === 'LMS' ? 'Room Location/Office (Optional)' : 'Room Location/Office'" placeholder="Room location" class="focus-within:border-0"
                                     wire:model="room.location" />
                             </div>
 
                             <div
                                 class="p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs leading-relaxed mt-2">
-                                K-LEARN does not require Trainer or Session Times. The fields below are for reference
+                                LMS does not require Trainer or Session Times. The fields below are for reference
                                 only and are disabled.
                             </div>
 

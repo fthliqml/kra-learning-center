@@ -30,7 +30,7 @@ class TrainingTemplateExport implements FromCollection, WithHeadings, WithStyles
       'Room Location',
       'Start Time',
       'End Time',
-      'Course Title (K-LEARN)',
+      'Course Title (LMS)',
       'Participants',
     ];
   }

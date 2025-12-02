@@ -13,6 +13,32 @@ return [
             'label' => 'Development',
             'icon' => 'trophy',
             'href' => '/development',
+            'submenu' => [
+                [
+                    'label' => 'Development Plan',
+                    'href' => '/development/plan',
+                ],
+                [
+                    'label' => 'Development Approval',
+                    'href' => '/development/approval',
+                    'roles' => ['spv', 'leader'],
+                ],
+                [
+                    'label' => 'Competency Book',
+                    'href' => '/development/competency-book',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+                ],
+                [
+                    'label' => 'Competency Value',
+                    'href' => '/development/competency-value',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+                ],
+                [
+                    'label' => 'Competency Matrix',
+                    'href' => '/development/competency-matrix',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+                ],
+            ]
         ],
 
         // Employee and Supervisor Menu Items
@@ -22,25 +48,6 @@ return [
             'icon' => 'book-open',
             'href' => '/courses',
             'roles' => ['employee', 'spv'],
-        ],
-        [
-            'id' => 'history',
-            'label' => 'History',
-            'icon' => 'clock',
-            'href' => '#',
-            'roles' => ['employee', 'instructor', 'admin', 'leader'],
-            'submenu' => [
-                [
-                    'label' => 'Training History',
-                    'href' => '/training/history',
-                    'roles' => ['employee', 'instructor', 'admin', 'leader'],
-                ],
-                [
-                    'label' => 'Certification History',
-                    'href' => '/certification/history',
-                    'roles' => ['employee', 'instructor', 'admin', 'leader'],
-                ],
-            ],
         ],
         [
             'id' => 'training',
@@ -90,6 +97,11 @@ return [
             'roles' => ['admin', 'instructor', 'certificator', 'leader'],
             'submenu' => [
                 [
+                    'label' => 'Trainer',
+                    'href' => '/training/trainer',
+                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                ],
+                [
                     'label' => 'Training Module',
                     'href' => '/training/module',
                     'roles' => ['instructor', 'certificator', 'admin', 'leader']
@@ -105,9 +117,9 @@ return [
                     'roles' => ['instructor', 'certificator', 'admin', 'leader']
                 ],
                 [
-                    'label' => 'Data Trainer',
-                    'href' => '/training/trainer',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader']
+                    'label' => 'Training Approval',
+                    'href' => '/training/approval',
+                    'roles' => ['leader']
                 ],
             ],
         ],
@@ -141,15 +153,15 @@ return [
             ],
         ],
         [
-            'id' => 'k-learn',
-            'label' => 'K-Learn',
+            'id' => 'course-management',
+            'label' => 'Course',
             'icon' => 'folder-open',
             'href' => '/courses/management',
             'roles' => ['instructor', 'certificator', 'admin', 'leader'],
         ],
         [
             'id' => 'survey-management',
-            'label' => 'Survey Management',
+            'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
             'roles' => ['instructor', 'certificator', 'admin'],
@@ -177,6 +189,26 @@ return [
             'icon' => 'document-duplicate',
             'href' => '/survey-template',
             'roles' => ['instructor', 'certificator', 'admin'],
+        ],
+        [
+            'id' => 'history',
+            'label' => 'History',
+            'icon' => 'clock',
+            'href' => '#',
+            'submenu' => [
+                [
+                    'label' => 'Development History',
+                    'href' => '/development/history',
+                ],
+                [
+                    'label' => 'Training History',
+                    'href' => '/training/history',
+                ],
+                [
+                    'label' => 'Certification History',
+                    'href' => '/certification/history',
+                ],
+            ],
         ],
     ],
     // Sidebar behavior options

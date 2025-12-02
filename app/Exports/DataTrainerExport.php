@@ -29,8 +29,7 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
 
             $institution = $trainer->institution;
             $competencies = $trainer->competencies
-                ->pluck('description')
-                ->filter()
+                ->map(fn($c) => "[{$c->code}] {$c->name}")
                 ->implode(', ');
 
             return [

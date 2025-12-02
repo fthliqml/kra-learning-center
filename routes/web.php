@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\CertificateController;
 use App\Livewire\Pages\Certification\CertificationApproval;
 use App\Livewire\Pages\Certification\CertificationPoint;
 use App\Livewire\Pages\Certification\CertificationModule;
@@ -22,6 +23,8 @@ use App\Livewire\Pages\Survey\TakeSurvey;
 use App\Livewire\Pages\SurveyTemplate\EditSurveyTemplate;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Certification\CertificationHistory;
+use App\Livewire\Pages\Development\CompetencyBook;
+use App\Livewire\Pages\Training\Approval;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\History;
 use App\Livewire\Pages\Training\Module;
@@ -48,9 +51,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/training/module', Module::class)->name('training-module.index');
     Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
     Route::get('/training/request', Request::class)->name('training-request.index');
+    Route::get('/training/approval', Approval::class)->name('training-approval.index');
     Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
     Route::get('/training/history', History::class)->name('training-history.index');
-
+    Route::get('/training/{assessment}/certificate', [CertificateController::class, 'viewTrainingCertificate'])
+        ->name('certificate.training.view');
 
     // Courses
     Route::get('/courses', Courses::class)->name('courses.index');
@@ -81,4 +86,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
     Route::get('/certification/approval', CertificationApproval::class)->name('certification-approval.index');
     Route::get('/certification/history', CertificationHistory::class)->name('certification-history.index');
+
+    // Development
+    Route::get('/development/competency-book', CompetencyBook::class)->name('competency-book.index');
 });

@@ -2,13 +2,13 @@
     @livewire('components.confirm-dialog')
 
     {{-- Header --}}
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
-                grid-cols-1 lg:grid-cols-2 items-center">
+    <div class="w-full flex flex-col lg:flex-row gap-5 mb-5 lg:mb-9 items-center justify-between">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
             Data Trainer
         </h1>
 
-        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
+        <div
+            class="flex gap-3 flex-col w-full lg:w-auto items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
                 {{-- Dropdown Export / Import --}}
@@ -55,54 +55,77 @@
 
                 {{-- Filter --}}
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
-                    placeholder="Filter"
-                    class="!w-30 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                    placeholder="All"
+                    class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
             </div>
 
             {{-- Search --}}
-            <x-search-input placeholder="Search..." class="max-w-72" wire:model.live="search" />
+            <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.600ms="search" />
         </div>
     </div>
 
-    {{-- Table --}}
-    <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
-        <x-table :headers="$headers" :rows="$trainers" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
-            with-pagination>
-            {{-- Custom cell untuk kolom Nomor --}}
-            @scope('cell_no', $trainer)
-                {{ $trainer->no ?? $loop->iteration }}
-            @endscope
+    {{-- Skeleton Loading --}}
+    <x-skeletons.table :columns="5" :rows="10"
+        targets="search,filter,save,deleteTrainer,file,openCreateModal" />
 
-            {{-- Custom cell untuk kolom Trainer Name --}}
-            @scope('cell_name', $trainer)
-                {{ optional($trainer->user)->name ?? $trainer->name }}
-            @endscope
+    {{-- No Data State --}}
+    @if ($trainers->isEmpty())
+        <div wire:loading.remove wire:target="search,filter,file,openCreateModal"
+            class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
+            <div class="flex flex-col items-center justify-center py-16 px-4">
+                <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-700 mb-1">No Data Available</h3>
+                <p class="text-sm text-gray-500 text-center">
+                    There are no trainer records to display at the moment.
+                </p>
+            </div>
+        </div>
+    @else
+        {{-- Table --}}
+        <div wire:loading.remove wire:target="search,filter,file,openCreateModal"
+            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+            <x-table :headers="$headers" :rows="$trainers" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
+                with-pagination>
+                {{-- Custom cell untuk kolom Nomor --}}
+                @scope('cell_no', $trainer)
+                    {{ $trainer->no ?? $loop->iteration }}
+                @endscope
 
-            {{-- Custom cell untuk kolom Action --}}
-            @scope('cell_action', $trainer)
-                <div class="flex gap-2 justify-center">
+                {{-- Custom cell untuk kolom Trainer Name --}}
+                @scope('cell_name', $trainer)
+                    {{ optional($trainer->user)->name ?? $trainer->name }}
+                @endscope
 
-                    <!-- Details -->
-                    <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
-                        wire:click="openDetailModal({{ $trainer->id }})" />
+                {{-- Custom cell untuk kolom Action --}}
+                @scope('cell_action', $trainer)
+                    <div class="flex gap-2 justify-center">
 
-                    <!-- Edit -->
-                    <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
-                        wire:click="openEditModal({{ $trainer->id }})" />
+                        <!-- Details -->
+                        <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
+                            wire:click="openDetailModal({{ $trainer->id }})" />
 
-                    <!-- Delete -->
-                    <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
-                        wire:click="$dispatch('confirm', {
+                        <!-- Edit -->
+                        <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
+                            wire:click="openEditModal({{ $trainer->id }})" />
+
+                        <!-- Delete -->
+                        <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85"
+                            spinner
+                            wire:click="$dispatch('confirm', {
                             title: 'Are you sure you want to delete?',
                             text: 'This action is permanent and cannot be undone.',
                             action: 'deleteTrainer',
                             id: {{ $trainer->id }}
                         })" />
-                </div>
-            @endscope
-        </x-table>
-    </div>
+                    </div>
+                @endscope
+            </x-table>
+        </div>
+    @endif
 
     {{-- Modal --}}
     <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Data Trainer' : ($mode === 'edit' ? 'Edit Data Trainer' : 'Preview Data Trainer')" separator box-class="max-w-3xl h-fit">
@@ -124,7 +147,8 @@
                     <x-choices label="Trainer Name" wire:model.live="formData.user_id" :options="$trainersSearchable"
                         search-function="trainerSearch" debounce="300ms" option-value="id" option-label="name"
                         placeholder="Search trainer name..." class="focus-within:border-0" min-chars=2
-                        hint="Type at least 2 chars" searchable single clearable wire:change="checkDuplicateTrainer" />
+                        hint="Type at least 2 chars" searchable single clearable
+                        wire:change="checkDuplicateTrainer" />
                 @else
                     <x-input label="Trainer Name" placeholder="Name of the trainer..."
                         wire:model.live.debounce.500ms="formData.name" class="focus-within:border-0"
@@ -161,43 +185,26 @@
             @endif
 
             <div class="space-y-3">
-                <label class="label p-0">
-                    <span class="label-text text-xs leading-[18px] font-semibold text-[#123456]">Competency</span>
-                </label>
                 @if ($mode === 'preview')
-                    @foreach ($formData['competencies'] ?? [] as $i => $comp)
-                        <x-input class="w-full" placeholder="Describe the competency..." :readonly="true"
-                            :value="$comp" />
-                    @endforeach
+                    <label class="label p-0">
+                        <span class="label-text text-xs leading-[18px] font-semibold text-[#123456]">Competency</span>
+                    </label>
+                    @php
+                        $selectedCompetencies = collect($competencyOptions)
+                            ->whereIn('id', $formData['competencies'] ?? [])
+                            ->values()
+                            ->map(fn($item, $index) => $index + 1 . '. ' . $item['display_name'])
+                            ->implode("\n");
+                    @endphp
+                    <textarea class="textarea textarea-bordered w-full" rows="{{ max(3, count($formData['competencies'] ?? [])) }}"
+                        readonly>{{ $selectedCompetencies ?: 'No competency selected' }}</textarea>
                 @else
-                    @foreach ($formData['competencies'] ?? [''] as $i => $comp)
-                        <div class="group">
-                            <div class="relative">
-                                <x-input class="w-full pr-12 focus-within:border-0"
-                                    placeholder="Describe the competency..."
-                                    wire:model.defer="formData.competencies.{{ $i }}" :error="$errors->first('formData.competencies.' . $i)" />
-                                <button type="button" wire:click="removeCompetencyRow({{ $i }})"
-                                    title="Remove competency" @disabled(count($formData['competencies'] ?? []) <= 1)
-                                    class="absolute inset-y-0 right-0 my-[3px] mr-1 flex items-center justify-center h-8 w-8 rounded-md text-red-500 border border-transparent
-                                        transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:text-gray-300
-                                        hover:bg-red-50 hover:text-red-600 active:scale-[0.95]
-                                        focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-1">
-                                    <x-icon name="o-trash" class="size-4" />
-                                    <span class="sr-only">Remove</span>
-                                </button>
-                            </div>
-                        </div>
-                    @endforeach
+                    <x-choices label="Competency" wire:model="formData.competencies" :options="$competencyOptions"
+                        option-value="id" option-label="name" placeholder="Select competencies..." searchable
+                        class="focus-within:border-0" />
                     @error('formData.competencies')
                         <div class="text-error text-xs mt-1">{{ $message }}</div>
                     @enderror
-
-                    <div>
-                        <x-ui.button type="button" variant="primary" size="sm" outline
-                            wire:click="addCompetencyRow">
-                            + Add Row
-                        </x-ui.button>
-                    </div>
                 @endif
             </div>
 

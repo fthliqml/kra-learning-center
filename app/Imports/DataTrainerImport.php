@@ -37,7 +37,8 @@ class DataTrainerImport implements ToCollection, WithHeadingRow, SkipsEmptyRows,
             $trainerType = trim((string)($row['trainer_type'] ?? 'external'));
             $name = trim((string)($row['name'] ?? ''));
             $institution = trim((string)($row['institution'] ?? ''));
-            $competenciesRaw = (string)($row['competencies'] ?? '');
+            // Support multiple possible column names for competencies
+            $competenciesRaw = (string)($row['competency_codes_comma_separated'] ?? $row['competencies'] ?? $row['competency_codes'] ?? '');
 
             if ($name === '') {
                 $this->skipped++;
@@ -84,11 +85,18 @@ class DataTrainerImport implements ToCollection, WithHeadingRow, SkipsEmptyRows,
                     // Count per trainer-row created/updated
                     $isNewTrainer ? $this->created++ : $this->updated++;
 
-                    // Upsert competencies and sync pivot
-                    $competencyIds = $competencyNames->map(function ($desc) {
-                        $competency = Competency::firstOrCreate(['description' => $desc]);
-                        return $competency->id;
-                    })->all();
+                    // Find competencies by code or name from Competency Book
+                    $competencyIds = $competencyNames->map(function ($compRef) {
+                        // Try to find by code first (e.g., BMC001)
+                        $competency = Competency::where('code', $compRef)->first();
+
+                        // If not found by code, try by name
+                        if (!$competency) {
+                            $competency = Competency::where('name', 'like', '%' . $compRef . '%')->first();
+                        }
+
+                        return $competency ? $competency->id : null;
+                    })->filter()->all();
 
                     $trainer->competencies()->sync($competencyIds);
                 });

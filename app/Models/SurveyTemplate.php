@@ -12,12 +12,13 @@ class SurveyTemplate extends Model
     'title',
     'description',
     'status',
-    'level'
+    'level',
   ];
 
   protected $casts = [
     'level' => 'integer',
   ];
+
   public function questions()
   {
     return $this->hasMany(SurveyTemplateQuestion::class, 'survey_template_id');
