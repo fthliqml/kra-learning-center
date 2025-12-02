@@ -179,10 +179,10 @@ class TrainingCloseTab extends Component
             return;
         }
 
-        // Check if training type is K-LEARN
+        // Check if training type is LMS
         $typeUpper = strtoupper($this->training->type ?? '');
-        if ($typeUpper === 'K-LEARN') {
-            $this->error('K-Learn trainings cannot be closed manually.', position: 'toast-top toast-center');
+        if ($typeUpper === 'LMS') {
+            $this->error('LMS trainings cannot be closed manually.', position: 'toast-top toast-center');
             return;
         }
 

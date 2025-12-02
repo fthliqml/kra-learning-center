@@ -36,17 +36,17 @@ class TrainingExport implements FromCollection, WithHeadings, WithStyles
 
             $rows[] = [
                 'no' => $counter++,
-                'training_name' => $training->type === 'K-LEARN' ? '' : $training->name,
+                'training_name' => $training->type === 'LMS' ? '' : $training->name,
                 'type' => $training->type,
                 'group_comp' => $training->group_comp,
                 'start_date' => optional($training->start_date)->format('Y-m-d'),
                 'end_date' => optional($training->end_date)->format('Y-m-d'),
-                'trainer_name' => $training->type === 'K-LEARN' ? '' : ($firstSession?->trainer?->name ?? $firstSession?->trainer?->user?->name ?? ''),
+                'trainer_name' => $training->type === 'LMS' ? '' : ($firstSession?->trainer?->name ?? $firstSession?->trainer?->user?->name ?? ''),
                 'room_name' => $firstSession?->room_name ?? '',
                 'room_location' => $firstSession?->room_location ?? '',
-                'start_time' => $training->type === 'K-LEARN' ? '' : ($firstSession?->start_time ? date('H:i', strtotime($firstSession->start_time)) : ''),
-                'end_time' => $training->type === 'K-LEARN' ? '' : ($firstSession?->end_time ? date('H:i', strtotime($firstSession->end_time)) : ''),
-                'course_title' => $training->type === 'K-LEARN' ? ($training->course?->title ?? '') : '',
+                'start_time' => $training->type === 'LMS' ? '' : ($firstSession?->start_time ? date('H:i', strtotime($firstSession->start_time)) : ''),
+                'end_time' => $training->type === 'LMS' ? '' : ($firstSession?->end_time ? date('H:i', strtotime($firstSession->end_time)) : ''),
+                'course_title' => $training->type === 'LMS' ? ($training->course?->title ?? '') : '',
                 'participants' => $participants,
             ];
         }
@@ -67,7 +67,7 @@ class TrainingExport implements FromCollection, WithHeadings, WithStyles
             'Room Location',
             'Start Time',
             'End Time',
-            'Course Title (K-LEARN)',
+            'Course Title (LMS)',
             'Participants',
         ];
     }

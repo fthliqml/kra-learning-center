@@ -19,7 +19,7 @@ return new class extends Migration
 
             // Details
             $table->string('name');
-            $table->enum('type', ['IN', 'OUT', 'K-LEARN']);
+            $table->enum('type', ['IN', 'OUT', 'LMS']);
             $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
             $table->date('start_date');
             $table->date('end_date')->nullable();

@@ -39,7 +39,7 @@
                         $colorClasses = match ($type) {
                             'IN' => ['badge' => 'border-green-700 !bg-green-100'],
                             'OUT' => ['badge' => 'border-amber-700 !bg-amber-100'],
-                            'K-LEARN', 'KLEARN', 'KLEARNING' => ['badge' => 'border-indigo-700 !bg-indigo-100'],
+                            'LMS' => ['badge' => 'border-indigo-700 !bg-indigo-100'],
                             default => ['badge' => 'border-primary bg-[#E4F3FF]'],
                         };
                     @endphp

@@ -41,9 +41,7 @@
                             case 'OUT':
                                 $badge = 'bg-amber-100 text-amber-700 border border-amber-300';
                                 break;
-                            case 'K-LEARN':
-                            case 'KLEARN':
-                            case 'KLEARNING':
+                            case 'LMS':
                                 $badge = 'bg-indigo-100 text-indigo-700 border border-indigo-300';
                                 break;
                             default:

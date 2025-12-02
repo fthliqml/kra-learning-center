@@ -18,7 +18,7 @@ class History extends Component
     public $typeOptions = [
         ['value' => 'IN', 'label' => 'In-house'],
         ['value' => 'OUT', 'label' => 'Out-house'],
-        ['value' => 'K-LEARN', 'label' => 'K-Learn'],
+        ['value' => 'LMS', 'label' => 'LMS'],
     ];
 
     public function updated($property): void
@@ -90,7 +90,7 @@ class History extends Component
             $typeLabel = match ($training->type) {
                 'IN' => 'In-House',
                 'OUT' => 'Out-House',
-                'K-LEARN' => 'K-Learn',
+                'LMS' => 'LMS',
                 default => $training->type
             };
 

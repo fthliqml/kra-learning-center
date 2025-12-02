@@ -166,7 +166,7 @@ class ScheduleView extends Component
     // patch cache detail
     $id = $payload['id'];
     if (isset($this->trainingDetails[$id])) {
-      $cache =& $this->trainingDetails[$id];
+      $cache = &$this->trainingDetails[$id];
       foreach (['name', 'start_date', 'end_date'] as $f)
         if (isset($payload[$f]))
           $cache[$f] = $payload[$f];
@@ -280,7 +280,7 @@ class ScheduleView extends Component
         $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
       });
     // Apply filters
-    if ($this->filterType && in_array($this->filterType, ['K-LEARN', 'IN', 'OUT'])) {
+    if ($this->filterType && in_array($this->filterType, ['LMS', 'IN', 'OUT'])) {
       $query->where('type', $this->filterType);
     }
     if ($this->filterTrainerId) {
@@ -312,7 +312,7 @@ class ScheduleView extends Component
         $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
       });
     if ($this->filterType) {
-      if ($this->filterType && in_array($this->filterType, ['K-LEARN', 'IN', 'OUT'])) {
+      if ($this->filterType && in_array($this->filterType, ['LMS', 'IN', 'OUT'])) {
         $query->where('type', $this->filterType);
       }
     }
@@ -454,7 +454,7 @@ class ScheduleView extends Component
     if ($user && strtolower($user->role ?? '') === 'admin') {
       // Check if training is closed
       $isClosed = isset($payload['status']) && strtolower($payload['status']) === 'done';
-      
+
       // Build actions based on training status
       $actions = [
         [
@@ -463,7 +463,7 @@ class ScheduleView extends Component
           'variant' => 'outline'
         ]
       ];
-      
+
       // Only allow edit if training is not closed
       if (!$isClosed) {
         $actions[] = [
@@ -472,7 +472,7 @@ class ScheduleView extends Component
           'variant' => 'primary'
         ];
       }
-      
+
       $this->dispatch('open-action-choice', [
         'title' => 'Training Action',
         'message' => 'What would you like to do with this training?',
@@ -562,5 +562,4 @@ class ScheduleView extends Component
     $this->filterType = $type ?: null;
     $this->refreshTrainings();
   }
-
 }

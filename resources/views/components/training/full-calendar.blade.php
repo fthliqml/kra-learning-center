@@ -44,9 +44,7 @@
                                                 ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 opacity-70'
                                                 : 'border-amber-500 bg-amber-50 hover:bg-amber-100';
                                             break;
-                                        case 'K-LEARN':
-                                        case 'KLEARN':
-                                        case 'KLEARNING':
+                                        case 'LMS':
                                             $typeColor = $isDone
                                                 ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-70'
                                                 : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
@@ -115,9 +113,7 @@
                                                 ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 opacity-70'
                                                 : 'border-amber-500 bg-amber-50 hover:bg-amber-100';
                                             break;
-                                        case 'K-LEARN':
-                                        case 'KLEARN':
-                                        case 'KLEARNING':
+                                        case 'LMS':
                                             $typeColor = $isDone
                                                 ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-70'
                                                 : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
