@@ -66,7 +66,8 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="7" :rows="10" targets="search,filter,file,openCreateModal" />
+    <x-skeletons.table :columns="5" :rows="10"
+        targets="search,filter,save,deleteTrainer,file,openCreateModal" />
 
     {{-- No Data State --}}
     @if ($trainers->isEmpty())
@@ -184,43 +185,26 @@
             @endif
 
             <div class="space-y-3">
-                <label class="label p-0">
-                    <span class="label-text text-xs leading-[18px] font-semibold text-[#123456]">Competency</span>
-                </label>
                 @if ($mode === 'preview')
-                    @foreach ($formData['competencies'] ?? [] as $i => $comp)
-                        <x-input class="w-full" placeholder="Describe the competency..." :readonly="true"
-                            :value="$comp" />
-                    @endforeach
+                    <label class="label p-0">
+                        <span class="label-text text-xs leading-[18px] font-semibold text-[#123456]">Competency</span>
+                    </label>
+                    @php
+                        $selectedCompetencies = collect($competencyOptions)
+                            ->whereIn('id', $formData['competencies'] ?? [])
+                            ->values()
+                            ->map(fn($item, $index) => $index + 1 . '. ' . $item['display_name'])
+                            ->implode("\n");
+                    @endphp
+                    <textarea class="textarea textarea-bordered w-full" rows="{{ max(3, count($formData['competencies'] ?? [])) }}"
+                        readonly>{{ $selectedCompetencies ?: 'No competency selected' }}</textarea>
                 @else
-                    @foreach ($formData['competencies'] ?? [''] as $i => $comp)
-                        <div class="group">
-                            <div class="relative">
-                                <x-input class="w-full pr-12 focus-within:border-0"
-                                    placeholder="Describe the competency..."
-                                    wire:model.defer="formData.competencies.{{ $i }}" :error="$errors->first('formData.competencies.' . $i)" />
-                                <button type="button" wire:click="removeCompetencyRow({{ $i }})"
-                                    title="Remove competency" @disabled(count($formData['competencies'] ?? []) <= 1)
-                                    class="absolute inset-y-0 right-0 my-[3px] mr-1 flex items-center justify-center h-8 w-8 rounded-md text-red-500 border border-transparent
-                                        transition-all disabled:opacity-40 disabled:cursor-not-allowed disabled:text-gray-300
-                                        hover:bg-red-50 hover:text-red-600 active:scale-[0.95]
-                                        focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-1">
-                                    <x-icon name="o-trash" class="size-4" />
-                                    <span class="sr-only">Remove</span>
-                                </button>
-                            </div>
-                        </div>
-                    @endforeach
+                    <x-choices label="Competency" wire:model="formData.competencies" :options="$competencyOptions"
+                        option-value="id" option-label="name" placeholder="Select competencies..." searchable
+                        class="focus-within:border-0" />
                     @error('formData.competencies')
                         <div class="text-error text-xs mt-1">{{ $message }}</div>
                     @enderror
-
-                    <div>
-                        <x-ui.button type="button" variant="primary" size="sm" outline
-                            wire:click="addCompetencyRow">
-                            + Add Row
-                        </x-ui.button>
-                    </div>
                 @endif
             </div>
 
