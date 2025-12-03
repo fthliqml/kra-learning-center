@@ -24,6 +24,7 @@ use App\Livewire\Pages\SurveyTemplate\EditSurveyTemplate;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Certification\CertificationHistory;
 use App\Livewire\Pages\Development\CompetencyBook;
+use App\Livewire\Pages\Development\CompetencyValue;
 use App\Livewire\Pages\Training\Approval;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\History;
@@ -101,4 +102,5 @@ Route::middleware('auth')->group(function () {
 
     // Development
     Route::get('/development/competency-book', CompetencyBook::class)->name('competency-book.index');
+    Route::get('/development/competency-value', CompetencyValue::class)->name('competency-value.index');
 });
