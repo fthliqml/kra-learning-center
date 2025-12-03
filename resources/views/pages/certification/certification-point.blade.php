@@ -25,7 +25,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="6" :rows="10" targets="search" />
+    <x-skeletons.table :columns="6" :rows="10" targets="search,sortOrder,export" />
 
     {{-- Table --}}
     <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
