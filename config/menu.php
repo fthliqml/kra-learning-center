@@ -10,7 +10,33 @@ return [
             'href' => '/',
         ],
 
-        // Development - All users with submenu
+        // Competency - Admin, Leader
+        [
+            'id' => 'competency',
+            'label' => 'Competency',
+            'icon' => 'archive-box',
+            'href' => '/competency',
+            'roles' => ['admin', 'leader'],
+            'submenu' => [
+                [
+                    'label' => 'Competency Book',
+                    'href' => '/competency/book',
+                    'roles' => ['admin', 'leader'],
+                ],
+                [
+                    'label' => 'Competency Value',
+                    'href' => '/competency/value',
+                    'roles' => ['admin', 'leader'],
+                ],
+                [
+                    'label' => 'Competency Matrix',
+                    'href' => '/competency/matrix',
+                    'roles' => ['admin', 'leader'],
+                ],
+            ],
+        ],
+
+        // Development - All users
         [
             'id' => 'development',
             'label' => 'Development',
@@ -25,21 +51,6 @@ return [
                     'label' => 'Development Approval',
                     'href' => '/development/approval',
                     'roles' => ['spv', 'leader'],
-                ],
-                [
-                    'label' => 'Competency Book',
-                    'href' => '/development/competency-book',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
-                ],
-                [
-                    'label' => 'Competency Value',
-                    'href' => '/development/competency-value',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
-                ],
-                [
-                    'label' => 'Competency Matrix',
-                    'href' => '/development/competency-matrix',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
                 ],
             ],
         ],
@@ -173,12 +184,17 @@ return [
 
         // Survey Management - Admin, Instructor, Certificator
         [
-            'id' => 'survey-management',
+            'id' => 'survey',
             'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
             'roles' => ['instructor', 'certificator', 'admin'],
             'submenu' => [
+                [
+                    'label' => 'Template',
+                    'href' => '/survey-template',
+                    'roles' => ['instructor', 'certificator', 'admin'],
+                ],
                 [
                     'label' => 'Survey 1',
                     'href' => '/survey/1/management',
@@ -195,15 +211,6 @@ return [
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
             ],
-        ],
-
-        // Survey Template - Admin, Instructor, Certificator
-        [
-            'id' => 'survey-template',
-            'label' => 'Survey Template',
-            'icon' => 'document-duplicate',
-            'href' => '/survey-template',
-            'roles' => ['instructor', 'certificator', 'admin'],
         ],
 
         // History - All users

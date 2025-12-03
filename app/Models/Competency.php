@@ -51,4 +51,12 @@ class Competency extends Model
     {
         return $this->hasMany(TrainerCompetency::class, 'competency_id');
     }
+
+    /**
+     * Get the matrix entries (employees trained) for this competency.
+     */
+    public function matrixEntries(): HasMany
+    {
+        return $this->hasMany(CompetencyMatrix::class, 'competency_id');
+    }
 }
