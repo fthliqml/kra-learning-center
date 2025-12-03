@@ -24,6 +24,7 @@ use App\Livewire\Pages\SurveyTemplate\EditSurveyTemplate;
 use App\Livewire\Pages\SurveyTemplate\SurveyTemplate;
 use App\Livewire\Pages\Certification\CertificationHistory;
 use App\Livewire\Pages\Development\CompetencyBook;
+use App\Livewire\Pages\Development\CompetencyMatrix;
 use App\Livewire\Pages\Development\CompetencyValue;
 use App\Livewire\Pages\Training\Approval;
 use App\Livewire\Pages\Training\DataTrainer;
@@ -100,7 +101,8 @@ Route::middleware('auth')->group(function () {
         return response()->json(['message' => 'Certificate route - To be implemented']);
     })->name('certificate.training');
 
-    // Development
-    Route::get('/development/competency-book', CompetencyBook::class)->name('competency-book.index');
-    Route::get('/development/competency-value', CompetencyValue::class)->name('competency-value.index');
+    // Competency
+    Route::get('/competency/book', CompetencyBook::class)->name('competency-book.index');
+    Route::get('/competency/value', CompetencyValue::class)->name('competency-value.index');
+    Route::get('/competency/matrix', CompetencyMatrix::class)->name('competency-matrix.index');
 });
