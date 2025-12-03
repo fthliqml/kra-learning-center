@@ -80,7 +80,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="6" :rows="10" targets="search,filter,file,openCreateModal" />
+    <x-skeletons.table :columns="6" :rows="10" targets="search,filter,file" />
 
     {{-- No Data State --}}
     @if ($modules->isEmpty())

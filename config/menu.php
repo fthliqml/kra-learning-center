@@ -104,7 +104,7 @@ return [
             'roles' => ['admin', 'instructor', 'certificator', 'leader'],
             'submenu' => [
                 [
-                    'label' => 'Data Trainer',
+                    'label' => 'Trainer',
                     'href' => '/training/trainer',
                     'roles' => ['instructor', 'certificator', 'admin', 'leader'],
                 ],
@@ -129,6 +129,15 @@ return [
                     'roles' => ['leader'],
                 ],
             ],
+        ],
+
+        // Course Management - Admin, Instructor, Certificator, Leader
+        [
+            'id' => 'courses-management',
+            'label' => 'Course',
+            'icon' => 'folder-open',
+            'href' => '/courses/management',
+            'roles' => ['instructor', 'certificator', 'admin', 'leader'],
         ],
 
         // Certification - Certificator, Admin, Leader
@@ -162,19 +171,10 @@ return [
             ],
         ],
 
-        // K-Learn (Course Management) - Admin, Instructor, Certificator, Leader
-        [
-            'id' => 'k-learn',
-            'label' => 'K-Learn',
-            'icon' => 'folder-open',
-            'href' => '/courses/management',
-            'roles' => ['instructor', 'certificator', 'admin', 'leader'],
-        ],
-
         // Survey Management - Admin, Instructor, Certificator
         [
             'id' => 'survey-management',
-            'label' => 'Survey Management',
+            'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
             'roles' => ['instructor', 'certificator', 'admin'],
