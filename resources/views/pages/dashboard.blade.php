@@ -1,9 +1,11 @@
 @extends('layouts.app')
 
 @section('content')
-    <h1 class="text-primary text-2xl sm:text-4xl font-bold text-center lg:text-start mb-6">
-        Welcome {{ Auth::user()->name }}
-    </h1>
+    {{-- Welcome Header --}}
+    <div class="mb-6">
+        <p class="text-sm text-gray-500 dark:text-gray-400">Hi, {{ auth()->user()->name }}</p>
+        <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Welcome Back!</h1>
+    </div>
 
     {{-- Admin/Leader Dashboard with Charts --}}
     @if (Auth::user()->hasAnyRole(['admin', 'leader']))
