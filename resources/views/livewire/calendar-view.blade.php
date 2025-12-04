@@ -1,0 +1,157 @@
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+    {{-- Header Navigation --}}
+    <div class="flex items-center justify-between mb-6">
+        {{-- Prev Button --}}
+        <button wire:click="goToPrevMonth"
+            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+        </button>
+
+        {{-- Month & Year Display --}}
+        <button wire:click="openJumpModal"
+            class="px-5 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-sm hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+            {{ $this->monthName }} {{ $currentYear }}
+        </button>
+
+        {{-- Next Button --}}
+        <button wire:click="goToNextMonth"
+            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
+            </svg>
+        </button>
+    </div>
+
+    {{-- Days of Week Header --}}
+    <div class="grid grid-cols-7 gap-1 mb-2">
+        @foreach (['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as $dayName)
+            <div class="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-2">
+                {{ $dayName }}
+            </div>
+        @endforeach
+    </div>
+
+    {{-- Calendar Grid --}}
+    <div class="grid grid-cols-7 gap-1">
+        @foreach ($calendarDays as $dayData)
+            <div class="relative aspect-square p-1" x-data="{ showTooltip: false }">
+                @if ($dayData['day'])
+                    <div class="h-full flex flex-col items-center justify-start pt-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-default {{ $dayData['isToday'] ? 'bg-blue-50 dark:bg-blue-900/20' : '' }}"
+                        @mouseenter="showTooltip = {{ count($dayData['events']) > 0 ? 'true' : 'false' }}"
+                        @mouseleave="showTooltip = false">
+
+                        {{-- Day Number --}}
+                        <span
+                            class="text-sm {{ $dayData['isToday']
+                                ? 'w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-semibold'
+                                : 'text-gray-500 dark:text-gray-400' }}">
+                            {{ $dayData['day'] }}
+                        </span>
+
+                        {{-- Event Bars --}}
+                        @if (count($dayData['events']) > 0)
+                            <div class="flex flex-col gap-0.5 mt-1 w-full px-1">
+                                @foreach (array_slice($dayData['events'], 0, 3) as $event)
+                                    <div
+                                        class="h-1 rounded-full {{ $event['type'] === 'warning' ? 'bg-amber-400' : 'bg-blue-400' }}">
+                                    </div>
+                                @endforeach
+                                @if (count($dayData['events']) > 3)
+                                    <span
+                                        class="text-[9px] text-gray-400 text-center">+{{ count($dayData['events']) - 3 }}</span>
+                                @endif
+                            </div>
+                        @endif
+                    </div>
+
+                    {{-- Tooltip --}}
+                    @if (count($dayData['events']) > 0)
+                        <div x-show="showTooltip" x-transition:enter="transition ease-out duration-150"
+                            x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
+                            x-transition:leave="transition ease-in duration-100"
+                            x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
+                            x-cloak
+                            class="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-40 bg-gray-800 dark:bg-gray-900 text-white rounded-lg shadow-lg p-2 pointer-events-none">
+                            <div class="text-xs font-medium text-gray-300 mb-1">
+                                {{ \Carbon\Carbon::parse($dayData['date'])->format('M d, Y') }}
+                            </div>
+                            <div class="space-y-1">
+                                @foreach ($dayData['events'] as $event)
+                                    <div class="flex items-center gap-2">
+                                        <span
+                                            class="w-2 h-2 rounded-full flex-shrink-0 {{ $event['type'] === 'warning' ? 'bg-amber-400' : 'bg-blue-400' }}"></span>
+                                        <span class="text-xs truncate">{{ $event['title'] }}</span>
+                                    </div>
+                                @endforeach
+                            </div>
+                            {{-- Tooltip Arrow --}}
+                            <div
+                                class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800 dark:border-t-gray-900">
+                            </div>
+                        </div>
+                    @endif
+                @endif
+            </div>
+        @endforeach
+    </div>
+
+    {{-- Today Button --}}
+    <div class="mt-4 flex justify-center">
+        <button wire:click="goToToday"
+            class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+            Go to Today
+        </button>
+    </div>
+
+    {{-- Jump to Month/Year Modal --}}
+    @if ($showJumpModal)
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50" wire:click.self="closeJumpModal">
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-5 w-72 mx-4"
+                x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 scale-95"
+                x-transition:enter-end="opacity-100 scale-100">
+
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Jump to Date</h3>
+
+                <div class="space-y-4">
+                    {{-- Month Select --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
+                        <select wire:model="jumpMonth"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500">
+                            @foreach (range(1, 12) as $month)
+                                <option value="{{ $month }}">
+                                    {{ \Carbon\Carbon::create(null, $month, 1)->format('F') }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Year Select --}}
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
+                        <select wire:model="jumpYear"
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500">
+                            @foreach (range(now()->year - 5, now()->year + 5) as $year)
+                                <option value="{{ $year }}">{{ $year }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+
+                {{-- Modal Actions --}}
+                <div class="mt-5 flex gap-2">
+                    <button wire:click="closeJumpModal"
+                        class="flex-1 px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors">
+                        Cancel
+                    </button>
+                    <button wire:click="jumpTo"
+                        class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                        Go
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+</div>
