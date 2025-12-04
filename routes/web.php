@@ -26,6 +26,7 @@ use App\Livewire\Pages\Certification\CertificationHistory;
 use App\Livewire\Pages\Development\CompetencyBook;
 use App\Livewire\Pages\Development\CompetencyMatrix;
 use App\Livewire\Pages\Development\CompetencyValue;
+use App\Livewire\Pages\Development\DevelopmentPlan;
 use App\Livewire\Pages\Training\Approval;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\History;
@@ -105,4 +106,7 @@ Route::middleware('auth')->group(function () {
     Route::get('/competency/book', CompetencyBook::class)->name('competency-book.index');
     Route::get('/competency/value', CompetencyValue::class)->name('competency-value.index');
     Route::get('/competency/matrix', CompetencyMatrix::class)->name('competency-matrix.index');
+
+    // Development
+    Route::get('/development/plan', DevelopmentPlan::class)->name('development-plan.index');
 });
