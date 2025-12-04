@@ -17,16 +17,48 @@ class leaderDashboard extends Component
     public array $monthlyTrainingData = [];
     public array $monthLabels = [];
 
+    // Selected month breakdown
+    public array $monthBreakdown = [];
+
     // Stats cards
     public int $trainingThisMonth = 0;
     public int $upcomingSchedules = 0;
     public int $pendingApprovals = 0;
+
+    // Calendar events
+    public array $calendarEvents = [];
 
     public function mount()
     {
         $this->selectedYear = now()->year;
         $this->loadChartData();
         $this->loadStatsCards();
+        $this->loadCalendarEvents();
+    }
+
+    public function loadCalendarEvents()
+    {
+        $this->calendarEvents = [];
+
+        // Get trainings for current month and next 2 months
+        $startDate = now()->startOfMonth();
+        $endDate = now()->addMonths(2)->endOfMonth();
+
+        $trainings = Training::whereBetween('start_date', [$startDate, $endDate])
+            ->get();
+
+        foreach ($trainings as $training) {
+            $dateKey = $training->start_date->format('Y-m-d');
+
+            if (!isset($this->calendarEvents[$dateKey])) {
+                $this->calendarEvents[$dateKey] = [];
+            }
+
+            $this->calendarEvents[$dateKey][] = [
+                'title' => $training->title ?? 'Training',
+                'type' => $training->status === 'pending' ? 'warning' : 'normal',
+            ];
+        }
     }
 
     public function loadChartData()
@@ -75,6 +107,10 @@ class leaderDashboard extends Component
     {
         // monthIndex is 0-based from ApexCharts
         $this->selectedMonth = $monthIndex + 1;
+        $this->monthBreakdown = [];
+
+        $this->loadMonthBreakdown();
+
         $monthName = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->format('F Y');
 
         // Dispatch event to notify other components
@@ -83,6 +119,46 @@ class leaderDashboard extends Component
             'year' => $this->selectedYear,
             'monthName' => $monthName,
         ]);
+
+        // Dispatch event to update donut charts with breakdown data
+        $this->dispatch(
+            'breakdown-loaded',
+            byType: $this->monthBreakdown['byType'] ?? [],
+            byGroupComp: $this->monthBreakdown['byGroupComp'] ?? [],
+            total: $this->monthBreakdown['total'] ?? 0
+        );
+    }
+
+    public function closeMonthDetails()
+    {
+        $this->selectedMonth = null;
+        $this->monthBreakdown = [];
+    }
+
+    public function loadMonthBreakdown()
+    {
+        if (!$this->selectedMonth) {
+            $this->monthBreakdown = [];
+            return;
+        }
+
+        $startOfMonth = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->startOfMonth();
+        $endOfMonth = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->endOfMonth();
+
+        // Get trainings for selected month
+        $trainings = Training::whereBetween('start_date', [$startOfMonth, $endOfMonth])->get();
+
+        // Breakdown by type
+        $byType = $trainings->groupBy('type')->map(fn($items) => $items->count())->toArray();
+
+        // Breakdown by group_comp
+        $byGroupComp = $trainings->groupBy('group_comp')->map(fn($items) => $items->count())->toArray();
+
+        $this->monthBreakdown = [
+            'total' => $trainings->count(),
+            'byType' => $byType,
+            'byGroupComp' => $byGroupComp,
+        ];
     }
 
     public function getChartOptionsProperty()
