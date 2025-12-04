@@ -21,7 +21,7 @@ class leaderDashboard extends Component
     public array $monthBreakdown = [];
 
     // Stats cards
-    public int $trainingThisMonth = 0;
+    public int $totalTrainingThisYear = 0;
     public int $upcomingSchedules = 0;
     public int $pendingApprovals = 0;
 
@@ -86,14 +86,14 @@ class leaderDashboard extends Component
     public function loadStatsCards()
     {
         $now = Carbon::now();
-        $startOfMonth = $now->copy()->startOfMonth();
-        $endOfMonth = $now->copy()->endOfMonth();
+        $startOfYear = $now->copy()->startOfYear();
+        $endOfYear = $now->copy()->endOfYear();
 
-        // Training this month - trainings that start in current month
-        $this->trainingThisMonth = Training::whereBetween('start_date', [$startOfMonth, $endOfMonth])->count();
+        // Total training this year - all trainings in current year
+        $this->totalTrainingThisYear = Training::whereBetween('start_date', [$startOfYear, $endOfYear])->count();
 
-        // Upcoming schedules - trainings with start_date > today
-        $this->upcomingSchedules = Training::where('start_date', '>', $now)->count();
+        // Upcoming schedules - trainings with start_date >= today
+        $this->upcomingSchedules = Training::where('start_date', '>=', $now->startOfDay())->count();
 
         // Pending approvals (combined: certification approval + training approval + training request)
         $pendingCertifications = Certification::where('status', 'pending')->count();

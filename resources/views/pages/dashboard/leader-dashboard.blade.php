@@ -5,20 +5,21 @@
         <div class="lg:col-span-2 space-y-6">
             {{-- Stats Cards (2 cards) --}}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {{-- Training This Month --}}
+                {{-- Total Training This Year --}}
                 <div
                     class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Training This Month</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $trainingThisMonth }}</p>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Training This Year</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalTrainingThisYear }}
+                                <span class="text-base font-normal text-gray-400">trainings</span></p>
                         </div>
                         <div class="p-3 bg-secondary rounded-xl">
                             <x-mary-icon name="o-academic-cap" class="w-7 h-7 text-white" />
                         </div>
                     </div>
                     <div class="mt-3 flex items-center text-sm">
-                        <span class="text-gray-500 dark:text-gray-400">{{ now()->format('F Y') }}</span>
+                        <span class="text-gray-500 dark:text-gray-400">Year {{ now()->format('Y') }}</span>
                     </div>
                 </div>
 
@@ -29,14 +30,16 @@
                         <div>
                             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Upcoming Schedules</p>
                             <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $upcomingSchedules }}
+                                <span class="text-base font-normal text-gray-400">sessions</span>
                             </p>
                         </div>
                         <div class="p-3 bg-secondary rounded-xl">
                             <x-mary-icon name="o-calendar-days" class="w-7 h-7 text-white" />
                         </div>
                     </div>
-                    <div class="mt-3 flex items-center text-sm">
-                        <span class="text-gray-500 dark:text-gray-400">Upcoming training sessions</span>
+                    <div class="mt-3 flex items-center text-sm text-gray-500 dark:text-gray-400">
+                        <x-mary-icon name="o-information-circle" class="w-4 h-4 mr-1" />
+                        <span>Starting from today</span>
                     </div>
                 </div>
             </div>
