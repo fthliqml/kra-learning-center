@@ -35,8 +35,8 @@ class PendingApprovals extends Component
       ];
     }
 
-    // Get pending trainings
-    $pendingTrainings = Training::where('status', 'pending')
+    // Get pending trainings (done = waiting for approval)
+    $pendingTrainings = Training::where('status', 'done')
       ->latest()
       ->take(5)
       ->get();
@@ -47,7 +47,7 @@ class PendingApprovals extends Component
         : 'No date';
 
       $this->items[] = [
-        'title' => $training->title ?? 'Training',
+        'title' => $training->name ?? 'Training',
         'info' => $dateInfo,
         'type' => 'training',
         'id' => $training->id,
@@ -81,9 +81,9 @@ class PendingApprovals extends Component
   {
     return match ($type) {
       'idp' => 'from-green-400 to-green-200',
-      'training_request' => 'from-blue-400 to-blue-200',
-      'training' => 'from-indigo-400 to-indigo-200',
-      'certification' => 'from-amber-400 to-amber-200',
+      'training_request' => 'from-blue-500 to-blue-300',
+      'training' => 'from-blue-400 to-blue-200',
+      'certification' => 'from-orange-400 to-yellow-300',
       default => 'from-gray-300 to-gray-100',
     };
   }
