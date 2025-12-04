@@ -18,6 +18,14 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
             $table->foreignId('competency_id')->constrained('competency')->cascadeOnDelete();
 
+            // Status & Period
+            $table->string('status')->default('draft'); // draft, pending, approved, rejected
+            $table->unsignedSmallInteger('year');
+
+            // Approval
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
+
             // Timestamps
             $table->timestamps();
         });

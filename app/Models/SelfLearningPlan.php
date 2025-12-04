@@ -19,12 +19,34 @@ class SelfLearningPlan extends Model
         'objective',
         'start_date',
         'end_date',
+        'status',
+        'year',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'year' => 'integer',
+        'approved_at' => 'datetime',
     ];
+
+    /**
+     * Check if this plan can be edited (only draft or pending status)
+     */
+    public function canEdit(): bool
+    {
+        return in_array($this->status, ['draft', 'pending']);
+    }
+
+    /**
+     * Get the approver for this plan.
+     */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
 
     /**
      * Get the user that owns this self learning plan.

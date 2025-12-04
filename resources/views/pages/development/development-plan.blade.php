@@ -5,7 +5,32 @@
             Development Plan
         </h1>
 
-        <div class="flex items-center justify-center gap-2">
+        <div class="flex items-center justify-center gap-3">
+            {{-- Year Filter --}}
+            <x-input type="number" wire:model.live.debounce.500ms="selectedYear" icon="o-calendar" class="!w-32"
+                min="2000" max="2100" />
+
+            {{-- Edit Button - Show when any plan exists and is editable --}}
+            @php
+                $hasEditablePlans =
+                    $trainingPlansData->contains(fn($p) => $p->canEdit()) ||
+                    $selfLearningData->contains(fn($p) => $p->canEdit()) ||
+                    $mentoringData->contains(fn($p) => $p->canEdit()) ||
+                    $projectData->contains(fn($p) => $p->canEdit());
+            @endphp
+            @if ($hasEditablePlans)
+                <x-ui.button wire:click="openEditModal" wire:target="openEditModal" class="h-10"
+                    wire:loading.attr="readonly">
+                    <span wire:loading.remove wire:target="openEditModal" class="flex items-center gap-2">
+                        <x-icon name="o-pencil-square" class="size-4" />
+                        Edit
+                    </span>
+                    <span wire:loading wire:target="openEditModal">
+                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                    </span>
+                </x-ui.button>
+            @endif
+
             <!-- Add Button -->
             <x-ui.button variant="primary" wire:click="openAddModal" wire:target="openAddModal" class="h-10"
                 wire:loading.attr="readonly">
@@ -20,74 +45,230 @@
         </div>
     </div>
 
-    {{-- Main Content - Personal Information --}}
-    <div class="flex flex-col lg:flex-row gap-6">
-        {{-- Photo Card --}}
-        <div class="w-full lg:w-2/5">
-            <div class="rounded-xl border border-gray-200 bg-white p-6 h-full flex items-center justify-center">
-                <div class="w-full max-w-[280px] aspect-[3/4] rounded-lg bg-gray-100 overflow-hidden">
-                    @if ($user->avatar)
-                        <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}"
-                            class="w-full h-full object-cover">
-                    @else
-                        <div class="w-full h-full flex items-center justify-center bg-primary/10">
-                            <span class="text-primary text-6xl font-bold">
-                                {{ strtoupper(substr($user->name, 0, 1)) }}
-                            </span>
-                        </div>
-                    @endif
+    {{-- Stats Cards --}}
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        {{-- Training Plans --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 rounded-lg bg-blue-100">
+                    <x-icon name="o-academic-cap" class="size-6 text-blue-600" />
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-800">{{ $trainingPlanCount }}</p>
+                    <p class="text-xs text-gray-500">Training Plans</p>
                 </div>
             </div>
         </div>
 
-        {{-- Information Card --}}
-        <div class="w-full lg:w-3/5">
-            <div class="rounded-xl border border-gray-200 bg-white p-6 h-full">
-                <h2 class="text-xl font-bold text-gray-800 mb-6">Personal Information</h2>
+        {{-- Self Learning --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 rounded-lg bg-green-100">
+                    <x-icon name="o-book-open" class="size-6 text-green-600" />
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-800">{{ $selfLearningCount }}</p>
+                    <p class="text-xs text-gray-500">Self Learning</p>
+                </div>
+            </div>
+        </div>
 
-                <div class="space-y-5">
-                    {{-- Name --}}
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Name</p>
-                        <p class="text-base font-medium text-gray-800">{{ $user->name }}</p>
-                    </div>
+        {{-- Mentoring --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 rounded-lg bg-purple-100">
+                    <x-icon name="o-user-group" class="size-6 text-purple-600" />
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-800">{{ $mentoringCount }}</p>
+                    <p class="text-xs text-gray-500">Mentoring</p>
+                </div>
+            </div>
+        </div>
 
-                    {{-- NRP --}}
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">NRP</p>
-                        <p class="text-base font-medium text-gray-800">{{ $user->NRP }}</p>
-                    </div>
-
-                    {{-- Division --}}
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Division</p>
-                        <p class="text-base font-medium text-gray-800">{{ $user->division ?? '-' }}</p>
-                    </div>
-
-                    {{-- Department --}}
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Department</p>
-                        <p class="text-base font-medium text-gray-800">{{ $user->department ?? '-' }}</p>
-                    </div>
-
-                    {{-- Section --}}
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Section</p>
-                        <p class="text-base font-medium text-gray-800">{{ $user->section ?? '-' }}</p>
-                    </div>
-
-                    {{-- Position --}}
-                    <div>
-                        <p class="text-xs text-gray-400 uppercase tracking-wider mb-1">Position</p>
-                        <p class="text-base font-medium text-gray-800">{{ $user->position ?? '-' }}</p>
-                    </div>
+        {{-- Project Assignment --}}
+        <div class="rounded-xl border border-gray-200 bg-white p-4">
+            <div class="flex items-center gap-3">
+                <div class="p-2 rounded-lg bg-amber-100">
+                    <x-icon name="o-briefcase" class="size-6 text-amber-600" />
+                </div>
+                <div>
+                    <p class="text-2xl font-bold text-gray-800">{{ $projectCount }}</p>
+                    <p class="text-xs text-gray-500">Projects</p>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Add Modal --}}
-    <x-modal wire:model="addModal" title="Add Development Plan" separator box-class="max-w-3xl h-fit">
+    {{-- Main Content --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {{-- Left Column - Personal Info & Chart --}}
+        <div class="lg:col-span-1 space-y-6">
+            {{-- Personal Information Card --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-6">
+                <div class="flex items-center gap-4 mb-4">
+                    {{-- Avatar --}}
+                    <div
+                        class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0 overflow-hidden">
+                        @if ($user->avatar)
+                            <img src="{{ asset('storage/' . $user->avatar) }}" alt="{{ $user->name }}"
+                                class="w-full h-full object-cover">
+                        @else
+                            <span class="text-primary text-2xl font-bold">
+                                {{ strtoupper(substr($user->name, 0, 1)) }}
+                            </span>
+                        @endif
+                    </div>
+                    <div>
+                        <h2 class="text-lg font-bold text-gray-800">{{ $user->name }}</h2>
+                        <p class="text-sm text-gray-500">{{ $user->NRP }}</p>
+                    </div>
+                </div>
+
+                <div class="space-y-3 text-sm">
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Section</span>
+                        <span class="font-medium text-gray-800">{{ $user->section ?? '-' }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-500">Position</span>
+                        <span class="font-medium text-gray-800">{{ $user->position ?? '-' }}</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Chart Card --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">Development Overview</h3>
+                <div id="development-chart" wire:ignore></div>
+            </div>
+        </div>
+
+        {{-- Right Column - Plans by Category --}}
+        <div class="lg:col-span-2 space-y-6">
+            {{-- Training Plans --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <x-icon name="o-academic-cap" class="size-5 text-blue-600" />
+                        Training Plans
+                    </h3>
+                </div>
+                @if ($trainingPlansData->count() > 0)
+                    <div class="space-y-3">
+                        @foreach ($trainingPlansData as $plan)
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex-1">
+                                    <p class="font-medium text-gray-800">{{ $plan->competency->name ?? 'N/A' }}</p>
+                                    <p class="text-xs text-gray-500">{{ $plan->competency->type ?? '-' }}</p>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    @include('pages.development.partials.status-badge', [
+                                        'status' => $plan->status,
+                                    ])
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500 text-center py-4">No training plans for this year</p>
+                @endif
+            </div>
+
+            {{-- Self Learning --}}
+            <div class="rounded-xl border border-gray-200 bg-white p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                        <x-icon name="o-book-open" class="size-5 text-green-600" />
+                        Self Learning
+                    </h3>
+                </div>
+                @if ($selfLearningData->count() > 0)
+                    <div class="space-y-3">
+                        @foreach ($selfLearningData as $plan)
+                            <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                                <div class="flex-1">
+                                    <p class="font-medium text-gray-800">{{ $plan->title }}</p>
+                                    <p class="text-xs text-gray-500">Mentor: {{ $plan->mentor->name ?? '-' }} |
+                                        {{ $plan->start_date?->format('d M Y') }} -
+                                        {{ $plan->end_date?->format('d M Y') }}</p>
+                                </div>
+                                <div class="flex items-center gap-3">
+                                    @include('pages.development.partials.status-badge', [
+                                        'status' => $plan->status,
+                                    ])
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                @else
+                    <p class="text-sm text-gray-500 text-center py-4">No self learning plans for this year</p>
+                @endif
+            </div>
+
+            {{-- Mentoring & Projects (2 columns) --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {{-- Mentoring --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <x-icon name="o-user-group" class="size-5 text-purple-600" />
+                            Mentoring
+                        </h3>
+                    </div>
+                    @if ($mentoringData->count() > 0)
+                        <div class="space-y-3">
+                            @foreach ($mentoringData as $plan)
+                                <div class="p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <p class="font-medium text-gray-800 text-sm truncate flex-1">
+                                            {{ $plan->objective }}</p>
+                                        @include('pages.development.partials.status-badge', [
+                                            'status' => $plan->status,
+                                        ])
+                                    </div>
+                                    <p class="text-xs text-gray-500">{{ $plan->mentor->name ?? '-' }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-500 text-center py-4">No mentoring plans for this year</p>
+                    @endif
+                </div>
+
+                {{-- Projects --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <x-icon name="o-briefcase" class="size-5 text-amber-600" />
+                            Projects
+                        </h3>
+                    </div>
+                    @if ($projectData->count() > 0)
+                        <div class="space-y-3">
+                            @foreach ($projectData as $plan)
+                                <div class="p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex items-start justify-between mb-2">
+                                        <p class="font-medium text-gray-800 text-sm truncate flex-1">
+                                            {{ $plan->name }}</p>
+                                        @include('pages.development.partials.status-badge', [
+                                            'status' => $plan->status,
+                                        ])
+                                    </div>
+                                    <p class="text-xs text-gray-500">{{ $plan->mentor->name ?? '-' }}</p>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-500 text-center py-4">No project assignments for this year</p>
+                    @endif
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Add/Edit Modal --}}
+    <x-modal wire:model="addModal" :title="$isEdit ? 'Edit Development Plan' : 'Add Development Plan'" separator box-class="max-w-3xl h-fit">
         <x-form wire:submit="save" no-separator>
             {{-- Tabs --}}
             <div class="border-b border-gray-200">
@@ -115,98 +296,256 @@
             @if ($activeTab === 'training')
                 <div class="space-y-4">
                     @foreach ($trainingPlans as $index => $plan)
-                        <div class="grid grid-cols-12 gap-4">
+                        <div class="grid grid-cols-12 gap-4 items-end">
                             <div class="col-span-4">
-                                <x-choices label="Group Competency"
+                                <x-choices label="{{ $index === 0 ? 'Group Competency' : '' }}"
                                     wire:model.live="trainingPlans.{{ $index }}.group" :options="$typeOptions"
                                     option-value="value" option-label="label" placeholder="Select group"
                                     class="focus-within:border-0" single />
                             </div>
-                            <div class="col-span-8">
-                                <x-choices label="Competency"
-                                    wire:model="trainingPlans.{{ $index }}.competency_id" :options="$this->getCompetenciesByType($trainingPlans[$index]['group'])"
+                            <div class="{{ count($trainingPlans) > 1 ? 'col-span-7' : 'col-span-8' }}">
+                                <x-choices label="{{ $index === 0 ? 'Competency' : '' }}"
+                                    wire:model="trainingPlans.{{ $index }}.competency_id" :options="$this->getCompetenciesByType($trainingPlans[$index]['group'] ?? '')"
                                     option-value="value" option-label="label" placeholder="Select competency"
                                     class="focus-within:border-0" single searchable />
                             </div>
+                            @if (count($trainingPlans) > 1)
+                                <div class="col-span-1">
+                                    <button type="button" wire:click="removeTrainingRow({{ $index }})"
+                                        class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                        <x-icon name="o-trash" class="size-4" />
+                                    </button>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
+                    <button type="button" wire:click="addTrainingRow"
+                        class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                        <x-icon name="o-plus" class="size-4" />
+                        Add Training
+                    </button>
                 </div>
             @endif
 
             {{-- Self Learning Tab --}}
             @if ($activeTab === 'self-learning')
-                <div class="space-y-4">
-                    <x-input label="Title" wire:model="selfLearning.title" placeholder="Enter title"
-                        class="focus-within:border-0" />
+                <div class="space-y-6">
+                    @foreach ($selfLearningPlans as $index => $plan)
+                        <div class="p-4 border border-gray-200 rounded-lg space-y-4 relative">
+                            @if (count($selfLearningPlans) > 1)
+                                <button type="button" wire:click="removeSelfLearningRow({{ $index }})"
+                                    class="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                                    <x-icon name="o-trash" class="size-4" />
+                                </button>
+                            @endif
+                            <x-input label="Title" wire:model="selfLearningPlans.{{ $index }}.title"
+                                placeholder="Enter title" class="focus-within:border-0" />
 
-                    <x-textarea label="Objective" wire:model="selfLearning.objective" placeholder="Enter objective"
-                        class="focus-within:border-0" rows="3" />
+                            <x-textarea label="Objective"
+                                wire:model="selfLearningPlans.{{ $index }}.objective"
+                                placeholder="Enter objective" class="focus-within:border-0" rows="2" />
 
-                    <x-choices label="Mentor/Superior" wire:model="selfLearning.mentor_id" :options="$mentors"
-                        option-value="value" option-label="label" placeholder="Select mentor"
-                        class="focus-within:border-0" single searchable />
+                            <x-choices label="Mentor/Superior"
+                                wire:model="selfLearningPlans.{{ $index }}.mentor_id" :options="$mentors"
+                                option-value="value" option-label="label" placeholder="Select mentor"
+                                class="focus-within:border-0" single searchable />
 
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <x-input label="Date In" wire:model="selfLearning.start_date" type="date"
-                            class="focus-within:border-0" />
-                        <x-input label="Date Out" wire:model="selfLearning.end_date" type="date"
-                            class="focus-within:border-0" />
-                    </div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <x-datepicker wire:model="selfLearningPlans.{{ $index }}.start_date"
+                                    label="Date In" icon="o-calendar" placeholder="Select date"
+                                    class="focus-within:border-0" :config="['altInput' => true, 'altFormat' => 'd M Y']" />
+                                <x-datepicker wire:model="selfLearningPlans.{{ $index }}.end_date"
+                                    label="Date Out" icon="o-calendar" placeholder="Select date"
+                                    class="focus-within:border-0" :config="['altInput' => true, 'altFormat' => 'd M Y']" />
+                            </div>
+                        </div>
+                    @endforeach
+                    <button type="button" wire:click="addSelfLearningRow"
+                        class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                        <x-icon name="o-plus" class="size-4" />
+                        Add Self Learning
+                    </button>
                 </div>
             @endif
 
             {{-- Mentoring Tab --}}
             @if ($activeTab === 'mentoring')
-                <div class="space-y-4">
-                    <x-choices label="Mentor/Superior" wire:model="mentoring.mentor_id" :options="$mentors"
-                        option-value="value" option-label="label" placeholder="Select mentor"
-                        class="focus-within:border-0" single searchable />
+                <div class="space-y-6">
+                    @foreach ($mentoringPlans as $index => $plan)
+                        <div class="p-4 border border-gray-200 rounded-lg space-y-4 relative">
+                            @if (count($mentoringPlans) > 1)
+                                <button type="button" wire:click="removeMentoringRow({{ $index }})"
+                                    class="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                                    <x-icon name="o-trash" class="size-4" />
+                                </button>
+                            @endif
+                            <x-choices label="Mentor/Superior"
+                                wire:model="mentoringPlans.{{ $index }}.mentor_id" :options="$mentors"
+                                option-value="value" option-label="label" placeholder="Select mentor"
+                                class="focus-within:border-0" single searchable />
 
-                    <x-textarea label="Objective" wire:model="mentoring.objective" placeholder="Enter objective"
-                        class="focus-within:border-0" rows="3" />
+                            <x-textarea label="Objective" wire:model="mentoringPlans.{{ $index }}.objective"
+                                placeholder="Enter objective" class="focus-within:border-0" rows="2" />
 
-                    <x-choices label="Method" wire:model="mentoring.method" :options="$methodOptions" option-value="value"
-                        option-label="label" placeholder="Select method" class="focus-within:border-0" single />
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                <x-choices label="Method" wire:model="mentoringPlans.{{ $index }}.method"
+                                    :options="$methodOptions" option-value="value" option-label="label"
+                                    placeholder="Select method" class="focus-within:border-0" single />
 
-                    <x-input label="Frequency" wire:model="mentoring.frequency" type="number"
-                        placeholder="Enter frequency" class="focus-within:border-0" />
+                                <x-input label="Frequency" wire:model="mentoringPlans.{{ $index }}.frequency"
+                                    type="number" placeholder="Enter frequency" class="focus-within:border-0" />
 
-                    <x-input label="Duration" wire:model="mentoring.duration" type="number"
-                        placeholder="Enter duration" class="focus-within:border-0" />
+                                <x-input label="Duration" wire:model="mentoringPlans.{{ $index }}.duration"
+                                    type="number" placeholder="Enter duration" class="focus-within:border-0" />
+                            </div>
+                        </div>
+                    @endforeach
+                    <button type="button" wire:click="addMentoringRow"
+                        class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                        <x-icon name="o-plus" class="size-4" />
+                        Add Mentoring
+                    </button>
                 </div>
             @endif
 
             {{-- Project Assignment Tab --}}
             @if ($activeTab === 'project')
-                <div class="space-y-4">
-                    <x-input label="Project Name" wire:model="project.name" placeholder="Enter project name"
-                        class="focus-within:border-0" />
+                <div class="space-y-6">
+                    @foreach ($projectPlans as $index => $plan)
+                        <div class="p-4 border border-gray-200 rounded-lg space-y-4 relative">
+                            @if (count($projectPlans) > 1)
+                                <button type="button" wire:click="removeProjectRow({{ $index }})"
+                                    class="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                                    <x-icon name="o-trash" class="size-4" />
+                                </button>
+                            @endif
+                            <x-input label="Project Name" wire:model="projectPlans.{{ $index }}.name"
+                                placeholder="Enter project name" class="focus-within:border-0" />
 
-                    <x-textarea label="Objective" wire:model="project.objective" placeholder="Enter objective"
-                        class="focus-within:border-0" rows="3" />
+                            <x-textarea label="Objective" wire:model="projectPlans.{{ $index }}.objective"
+                                placeholder="Enter objective" class="focus-within:border-0" rows="2" />
 
-                    <x-choices label="Mentor/Superior" wire:model="project.mentor_id" :options="$mentors"
-                        option-value="value" option-label="label" placeholder="Select mentor"
-                        class="focus-within:border-0" single searchable />
-
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <x-input label="Date In" wire:model="project.start_date" type="date"
-                            class="focus-within:border-0" />
-                        <x-input label="Date Out" wire:model="project.end_date" type="date"
-                            class="focus-within:border-0" />
-                    </div>
+                            <x-choices label="Mentor/Superior"
+                                wire:model="projectPlans.{{ $index }}.mentor_id" :options="$mentors"
+                                option-value="value" option-label="label" placeholder="Select mentor"
+                                class="focus-within:border-0" single searchable />
+                        </div>
+                    @endforeach
+                    <button type="button" wire:click="addProjectRow"
+                        class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                        <x-icon name="o-plus" class="size-4" />
+                        Add Project
+                    </button>
                 </div>
             @endif
 
             <x-slot:actions class="mt-5">
-                <x-ui.button type="button" wire:click="saveDraft" class="btn-outline" spinner="saveDraft">
-                    Save Draft
-                </x-ui.button>
-                <x-ui.button @click="$wire.closeAddModal()" type="button">Cancel</x-ui.button>
-                <x-ui.button type="submit" variant="primary" class="btn-primary !text-white" spinner="save">
-                    Save
-                </x-ui.button>
+                <div class="flex items-center justify-between w-full">
+                    <div>
+                        <x-ui.button @click="$wire.closeAddModal()" type="button">Cancel</x-ui.button>
+                    </div>
+                    <div class="flex gap-2">
+                        @if (!$isEdit)
+                            <x-ui.button type="button" wire:click="saveDraft" class="btn-outline"
+                                spinner="saveDraft">
+                                Save Draft
+                            </x-ui.button>
+                        @endif
+                        <x-ui.button type="submit" variant="primary" class="btn-primary !text-white"
+                            spinner="save">
+                            {{ $isEdit ? 'Update' : 'Save' }}
+                        </x-ui.button>
+                    </div>
+                </div>
             </x-slot:actions>
         </x-form>
     </x-modal>
 </div>
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+    <script>
+        document.addEventListener('livewire:initialized', function() {
+            initDevelopmentChart();
+        });
+
+        document.addEventListener('livewire:navigated', function() {
+            initDevelopmentChart();
+        });
+
+        // Re-render chart when data changes
+        Livewire.on('refreshChart', function() {
+            initDevelopmentChart();
+        });
+
+        function initDevelopmentChart() {
+            const chartElement = document.querySelector("#development-chart");
+            if (!chartElement) return;
+
+            // Clear any existing chart
+            chartElement.innerHTML = '';
+
+            const chartData = @json($chartData);
+
+            const options = {
+                series: chartData,
+                chart: {
+                    type: 'donut',
+                    height: 280,
+                },
+                labels: ['Training', 'Self Learning', 'Mentoring', 'Projects'],
+                colors: ['#3B82F6', '#10B981', '#8B5CF6', '#F59E0B'],
+                plotOptions: {
+                    pie: {
+                        donut: {
+                            size: '65%',
+                            labels: {
+                                show: true,
+                                name: {
+                                    show: true,
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                },
+                                value: {
+                                    show: true,
+                                    fontSize: '24px',
+                                    fontWeight: 700,
+                                },
+                                total: {
+                                    show: true,
+                                    label: 'Total',
+                                    fontSize: '14px',
+                                    fontWeight: 600,
+                                    formatter: function(w) {
+                                        return w.globals.seriesTotals.reduce((a, b) => a + b, 0);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                legend: {
+                    position: 'bottom',
+                    fontSize: '12px',
+                },
+                dataLabels: {
+                    enabled: false
+                },
+                responsive: [{
+                    breakpoint: 480,
+                    options: {
+                        chart: {
+                            height: 250
+                        },
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }]
+            };
+
+            const chart = new ApexCharts(chartElement, options);
+            chart.render();
+        }
+    </script>
+@endpush

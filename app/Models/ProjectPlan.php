@@ -15,16 +15,34 @@ class ProjectPlan extends Model
     protected $fillable = [
         'user_id',
         'mentor_id',
+        'name',
         'objective',
-        'method',
-        'frequency',
-        'duration',
+        'status',
+        'year',
+        'approved_by',
+        'approved_at',
     ];
 
     protected $casts = [
-        'frequency' => 'integer',
-        'duration' => 'integer',
+        'year' => 'integer',
+        'approved_at' => 'datetime',
     ];
+
+    /**
+     * Check if this plan can be edited (only draft or pending status)
+     */
+    public function canEdit(): bool
+    {
+        return in_array($this->status, ['draft', 'pending']);
+    }
+
+    /**
+     * Get the approver for this plan.
+     */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
 
     /**
      * Get the user that owns this project plan.

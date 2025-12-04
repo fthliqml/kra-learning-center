@@ -10,6 +10,7 @@ use App\Models\TrainingPlan;
 use App\Models\User;
 use Livewire\Component;
 use Mary\Traits\Toast;
+use Illuminate\Support\Facades\Auth;
 
 class DevelopmentPlan extends Component
 {
@@ -19,14 +20,35 @@ class DevelopmentPlan extends Component
     public $addModal = false;
     public $activeTab = 'training';
 
-    // Training Plan form (3 rows of group + competency)
+    // Edit mode
+    public $isEdit = false;
+
+    // Filter by year
+    public $selectedYear;
+
+    // Training Plan form (multiple rows)
     public $trainingPlans = [
-        ['group' => '', 'competency_id' => ''],
-        ['group' => '', 'competency_id' => ''],
-        ['group' => '', 'competency_id' => ''],
+        ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
+        ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
+        ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
     ];
 
-    // Self Learning Plan form
+    // Self Learning Plans (multiple)
+    public $selfLearningPlans = [
+        ['id' => null, 'title' => '', 'objective' => '', 'mentor_id' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
+    ];
+
+    // Mentoring Plans (multiple)
+    public $mentoringPlans = [
+        ['id' => null, 'mentor_id' => '', 'objective' => '', 'method' => '', 'frequency' => '', 'duration' => '', 'status' => null],
+    ];
+
+    // Project Plans (multiple)
+    public $projectPlans = [
+        ['id' => null, 'name' => '', 'objective' => '', 'mentor_id' => '', 'status' => null],
+    ];
+
+    // Legacy single form properties (for backward compatibility)
     public $selfLearning = [
         'title' => '',
         'objective' => '',
@@ -35,7 +57,6 @@ class DevelopmentPlan extends Component
         'end_date' => '',
     ];
 
-    // Mentoring Plan form
     public $mentoring = [
         'mentor_id' => '',
         'objective' => '',
@@ -44,7 +65,6 @@ class DevelopmentPlan extends Component
         'duration' => '',
     ];
 
-    // Project Assignment Plan form
     public $project = [
         'name' => '',
         'objective' => '',
@@ -69,6 +89,12 @@ class DevelopmentPlan extends Component
         ['value' => 'hybrid', 'label' => 'Hybrid'],
     ];
 
+    public function mount()
+    {
+        // Default to current year (as string for datepicker compatibility)
+        $this->selectedYear = (string) now()->year;
+    }
+
     public function setActiveTab($tab)
     {
         $this->activeTab = $tab;
@@ -77,7 +103,127 @@ class DevelopmentPlan extends Component
     public function openAddModal()
     {
         $this->resetForm();
+        $this->isEdit = false;
         $this->addModal = true;
+    }
+
+    public function openEditModal()
+    {
+        $this->resetForm();
+        $this->isEdit = true;
+        $this->activeTab = 'training';
+        $this->loadExistingPlans();
+        $this->addModal = true;
+    }
+
+    private function loadExistingPlans()
+    {
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+
+        // Load Training Plans
+        $trainingPlans = TrainingPlan::with('competency')
+            ->where('user_id', $userId)
+            ->where('year', $year)
+            ->get();
+
+        $this->trainingPlans = [];
+        foreach ($trainingPlans as $plan) {
+            $this->trainingPlans[] = [
+                'id' => $plan->id,
+                'group' => $plan->competency->type ?? '',
+                'competency_id' => $plan->competency_id,
+                'status' => $plan->status,
+            ];
+        }
+        // Add empty rows if less than 3
+        while (count($this->trainingPlans) < 3) {
+            $this->trainingPlans[] = ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null];
+        }
+
+        // Load Self Learning Plans
+        $selfLearningPlans = SelfLearningPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->get();
+
+        $this->selfLearningPlans = [];
+        foreach ($selfLearningPlans as $plan) {
+            $this->selfLearningPlans[] = [
+                'id' => $plan->id,
+                'title' => $plan->title,
+                'objective' => $plan->objective,
+                'mentor_id' => $plan->mentor_id,
+                'start_date' => $plan->start_date?->format('Y-m-d'),
+                'end_date' => $plan->end_date?->format('Y-m-d'),
+                'status' => $plan->status,
+            ];
+        }
+        // Add empty row if empty
+        if (empty($this->selfLearningPlans)) {
+            $this->selfLearningPlans[] = [
+                'id' => null,
+                'title' => '',
+                'objective' => '',
+                'mentor_id' => '',
+                'start_date' => '',
+                'end_date' => '',
+                'status' => null
+            ];
+        }
+
+        // Load Mentoring Plans
+        $mentoringPlans = MentoringPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->get();
+
+        $this->mentoringPlans = [];
+        foreach ($mentoringPlans as $plan) {
+            $this->mentoringPlans[] = [
+                'id' => $plan->id,
+                'mentor_id' => $plan->mentor_id,
+                'objective' => $plan->objective,
+                'method' => $plan->method,
+                'frequency' => $plan->frequency,
+                'duration' => $plan->duration,
+                'status' => $plan->status,
+            ];
+        }
+        if (empty($this->mentoringPlans)) {
+            $this->mentoringPlans[] = [
+                'id' => null,
+                'mentor_id' => '',
+                'objective' => '',
+                'method' => '',
+                'frequency' => '',
+                'duration' => '',
+                'status' => null
+            ];
+        }
+
+        // Load Project Plans
+        $projectPlans = ProjectPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->get();
+
+        $this->projectPlans = [];
+        foreach ($projectPlans as $plan) {
+            $this->projectPlans[] = [
+                'id' => $plan->id,
+                'name' => $plan->name,
+                'objective' => $plan->objective,
+                'mentor_id' => $plan->mentor_id,
+                'status' => $plan->status,
+            ];
+        }
+        if (empty($this->projectPlans)) {
+            $this->projectPlans[] = [
+                'id' => null,
+                'name' => '',
+                'objective' => '',
+                'mentor_id' => '',
+                'status' => null
+            ];
+        }
     }
 
     public function closeAddModal()
@@ -86,14 +232,169 @@ class DevelopmentPlan extends Component
         $this->resetForm();
     }
 
+    // Add new row methods
+    public function addTrainingRow()
+    {
+        $this->trainingPlans[] = ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null];
+    }
+
+    public function addSelfLearningRow()
+    {
+        $this->selfLearningPlans[] = ['id' => null, 'title' => '', 'objective' => '', 'mentor_id' => '', 'start_date' => '', 'end_date' => '', 'status' => null];
+    }
+
+    public function addMentoringRow()
+    {
+        $this->mentoringPlans[] = ['id' => null, 'mentor_id' => '', 'objective' => '', 'method' => '', 'frequency' => '', 'duration' => '', 'status' => null];
+    }
+
+    public function addProjectRow()
+    {
+        $this->projectPlans[] = ['id' => null, 'name' => '', 'objective' => '', 'mentor_id' => '', 'status' => null];
+    }
+
+    // Remove row methods
+    public function removeTrainingRow($index)
+    {
+        if (count($this->trainingPlans) > 1) {
+            $plan = $this->trainingPlans[$index];
+            // If it has an ID, delete from database
+            if (!empty($plan['id'])) {
+                $existing = TrainingPlan::find($plan['id']);
+                if ($existing && $existing->canEdit()) {
+                    $existing->delete();
+                }
+            }
+            unset($this->trainingPlans[$index]);
+            $this->trainingPlans = array_values($this->trainingPlans);
+        }
+    }
+
+    public function removeSelfLearningRow($index)
+    {
+        if (count($this->selfLearningPlans) > 1) {
+            $plan = $this->selfLearningPlans[$index];
+            if (!empty($plan['id'])) {
+                $existing = SelfLearningPlan::find($plan['id']);
+                if ($existing && $existing->canEdit()) {
+                    $existing->delete();
+                }
+            }
+            unset($this->selfLearningPlans[$index]);
+            $this->selfLearningPlans = array_values($this->selfLearningPlans);
+        }
+    }
+
+    public function removeMentoringRow($index)
+    {
+        if (count($this->mentoringPlans) > 1) {
+            $plan = $this->mentoringPlans[$index];
+            if (!empty($plan['id'])) {
+                $existing = MentoringPlan::find($plan['id']);
+                if ($existing && $existing->canEdit()) {
+                    $existing->delete();
+                }
+            }
+            unset($this->mentoringPlans[$index]);
+            $this->mentoringPlans = array_values($this->mentoringPlans);
+        }
+    }
+
+    public function removeProjectRow($index)
+    {
+        if (count($this->projectPlans) > 1) {
+            $plan = $this->projectPlans[$index];
+            if (!empty($plan['id'])) {
+                $existing = ProjectPlan::find($plan['id']);
+                if ($existing && $existing->canEdit()) {
+                    $existing->delete();
+                }
+            }
+            unset($this->projectPlans[$index]);
+            $this->projectPlans = array_values($this->projectPlans);
+        }
+    }
+
+    // Delete methods
+    public function deleteTrainingPlan($id)
+    {
+        $plan = TrainingPlan::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        if (!$plan || !$plan->canEdit()) {
+            $this->error('This plan cannot be deleted');
+            return;
+        }
+
+        $plan->delete();
+        $this->success('Training plan deleted successfully');
+    }
+
+    public function deleteSelfLearningPlan($id)
+    {
+        $plan = SelfLearningPlan::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        if (!$plan || !$plan->canEdit()) {
+            $this->error('This plan cannot be deleted');
+            return;
+        }
+
+        $plan->delete();
+        $this->success('Self learning plan deleted successfully');
+    }
+
+    public function deleteMentoringPlan($id)
+    {
+        $plan = MentoringPlan::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        if (!$plan || !$plan->canEdit()) {
+            $this->error('This plan cannot be deleted');
+            return;
+        }
+
+        $plan->delete();
+        $this->success('Mentoring plan deleted successfully');
+    }
+
+    public function deleteProjectPlan($id)
+    {
+        $plan = ProjectPlan::where('id', $id)
+            ->where('user_id', Auth::id())
+            ->first();
+
+        if (!$plan || !$plan->canEdit()) {
+            $this->error('This plan cannot be deleted');
+            return;
+        }
+
+        $plan->delete();
+        $this->success('Project plan deleted successfully');
+    }
+
     public function resetForm()
     {
         $this->activeTab = 'training';
+        $this->isEdit = false;
         $this->trainingPlans = [
-            ['group' => '', 'competency_id' => ''],
-            ['group' => '', 'competency_id' => ''],
-            ['group' => '', 'competency_id' => ''],
+            ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
+            ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
+            ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
         ];
+        $this->selfLearningPlans = [
+            ['id' => null, 'title' => '', 'objective' => '', 'mentor_id' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
+        ];
+        $this->mentoringPlans = [
+            ['id' => null, 'mentor_id' => '', 'objective' => '', 'method' => '', 'frequency' => '', 'duration' => '', 'status' => null],
+        ];
+        $this->projectPlans = [
+            ['id' => null, 'name' => '', 'objective' => '', 'mentor_id' => '', 'status' => null],
+        ];
+        // Legacy
         $this->selfLearning = [
             'title' => '',
             'objective' => '',
@@ -132,7 +433,7 @@ class DevelopmentPlan extends Component
 
     public function save()
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         try {
             if ($this->activeTab === 'training') {
@@ -154,7 +455,7 @@ class DevelopmentPlan extends Component
 
     public function saveDraft()
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         try {
             if ($this->activeTab === 'training') {
@@ -176,85 +477,129 @@ class DevelopmentPlan extends Component
 
     private function saveTrainingPlans($user, $isDraft = false)
     {
+        $status = $isDraft ? 'draft' : 'pending';
+
         foreach ($this->trainingPlans as $plan) {
             if (!empty($plan['competency_id'])) {
-                TrainingPlan::create([
-                    'user_id' => $user->id,
-                    'competency_id' => $plan['competency_id'],
-                ]);
+                if (!empty($plan['id'])) {
+                    // Update existing plan
+                    $existingPlan = TrainingPlan::find($plan['id']);
+                    if ($existingPlan && $existingPlan->canEdit()) {
+                        $existingPlan->update([
+                            'competency_id' => $plan['competency_id'],
+                            'status' => $status,
+                            'year' => (int) $this->selectedYear,
+                        ]);
+                    }
+                } else {
+                    // Create new plan
+                    TrainingPlan::create([
+                        'user_id' => $user->id,
+                        'competency_id' => $plan['competency_id'],
+                        'status' => $status,
+                        'year' => (int) $this->selectedYear,
+                    ]);
+                }
             }
         }
     }
 
     private function saveSelfLearningPlan($user, $isDraft = false)
     {
-        if (!$isDraft) {
-            $this->validate([
-                'selfLearning.title' => 'required|string|max:255',
-                'selfLearning.objective' => 'required|string',
-                'selfLearning.mentor_id' => 'required|exists:users,id',
-                'selfLearning.start_date' => 'required|date',
-                'selfLearning.end_date' => 'required|date|after_or_equal:selfLearning.start_date',
-            ]);
-        }
+        $status = $isDraft ? 'draft' : 'pending';
 
-        SelfLearningPlan::create([
-            'user_id' => $user->id,
-            'mentor_id' => $this->selfLearning['mentor_id'] ?: null,
-            'title' => $this->selfLearning['title'] ?: 'Draft',
-            'objective' => $this->selfLearning['objective'] ?: '',
-            'start_date' => $this->selfLearning['start_date'] ?: now(),
-            'end_date' => $this->selfLearning['end_date'] ?: now(),
-        ]);
+        foreach ($this->selfLearningPlans as $plan) {
+            // Skip empty rows
+            if (empty($plan['title']) && empty($plan['objective'])) {
+                continue;
+            }
+
+            $data = [
+                'mentor_id' => $plan['mentor_id'] ?: null,
+                'title' => $plan['title'] ?: 'Draft',
+                'objective' => $plan['objective'] ?: '',
+                'start_date' => $plan['start_date'] ?: now(),
+                'end_date' => $plan['end_date'] ?: now(),
+                'status' => $status,
+                'year' => (int) $this->selectedYear,
+            ];
+
+            if (!empty($plan['id'])) {
+                // Update existing
+                $existingPlan = SelfLearningPlan::find($plan['id']);
+                if ($existingPlan && $existingPlan->canEdit()) {
+                    $existingPlan->update($data);
+                }
+            } else {
+                // Create new
+                SelfLearningPlan::create(array_merge(['user_id' => $user->id], $data));
+            }
+        }
     }
 
     private function saveMentoringPlan($user, $isDraft = false)
     {
-        if (!$isDraft) {
-            $this->validate([
-                'mentoring.mentor_id' => 'required|exists:users,id',
-                'mentoring.objective' => 'required|string',
-                'mentoring.method' => 'required|string',
-                'mentoring.frequency' => 'required|integer|min:1',
-                'mentoring.duration' => 'required|integer|min:1',
-            ]);
-        }
+        $status = $isDraft ? 'draft' : 'pending';
 
-        MentoringPlan::create([
-            'user_id' => $user->id,
-            'mentor_id' => $this->mentoring['mentor_id'] ?: null,
-            'objective' => $this->mentoring['objective'] ?: '',
-            'method' => $this->mentoring['method'] ?: '',
-            'frequency' => $this->mentoring['frequency'] ?: 0,
-            'duration' => $this->mentoring['duration'] ?: 0,
-        ]);
+        foreach ($this->mentoringPlans as $plan) {
+            // Skip empty rows
+            if (empty($plan['objective']) && empty($plan['mentor_id'])) {
+                continue;
+            }
+
+            $data = [
+                'mentor_id' => $plan['mentor_id'] ?: null,
+                'objective' => $plan['objective'] ?: '',
+                'method' => $plan['method'] ?: '',
+                'frequency' => $plan['frequency'] ?: 0,
+                'duration' => $plan['duration'] ?: 0,
+                'status' => $status,
+                'year' => (int) $this->selectedYear,
+            ];
+
+            if (!empty($plan['id'])) {
+                $existingPlan = MentoringPlan::find($plan['id']);
+                if ($existingPlan && $existingPlan->canEdit()) {
+                    $existingPlan->update($data);
+                }
+            } else {
+                MentoringPlan::create(array_merge(['user_id' => $user->id], $data));
+            }
+        }
     }
 
     private function saveProjectPlan($user, $isDraft = false)
     {
-        if (!$isDraft) {
-            $this->validate([
-                'project.name' => 'required|string|max:255',
-                'project.objective' => 'required|string',
-                'project.mentor_id' => 'required|exists:users,id',
-                'project.start_date' => 'required|date',
-                'project.end_date' => 'required|date|after_or_equal:project.start_date',
-            ]);
-        }
+        $status = $isDraft ? 'draft' : 'pending';
 
-        ProjectPlan::create([
-            'user_id' => $user->id,
-            'mentor_id' => $this->project['mentor_id'] ?: null,
-            'objective' => $this->project['objective'] ?: '',
-            'method' => $this->project['name'] ?: 'Draft',
-            'frequency' => 1,
-            'duration' => 1,
-        ]);
+        foreach ($this->projectPlans as $plan) {
+            // Skip empty rows
+            if (empty($plan['name']) && empty($plan['objective'])) {
+                continue;
+            }
+
+            $data = [
+                'mentor_id' => $plan['mentor_id'] ?: null,
+                'name' => $plan['name'] ?: 'Draft',
+                'objective' => $plan['objective'] ?: '',
+                'status' => $status,
+                'year' => (int) $this->selectedYear,
+            ];
+
+            if (!empty($plan['id'])) {
+                $existingPlan = ProjectPlan::find($plan['id']);
+                if ($existingPlan && $existingPlan->canEdit()) {
+                    $existingPlan->update($data);
+                }
+            } else {
+                ProjectPlan::create(array_merge(['user_id' => $user->id], $data));
+            }
+        }
     }
 
     public function render()
     {
-        $user = auth()->user();
+        $user = Auth::user();
 
         // Get mentors (users with spv or leader role)
         $mentors = User::whereIn('role', ['spv', 'leader', 'admin'])
@@ -263,9 +608,58 @@ class DevelopmentPlan extends Component
             ->map(fn($u) => ['value' => $u->id, 'label' => $u->name])
             ->toArray();
 
+        // Parse year from datepicker (handles both "2025" and full date strings)
+        $selectedYearInt = (int) $this->selectedYear;
+
+        // Get user's development plans for selected year
+        $trainingPlansData = TrainingPlan::with(['competency', 'approver'])
+            ->where('user_id', $user->id)
+            ->where('year', $selectedYearInt)
+            ->get();
+
+        $selfLearningData = SelfLearningPlan::with(['mentor', 'approver'])
+            ->where('user_id', $user->id)
+            ->where('year', $selectedYearInt)
+            ->get();
+
+        $mentoringData = MentoringPlan::with(['mentor', 'approver'])
+            ->where('user_id', $user->id)
+            ->where('year', $selectedYearInt)
+            ->get();
+
+        $projectData = ProjectPlan::with(['mentor', 'approver'])
+            ->where('user_id', $user->id)
+            ->where('year', $selectedYearInt)
+            ->get();
+
+        // Statistics for selected year
+        $trainingPlanCount = $trainingPlansData->count();
+        $selfLearningCount = $selfLearningData->count();
+        $mentoringCount = $mentoringData->count();
+        $projectCount = $projectData->count();
+        $totalPlans = $trainingPlanCount + $selfLearningCount + $mentoringCount + $projectCount;
+
+        // Chart data
+        $chartData = [
+            $trainingPlanCount,
+            $selfLearningCount,
+            $mentoringCount,
+            $projectCount,
+        ];
+
         return view('pages.development.development-plan', [
             'user' => $user,
             'mentors' => $mentors,
+            'trainingPlanCount' => $trainingPlanCount,
+            'selfLearningCount' => $selfLearningCount,
+            'mentoringCount' => $mentoringCount,
+            'projectCount' => $projectCount,
+            'totalPlans' => $totalPlans,
+            'trainingPlansData' => $trainingPlansData,
+            'selfLearningData' => $selfLearningData,
+            'mentoringData' => $mentoringData,
+            'projectData' => $projectData,
+            'chartData' => $chartData,
         ]);
     }
 }

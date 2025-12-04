@@ -16,13 +16,21 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('mentor_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('mentor_id')->nullable()->constrained('users')->nullOnDelete();
 
             // Plan Details
             $table->string('title');
-            $table->string('objective');
-            $table->date('start_date');
-            $table->date('end_date');
+            $table->text('objective')->nullable();
+            $table->date('start_date')->nullable();
+            $table->date('end_date')->nullable();
+
+            // Status & Period
+            $table->string('status')->default('draft'); // draft, pending, approved, rejected
+            $table->unsignedSmallInteger('year');
+
+            // Approval
+            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('approved_at')->nullable();
 
             // Timestamps
             $table->timestamps();
