@@ -11,7 +11,7 @@
 
         {{-- Month & Year Display --}}
         <button wire:click="openJumpModal"
-            class="px-5 py-2 bg-secondary text-white rounded-full font-semibold text-sm hover:bg-secondary/20 transition-colors">
+            class="px-5 py-2 bg-secondary text-white rounded-full text-sm hover:bg-secondary/90 transition-colors">
             {{ $this->monthName }} {{ $currentYear }}
         </button>
 
@@ -46,7 +46,7 @@
                         {{-- Day Number --}}
                         <span
                             class="text-sm {{ $dayData['isToday']
-                                ? 'w-7 h-7 flex items-center justify-center bg-secondary text-white rounded-full font-semibold'
+                                ? 'w-7 h-7 flex items-center justify-center bg-secondary text-white rounded-full'
                                 : 'text-gray-500 dark:text-gray-400' }}">
                             {{ $dayData['day'] }}
                         </span>
@@ -146,7 +146,7 @@
                         Cancel
                     </button>
                     <button wire:click="jumpTo"
-                        class="flex-1 px-4 py-2 text-sm font-medium text-white bg-secondary rounded-lg hover:bg-secondary/90 transition-colors">
+                        class="flex-1 px-4 py-2 text-sm text-white bg-secondary rounded-lg hover:bg-secondary/90 transition-colors">
                         Go
                     </button>
                 </div>

@@ -50,8 +50,7 @@
                             {{ $selectedYear }}</p>
                     </div>
                     <div class="flex items-center gap-2">
-                        <span
-                            class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-secondary text-white">
+                        <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-secondary text-white">
                             <span class="w-2 h-2 rounded-full bg-white mr-2"></span>
                             Training Count
                         </span>
