@@ -11,7 +11,7 @@
 
         {{-- Month & Year Display --}}
         <button wire:click="openJumpModal"
-            class="px-5 py-2 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full font-semibold text-sm hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-colors">
+            class="px-5 py-2 bg-secondary text-white rounded-full font-semibold text-sm hover:bg-secondary/20 transition-colors">
             {{ $this->monthName }} {{ $currentYear }}
         </button>
 
@@ -39,14 +39,14 @@
         @foreach ($calendarDays as $dayData)
             <div class="relative aspect-square p-1" x-data="{ showTooltip: false }">
                 @if ($dayData['day'])
-                    <div class="h-full flex flex-col items-center justify-start pt-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-default {{ $dayData['isToday'] ? 'bg-blue-50 dark:bg-blue-900/20' : '' }}"
+                    <div class="h-full flex flex-col items-center justify-start pt-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-default {{ $dayData['isToday'] ? 'bg-secondary/10' : '' }}"
                         @mouseenter="showTooltip = {{ count($dayData['events']) > 0 ? 'true' : 'false' }}"
                         @mouseleave="showTooltip = false">
 
                         {{-- Day Number --}}
                         <span
                             class="text-sm {{ $dayData['isToday']
-                                ? 'w-7 h-7 flex items-center justify-center bg-blue-500 text-white rounded-full font-semibold'
+                                ? 'w-7 h-7 flex items-center justify-center bg-secondary text-white rounded-full font-semibold'
                                 : 'text-gray-500 dark:text-gray-400' }}">
                             {{ $dayData['day'] }}
                         </span>
@@ -100,8 +100,7 @@
 
     {{-- Today Button --}}
     <div class="mt-4 flex justify-center">
-        <button wire:click="goToToday"
-            class="text-xs text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium">
+        <button wire:click="goToToday" class="text-xs text-secondary hover:text-secondary/80 font-medium">
             Go to Today
         </button>
     </div>
@@ -120,7 +119,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Month</label>
                         <select wire:model="jumpMonth"
-                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-secondary focus:border-secondary">
                             @foreach (range(1, 12) as $month)
                                 <option value="{{ $month }}">
                                     {{ \Carbon\Carbon::create(null, $month, 1)->format('F') }}</option>
@@ -132,7 +131,7 @@
                     <div>
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Year</label>
                         <select wire:model="jumpYear"
-                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-blue-500 focus:border-blue-500">
+                            class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-700 dark:text-white text-sm focus:ring-secondary focus:border-secondary">
                             @foreach (range(now()->year - 5, now()->year + 5) as $year)
                                 <option value="{{ $year }}">{{ $year }}</option>
                             @endforeach
@@ -147,7 +146,7 @@
                         Cancel
                     </button>
                     <button wire:click="jumpTo"
-                        class="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors">
+                        class="flex-1 px-4 py-2 text-sm font-medium text-white bg-secondary rounded-lg hover:bg-secondary/90 transition-colors">
                         Go
                     </button>
                 </div>

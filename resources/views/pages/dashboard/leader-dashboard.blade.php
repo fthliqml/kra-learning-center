@@ -13,8 +13,8 @@
                             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Training This Month</p>
                             <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $trainingThisMonth }}</p>
                         </div>
-                        <div class="p-3 bg-indigo-100 dark:bg-indigo-900/30 rounded-xl">
-                            <x-mary-icon name="o-academic-cap" class="w-7 h-7 text-indigo-600 dark:text-indigo-400" />
+                        <div class="p-3 bg-secondary rounded-xl">
+                            <x-mary-icon name="o-academic-cap" class="w-7 h-7 text-white" />
                         </div>
                     </div>
                     <div class="mt-3 flex items-center text-sm">
@@ -31,9 +31,8 @@
                             <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $upcomingSchedules }}
                             </p>
                         </div>
-                        <div class="p-3 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl">
-                            <x-mary-icon name="o-calendar-days"
-                                class="w-7 h-7 text-emerald-600 dark:text-emerald-400" />
+                        <div class="p-3 bg-secondary rounded-xl">
+                            <x-mary-icon name="o-calendar-days" class="w-7 h-7 text-white" />
                         </div>
                     </div>
                     <div class="mt-3 flex items-center text-sm">
@@ -52,8 +51,8 @@
                     </div>
                     <div class="flex items-center gap-2">
                         <span
-                            class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300">
-                            <span class="w-2 h-2 rounded-full bg-indigo-500 mr-2"></span>
+                            class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-secondary text-white">
+                            <span class="w-2 h-2 rounded-full bg-white mr-2"></span>
                             Training Count
                         </span>
                     </div>
@@ -187,7 +186,7 @@
 
                 const options = {
                     chart: {
-                        type: 'line',
+                        type: 'area',
                         height: 350,
                         fontFamily: 'inherit',
                         toolbar: {
@@ -201,7 +200,8 @@
                             top: 3,
                             left: 0,
                             blur: 4,
-                            opacity: 0.1
+                            opacity: 0.15,
+                            color: '#6366f1'
                         },
                         events: {
                             // Handle click on data point
@@ -225,16 +225,20 @@
                     }],
                     stroke: {
                         curve: 'smooth',
-                        width: 3
+                        width: 3,
+                        colors: ['#6366f1']
                     },
                     colors: ['#6366f1'],
                     fill: {
                         type: 'gradient',
                         gradient: {
-                            shadeIntensity: 1,
-                            opacityFrom: 0.4,
-                            opacityTo: 0.1,
-                            stops: [0, 90, 100]
+                            shade: 'light',
+                            type: 'vertical',
+                            shadeIntensity: 0.5,
+                            gradientToColors: ['#6366f1'],
+                            opacityFrom: 0.5,
+                            opacityTo: 0.05,
+                            stops: [0, 100]
                         }
                     },
                     xaxis: {
@@ -387,7 +391,7 @@
                             speed: 400,
                         }
                     },
-                    colors: ['#6366f1', '#8b5cf6', '#a855f7', '#d946ef', '#ec4899', '#f43f5e'],
+                    colors: ['#4863a0', '#f59e0b', '#10b981', '#ef4444', '#8b5cf6', '#06b6d4'],
                     plotOptions: {
                         pie: {
                             donut: {
@@ -470,7 +474,7 @@
                             speed: 400,
                         }
                     },
-                    colors: ['#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', '#3b82f6', '#6366f1'],
+                    colors: ['#3b82f6', '#22c55e', '#f97316', '#a855f7', '#ec4899', '#14b8a6'],
                     plotOptions: {
                         pie: {
                             donut: {
