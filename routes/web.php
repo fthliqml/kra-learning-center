@@ -26,6 +26,7 @@ use App\Livewire\Pages\Certification\CertificationHistory;
 use App\Livewire\Pages\Development\CompetencyBook;
 use App\Livewire\Pages\Development\CompetencyMatrix;
 use App\Livewire\Pages\Development\CompetencyValue;
+use App\Livewire\Pages\Development\DevelopmentApproval;
 use App\Livewire\Pages\Development\DevelopmentPlan;
 use App\Livewire\Pages\Training\Approval;
 use App\Livewire\Pages\Training\DataTrainer;
@@ -109,4 +110,5 @@ Route::middleware('auth')->group(function () {
 
     // Development
     Route::get('/development/plan', DevelopmentPlan::class)->name('development-plan.index');
+    Route::get('/development/approval', DevelopmentApproval::class)->name('development-approval.index');
 });

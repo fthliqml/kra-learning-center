@@ -6,6 +6,8 @@ use App\Models\Competency;
 use App\Models\MentoringPlan;
 use App\Models\ProjectPlan;
 use App\Models\SelfLearningPlan;
+use App\Models\Training;
+use App\Models\TrainingAttendance;
 use App\Models\TrainingPlan;
 use App\Models\User;
 use Livewire\Component;
@@ -323,12 +325,12 @@ class DevelopmentPlan extends Component
             ->first();
 
         if (!$plan || !$plan->canEdit()) {
-            $this->error('This plan cannot be deleted');
+            $this->error('This plan cannot be deleted', position: 'toast-top toast-center');
             return;
         }
 
         $plan->delete();
-        $this->success('Training plan deleted successfully');
+        $this->success('Training plan deleted successfully', position: 'toast-top toast-center');
     }
 
     public function deleteSelfLearningPlan($id)
@@ -338,12 +340,12 @@ class DevelopmentPlan extends Component
             ->first();
 
         if (!$plan || !$plan->canEdit()) {
-            $this->error('This plan cannot be deleted');
+            $this->error('This plan cannot be deleted', position: 'toast-top toast-center');
             return;
         }
 
         $plan->delete();
-        $this->success('Self learning plan deleted successfully');
+        $this->success('Self learning plan deleted successfully', position: 'toast-top toast-center');
     }
 
     public function deleteMentoringPlan($id)
@@ -353,12 +355,12 @@ class DevelopmentPlan extends Component
             ->first();
 
         if (!$plan || !$plan->canEdit()) {
-            $this->error('This plan cannot be deleted');
+            $this->error('This plan cannot be deleted', position: 'toast-top toast-center');
             return;
         }
 
         $plan->delete();
-        $this->success('Mentoring plan deleted successfully');
+        $this->success('Mentoring plan deleted successfully', position: 'toast-top toast-center');
     }
 
     public function deleteProjectPlan($id)
@@ -368,12 +370,12 @@ class DevelopmentPlan extends Component
             ->first();
 
         if (!$plan || !$plan->canEdit()) {
-            $this->error('This plan cannot be deleted');
+            $this->error('This plan cannot be deleted', position: 'toast-top toast-center');
             return;
         }
 
         $plan->delete();
-        $this->success('Project plan deleted successfully');
+        $this->success('Project plan deleted successfully', position: 'toast-top toast-center');
     }
 
     public function resetForm()
@@ -436,20 +438,16 @@ class DevelopmentPlan extends Component
         $user = Auth::user();
 
         try {
-            if ($this->activeTab === 'training') {
-                $this->saveTrainingPlans($user);
-            } elseif ($this->activeTab === 'self-learning') {
-                $this->saveSelfLearningPlan($user);
-            } elseif ($this->activeTab === 'mentoring') {
-                $this->saveMentoringPlan($user);
-            } elseif ($this->activeTab === 'project') {
-                $this->saveProjectPlan($user);
-            }
+            // Save all tabs at once
+            $this->saveTrainingPlans($user);
+            $this->saveSelfLearningPlan($user);
+            $this->saveMentoringPlan($user);
+            $this->saveProjectPlan($user);
 
             $this->closeAddModal();
-            $this->success('Development plan saved successfully!');
+            $this->success('Development plan saved successfully!', position: 'toast-top toast-center');
         } catch (\Exception $e) {
-            $this->error('Failed to save: ' . $e->getMessage());
+            $this->error('Failed to save: ' . $e->getMessage(), position: 'toast-top toast-center');
         }
     }
 
@@ -458,26 +456,22 @@ class DevelopmentPlan extends Component
         $user = Auth::user();
 
         try {
-            if ($this->activeTab === 'training') {
-                $this->saveTrainingPlans($user, true);
-            } elseif ($this->activeTab === 'self-learning') {
-                $this->saveSelfLearningPlan($user, true);
-            } elseif ($this->activeTab === 'mentoring') {
-                $this->saveMentoringPlan($user, true);
-            } elseif ($this->activeTab === 'project') {
-                $this->saveProjectPlan($user, true);
-            }
+            // Save all tabs at once as draft
+            $this->saveTrainingPlans($user, true);
+            $this->saveSelfLearningPlan($user, true);
+            $this->saveMentoringPlan($user, true);
+            $this->saveProjectPlan($user, true);
 
             $this->closeAddModal();
-            $this->success('Development plan draft saved successfully!');
+            $this->success('Development plan draft saved successfully!', position: 'toast-top toast-center');
         } catch (\Exception $e) {
-            $this->error('Failed to save draft: ' . $e->getMessage());
+            $this->error('Failed to save draft: ' . $e->getMessage(), position: 'toast-top toast-center');
         }
     }
 
     private function saveTrainingPlans($user, $isDraft = false)
     {
-        $status = $isDraft ? 'draft' : 'pending';
+        $status = $isDraft ? 'draft' : 'pending_spv';
 
         foreach ($this->trainingPlans as $plan) {
             if (!empty($plan['competency_id'])) {
@@ -506,7 +500,7 @@ class DevelopmentPlan extends Component
 
     private function saveSelfLearningPlan($user, $isDraft = false)
     {
-        $status = $isDraft ? 'draft' : 'pending';
+        $status = $isDraft ? 'draft' : 'pending_spv';
 
         foreach ($this->selfLearningPlans as $plan) {
             // Skip empty rows
@@ -539,7 +533,7 @@ class DevelopmentPlan extends Component
 
     private function saveMentoringPlan($user, $isDraft = false)
     {
-        $status = $isDraft ? 'draft' : 'pending';
+        $status = $isDraft ? 'draft' : 'pending_spv';
 
         foreach ($this->mentoringPlans as $plan) {
             // Skip empty rows
@@ -570,7 +564,7 @@ class DevelopmentPlan extends Component
 
     private function saveProjectPlan($user, $isDraft = false)
     {
-        $status = $isDraft ? 'draft' : 'pending';
+        $status = $isDraft ? 'draft' : 'pending_spv';
 
         foreach ($this->projectPlans as $plan) {
             // Skip empty rows
@@ -639,6 +633,32 @@ class DevelopmentPlan extends Component
         $projectCount = $projectData->count();
         $totalPlans = $trainingPlanCount + $selfLearningCount + $mentoringCount + $projectCount;
 
+        // Training Realization: Count training plans where user has completed (closed) training
+        // with matching competency type (group_comp matches competency->type)
+        $trainingRealized = 0;
+        foreach ($trainingPlansData as $plan) {
+            if ($plan->competency) {
+                // Check if user has attended a closed training with matching group_comp
+                $hasCompletedTraining = TrainingAttendance::where('employee_id', $user->id)
+                    ->whereHas('session.training', function ($q) use ($plan, $selectedYearInt) {
+                        $q->where('status', 'closed')
+                            ->where('group_comp', $plan->competency->type)
+                            ->whereYear('end_date', $selectedYearInt);
+                    })
+                    ->exists();
+
+                if ($hasCompletedTraining) {
+                    $trainingRealized++;
+                }
+            }
+        }
+
+        // Self Learning, Mentoring, Project realization (based on approved status for now)
+        // TODO: Implement actual realization tracking when features are available
+        $selfLearningRealized = $selfLearningData->where('status', 'approved')->count();
+        $mentoringRealized = $mentoringData->where('status', 'approved')->count();
+        $projectRealized = $projectData->where('status', 'approved')->count();
+
         // Chart data
         $chartData = [
             $trainingPlanCount,
@@ -660,6 +680,10 @@ class DevelopmentPlan extends Component
             'mentoringData' => $mentoringData,
             'projectData' => $projectData,
             'chartData' => $chartData,
+            'trainingRealized' => $trainingRealized,
+            'selfLearningRealized' => $selfLearningRealized,
+            'mentoringRealized' => $mentoringRealized,
+            'projectRealized' => $projectRealized,
         ]);
     }
 }
