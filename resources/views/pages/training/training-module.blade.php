@@ -53,9 +53,9 @@
                 </x-ui.button>
 
                 {{-- Filter --}}
-                <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
-                    placeholder="All"
-                    class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
+                <x-select wire:model.live="filter" :options="$competencyOptions" option-value="value" option-label="label"
+                    placeholder="All Competency"
+                    class="!min-w-[180px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
             </div>
 
@@ -123,9 +123,9 @@
             <x-input label="Title" placeholder="Title of the training module..." wire:model.defer="formData.title"
                 class="focus-within:border-0" :error="$errors->first('formData.title')" :readonly="$mode === 'preview'" />
 
-            <x-select label="Group Competency" wire:model.defer="formData.group_comp" :options="$groupOptions"
-                option-value="value" option-label="label" placeholder="Select Group Competency" :error="$errors->first('formData.group_comp')"
-                :disabled="$mode === 'preview'" />
+            <x-choices label="Competency" wire:model.defer="formData.competency_id" :options="$competencyOptions"
+                option-value="value" option-label="label" placeholder="Select Competency" :error="$errors->first('formData.competency_id')"
+                :disabled="$mode === 'preview'" single searchable class="focus-within:border-0" />
 
             <x-textarea label="Objective" placeholder="Describe the training objectives..."
                 class="focus-within:border-0" wire:model.defer="formData.objective" :error="$errors->first('formData.objective')"
