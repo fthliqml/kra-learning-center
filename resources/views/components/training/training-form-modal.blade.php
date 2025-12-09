@@ -26,33 +26,39 @@
             <x-tabs wire:model="activeTab">
                 <x-tab name="training" label="Training Config" icon="o-academic-cap">
                     <div class="{{ $errors->any() ? 'space-y-1' : 'space-y-4' }}">
-                        <!-- Training Name / Course Select for LMS -->
+                        <!-- Training Type -->
+                        <x-choices label="Training Type" wire:model.live="training_type" :options="$trainingTypeOptions"
+                            option-value="id" option-label="name" icon="o-book-open" single
+                            class="focus-within:border-0" />
+
+                        <!-- Training Name / Course Select for LMS / Module Select for In-House -->
                         @if ($training_type === 'LMS')
-                            <x-select label="Course" wire:model="course_id" :options="$courseOptions" option-value="id"
-                                option-label="title" placeholder="Select course" icon="o-rectangle-group" />
-                            @if ($training_name)
-                                <p class="text-xs text-gray-500 -mt-2">Selected Course Title: <span
-                                        class="font-medium">{{ $training_name }}</span></p>
-                            @endif
+                            <x-choices label="Course" wire:model.live="selected_module_id" :options="$courseOptions"
+                                option-value="id" option-label="title" placeholder="Select course"
+                                icon="o-rectangle-group" single searchable class="focus-within:border-0" />
+                        @elseif ($training_type === 'IN')
+                            <x-choices label="Training Module" wire:model.live="selected_module_id" :options="$trainingModuleOptions"
+                                option-value="id" option-label="title" placeholder="Select training module"
+                                icon="o-academic-cap" single searchable class="focus-within:border-0" />
+                            <x-input wire:model.live="training_name" label="Training Name (Optional)"
+                                placeholder="Edit training name or leave as selected module"
+                                class="focus-within:border-0" hint="You can customize the training name" />
                         @else
                             <x-input wire:model="training_name" label="Training Name" placeholder="Enter training name"
                                 class="focus-within:border-0" />
                         @endif
 
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center justify-center w-full">
-                            <!-- Type -->
-                            <x-select label="Training Type" wire:model="training_type" :options="$trainingTypeOptions"
-                                option-value="id" option-label="name" icon="o-book-open" wire:change="$refresh" />
-
-                            <!-- Group Comp -->
-                            <div>
-                                <x-select label="Group Competency" wire:model="group_comp" :options="$groupCompOptions"
-                                    option-value="id" option-label="name" icon="o-clipboard-document"
-                                    :disabled="$training_type === 'LMS'" />
-                                @if ($training_type === 'LMS')
-                                    <p class="text-xs text-gray-500 mt-1">Synced from selected Course.</p>
-                                @endif
-                            </div>
+                        <!-- Group Comp -->
+                        <div>
+                            @if ($training_type === 'LMS' || $training_type === 'IN')
+                                <x-input label="Group Competency" wire:model="group_comp" readonly
+                                    icon="o-clipboard-document" class="focus-within:border-0 bg-gray-50"
+                                    hint="{{ $training_type === 'LMS' ? 'Synced from selected Course' : 'Synced from selected Training Module' }}" />
+                            @else
+                                <x-choices label="Group Competency" wire:model="group_comp" :options="$groupCompOptions"
+                                    option-value="id" option-label="name" icon="o-clipboard-document" single
+                                    class="focus-within:border-0" />
+                            @endif
                         </div>
 
                         <!-- Date Range -->
@@ -78,32 +84,10 @@
 
                             <!-- Room fields immediately after participants -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full mt-2">
-                                <x-input :label="$training_type === 'LMS' ? 'Room Name (Optional)' : 'Room Name'" placeholder="Room name" class="focus-within:border-0"
-                                    wire:model="room.name" />
-                                <x-input :label="$training_type === 'LMS' ? 'Room Location/Office (Optional)' : 'Room Location/Office'" placeholder="Room location" class="focus-within:border-0"
-                                    wire:model="room.location" />
-                            </div>
-
-                            <div
-                                class="p-3 rounded-md bg-amber-50 border border-amber-200 text-amber-700 text-xs leading-relaxed mt-2">
-                                LMS does not require Trainer or Session Times. The fields below are for reference
-                                only and are disabled.
-                            </div>
-
-                            <div class="mt-2 space-y-4">
-                                <div class="opacity-50 pointer-events-none">
-                                    <x-choices label="Trainer" wire:model="trainerId" :options="$trainersSearchable"
-                                        search-function="trainerSearch" debounce="300ms" option-value="id"
-                                        option-label="name" placeholder="Search trainer name..."
-                                        class="focus-within:border-0" min-chars=2 hint="Type at least 2 chars"
-                                        searchable single clearable />
-                                </div>
-                                <div class="grid grid-cols-2 gap-5 items-center w-full opacity-50 pointer-events-none">
-                                    <x-input type="time" label="Start Time" wire:model="start_time"
-                                        class="focus-within:border-0" placeholder="HH:MM" />
-                                    <x-input type="time" label="End Time" wire:model="end_time"
-                                        class="focus-within:border-0" placeholder="HH:MM" />
-                                </div>
+                                <x-input label="Room Name (Optional)" placeholder="Room name"
+                                    class="focus-within:border-0" wire:model="room.name" />
+                                <x-input label="Room Location/Office (Optional)" placeholder="Room location"
+                                    class="focus-within:border-0" wire:model="room.location" />
                             </div>
                         @else
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center justify-center w-full">

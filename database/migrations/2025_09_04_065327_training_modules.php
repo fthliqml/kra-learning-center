@@ -16,7 +16,7 @@ return new class extends Migration
 
             // Details
             $table->string('title');
-            $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
+            $table->foreignId('competency_id')->nullable()->constrained('competency')->nullOnDelete();
             $table->text('objective');
             $table->text('training_content');
             $table->string('method');

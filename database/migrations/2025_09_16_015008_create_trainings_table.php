@@ -16,6 +16,7 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
+            $table->foreignId('module_id')->nullable()->constrained('training_modules')->nullOnDelete();
 
             // Details
             $table->string('name');

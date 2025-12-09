@@ -121,6 +121,38 @@ class User extends Authenticatable
         return $this->hasMany(Request::class, 'created_by');
     }
 
+    /**
+     * Get the training plans for the user.
+     */
+    public function trainingPlans(): HasMany
+    {
+        return $this->hasMany(TrainingPlan::class);
+    }
+
+    /**
+     * Get the self learning plans for the user.
+     */
+    public function selfLearningPlans(): HasMany
+    {
+        return $this->hasMany(SelfLearningPlan::class);
+    }
+
+    /**
+     * Get the mentoring plans for the user.
+     */
+    public function mentoringPlans(): HasMany
+    {
+        return $this->hasMany(MentoringPlan::class);
+    }
+
+    /**
+     * Get the project plans for the user.
+     */
+    public function projectPlans(): HasMany
+    {
+        return $this->hasMany(ProjectPlan::class);
+    }
+
     /* =====================
      |  Role Utilities
      |  Single role stored on users.role (string)

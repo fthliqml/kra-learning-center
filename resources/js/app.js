@@ -3,6 +3,12 @@ import sortable from "./sortable";
 
 import flatpickr from "flatpickr";
 import "flatpickr/dist/flatpickr.min.css";
+import monthSelectPlugin from "flatpickr/dist/plugins/monthSelect";
+import "flatpickr/dist/plugins/monthSelect/style.css";
+
+// Expose monthSelectPlugin globally for MaryUI datepicker
+window.monthSelectPlugin = monthSelectPlugin;
+
 import "./flipbook"; // initialize flipbook viewer globally
 import "./modulePage"; // module page scripts (video gate, yt api, accordion)
 

@@ -6,21 +6,36 @@ use App\Models\TrainingModule;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithStyles;
+use Maatwebsite\Excel\Concerns\WithMapping;
 use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
-class TrainingModuleExport implements FromCollection, WithHeadings, WithStyles
+class TrainingModuleExport implements FromCollection, WithHeadings, WithStyles, WithMapping
 {
     /**
      * @return \Illuminate\Support\Collection
      */
     public function collection()
     {
-        return TrainingModule::all();
+        return TrainingModule::with('competency')->get();
+    }
+
+    public function map($module): array
+    {
+        return [
+            $module->id,
+            $module->title,
+            $module->competency ? $module->competency->name . ' (' . $module->competency->type . ')' : '-',
+            $module->objective,
+            $module->training_content,
+            $module->method,
+            $module->duration,
+            $module->frequency,
+        ];
     }
 
     public function headings(): array
     {
-        return ['No', 'Module Title', 'Group Competency', 'Objective', 'Training Content', 'Method', 'Duration (hours)', 'Frequency (days)'];
+        return ['No', 'Module Title', 'Competency', 'Objective', 'Training Content', 'Method', 'Duration (hours)', 'Frequency (days)'];
     }
 
     public function styles(Worksheet $sheet)

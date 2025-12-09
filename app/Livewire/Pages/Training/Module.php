@@ -5,6 +5,7 @@ namespace App\Livewire\Pages\Training;
 use App\Exports\TrainingModuleExport;
 use App\Exports\TrainingModuleTemplateExport;
 use App\Imports\TrainingModuleImport;
+use App\Models\Competency;
 use App\Models\TrainingModule;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -23,18 +24,9 @@ class Module extends Component
     public $search = '';
     public $filter = null;
 
-    public $groupOptions = [
-        ['value' => 'BMC', 'label' => 'BMC'],
-        ['value' => 'BC', 'label' => 'BC'],
-        ['value' => 'MMP', 'label' => 'MMP'],
-        ['value' => 'LC', 'label' => 'LC'],
-        ['value' => 'MDP', 'label' => 'MDP'],
-        ['value' => 'TOC', 'label' => 'TOC'],
-    ];
-
     public $formData = [
         'title' => '',
-        'group_comp' => '',
+        'competency_id' => '',
         'objective' => '',
         'training_content' => '',
         'method' => '',
@@ -44,7 +36,7 @@ class Module extends Component
 
     protected $rules = [
         'formData.title' => 'required|string|max:255',
-        'formData.group_comp' => 'required|string',
+        'formData.competency_id' => 'required|exists:competency,id',
         'formData.objective' => 'nullable|string',
         'formData.training_content' => 'nullable|string',
         'formData.method' => 'nullable|string|max:255',
@@ -74,7 +66,7 @@ class Module extends Component
         $this->selectedId = $id;
         $this->formData = [
             'title' => $module->title,
-            'group_comp' => $module->group_comp,
+            'competency_id' => $module->competency_id,
             'objective' => $module->objective,
             'training_content' => $module->training_content,
             'method' => $module->method,
@@ -93,7 +85,7 @@ class Module extends Component
 
         $this->validate([
             'formData.title' => 'required|string|max:255',
-            'formData.group_comp' => 'required|string',
+            'formData.competency_id' => 'required|exists:competency,id',
             'formData.objective' => 'required|string',
             'formData.training_content' => 'required|string',
             'formData.method' => 'required|string',
@@ -127,7 +119,7 @@ class Module extends Component
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
             ['key' => 'title', 'label' => 'Module Title', 'class' => 'w-[300px]'],
-            ['key' => 'group_comp', 'label' => 'Group Comp', 'class' => '!text-center'],
+            ['key' => 'competency.type', 'label' => 'Group Comp', 'class' => '!text-center'],
             [
                 'key' => 'duration',
                 'label' => 'Duration',
@@ -146,16 +138,17 @@ class Module extends Component
 
     public function modules()
     {
-        $query = TrainingModule::query()
+        $query = TrainingModule::with('competency')
             ->when(
                 $this->search,
                 fn($q) =>
                 $q->where('title', 'like', '%' . $this->search . '%')
+                    ->orWhereHas('competency', fn($q2) => $q2->where('name', 'like', '%' . $this->search . '%'))
             )
             ->when(
                 $this->filter,
                 fn($q) =>
-                $q->where('group_comp', $this->filter)
+                $q->where('competency_id', $this->filter)
             )
             ->orderBy('created_at', 'asc');
 
@@ -212,10 +205,15 @@ class Module extends Component
 
     public function render()
     {
+        $competencyOptions = Competency::orderBy('name')
+            ->get()
+            ->map(fn($c) => ['value' => $c->id, 'label' => $c->name . ' (' . $c->type . ')'])
+            ->toArray();
 
         return view('pages.training.training-module', [
             'modules' => $this->modules(),
-            'headers' => $this->headers()
+            'headers' => $this->headers(),
+            'competencyOptions' => $competencyOptions,
         ]);
     }
 }

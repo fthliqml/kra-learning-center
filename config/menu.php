@@ -221,10 +221,6 @@ return [
             'href' => '#',
             'submenu' => [
                 [
-                    'label' => 'Development History',
-                    'href' => '/development/history',
-                ],
-                [
                     'label' => 'Training History',
                     'href' => '/training/history',
                 ],
