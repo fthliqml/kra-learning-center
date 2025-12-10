@@ -44,7 +44,8 @@ class leaderDashboard extends Component
         $startDate = now()->startOfMonth();
         $endDate = now()->addMonths(2)->endOfMonth();
 
-        $trainings = Training::whereBetween('start_date', [$startDate, $endDate])
+        $trainings = Training::with(['sessions.trainer.user'])
+            ->whereBetween('start_date', [$startDate, $endDate])
             ->get();
 
         foreach ($trainings as $training) {
@@ -54,9 +55,18 @@ class leaderDashboard extends Component
                 $this->calendarEvents[$dateKey] = [];
             }
 
+            // Get first session details
+            $firstSession = $training->sessions->first();
+            $trainerName = $firstSession?->trainer?->user?->name ?? 'TBA';
+            $location = $firstSession?->room_location ?? 'TBA';
+            $time = $firstSession ? ($firstSession->start_time ? substr($firstSession->start_time, 0, 5) : 'TBA') . ' - ' . ($firstSession->end_time ? substr($firstSession->end_time, 0, 5) : 'TBA') : 'TBA';
+
             $this->calendarEvents[$dateKey][] = [
-                'title' => $training->title ?? 'Training',
+                'title' => $training->name ?? 'Training',
                 'type' => $training->status === 'pending' ? 'warning' : 'normal',
+                'trainer' => $trainerName,
+                'location' => $location,
+                'time' => $time,
             ];
         }
     }

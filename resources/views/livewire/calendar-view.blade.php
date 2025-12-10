@@ -74,16 +74,53 @@
                             x-transition:leave="transition ease-in duration-100"
                             x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
                             x-cloak
-                            class="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-40 bg-gray-800 dark:bg-gray-900 text-white rounded-lg shadow-lg p-2 pointer-events-none">
-                            <div class="text-xs font-medium text-gray-300 mb-1">
+                            class="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 dark:bg-gray-900 text-white rounded-lg shadow-lg p-3 pointer-events-none">
+                            <div class="text-xs font-semibold text-gray-200 mb-2 border-b border-gray-700 pb-2">
                                 {{ \Carbon\Carbon::parse($dayData['date'])->format('M d, Y') }}
                             </div>
-                            <div class="space-y-1">
+                            <div
+                                class="space-y-3 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
                                 @foreach ($dayData['events'] as $event)
-                                    <div class="flex items-center gap-2">
-                                        <span
-                                            class="w-2 h-2 rounded-full flex-shrink-0 {{ $event['type'] === 'warning' ? 'bg-amber-400' : 'bg-blue-400' }}"></span>
-                                        <span class="text-xs truncate">{{ $event['title'] }}</span>
+                                    <div class="flex flex-col gap-1">
+                                        <div class="flex items-start gap-2">
+                                            <span
+                                                class="w-2 h-2 rounded-full flex-shrink-0 mt-1 {{ $event['type'] === 'warning' ? 'bg-amber-400' : 'bg-blue-400' }}"></span>
+                                            <div class="flex-1 min-w-0">
+                                                <p class="text-xs font-semibold text-white/90 truncate">
+                                                    {{ $event['title'] }}</p>
+                                                <div class="mt-1 space-y-0.5 text-[10px] text-gray-400">
+                                                    <div class="flex items-center gap-1">
+                                                        <svg class="w-3 h-3 flex-shrink-0" fill="none"
+                                                            stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                                        </svg>
+                                                        <span class="truncate">{{ $event['trainer'] }}</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1">
+                                                        <svg class="w-3 h-3 flex-shrink-0" fill="none"
+                                                            stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                        </svg>
+                                                        <span class="truncate">{{ $event['location'] }}</span>
+                                                    </div>
+                                                    <div class="flex items-center gap-1">
+                                                        <svg class="w-3 h-3 flex-shrink-0" fill="none"
+                                                            stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path stroke-linecap="round" stroke-linejoin="round"
+                                                                stroke-width="2"
+                                                                d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                        </svg>
+                                                        <span>{{ $event['time'] }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
                                 @endforeach
                             </div>
