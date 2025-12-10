@@ -8,7 +8,9 @@
     </div>
 
     {{-- Admin/Leader Dashboard with Charts --}}
-    @if (Auth::user()->hasAnyRole(['admin', 'leader']))
+    @if (Auth::user()->hasRole('admin'))
+        @livewire('pages.dashboard.admin-dashboard')
+    @elseif (Auth::user()->hasRole('leader'))
         @livewire('pages.dashboard.leader-dashboard')
     @endif
 @endsection
