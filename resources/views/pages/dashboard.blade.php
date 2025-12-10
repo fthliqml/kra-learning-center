@@ -9,10 +9,12 @@
         <p class="text-sm text-gray-500 dark:text-gray-400">Hi, {{ auth()->user()->name }}</p>
     </div>
 
-    {{-- Admin/Leader/Employee Dashboard --}}
+    {{-- Admin/Instructor/Leader/Employee Dashboard --}}
     @if (Auth::user()->hasRole('admin'))
         @livewire('pages.dashboard.admin-dashboard')
-    @elseif (Auth::user()->hasAnyRole(['leader', 'instructor']))
+    @elseif (Auth::user()->hasRole('instructor'))
+        @livewire('pages.dashboard.instructor-dashboard')
+    @elseif (Auth::user()->hasRole('leader'))
         @livewire('pages.dashboard.leader-dashboard')
     @elseif (Auth::user()->hasRole('employee'))
         @livewire('pages.dashboard.employee-dashboard')
