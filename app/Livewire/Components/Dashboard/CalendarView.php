@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Components\Dashboard;
 
 use Carbon\Carbon;
 use Livewire\Component;
@@ -124,6 +124,6 @@ class CalendarView extends Component
 
   public function render()
   {
-    return view('livewire.calendar-view');
+    return view('components.dashboard.calendar-view');
   }
 }

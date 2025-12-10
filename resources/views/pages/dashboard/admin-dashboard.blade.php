@@ -165,10 +165,10 @@
         {{-- Right Column: Calendar + Upcoming Schedules --}}
         <div class="lg:col-span-1 space-y-6">
             {{-- Calendar View (Mini) --}}
-            <livewire:calendar-view :events="$calendarEvents" />
+            <livewire:components.dashboard.calendar-view :events="$calendarEvents" />
 
             {{-- Upcoming Schedules List --}}
-            <livewire:upcoming-schedules />
+            <livewire:components.dashboard.upcoming-schedules />
         </div>
     </div>
 

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire;
+namespace App\Livewire\Components\Dashboard;
 
 use App\Models\UserCourse;
 use Carbon\Carbon;
@@ -30,6 +30,6 @@ class WelcomeBanner extends Component
 
   public function render()
   {
-    return view('livewire.welcome-banner');
+    return view('components.dashboard.welcome-banner');
   }
 }

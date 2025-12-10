@@ -12,7 +12,8 @@
                         <div>
                             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Training This Year</p>
                             <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalTrainingThisYear }}
-                                <span class="text-base font-normal text-gray-400">trainings</span></p>
+                                <span class="text-base font-normal text-gray-400">trainings</span>
+                            </p>
                         </div>
                         <div class="p-3 bg-secondary rounded-xl">
                             <x-mary-icon name="o-academic-cap" class="w-7 h-7 text-white" />
@@ -164,10 +165,10 @@
         {{-- Right Column: Calendar + Pending Approvals --}}
         <div class="lg:col-span-1 space-y-6">
             {{-- Calendar View (Mini) --}}
-            <livewire:calendar-view :events="$calendarEvents" />
+            <livewire:components.dashboard.calendar-view :events="$calendarEvents" />
 
             {{-- Pending Approvals List --}}
-            <livewire:pending-approvals />
+            <livewire:components.dashboard.pending-approvals />
         </div>
     </div>
 
