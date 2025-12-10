@@ -10,9 +10,11 @@ use Livewire\Component;
 class UpcomingSchedules extends Component
 {
     public array $items = [];
+    public ?int $employeeId = null; // Optional: filter by employee
 
-    public function mount()
+    public function mount(?int $employeeId = null)
     {
+        $this->employeeId = $employeeId;
         $this->loadUpcomingSchedules();
     }
 
@@ -22,7 +24,16 @@ class UpcomingSchedules extends Component
         $now = Carbon::now();
 
         // Get upcoming trainings (max 5)
-        $upcomingTrainings = Training::where('start_date', '>=', $now)
+        $trainingsQuery = Training::where('start_date', '>=', $now);
+
+        // If employeeId is provided, filter trainings where they are a participant
+        if ($this->employeeId) {
+            $trainingsQuery->whereHas('assessments', function ($q) {
+                $q->where('employee_id', $this->employeeId);
+            });
+        }
+
+        $upcomingTrainings = $trainingsQuery
             ->orderBy('start_date', 'asc')
             ->take(5)
             ->get();
@@ -42,8 +53,16 @@ class UpcomingSchedules extends Component
         }
 
         // Get upcoming certifications (max 5)
-        $upcomingCertifications = Certification::where('status', 'scheduled')
-            ->with('sessions')
+        $certificationsQuery = Certification::where('status', 'scheduled')->with('sessions');
+
+        // If employeeId is provided, filter certifications where they are a participant
+        if ($this->employeeId) {
+            $certificationsQuery->whereHas('participants', function ($q) {
+                $q->where('employee_id', $this->employeeId);
+            });
+        }
+
+        $upcomingCertifications = $certificationsQuery
             ->get()
             ->filter(function ($cert) use ($now) {
                 $firstSession = $cert->sessions->first();
