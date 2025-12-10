@@ -70,7 +70,8 @@
         </div>
     @else
         {{-- Table --}}
-        <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+        <div wire:loading.remove wire:target="search,filter,approve,reject"
+            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$requests" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- No --}}

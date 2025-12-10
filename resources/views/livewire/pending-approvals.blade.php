@@ -14,8 +14,8 @@
         <div
             class="space-y-3 max-h-[280px] overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-gray-300 dark:scrollbar-thumb-gray-600 scrollbar-track-transparent">
             @foreach ($items as $item)
-                <div
-                    class="relative flex justify-between items-center w-full p-4 pl-5 rounded-xl bg-gray-50 dark:bg-gray-700/50 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
+                <a href="{{ $this->getUrl($item['type'], $item['id']) }}"
+                    class="relative flex justify-between items-center w-full p-4 pl-5 rounded-xl bg-gray-50 dark:bg-gray-700/50 shadow-sm hover:shadow-md hover:bg-gray-100 dark:hover:bg-gray-700 transition-all cursor-pointer overflow-hidden">
                     {{-- Gradient Strip --}}
                     <div
                         class="absolute left-0 top-0 h-full w-1.5 rounded-l-xl bg-gradient-to-b {{ $this->gradient($item['type']) }}">
@@ -38,7 +38,7 @@
                     <div class="text-right">
                         <p class="text-xs font-medium text-gray-600 dark:text-gray-300">{{ $item['info'] }}</p>
                     </div>
-                </div>
+                </a>
             @endforeach
         </div>
     @else
