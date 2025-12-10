@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Competency;
 use App\Models\Request as TrainingRequest;
 use App\Models\User;
 use Illuminate\Database\Seeder;
@@ -25,6 +26,9 @@ class TrainingRequestSeeder extends Seeder
         $employee   = User::where('role', 'employee')->first() ?: $spv;
         $instructor = User::where('role', 'instructor')->first() ?: $spv;
         $leader     = User::where('role', 'leader')->first() ?: $spv;
+
+        // Get competencies for mapping
+        $competencies = Competency::all()->keyBy('name');
 
         $rows = [
             [
@@ -120,11 +124,17 @@ class TrainingRequestSeeder extends Seeder
         ];
 
         foreach ($rows as $data) {
+            // Find competency_id based on competency name
+            $competency = $competencies->get($data['competency']);
+            if (!$competency) {
+                continue; // Skip if competency not found
+            }
+
             TrainingRequest::updateOrCreate(
                 [
                     'created_by' => $spv->id,
                     'user_id'    => $data['user_id'],
-                    'competency' => $data['competency'],
+                    'competency_id' => $competency->id,
                     'reason'     => $data['reason'],
                 ],
                 [
