@@ -44,6 +44,7 @@ class AdminDashboard extends Component
     $startDate = now()->startOfMonth();
     $endDate = now()->addMonths(2)->endOfMonth();
 
+    // Admin sees all training schedules
     $trainings = Training::with(['sessions.trainer.user'])
       ->whereBetween('start_date', [$startDate, $endDate])
       ->get();

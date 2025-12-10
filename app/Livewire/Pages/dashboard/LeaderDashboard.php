@@ -44,9 +44,40 @@ class leaderDashboard extends Component
         $startDate = now()->startOfMonth();
         $endDate = now()->addMonths(2)->endOfMonth();
 
-        $trainings = Training::with(['sessions.trainer.user'])
-            ->whereBetween('start_date', [$startDate, $endDate])
-            ->get();
+        $userId = auth()->id();
+        $user = auth()->user();
+
+        // Leader/Instructor sees trainings where they are the trainer
+        if ($user->hasAnyRole(['leader', 'instructor'])) {
+            // Get trainer record for current user
+            $trainer = \App\Models\Trainer::where('user_id', $userId)->first();
+
+            if ($trainer) {
+                $trainings = Training::with(['sessions.trainer.user'])
+                    ->whereBetween('start_date', [$startDate, $endDate])
+                    ->whereHas('sessions', function ($q) use ($trainer) {
+                        $q->where('trainer_id', $trainer->id);
+                    })
+                    ->get();
+            } else {
+                $trainings = collect();
+            }
+        }
+        // Employee sees trainings where they are a participant
+        elseif ($user->hasRole('employee')) {
+            $trainings = Training::with(['sessions.trainer.user'])
+                ->whereBetween('start_date', [$startDate, $endDate])
+                ->whereHas('assessments', function ($q) use ($userId) {
+                    $q->where('employee_id', $userId);
+                })
+                ->get();
+        }
+        // Fallback: show all trainings
+        else {
+            $trainings = Training::with(['sessions.trainer.user'])
+                ->whereBetween('start_date', [$startDate, $endDate])
+                ->get();
+        }
 
         foreach ($trainings as $training) {
             $dateKey = $training->start_date->format('Y-m-d');
