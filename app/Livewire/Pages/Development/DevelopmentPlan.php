@@ -633,23 +633,12 @@ class DevelopmentPlan extends Component
         $projectCount = $projectData->count();
         $totalPlans = $trainingPlanCount + $selfLearningCount + $mentoringCount + $projectCount;
 
-        // Training Realization: Count training plans where user has completed (closed) training
-        // with matching competency type (group_comp matches competency->type)
+        // Training Realization: Count training plans where user has completed training
+        // with matching competency and passed status
         $trainingRealized = 0;
         foreach ($trainingPlansData as $plan) {
-            if ($plan->competency) {
-                // Check if user has attended a closed training with matching group_comp
-                $hasCompletedTraining = TrainingAttendance::where('employee_id', $user->id)
-                    ->whereHas('session.training', function ($q) use ($plan, $selectedYearInt) {
-                        $q->where('status', 'closed')
-                            ->where('group_comp', $plan->competency->type)
-                            ->whereYear('end_date', $selectedYearInt);
-                    })
-                    ->exists();
-
-                if ($hasCompletedTraining) {
-                    $trainingRealized++;
-                }
+            if ($plan->isRealized()) {
+                $trainingRealized++;
             }
         }
 

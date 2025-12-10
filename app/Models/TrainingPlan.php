@@ -140,4 +140,94 @@ class TrainingPlan extends Model
     {
         return $this->belongsTo(Competency::class);
     }
+
+    /**
+     * Check if this training plan has been realized.
+     * A plan is realized if the employee has completed (passed) a training
+     * with the same competency in the same year.
+     */
+    public function isRealized(): bool
+    {
+        if (!$this->user_id || !$this->competency_id || !$this->year) {
+            return false;
+        }
+
+        // Query trainings yang done dengan module yang memiliki competency_id yang sama
+        $query = \App\Models\Training::query()
+            ->where('status', 'done')
+            ->whereYear('start_date', $this->year)
+            ->whereNotNull('module_id') // Pastikan ada module_id
+            ->whereHas('module', function ($q) {
+                $q->where('competency_id', $this->competency_id);
+            })
+            ->whereHas('assessments', function ($q) {
+                $q->where('employee_id', $this->user_id)
+                    ->where('status', 'passed');
+            });
+
+        return $query->exists();
+    }
+
+    /**
+     * Get the realized training for this plan.
+     * Returns the first completed training that matches competency and employee passed.
+     */
+    public function getRealizedTraining()
+    {
+        if (!$this->user_id || !$this->competency_id || !$this->year) {
+            return null;
+        }
+
+        return \App\Models\Training::query()
+            ->where('status', 'done')
+            ->whereYear('start_date', $this->year)
+            ->whereNotNull('module_id')
+            ->whereHas('module', function ($q) {
+                $q->where('competency_id', $this->competency_id);
+            })
+            ->whereHas('assessments', function ($q) {
+                $q->where('employee_id', $this->user_id)
+                    ->where('status', 'passed');
+            })
+            ->first();
+    }
+
+    /**
+     * Check if there's a scheduled training (in progress) for this plan.
+     */
+    public function hasScheduledTraining(): bool
+    {
+        if (!$this->user_id || !$this->competency_id || !$this->year) {
+            return false;
+        }
+
+        return \App\Models\Training::query()
+            ->whereIn('status', ['in_progress'])
+            ->whereYear('start_date', $this->year)
+            ->whereNotNull('module_id')
+            ->whereHas('module', function ($q) {
+                $q->where('competency_id', $this->competency_id);
+            })
+            ->whereHas('assessments', function ($q) {
+                $q->where('employee_id', $this->user_id);
+            })
+            ->exists();
+    }
+
+    /**
+     * Get realization status for display.
+     * Returns: 'completed', 'scheduled', or 'waiting'
+     */
+    public function getRealizationStatus(): string
+    {
+        if ($this->isRealized()) {
+            return 'completed';
+        }
+
+        if ($this->hasScheduledTraining()) {
+            return 'scheduled';
+        }
+
+        return 'waiting';
+    }
 }
