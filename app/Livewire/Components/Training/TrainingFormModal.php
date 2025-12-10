@@ -82,7 +82,8 @@ class TrainingFormModal extends Component
     protected $listeners = [
         'open-add-training-modal' => 'openModalWithDate',
         'schedule-month-context' => 'setDefaultMonth',
-        'open-training-form-edit' => 'openEdit'
+        'open-training-form-edit' => 'openEdit',
+        'confirm-delete-training-form' => 'onConfirmDelete'
     ];
 
     public function mount()
@@ -340,6 +341,63 @@ class TrainingFormModal extends Component
     /**
      * Open the modal in edit mode for an existing training.
      */
+    public function requestDeleteConfirm(): void
+    {
+        if (!$this->trainingId) {
+            return;
+        }
+        // Dispatch to global ConfirmDialog component
+        $this->dispatch('confirm', 'Delete Confirmation', 'Are you sure you want to delete this training along with all sessions and attendance?', 'confirm-delete-training-form', $this->trainingId);
+    }
+
+    public function onConfirmDelete($id = null): void
+    {
+        // Ensure the confirmation corresponds to the currently opened training
+        if ($id && $this->trainingId && (int) $id !== (int) $this->trainingId) {
+            return;
+        }
+        $this->deleteTraining();
+    }
+
+    public function deleteTraining()
+    {
+        if (!$this->trainingId) {
+            return;
+        }
+        $id = $this->trainingId;
+        try {
+            DB::transaction(function () use ($id) {
+                // Load training with sessions to collect session IDs
+                $training = Training::with('sessions')->find($id);
+                if (!$training)
+                    return;
+
+                $sessionIds = $training->sessions->pluck('id')->all();
+                if (!empty($sessionIds)) {
+                    // Delete attendances under sessions
+                    TrainingAttendance::whereIn('session_id', $sessionIds)->delete();
+                }
+                // Delete sessions
+                TrainingSession::where('training_id', $id)->delete();
+                // Delete assessments
+                TrainingAssessment::where('training_id', $id)->delete();
+                // Finally delete training
+                $training->delete();
+            });
+
+            // Notify parent and close
+            $this->dispatch('training-deleted', ['id' => $id]);
+            $this->success('Training deleted.', position: 'toast-top toast-center');
+            $this->showModal = false;
+            $this->resetForm();
+            // Close confirm dialog and stop spinner
+            $this->dispatch('confirm-done');
+        } catch (\Throwable $e) {
+            $this->error('Failed to delete training.');
+            $this->dispatch('confirm-done');
+        }
+    }
+
     public function openEdit($payload): void
     {
         // Payload may be an ID (int/string) or an array containing ['id'=>...] from action-choice modal
@@ -363,7 +421,8 @@ class TrainingFormModal extends Component
                 $q->orderBy('day_number');
             },
             'assessments',
-            'course'
+            'course',
+            'module'
         ])->find($this->trainingId);
 
         if (!$training) {
@@ -377,12 +436,29 @@ class TrainingFormModal extends Component
             return;
         }
 
+        // Reload options FIRST to ensure selected module/course is included
+        $this->loadCourseOptions();
+        $this->loadTrainingModuleOptions();
+
         // Populate base fields
         $this->training_type = $training->type; // Locked in UI while editing
         $this->originalTrainingType = $training->type;
         $this->group_comp = $training->group_comp;
         $this->course_id = $training->course_id;
-        $this->selected_module_id = $training->module_id;
+
+        // Set selected_module_id based on training type
+        if ($training->type === 'IN' && $training->module_id) {
+            $this->selected_module_id = (int) $training->module_id;
+        } elseif ($training->type === 'IN' && !$training->module_id) {
+            // Training created before module_id feature - show info message
+            $this->selected_module_id = null;
+            session()->flash('info_module', 'This training was created without a module reference. Please select a training module to update it.');
+        } elseif ($training->type === 'LMS' && $training->course_id) {
+            // For LMS, selected_module_id actually stores course_id (workaround for x-choices binding)
+            $this->selected_module_id = (int) $training->course_id;
+        } else {
+            $this->selected_module_id = null;
+        }
         if ($training->type !== 'LMS') {
             $this->training_name = $training->name;
         } else {
@@ -417,6 +493,9 @@ class TrainingFormModal extends Component
 
         $this->activeTab = 'training';
         $this->showModal = true;
+
+        // Force component to refresh after data is loaded
+        $this->dispatch('training-edit-loaded');
     }
 
     public function userSearch(string $value = '')
@@ -453,8 +532,10 @@ class TrainingFormModal extends Component
                 ->get();
         }
 
-        if (strlen($value) < 2) {
-            $this->trainersSearchable = $selected->map(function ($trainer) {
+        // If no search value, load all trainers
+        if (empty($value)) {
+            $results = Trainer::with('user')->get();
+            $this->trainersSearchable = $results->map(function ($trainer) {
                 return [
                     'id' => $trainer->id,
                     'name' => $trainer->name ?: ($trainer->user?->name ?? 'Unknown'),
@@ -463,6 +544,7 @@ class TrainingFormModal extends Component
             return;
         }
 
+        // Search with value
         $results = Trainer::with('user')
             ->where(function ($q) use ($value) {
                 $q->where('name', 'like', "%{$value}%")
@@ -481,6 +563,40 @@ class TrainingFormModal extends Component
                     'name' => $trainer->name ?: ($trainer->user?->name ?? 'Unknown'),
                 ];
             });
+    }
+
+    public function searchCourse(string $value = ''): void
+    {
+        if (empty($value)) {
+            $this->loadCourseOptions();
+            return;
+        }
+
+        $this->courseOptions = Course::select('id', 'title', 'group_comp')
+            ->where('title', 'like', "%{$value}%")
+            ->orderBy('title')
+            ->get()
+            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->group_comp])
+            ->toArray();
+    }
+
+    public function searchTrainingModule(string $value = ''): void
+    {
+        if (empty($value)) {
+            $this->loadTrainingModuleOptions();
+            return;
+        }
+
+        $this->trainingModuleOptions = TrainingModule::with('competency')
+            ->where('title', 'like', "%{$value}%")
+            ->orderBy('title')
+            ->get()
+            ->map(fn($m) => [
+                'id' => $m->id,
+                'title' => $m->title,
+                'group_comp' => $m->competency?->type ?? null
+            ])
+            ->toArray();
     }
 
     // Fallback universal watcher to ensure course->group sync always runs

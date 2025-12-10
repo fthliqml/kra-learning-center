@@ -421,16 +421,25 @@ class ScheduleView extends Component
   {
     $c = Carbon::parse($iso);
     return $this->trainings->filter(fn($t) => $c->between(Carbon::parse($t->start_date), Carbon::parse($t->end_date)))
-      ->values()->map(fn($t) => [
-        'id' => $t->id,
-        'name' => $t->name,
-        'group_comp' => $t->group_comp,
-        'type' => $t->type ?? null,
-        'status' => $t->status ?? null,
-        'start_date' => $t->start_date,
-        'end_date' => $t->end_date,
-        'sessions' => $t->sessions,
-      ])->toArray();
+      ->values()->map(function ($t) use ($iso) {
+        $status = strtolower($t->status ?? '');
+        $isClosed = in_array($status, ['closed', 'done', 'completed']);
+        $isPast = Carbon::parse($iso)->endOfDay()->isPast();
+
+        return [
+          'id' => $t->id,
+          'name' => $t->name,
+          'group_comp' => $t->group_comp,
+          'type' => $t->type ?? null,
+          'status' => $t->status ?? null,
+          'start_date' => $t->start_date,
+          'end_date' => $t->end_date,
+          'sessions' => $t->sessions,
+          'is_closed' => $isClosed,
+          'is_past' => $isPast,
+          'is_faded' => $isClosed || $isPast,
+        ];
+      })->toArray();
   }
 
   public function openAdd(string $date): void

@@ -53,9 +53,9 @@
                 </x-ui.button>
 
                 {{-- Filter --}}
-                <x-select wire:model.live="filter" :options="$competencyOptions" option-value="value" option-label="label"
-                    placeholder="All Competency"
-                    class="!min-w-[180px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
+                <x-select wire:model.live="filter" :options="$groupCompOptions" option-value="value" option-label="label"
+                    placeholder="All"
+                    class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
             </div>
 

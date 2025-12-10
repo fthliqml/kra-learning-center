@@ -148,7 +148,7 @@ class Module extends Component
             ->when(
                 $this->filter,
                 fn($q) =>
-                $q->where('competency_id', $this->filter)
+                $q->whereHas('competency', fn($q2) => $q2->where('type', $this->filter))
             )
             ->orderBy('created_at', 'asc');
 
@@ -210,10 +210,19 @@ class Module extends Component
             ->map(fn($c) => ['value' => $c->id, 'label' => $c->name . ' (' . $c->type . ')'])
             ->toArray();
 
+        // Group comp filter options - only unique types
+        $groupCompOptions = Competency::select('type')
+            ->distinct()
+            ->orderBy('type')
+            ->get()
+            ->map(fn($c) => ['value' => $c->type, 'label' => $c->type])
+            ->toArray();
+
         return view('pages.training.training-module', [
             'modules' => $this->modules(),
             'headers' => $this->headers(),
             'competencyOptions' => $competencyOptions,
+            'groupCompOptions' => $groupCompOptions,
         ]);
     }
 }
