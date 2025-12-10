@@ -34,6 +34,7 @@ class Request extends Component
         'user_name' => '',
         'section' => '',
         'competency_id' => '',
+        'group_comp' => '',
         'reason' => '',
     ];
 
@@ -118,6 +119,7 @@ class Request extends Component
             'user_name' => '',
             'section' => '',
             'competency_id' => '',
+            'group_comp' => '',
             'reason' => '',
         ];
         $this->mode = 'create';
@@ -137,6 +139,17 @@ class Request extends Component
 
         $user = collect($this->users)->firstWhere('id', (int)$value);
         $this->formData['section'] = $user['section'] ?? '';
+    }
+
+    public function updatedFormDataCompetencyId($value): void
+    {
+        if (!$value) {
+            $this->formData['group_comp'] = '';
+            return;
+        }
+
+        $competency = Competency::find((int)$value);
+        $this->formData['group_comp'] = $competency->type ?? '';
     }
 
     protected function rules(): array
@@ -222,6 +235,7 @@ class Request extends Component
                 'target.name as user_name',
                 'target.section as user_section',
                 'competency.name as competency_name',
+                'competency.type as group_comp',
             ])
             ->firstOrFail();
 
@@ -232,6 +246,7 @@ class Request extends Component
             'section' => $request->user_section,
             'competency_id' => $request->competency_id,
             'competency_name' => $request->competency_name ?? '',
+            'group_comp' => $request->group_comp ?? '',
             'reason' => $request->reason,
             'status' => $request->status,
         ];
