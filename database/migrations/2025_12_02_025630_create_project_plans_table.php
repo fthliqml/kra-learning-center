@@ -23,13 +23,8 @@ return new class extends Migration
             $table->text('objective')->nullable();
 
             // Status & Period
-            // Status: draft, pending_spv, rejected_spv, pending_leader, rejected_leader, approved
             $table->string('status')->default('draft');
             $table->unsignedSmallInteger('year');
-
-            // Legacy Approval (kept for backward compatibility)
-            $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
-            $table->timestamp('approved_at')->nullable();
 
             // SPV Approval (Level 1)
             $table->foreignId('spv_approved_by')->nullable()->constrained('users')->nullOnDelete();

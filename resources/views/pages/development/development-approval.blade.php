@@ -15,7 +15,6 @@
 
                 {{-- Status Filter --}}
                 <x-select wire:model.live="filter" :options="$filterOptions" option-value="value" option-label="label"
-                    placeholder="All"
                     class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
             </div>

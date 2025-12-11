@@ -136,13 +136,21 @@
             @if ($mode === 'preview')
                 <x-input label="Competency" :value="$formData['competency_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
             @else
-                <x-choices label="Competency" wire:model="formData.competency_id" :options="$competencies" option-value="id"
-                    option-label="name" placeholder="Select competency..." class="focus-within:border-0"
-                    hint="Type at least 2 chars" searchable single />
+                <x-choices label="Competency" wire:model.live="formData.competency_id" :options="$competencies"
+                    option-value="id" option-label="name" placeholder="Select competency..."
+                    class="focus-within:border-0" hint="Type at least 2 chars" searchable single />
             @endif
 
-            <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
-                class="focus-within:border-0" :error="$errors->first('formData.reason')" :readonly="$mode === 'preview'" />
+            <x-input label="Group Competency" placeholder="Auto filled from competency"
+                wire:model.defer="formData.group_comp" class="focus-within:border-0" :readonly="true" />
+
+            @if ($mode === 'preview')
+                <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
+                    class="focus-within:border-0" :error="$errors->first('formData.reason')" :readonly="true" />
+            @else
+                <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
+                    class="focus-within:border-0" :error="$errors->first('formData.reason')" />
+            @endif
 
             <div class="mt-3">
                 {{-- Status badge in detail mode --}}

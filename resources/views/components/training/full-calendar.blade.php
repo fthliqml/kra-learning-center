@@ -33,25 +33,22 @@
                                 @php
                                     $type = strtoupper($training['type'] ?? '');
                                     $isDone = strtolower($training['status'] ?? '') === 'done';
+                                    $isFaded = $training['is_faded'] ?? false;
                                     switch ($type) {
                                         case 'IN':
-                                            $typeColor = $isDone
-                                                ? 'border-green-300 bg-green-50 hover:bg-green-100 opacity-70'
+                                            $typeColor = ($isDone || $isFaded) ? 'border-green-300 bg-green-50 hover:bg-green-100 opacity-60'
                                                 : 'border-green-500 bg-green-50 hover:bg-green-100';
                                             break;
                                         case 'OUT':
-                                            $typeColor = $isDone
-                                                ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 opacity-70'
+                                            $typeColor = ($isDone || $isFaded) ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 opacity-60'
                                                 : 'border-amber-500 bg-amber-50 hover:bg-amber-100';
                                             break;
                                         case 'LMS':
-                                            $typeColor = $isDone
-                                                ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-70'
+                                            $typeColor = ($isDone || $isFaded) ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-60'
                                                 : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
                                             break;
                                         default:
-                                            $typeColor = $isDone
-                                                ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#d4ebfc] opacity-70'
+                                            $typeColor = ($isDone || $isFaded) ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#d4ebfc] opacity-60'
                                                 : 'border-primary bg-[#E4F3FF] hover:bg-[#d4ebfc]';
                                             break;
                                     }
@@ -102,25 +99,22 @@
                                 @php
                                     $type = strtoupper($training['type'] ?? '');
                                     $isDone = strtolower($training['status'] ?? '') === 'done';
+                                    $isFaded = $training['is_faded'] ?? false;
                                     switch ($type) {
                                         case 'IN':
-                                            $typeColor = $isDone
-                                                ? 'border-green-300 bg-green-50 hover:bg-green-100 opacity-70'
+                                            $typeColor = ($isDone || $isFaded) ? 'border-green-300 bg-green-50 hover:bg-green-100 opacity-60'
                                                 : 'border-green-500 bg-green-50 hover:bg-green-100';
                                             break;
                                         case 'OUT':
-                                            $typeColor = $isDone
-                                                ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 opacity-70'
+                                            $typeColor = ($isDone || $isFaded) ? 'border-amber-300 bg-amber-50 hover:bg-amber-100 opacity-60'
                                                 : 'border-amber-500 bg-amber-50 hover:bg-amber-100';
                                             break;
                                         case 'LMS':
-                                            $typeColor = $isDone
-                                                ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-70'
+                                            $typeColor = ($isDone || $isFaded) ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-60'
                                                 : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
                                             break;
                                         default:
-                                            $typeColor = $isDone
-                                                ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#d4ebfc] opacity-70'
+                                            $typeColor = ($isDone || $isFaded) ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#d4ebfc] opacity-60'
                                                 : 'border-primary bg-[#E4F3FF] hover:bg-[#d4ebfc]';
                                             break;
                                     }

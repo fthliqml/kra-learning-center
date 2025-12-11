@@ -31,22 +31,23 @@
             @php
                 $type = strtoupper($item['type'] ?? '');
                 $isDone = strtolower($item['status'] ?? '') === 'done';
+                $isFaded = $item['is_faded'] ?? false;
                 $colorClasses = match ($type) {
                     'IN' => [
-                        'dot' => $isDone ? 'bg-green-300' : 'bg-green-500',
-                        'badge' => $isDone ? 'border-green-300 bg-green-50' : 'border-green-500 bg-green-50',
+                        'dot' => ($isDone || $isFaded) ? 'bg-green-300' : 'bg-green-500',
+                        'badge' => ($isDone || $isFaded) ? 'border-green-300 bg-green-50' : 'border-green-500 bg-green-50',
                     ],
                     'OUT' => [
-                        'dot' => $isDone ? 'bg-amber-300' : 'bg-amber-500',
-                        'badge' => $isDone ? 'border-amber-300 bg-amber-50' : 'border-amber-500 bg-amber-50',
+                        'dot' => ($isDone || $isFaded) ? 'bg-amber-300' : 'bg-amber-500',
+                        'badge' => ($isDone || $isFaded) ? 'border-amber-300 bg-amber-50' : 'border-amber-500 bg-amber-50',
                     ],
                     'LMS' => [
-                        'dot' => $isDone ? 'bg-indigo-300' : 'bg-indigo-500',
-                        'badge' => $isDone ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-500 bg-indigo-50',
+                        'dot' => ($isDone || $isFaded) ? 'bg-indigo-300' : 'bg-indigo-500',
+                        'badge' => ($isDone || $isFaded) ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-500 bg-indigo-50',
                     ],
                     default => [
-                        'dot' => $isDone ? 'bg-primary/60' : 'bg-primary',
-                        'badge' => $isDone ? 'border-primary/50 bg-[#E4F3FF]' : 'border-primary bg-[#E4F3FF]',
+                        'dot' => ($isDone || $isFaded) ? 'bg-primary/60' : 'bg-primary',
+                        'badge' => ($isDone || $isFaded) ? 'border-primary/50 bg-[#E4F3FF]' : 'border-primary bg-[#E4F3FF]',
                     ],
                 };
             @endphp
@@ -54,8 +55,7 @@
                 $baseCard =
                     'bg-white border border-gray-200 rounded-lg shadow-sm p-3 flex gap-4 items-start transition';
                 // Closed trainings still clickable for details: keep pointer + subtle hover, but keep faded look
-                $interactive = $isDone
-                    ? 'opacity-80 cursor-pointer hover:border-primary/30'
+                $interactive = ($isDone || $isFaded) ? 'opacity-60 cursor-pointer hover:border-primary/30'
                     : 'cursor-pointer hover:border-primary/40';
             @endphp
             <div x-on:click="$dispatch('detail-loading-start')" class="{{ $baseCard }} {{ $interactive }}"

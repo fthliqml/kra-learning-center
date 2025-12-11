@@ -17,7 +17,14 @@ class TrainingCloseTab extends Component
     public $trainingId;
     public $training;
     public $search = '';
-    public $tempScores = []; // Temporary scores before saving    // Add validation rules for tempScores to validate on update
+    public $tempScores = []; // Temporary scores before saving
+
+    protected $listeners = [
+        'training-close-save-draft' => 'saveDraft',
+        'training-close-close' => 'closeTraining',
+    ];
+
+    // Add validation rules for tempScores to validate on update
     protected function rules()
     {
         $rules = [];
@@ -61,10 +68,8 @@ class TrainingCloseTab extends Component
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
             ['key' => 'employee_name', 'label' => 'Employee Name', 'class' => 'min-w-[150px]'],
-            ['key' => 'pretest_score', 'label' => 'Pretest Score', 'class' => '!text-center min-w-[120px]'],
             ['key' => 'posttest_score', 'label' => 'Posttest Score', 'class' => '!text-center min-w-[120px]'],
             ['key' => 'practical_score', 'label' => 'Practical Score', 'class' => '!text-center min-w-[120px]'],
-            ['key' => 'average_score', 'label' => 'Average', 'class' => '!text-center'],
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
         ];
     }
@@ -122,12 +127,15 @@ class TrainingCloseTab extends Component
 
             $assessment->average_score = count($scores) > 0 ? round(array_sum($scores) / count($scores), 1) : 0;
 
-            // Calculate temp status
-            if (count($scores) > 0) {
-                $average = array_sum($scores) / count($scores);
-                $assessment->temp_status = $average >= 60 ? 'passed' : 'failed';
+            // Calculate temp status - real-time like certification
+            $hasPosttest = is_numeric($posttestScore) && $posttestScore !== '';
+            $hasPractical = is_numeric($practicalScore) && $practicalScore !== '';
+
+            if (!$hasPosttest || !$hasPractical) {
+                $assessment->temp_status = 'pending';
             } else {
-                $assessment->temp_status = $assessment->status ?? 'in_progress';
+                $average = ((float)$posttestScore + (float)$practicalScore) / 2;
+                $assessment->temp_status = $average >= 60 ? 'passed' : 'failed';
             }
 
             // Expose training done flag directly on assessment for blade scopes (avoid scope isolation issues)
@@ -150,16 +158,17 @@ class TrainingCloseTab extends Component
                     $assessment->posttest_score = $scores['posttest_score'];
                     $assessment->practical_score = $scores['practical_score'];
 
-                    // Auto-determine status based on average score (only posttest and practical)
-                    // Treat empty/null as 0
-                    $posttest = (float) ($assessment->posttest_score ?? 0);
-                    $practical = (float) ($assessment->practical_score ?? 0);
-                    $average = ($posttest + $practical) / 2;
+                    // Calculate status based on scores (same logic as certification)
+                    $posttest = $scores['posttest_score'];
+                    $practical = $scores['practical_score'];
 
-                    if ($average > 0) {
+                    // If both scores are filled
+                    if (is_numeric($posttest) && is_numeric($practical)) {
+                        $average = ((float) $posttest + (float) $practical) / 2;
                         $assessment->status = $average >= 60 ? 'passed' : 'failed';
                     } else {
-                        $assessment->status = 'in_progress';
+                        // If scores are not complete, keep as pending
+                        $assessment->status = 'pending';
                     }
 
                     $assessment->save();
@@ -240,12 +249,16 @@ class TrainingCloseTab extends Component
                     $assessment->practical_score = $scores['practical_score'];
 
                     // Calculate status based on average (only posttest and practical)
-                    // Both must be filled as per validation, no need to check for null
-                    $posttest = (float) $assessment->posttest_score;
-                    $practical = (float) $assessment->practical_score;
-                    $average = ($posttest + $practical) / 2;
+                    // Check if both scores are filled
+                    $posttest = $assessment->posttest_score;
+                    $practical = $assessment->practical_score;
 
-                    $assessment->status = $average >= 60 ? 'passed' : 'failed';
+                    if ($posttest === null || $posttest === '' || $practical === null || $practical === '') {
+                        $assessment->status = 'pending';
+                    } else {
+                        $average = ((float) $posttest + (float) $practical) / 2;
+                        $assessment->status = $average >= 60 ? 'passed' : 'failed';
+                    }
 
                     $assessment->save();
                 }

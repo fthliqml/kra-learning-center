@@ -259,7 +259,14 @@
                                             </p>
                                             <p class="text-xs text-gray-500">{{ $plan->competency->type ?? '-' }}</p>
                                         </div>
-                                        <div class="flex items-center gap-3">
+                                        <div class="flex items-center gap-5">
+                                            {{-- Realization Status - Only show if approved --}}
+                                            @if ($plan->status === 'approved')
+                                                @include('pages.development.partials.realization-badge', [
+                                                    'status' => $plan->getRealizationStatus(),
+                                                ])
+                                            @endif
+
                                             @include('pages.development.partials.status-badge', [
                                                 'status' => $plan->status,
                                             ])

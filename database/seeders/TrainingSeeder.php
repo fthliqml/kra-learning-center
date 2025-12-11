@@ -6,6 +6,7 @@ use App\Models\Trainer;
 use App\Models\Training;
 use App\Models\TrainingAssessment;
 use App\Models\TrainingAttendance;
+use App\Models\TrainingModule;
 use App\Models\TrainingSession;
 use App\Models\User;
 use Carbon\Carbon;
@@ -47,15 +48,36 @@ class TrainingSeeder extends Seeder
             $employees->push($employeeUser);
         }
 
+        // Get training modules for IN-HOUSE type
+        $trainingModules = TrainingModule::with('competency')->get();
+        if ($trainingModules->isEmpty()) {
+            // If no modules exist, create at least one
+            $trainingModules = collect([
+                TrainingModule::create([
+                    'title' => 'Safety Induction Module',
+                    'competency_id' => 1, // Assuming competency with id 1 exists
+                    'objective' => 'Basic safety training',
+                    'training_content' => 'Safety procedures and protocols',
+                    'method' => 'Classroom',
+                    'duration' => 8,
+                    'frequency' => 1,
+                ])
+            ]);
+        }
+
         // 3. Create 6 trainings with sessions, assessments, and attendances
         for ($i = 1; $i <= 6; $i++) {
             $start = Carbon::now()->addDays(($i - 1) * 7); // stagger by weeks
             $end = $start->copy()->addDays(3);
 
+            // Pick a random training module
+            $module = $trainingModules->random();
+
             $training = Training::create([
                 'name' => 'Safety Induction #' . $i,
                 'type' => 'IN',
-                'group_comp' => 'BMC',
+                'group_comp' => $module->competency?->type ?? 'BMC',
+                'module_id' => $module->id,
                 'start_date' => $start->toDateString(),
                 'end_date' => $end->toDateString(),
                 'status' => 'in_progress',
