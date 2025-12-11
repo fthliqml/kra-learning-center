@@ -24,9 +24,9 @@ class CertificateController extends Controller
 
         // Allow view if:
         // 1. User is the participant themselves
-        // 2. User is a leader
+        // 2. User is in leadership position (section_head, dept_head, div_head, director)
         $canView = $user->id === $assessment->employee_id ||
-            strtolower($user->role ?? '') === 'leader';
+            in_array(strtolower($user->role ?? ''), ['section_head', 'dept_head', 'div_head', 'director']);
 
         if (!$canView) {
             abort(403, 'You are not authorized to view this certificate');

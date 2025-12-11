@@ -3,24 +3,37 @@
 namespace App\Support;
 
 use Illuminate\Contracts\Auth\Authenticatable;
+use App\Models\User;
 
 class SidebarMenu
 {
-    public static function for(?Authenticatable $user): array
+    public static function for(User|Authenticatable|null $user): array
     {
         $all = config('menu.sidebar', []);
         $role = null;
         if ($user) {
+            // Get role (position-based or functional)
             $role = data_get($user, 'role');
         }
         $flatten = config('menu.flatten_child_when_parent_hidden', true);
 
-        $visible = function (array $item) use ($role) {
+        $visible = function (array $item) use ($role, $user) {
             if (!isset($item['roles']) || $item['roles'] === null)
                 return true;
             $allowed = is_array($item['roles']) ? $item['roles'] : explode(',', $item['roles']);
             $allowed = array_map(fn($r) => strtolower(trim($r)), $allowed);
-            return in_array(strtolower((string) $role), $allowed, true);
+
+            // Check position-based role first
+            if (in_array(strtolower((string) $role), $allowed, true)) {
+                return true;
+            }
+
+            // Check functional roles from user_roles table
+            if ($user instanceof User) {
+                return $user->hasAnyRole($allowed);
+            }
+
+            return false;
         };
 
         $result = [];

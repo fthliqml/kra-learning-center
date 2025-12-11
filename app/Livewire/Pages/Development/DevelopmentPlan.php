@@ -24,6 +24,7 @@ class DevelopmentPlan extends Component
 
     // Edit mode
     public $isEdit = false;
+    public $editingCategory = null; // Track which category is being edited
 
     // Filter by year
     public $selectedYear;
@@ -106,14 +107,23 @@ class DevelopmentPlan extends Component
     {
         $this->resetForm();
         $this->isEdit = false;
+        $this->editingCategory = null; // Reset editing category for add mode
+        $this->activeTab = 'training'; // Start with training tab
         $this->addModal = true;
     }
 
-    public function openEditModal()
+    public function openEditModal($category = 'training')
     {
         $this->resetForm();
         $this->isEdit = true;
-        $this->activeTab = 'training';
+        $this->editingCategory = $category; // Track which category is being edited
+        // Set active tab based on category
+        $this->activeTab = match ($category) {
+            'self_learning' => 'self-learning',
+            'mentoring' => 'mentoring',
+            'project' => 'project',
+            default => 'training',
+        };
         $this->loadExistingPlans();
         $this->addModal = true;
     }
@@ -438,11 +448,21 @@ class DevelopmentPlan extends Component
         $user = Auth::user();
 
         try {
-            // Save all tabs at once
-            $this->saveTrainingPlans($user);
-            $this->saveSelfLearningPlan($user);
-            $this->saveMentoringPlan($user);
-            $this->saveProjectPlan($user);
+            // If editing a specific category, only save that category
+            if ($this->editingCategory) {
+                match ($this->editingCategory) {
+                    'training' => $this->saveTrainingPlans($user),
+                    'self_learning' => $this->saveSelfLearningPlan($user),
+                    'mentoring' => $this->saveMentoringPlan($user),
+                    'project' => $this->saveProjectPlan($user),
+                };
+            } else {
+                // Save all tabs at once when adding new plans
+                $this->saveTrainingPlans($user);
+                $this->saveSelfLearningPlan($user);
+                $this->saveMentoringPlan($user);
+                $this->saveProjectPlan($user);
+            }
 
             $this->closeAddModal();
             $this->success('Development plan saved successfully!', position: 'toast-top toast-center');
@@ -456,11 +476,21 @@ class DevelopmentPlan extends Component
         $user = Auth::user();
 
         try {
-            // Save all tabs at once as draft
-            $this->saveTrainingPlans($user, true);
-            $this->saveSelfLearningPlan($user, true);
-            $this->saveMentoringPlan($user, true);
-            $this->saveProjectPlan($user, true);
+            // If editing a specific category, only save that category as draft
+            if ($this->editingCategory) {
+                match ($this->editingCategory) {
+                    'training' => $this->saveTrainingPlans($user, true),
+                    'self_learning' => $this->saveSelfLearningPlan($user, true),
+                    'mentoring' => $this->saveMentoringPlan($user, true),
+                    'project' => $this->saveProjectPlan($user, true),
+                };
+            } else {
+                // Save all tabs at once as draft when adding new plans
+                $this->saveTrainingPlans($user, true);
+                $this->saveSelfLearningPlan($user, true);
+                $this->saveMentoringPlan($user, true);
+                $this->saveProjectPlan($user, true);
+            }
 
             $this->closeAddModal();
             $this->success('Development plan draft saved successfully!', position: 'toast-top toast-center');
@@ -591,15 +621,155 @@ class DevelopmentPlan extends Component
         }
     }
 
+    /**
+     * Check if user can edit plans
+     * User can edit plans that are in draft or rejected status
+     */
+    public function getCanEditProperty()
+    {
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+
+        // Check if user has any editable plans (draft or rejected)
+        $hasEditableTraining = TrainingPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->where(function ($q) {
+                $q->where('status', 'draft')
+                    ->orWhere('status', 'like', 'rejected%');
+            })
+            ->exists();
+
+        $hasEditableSelfLearning = SelfLearningPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->where(function ($q) {
+                $q->where('status', 'draft')
+                    ->orWhere('status', 'like', 'rejected%');
+            })
+            ->exists();
+
+        $hasEditableMentoring = MentoringPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->where(function ($q) {
+                $q->where('status', 'draft')
+                    ->orWhere('status', 'like', 'rejected%');
+            })
+            ->exists();
+
+        $hasEditableProject = ProjectPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->where(function ($q) {
+                $q->where('status', 'draft')
+                    ->orWhere('status', 'like', 'rejected%');
+            })
+            ->exists();
+
+        return $hasEditableTraining || $hasEditableSelfLearning || $hasEditableMentoring || $hasEditableProject;
+    }
+
+    /**
+     * Check if user can edit Training Plans specifically
+     */
+    public function getCanEditTrainingProperty()
+    {
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+
+        return TrainingPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->where(function ($q) {
+                $q->where('status', 'draft')
+                    ->orWhere('status', 'like', 'rejected%');
+            })
+            ->exists();
+    }
+
+    /**
+     * Check if user can edit Self Learning Plans specifically
+     */
+    public function getCanEditSelfLearningProperty()
+    {
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+
+        return SelfLearningPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->where(function ($q) {
+                $q->where('status', 'draft')
+                    ->orWhere('status', 'like', 'rejected%');
+            })
+            ->exists();
+    }
+
+    /**
+     * Check if user can edit Mentoring Plans specifically
+     */
+    public function getCanEditMentoringProperty()
+    {
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+
+        return MentoringPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->where(function ($q) {
+                $q->where('status', 'draft')
+                    ->orWhere('status', 'like', 'rejected%');
+            })
+            ->exists();
+    }
+
+    /**
+     * Check if user can edit Project Plans specifically
+     */
+    public function getCanEditProjectProperty()
+    {
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+
+        return ProjectPlan::where('user_id', $userId)
+            ->where('year', $year)
+            ->where(function ($q) {
+                $q->where('status', 'draft')
+                    ->orWhere('status', 'like', 'rejected%');
+            })
+            ->exists();
+    }
+
+    /**
+     * Check if user can add new plans
+     * User can add plans if it's not yet submitted or if all plans are rejected
+     */
+    public function getCanAddPlanProperty()
+    {
+        // User can always add plans (business rule may vary)
+        return true;
+    }
+
     public function render()
     {
         $user = Auth::user();
 
-        // Get mentors (users with spv or leader role)
-        $mentors = User::whereIn('role', ['spv', 'leader', 'admin'])
+        // Get mentors (users with supervisor or leadership positions in user's organizational hierarchy)
+        $mentors = User::whereIn('position', ['supervisor', 'section_head', 'department_head', 'division_head'])
+            ->where(function ($query) use ($user) {
+                // Same section (supervisor or section head)
+                $query->where(function ($q) use ($user) {
+                    $q->whereIn('position', ['supervisor', 'section_head'])
+                        ->where('section', $user->section);
+                })
+                    // Same department (department head)
+                    ->orWhere(function ($q) use ($user) {
+                        $q->where('position', 'department_head')
+                            ->where('department', $user->department);
+                    })
+                    // Same division (division head)
+                    ->orWhere(function ($q) use ($user) {
+                        $q->where('position', 'division_head')
+                            ->where('division', $user->division);
+                    });
+            })
             ->orderBy('name')
             ->get()
-            ->map(fn($u) => ['value' => $u->id, 'label' => $u->name])
+            ->map(fn($u) => ['value' => $u->id, 'label' => $u->name . ' (' . ucfirst(str_replace('_', ' ', $u->position)) . ')'])
             ->toArray();
 
         // Parse year from datepicker (handles both "2025" and full date strings)
@@ -673,6 +843,12 @@ class DevelopmentPlan extends Component
             'selfLearningRealized' => $selfLearningRealized,
             'mentoringRealized' => $mentoringRealized,
             'projectRealized' => $projectRealized,
+            'canEdit' => $this->canEdit,
+            'canAddPlan' => $this->canAddPlan,
+            'canEditTraining' => $this->canEditTraining,
+            'canEditSelfLearning' => $this->canEditSelfLearning,
+            'canEditMentoring' => $this->canEditMentoring,
+            'canEditProject' => $this->canEditProject,
         ]);
     }
 }

@@ -14,11 +14,11 @@
         'draft' => 'Draft',
         'pending' => 'Pending',
         'pending_spv' => 'Pending SPV',
-        'pending_leader' => 'Pending Leader',
+        'pending_leader' => 'Pending LID',
         'approved' => 'Approved',
         'rejected' => 'Rejected',
         'rejected_spv' => 'Rejected by SPV',
-        'rejected_leader' => 'Rejected by Leader',
+        'rejected_leader' => 'Rejected by LID',
     ];
 @endphp
 

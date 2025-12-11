@@ -5,8 +5,9 @@
         Welcome {{ Auth::user()->name }}
     </h1>
 
-    {{-- Admin/Leader Dashboard with Charts --}}
-    @if (Auth::user()->hasAnyRole(['admin', 'leader']))
+    {{-- Admin/Leadership Dashboard with Charts --}}
+    @if (Auth::user()->hasRole('admin') ||
+            in_array(Auth::user()->role, ['section_head', 'dept_head', 'div_head', 'director']))
         @livewire('pages.dashboard.leader-dashboard')
     @endif
 @endsection

@@ -263,8 +263,8 @@ class Request extends Component
     {
         $user = Auth::user();
         if (!$user) return false;
-        // Assuming leader role stored in users.role as 'leader'
-        return strtolower(trim($user->role ?? '')) === 'leader' && strtolower(trim($user->section ?? '')) === 'lid';
+        // Only section head from LID can moderate
+        return strtolower(trim($user->role ?? '')) === 'section_head' && strtolower(trim($user->section ?? '')) === 'lid';
     }
 
     /** Approve selected request */
