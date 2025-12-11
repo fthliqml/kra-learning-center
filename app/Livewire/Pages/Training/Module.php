@@ -59,6 +59,27 @@ class Module extends Component
 
         $this->resetValidation();
     }
+    public function openDetailModal($id)
+    {
+        $module = TrainingModule::with('competency')->findOrFail($id);
+
+        $this->selectedId = $id;
+        $this->formData = [
+            'title' => $module->title,
+            'competency_id' => $module->competency->name ?? '-',
+            'objective' => $module->objective,
+            'training_content' => $module->training_content,
+            'method' => $module->method,
+            'duration' => $module->duration,
+            'frequency' => $module->frequency,
+        ];
+
+        $this->mode = 'preview';
+        $this->modal = true;
+
+        $this->resetValidation();
+    }
+
     public function openEditModal($id)
     {
         $module = TrainingModule::findOrFail($id);
@@ -118,20 +139,9 @@ class Module extends Component
     {
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
-            ['key' => 'title', 'label' => 'Module Title', 'class' => 'w-[300px]'],
+            ['key' => 'title', 'label' => 'Module Title', 'class' => 'w-[400px]'],
+            ['key' => 'competency.name', 'label' => 'Competency', 'class' => 'min-w-[150px]'],
             ['key' => 'competency.type', 'label' => 'Group Comp', 'class' => '!text-center'],
-            [
-                'key' => 'duration',
-                'label' => 'Duration',
-                'class' => '!text-center',
-                'format' => fn($row, $field) => $field . ' Hours',
-            ],
-            [
-                'key' => 'frequency',
-                'label' => 'Frequency',
-                'class' => '!text-center',
-                'format' => fn($row, $field) => $field . ' Days',
-            ],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center'],
         ];
     }

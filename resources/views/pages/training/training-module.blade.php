@@ -95,6 +95,9 @@
                 {{-- Custom cell untuk kolom Action --}}
                 @scope('cell_action', $module)
                     <div class="flex gap-2 justify-center">
+                        <!-- Detail -->
+                        <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
+                            wire:click="openDetailModal({{ $module->id }})" />
 
                         <!-- Edit -->
                         <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
@@ -123,9 +126,14 @@
             <x-input label="Title" placeholder="Title of the training module..." wire:model.defer="formData.title"
                 class="focus-within:border-0" :error="$errors->first('formData.title')" :readonly="$mode === 'preview'" />
 
-            <x-choices label="Competency" wire:model.defer="formData.competency_id" :options="$competencyOptions"
-                option-value="value" option-label="label" placeholder="Select Competency" :error="$errors->first('formData.competency_id')"
-                :disabled="$mode === 'preview'" single searchable class="focus-within:border-0" />
+            @if ($mode === 'preview')
+                <x-input label="Competency" placeholder="Competency" wire:model="formData.competency_id"
+                    class="focus-within:border-0" readonly />
+            @else
+                <x-choices label="Competency" wire:model.defer="formData.competency_id" :options="$competencyOptions"
+                    option-value="value" option-label="label" placeholder="Select Competency" :error="$errors->first('formData.competency_id')" single
+                    searchable class="focus-within:border-0" />
+            @endif
 
             <x-textarea label="Objective" placeholder="Describe the training objectives..."
                 class="focus-within:border-0" wire:model.defer="formData.objective" :error="$errors->first('formData.objective')"
