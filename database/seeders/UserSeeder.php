@@ -1255,24 +1255,31 @@ class UserSeeder extends Seeder
         }
 
         // Add roles to specific users (many-to-many relationship via user_roles)
-        $lidStaff1 = User::where('nrp', 1002)->first();
+        $lidStaff1 = User::where('nrp', 1001)->first();
         if ($lidStaff1) {
+            DB::table('user_roles')->insert([
+                ['user_id' => $lidStaff1->id, 'role' => 'multimedia', 'created_at' => now(), 'updated_at' => now()],
+            ]);
+        }
+
+        $lidStaff2 = User::where('nrp', 1002)->first();
+        if ($lidStaff2) {
             DB::table('user_roles')->insert([
                 ['user_id' => $lidStaff1->id, 'role' => 'admin', 'created_at' => now(), 'updated_at' => now()],
             ]);
         }
 
-        $lidStaff2 = User::where('nrp', 1003)->first();
-        if ($lidStaff2) {
+        $lidStaff3 = User::where('nrp', 1003)->first();
+        if ($lidStaff3) {
             DB::table('user_roles')->insert([
                 ['user_id' => $lidStaff2->id, 'role' => 'instructor', 'created_at' => now(), 'updated_at' => now()],
             ]);
         }
 
-        $lidStaff3 = User::where('nrp', 1004)->first();
-        if ($lidStaff3) {
+        $lidStaff4 = User::where('nrp', 1004)->first();
+        if ($lidStaff4) {
             DB::table('user_roles')->insert([
-                ['user_id' => $lidStaff3->id, 'role' => 'certification', 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $lidStaff3->id, 'role' => 'certificator', 'created_at' => now(), 'updated_at' => now()],
             ]);
         }
     }

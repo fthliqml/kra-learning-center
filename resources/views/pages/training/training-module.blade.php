@@ -148,11 +148,11 @@
                 :readonly="$mode === 'preview'" />
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <x-input label="Duration" type="number" wire:model.defer="formData.duration" placeholder="6 Hours"
-                    class="focus-within:border-0" min="1" step="0.5" :error="$errors->first('formData.duration')"
-                    :readonly="$mode === 'preview'" />
+                <x-input label="Duration (Hours)" type="number" wire:model.defer="formData.duration"
+                    placeholder="6 Hours" class="focus-within:border-0" min="1" step="0.5"
+                    :error="$errors->first('formData.duration')" :readonly="$mode === 'preview'" />
 
-                <x-input label="Frequency" type="number" wire:model.defer="formData.frequency"
+                <x-input label="Frequency (Days)" type="number" wire:model.defer="formData.frequency"
                     placeholder="15 Days" class="focus-within:border-0" min="1" :error="$errors->first('formData.frequency')"
                     :readonly="$mode === 'preview'" />
             </div>

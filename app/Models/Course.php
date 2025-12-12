@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\Section;
@@ -18,6 +19,7 @@ class Course extends Model
         'title',
         'description',
         'thumbnail_url',
+        'competency_id',
         'group_comp',
         'status',
     ];
@@ -68,6 +70,14 @@ class Course extends Model
     public function trainings(): HasMany
     {
         return $this->hasMany(Training::class, 'course_id');
+    }
+
+    /**
+     * Get the competency associated with this course.
+     */
+    public function competency(): BelongsTo
+    {
+        return $this->belongsTo(Competency::class, 'competency_id');
     }
 
     /**

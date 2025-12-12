@@ -5,9 +5,15 @@
     <x-textarea label="About Course" placeholder="Describe this course" class="focus-within:border-0"
         wire:model.live.debounce.500ms="course.about" />
 
-    <x-select label="Group Competency" :options="$groupOptions" option-value="value" option-label="label"
-        placeholder="Select group" wire:change="$refresh" class="focus-within:border-0"
-        wire:model="course.group_comp" />
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <x-choices label="Group Competency" :options="$this->groupOptions" option-value="value" option-label="label"
+            placeholder="Select group" wire:model.live="course.group_comp" single searchable
+            class="focus-within:border-0" />
+
+        <x-choices label="Competency" :options="$competencyOptions" option-value="value" option-label="label"
+            placeholder="Select competency" wire:model.live="course.competency_id" single searchable
+            class="focus-within:border-0" />
+    </div>
 
     <div>
         <label class="block mb-2 text-sm font-medium">Choose Thumbnail</label>
