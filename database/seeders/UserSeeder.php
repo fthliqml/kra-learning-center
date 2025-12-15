@@ -1265,21 +1265,21 @@ class UserSeeder extends Seeder
         $lidStaff2 = User::where('nrp', 1002)->first();
         if ($lidStaff2) {
             DB::table('user_roles')->insert([
-                ['user_id' => $lidStaff1->id, 'role' => 'admin', 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $lidStaff2->id, 'role' => 'admin', 'created_at' => now(), 'updated_at' => now()],
             ]);
         }
 
         $lidStaff3 = User::where('nrp', 1003)->first();
         if ($lidStaff3) {
             DB::table('user_roles')->insert([
-                ['user_id' => $lidStaff2->id, 'role' => 'instructor', 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $lidStaff3->id, 'role' => 'instructor', 'created_at' => now(), 'updated_at' => now()],
             ]);
         }
 
         $lidStaff4 = User::where('nrp', 1004)->first();
         if ($lidStaff4) {
             DB::table('user_roles')->insert([
-                ['user_id' => $lidStaff3->id, 'role' => 'certificator', 'created_at' => now(), 'updated_at' => now()],
+                ['user_id' => $lidStaff4->id, 'role' => 'certificator', 'created_at' => now(), 'updated_at' => now()],
             ]);
         }
     }
