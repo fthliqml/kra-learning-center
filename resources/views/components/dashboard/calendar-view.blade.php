@@ -51,17 +51,27 @@
                             {{ $dayData['day'] }}
                         </span>
 
-                        {{-- Event Bars --}}
+                        {{-- Event Indicators (dots for multiple events) --}}
                         @if (count($dayData['events']) > 0)
-                            <div class="flex flex-col gap-0.5 mt-1 w-full px-1">
-                                @foreach (array_slice($dayData['events'], 0, 3) as $event)
-                                    <div
-                                        class="h-1 rounded-full {{ $event['type'] === 'warning' ? 'bg-amber-400' : 'bg-blue-400' }}">
-                                    </div>
+                            <div class="flex flex-wrap justify-center gap-0.5 mt-1 w-full px-0.5">
+                                @php
+                                    $maxDots = 4;
+                                    $eventsToShow = array_slice($dayData['events'], 0, $maxDots);
+                                    $remaining = count($dayData['events']) - $maxDots;
+                                @endphp
+                                @foreach ($eventsToShow as $event)
+                                    @php
+                                        // Color based on event type: certification=orange, warning=amber, normal=blue
+                                        $dotColor = match ($event['type'] ?? 'normal') {
+                                            'certification' => 'bg-amber-500',
+                                            'warning' => 'bg-yellow-400',
+                                            default => 'bg-blue-400',
+                                        };
+                                    @endphp
+                                    <span class="w-1.5 h-1.5 rounded-full {{ $dotColor }}"></span>
                                 @endforeach
-                                @if (count($dayData['events']) > 3)
-                                    <span
-                                        class="text-[9px] text-gray-400 text-center">+{{ count($dayData['events']) - 3 }}</span>
+                                @if ($remaining > 0)
+                                    <span class="text-[8px] text-gray-400 leading-none">+{{ $remaining }}</span>
                                 @endif
                             </div>
                         @endif
@@ -75,19 +85,40 @@
                             x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
                             x-cloak
                             class="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 dark:bg-gray-900 text-white rounded-lg shadow-lg p-3 pointer-events-none">
-                            <div class="text-xs font-semibold text-gray-200 mb-2 border-b border-gray-700 pb-2">
-                                {{ \Carbon\Carbon::parse($dayData['date'])->format('M d, Y') }}
+                            <div
+                                class="flex items-center justify-between text-xs font-semibold text-gray-200 mb-2 border-b border-gray-700 pb-2">
+                                <span>{{ \Carbon\Carbon::parse($dayData['date'])->format('M d, Y') }}</span>
+                                @if (count($dayData['events']) > 1)
+                                    <span class="text-gray-400">{{ count($dayData['events']) }} events</span>
+                                @endif
                             </div>
                             <div
                                 class="space-y-3 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
                                 @foreach ($dayData['events'] as $event)
+                                    @php
+                                        // Color based on event type
+                                        $indicatorColor = match ($event['type'] ?? 'normal') {
+                                            'certification' => 'bg-amber-500',
+                                            'warning' => 'bg-yellow-400',
+                                            default => 'bg-blue-400',
+                                        };
+                                        $categoryLabel = match ($event['category'] ?? 'training') {
+                                            'certification' => 'Certification',
+                                            default => 'Training',
+                                        };
+                                    @endphp
                                     <div class="flex flex-col gap-1">
                                         <div class="flex items-start gap-2">
                                             <span
-                                                class="w-2 h-2 rounded-full flex-shrink-0 mt-1 {{ $event['type'] === 'warning' ? 'bg-amber-400' : 'bg-blue-400' }}"></span>
+                                                class="w-2 h-2 rounded-full flex-shrink-0 mt-1 {{ $indicatorColor }}"></span>
                                             <div class="flex-1 min-w-0">
                                                 <p class="text-xs font-semibold text-white/90 truncate">
                                                     {{ $event['title'] }}</p>
+                                                {{-- Category Badge --}}
+                                                <span
+                                                    class="inline-block mt-0.5 px-1.5 py-0.5 text-[9px] font-medium rounded {{ ($event['category'] ?? 'training') === 'certification' ? 'bg-amber-500/20 text-amber-300' : 'bg-blue-500/20 text-blue-300' }}">
+                                                    {{ $categoryLabel }}
+                                                </span>
                                                 <div class="mt-1 space-y-0.5 text-[10px] text-gray-400">
                                                     <div class="flex items-center gap-1">
                                                         <svg class="w-3 h-3 flex-shrink-0" fill="none"
