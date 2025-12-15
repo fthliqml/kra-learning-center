@@ -37,11 +37,22 @@
     {{-- Calendar Grid --}}
     <div class="grid grid-cols-7 gap-1">
         @foreach ($calendarDays as $dayData)
-            <div class="relative aspect-square p-1" x-data="{ showTooltip: false }">
+            <div class="relative aspect-square p-1" x-data="{ showDetail: false, showHint: false }">
                 @if ($dayData['day'])
-                    <div class="h-full flex flex-col items-center justify-start pt-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors cursor-default {{ $dayData['isToday'] ? 'bg-secondary/10' : '' }}"
-                        @mouseenter="showTooltip = {{ count($dayData['events']) > 0 ? 'true' : 'false' }}"
-                        @mouseleave="showTooltip = false">
+                    @php
+                        // Filter out past events (only show today and future)
+                        $futureEvents = array_filter($dayData['events'], function ($event) use ($dayData) {
+                            return \Carbon\Carbon::parse($dayData['date'])->startOfDay() >= now()->startOfDay();
+                        });
+                        $hasEvents = count($futureEvents) > 0;
+                    @endphp
+                    <div class="h-full flex flex-col items-center justify-start pt-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors {{ $hasEvents ? 'cursor-pointer' : 'cursor-default' }} {{ $dayData['isToday'] ? 'bg-secondary/10' : '' }}"
+                        @if ($hasEvents)
+                            @click="showDetail = !showDetail"
+                            @mouseenter="showHint = true"
+                            @mouseleave="showHint = false"
+                        @endif
+                        @click.outside="showDetail = false">
 
                         {{-- Day Number --}}
                         <span
@@ -51,13 +62,13 @@
                             {{ $dayData['day'] }}
                         </span>
 
-                        {{-- Event Indicators (dots for multiple events) --}}
-                        @if (count($dayData['events']) > 0)
+                        {{-- Event Indicators (dots for multiple events) - only for future/today events --}}
+                        @if ($hasEvents)
                             <div class="flex flex-wrap justify-center gap-0.5 mt-1 w-full px-0.5">
                                 @php
                                     $maxDots = 4;
-                                    $eventsToShow = array_slice($dayData['events'], 0, $maxDots);
-                                    $remaining = count($dayData['events']) - $maxDots;
+                                    $eventsToShow = array_slice($futureEvents, 0, $maxDots);
+                                    $remaining = count($futureEvents) - $maxDots;
                                 @endphp
                                 @foreach ($eventsToShow as $event)
                                     @php
@@ -77,24 +88,41 @@
                         @endif
                     </div>
 
-                    {{-- Tooltip --}}
-                    @if (count($dayData['events']) > 0)
-                        <div x-show="showTooltip" x-transition:enter="transition ease-out duration-150"
+                    {{-- Hover Hint - Click to see detail --}}
+                    @if ($hasEvents)
+                        <div x-show="showHint && !showDetail" x-transition:enter="transition ease-out duration-100"
+                            x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
+                            x-transition:leave="transition ease-in duration-75"
+                            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
+                            x-cloak
+                            class="absolute z-40 left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 bg-gray-700 dark:bg-gray-600 text-white text-[10px] rounded whitespace-nowrap pointer-events-none">
+                            Click to see detail
+                            <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-700 dark:border-t-gray-600"></div>
+                        </div>
+
+                        {{-- Detail Popup (on click) --}}
+                        <div x-show="showDetail" x-transition:enter="transition ease-out duration-150"
                             x-transition:enter-start="opacity-0 scale-95" x-transition:enter-end="opacity-100 scale-100"
                             x-transition:leave="transition ease-in duration-100"
                             x-transition:leave-start="opacity-100 scale-100" x-transition:leave-end="opacity-0 scale-95"
                             x-cloak
-                            class="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 dark:bg-gray-900 text-white rounded-lg shadow-lg p-3 pointer-events-none">
+                            class="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 dark:bg-gray-900 text-white rounded-lg shadow-lg p-3">
+                            {{-- Close button --}}
+                            <button @click="showDetail = false" class="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                            </button>
                             <div
-                                class="flex items-center justify-between text-xs font-semibold text-gray-200 mb-2 border-b border-gray-700 pb-2">
+                                class="flex items-center justify-between text-xs font-semibold text-gray-200 mb-2 border-b border-gray-700 pb-2 pr-5">
                                 <span>{{ \Carbon\Carbon::parse($dayData['date'])->format('M d, Y') }}</span>
-                                @if (count($dayData['events']) > 1)
-                                    <span class="text-gray-400">{{ count($dayData['events']) }} events</span>
+                                @if (count($futureEvents) > 1)
+                                    <span class="text-gray-400">{{ count($futureEvents) }} events</span>
                                 @endif
                             </div>
                             <div
                                 class="space-y-3 max-h-48 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-700 scrollbar-track-transparent">
-                                @foreach ($dayData['events'] as $event)
+                                @foreach ($futureEvents as $event)
                                     @php
                                         // Color based on event type
                                         $indicatorColor = match ($event['type'] ?? 'normal') {
@@ -155,7 +183,7 @@
                                     </div>
                                 @endforeach
                             </div>
-                            {{-- Tooltip Arrow --}}
+                            {{-- Popup Arrow --}}
                             <div
                                 class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-800 dark:border-t-gray-900">
                             </div>
