@@ -65,10 +65,51 @@ class AdminDashboard extends Component
       $this->calendarEvents[$dateKey][] = [
         'title' => $training->name ?? 'Training',
         'type' => $training->status === 'pending' ? 'warning' : 'normal',
+        'category' => 'training',
         'trainer' => $trainerName,
         'location' => $location,
         'time' => $time,
       ];
+    }
+
+    // Admin sees all certification schedules
+    $certifications = Certification::with(['sessions'])
+      ->whereHas('sessions', function ($q) use ($startDate, $endDate) {
+        $q->whereBetween('date', [$startDate, $endDate]);
+      })
+      ->get();
+
+    foreach ($certifications as $certification) {
+      foreach ($certification->sessions as $session) {
+        if ($session->date < $startDate || $session->date > $endDate) {
+          continue;
+        }
+
+        $dateKey = $session->date->format('Y-m-d');
+
+        if (!isset($this->calendarEvents[$dateKey])) {
+          $this->calendarEvents[$dateKey] = [];
+        }
+
+        $sessionTypeLabel = match ($session->type) {
+          'theory' => 'Theory',
+          'practical' => 'Practical',
+          default => ucfirst($session->type ?? ''),
+        };
+
+        $time = $session->start_time
+          ? substr($session->start_time, 0, 5) . ' - ' . ($session->end_time ? substr($session->end_time, 0, 5) : 'TBA')
+          : 'TBA';
+
+        $this->calendarEvents[$dateKey][] = [
+          'title' => ($certification->name ?? 'Certification') . ' - ' . $sessionTypeLabel,
+          'type' => 'certification',
+          'category' => 'certification',
+          'trainer' => $sessionTypeLabel . ' Session',
+          'location' => $session->location ?? 'TBA',
+          'time' => $time,
+        ];
+      }
     }
   }
 
