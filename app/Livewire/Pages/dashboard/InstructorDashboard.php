@@ -2,236 +2,176 @@
 
 namespace App\Livewire\Pages\dashboard;
 
+use App\Models\Certification;
 use App\Models\Training;
-use App\Models\User;
-use Carbon\Carbon;
 use Livewire\Component;
 
 class InstructorDashboard extends Component
 {
-  public $selectedMonth = null;
-  public $selectedYear = null;
+    // Calendar events
+    public array $calendarEvents = [];
 
-  // Chart data
-  public array $monthlyTrainingData = [];
-  public array $monthLabels = [];
+    // Upcoming schedules (trainings + certifications)
+    public array $upcomingSchedules = [];
 
-  // Selected month breakdown
-  public array $monthBreakdown = [];
-
-  // Stats cards
-  public int $totalTrainingThisYear = 0;
-  public int $upcomingSchedules = 0;
-  public int $totalParticipants = 0;
-
-  // Calendar events
-  public array $calendarEvents = [];
-
-  public function mount()
-  {
-    $this->selectedYear = now()->year;
-    $this->loadChartData();
-    $this->loadStatsCards();
-    $this->loadCalendarEvents();
-  }
-
-  public function loadCalendarEvents()
-  {
-    $this->calendarEvents = [];
-
-    // Get trainings for current month and next 2 months
-    $startDate = now()->startOfMonth();
-    $endDate = now()->addMonths(2)->endOfMonth();
-
-    $userId = auth()->id();
-
-    // Get trainer record for current user
-    $trainer = \App\Models\Trainer::where('user_id', $userId)->first();
-
-    if (!$trainer) {
-      return;
+    public function mount()
+    {
+        $this->loadCalendarEvents();
+        $this->loadUpcomingSchedules();
     }
 
-    // Instructor sees only trainings where they are the trainer
-    $trainings = Training::with(['sessions.trainer.user'])
-      ->whereBetween('start_date', [$startDate, $endDate])
-      ->whereHas('sessions', function ($q) use ($trainer) {
-        $q->where('trainer_id', $trainer->id);
-      })
-      ->get();
+    public function loadCalendarEvents()
+    {
+        $this->calendarEvents = [];
 
-    foreach ($trainings as $training) {
-      $dateKey = $training->start_date->format('Y-m-d');
+        // Get trainings for current month and next 2 months
+        $startDate = now()->startOfMonth();
+        $endDate = now()->addMonths(2)->endOfMonth();
 
-      if (!isset($this->calendarEvents[$dateKey])) {
-        $this->calendarEvents[$dateKey] = [];
-      }
+        $userId = auth()->id();
 
-      // Get first session details
-      $firstSession = $training->sessions->first();
-      $trainerName = $firstSession?->trainer?->user?->name ?? 'TBA';
-      $location = $firstSession?->room_location ?? 'TBA';
-      $time = $firstSession ? ($firstSession->start_time ? substr($firstSession->start_time, 0, 5) : 'TBA') . ' - ' . ($firstSession->end_time ? substr($firstSession->end_time, 0, 5) : 'TBA') : 'TBA';
+        // Get trainer record for current user
+        $trainer = \App\Models\Trainer::where('user_id', $userId)->first();
 
-      $this->calendarEvents[$dateKey][] = [
-        'title' => $training->name ?? 'Training',
-        'type' => $training->status === 'pending' ? 'warning' : 'normal',
-        'trainer' => $trainerName,
-        'location' => $location,
-        'time' => $time,
-      ];
-    }
-  }
+        if (!$trainer) {
+            return;
+        }
 
-  public function loadChartData()
-  {
-    $year = $this->selectedYear;
-    $monthlyData = [];
-    $labels = [];
+        // Instructor sees only trainings where they are the trainer
+        $trainings = Training::with(['sessions.trainer.user'])
+            ->whereBetween('start_date', [$startDate, $endDate])
+            ->whereHas('sessions', function ($q) use ($trainer) {
+                $q->where('trainer_id', $trainer->id);
+            })
+            ->get();
 
-    $userId = auth()->id();
-    $trainer = \App\Models\Trainer::where('user_id', $userId)->first();
+        foreach ($trainings as $training) {
+            $dateKey = $training->start_date->format('Y-m-d');
 
-    // Generate data for 12 months - only trainings where instructor is trainer
-    for ($month = 1; $month <= 12; $month++) {
-      $startOfMonth = Carbon::create($year, $month, 1)->startOfMonth();
-      $endOfMonth = Carbon::create($year, $month, 1)->endOfMonth();
+            if (!isset($this->calendarEvents[$dateKey])) {
+                $this->calendarEvents[$dateKey] = [];
+            }
 
-      if ($trainer) {
-        $count = Training::whereBetween('start_date', [$startOfMonth, $endOfMonth])
-          ->whereHas('sessions', function ($q) use ($trainer) {
-            $q->where('trainer_id', $trainer->id);
-          })
-          ->count();
-      } else {
-        $count = 0;
-      }
+            // Get first session details
+            $firstSession = $training->sessions->first();
+            $trainerName = $firstSession?->trainer?->user?->name ?? 'TBA';
+            $location = $firstSession?->room_location ?? 'TBA';
+            $time = $firstSession ? ($firstSession->start_time ? substr($firstSession->start_time, 0, 5) : 'TBA') . ' - ' . ($firstSession->end_time ? substr($firstSession->end_time, 0, 5) : 'TBA') : 'TBA';
 
-      $monthlyData[] = $count;
-      $labels[] = $startOfMonth->format('M');
+            $this->calendarEvents[$dateKey][] = [
+                'title' => $training->name ?? 'Training',
+                'type' => $training->status === 'pending' ? 'warning' : 'normal',
+                'trainer' => $trainerName,
+                'location' => $location,
+                'time' => $time,
+            ];
+        }
     }
 
-    $this->monthlyTrainingData = $monthlyData;
-    $this->monthLabels = $labels;
-  }
+    public function loadUpcomingSchedules()
+    {
+        $this->upcomingSchedules = [];
+        $userId = auth()->id();
+        $trainer = \App\Models\Trainer::where('user_id', $userId)->first();
 
-  public function loadStatsCards()
-  {
-    $now = Carbon::now();
-    $startOfYear = $now->copy()->startOfYear();
-    $endOfYear = $now->copy()->endOfYear();
+        // Get upcoming trainings where instructor is trainer
+        if ($trainer) {
+            $trainings = Training::with(['sessions.trainer.user'])
+                ->where('start_date', '>=', now()->startOfDay())
+                ->whereHas('sessions', function ($q) use ($trainer) {
+                    $q->where('trainer_id', $trainer->id);
+                })
+                ->orderBy('start_date', 'asc')
+                ->limit(5)
+                ->get();
 
-    $userId = auth()->id();
-    $trainer = \App\Models\Trainer::where('user_id', $userId)->first();
+            foreach ($trainings as $training) {
+                $firstSession = $training->sessions->first();
+                $location = $firstSession?->room_location ?? null;
+                $time = null;
 
-    if ($trainer) {
-      // Total training this year - only where instructor is trainer
-      $this->totalTrainingThisYear = Training::whereBetween('start_date', [$startOfYear, $endOfYear])
-        ->whereHas('sessions', function ($q) use ($trainer) {
-          $q->where('trainer_id', $trainer->id);
-        })
-        ->count();
+                if ($firstSession && $firstSession->start_time) {
+                    $time = substr($firstSession->start_time, 0, 5);
+                    if ($firstSession->end_time) {
+                        $time .= ' - ' . substr($firstSession->end_time, 0, 5);
+                    }
+                }
 
-      // Upcoming schedules - trainings with start_date >= today where instructor is trainer
-      $this->upcomingSchedules = Training::where('start_date', '>=', $now->startOfDay())
-        ->whereHas('sessions', function ($q) use ($trainer) {
-          $q->where('trainer_id', $trainer->id);
-        })
-        ->count();
+                $this->upcomingSchedules[] = [
+                    'id' => $training->id,
+                    'name' => $training->name ?? 'Training',
+                    'start_date' => $training->start_date->format('Y-m-d'),
+                    'end_date' => $training->end_date ? $training->end_date->format('Y-m-d') : null,
+                    'location' => $location,
+                    'time' => $time,
+                    'type' => $training->type,
+                    'status' => $training->status,
+                    'schedule_type' => 'training', // training or certification
+                ];
+            }
+        }
 
-      // Total unique participants across all instructor's trainings
-      $this->totalParticipants = Training::whereHas('sessions', function ($q) use ($trainer) {
-        $q->where('trainer_id', $trainer->id);
-      })
-        ->with('assessments')
-        ->get()
-        ->pluck('assessments')
-        ->flatten()
-        ->unique('employee_id')
-        ->count();
-    } else {
-      $this->totalTrainingThisYear = 0;
-      $this->upcomingSchedules = 0;
-      $this->totalParticipants = 0;
+        // Get upcoming certifications where user is participant
+        // Each session (theory/practical) shown as separate item
+        $certifications = Certification::with(['sessions'])
+            ->whereHas('participants', function ($q) use ($userId) {
+                $q->where('employee_id', $userId);
+            })
+            ->whereHas('sessions', function ($q) {
+                $q->where('date', '>=', now()->startOfDay());
+            })
+            ->get();
+
+        foreach ($certifications as $certification) {
+            // Get all upcoming sessions for this certification
+            $upcomingSessions = $certification->sessions
+                ->where('date', '>=', now()->startOfDay())
+                ->sortBy('date');
+
+            // Add each session as separate schedule item
+            foreach ($upcomingSessions as $session) {
+                $location = $session->location ?? null;
+                $time = null;
+
+                if ($session->start_time) {
+                    $time = substr($session->start_time, 0, 5);
+                    if ($session->end_time) {
+                        $time .= ' - ' . substr($session->end_time, 0, 5);
+                    }
+                }
+
+                // Session type label (Theory/Practical)
+                $sessionTypeLabel = match ($session->type) {
+                    'theory' => 'Theory',
+                    'practical' => 'Practical',
+                    default => ucfirst($session->type ?? ''),
+                };
+
+                $this->upcomingSchedules[] = [
+                    'id' => $certification->id,
+                    'name' => $certification->name ?? 'Certification',
+                    'start_date' => $session->date->format('Y-m-d'),
+                    'end_date' => null, // No range, single session
+                    'location' => $location,
+                    'time' => $time,
+                    'type' => $session->type ?? null,
+                    'session_type_label' => $sessionTypeLabel,
+                    'status' => $certification->status,
+                    'schedule_type' => 'certification', // training or certification
+                ];
+            }
+        }
+
+        // Sort all schedules by start_date and limit to 5
+        usort($this->upcomingSchedules, function ($a, $b) {
+            return strtotime($a['start_date']) - strtotime($b['start_date']);
+        });
+
+        $this->upcomingSchedules = array_slice($this->upcomingSchedules, 0, 5);
     }
-  }
 
-  public function selectMonth($monthIndex)
-  {
-    // monthIndex is 0-based from ApexCharts
-    $this->selectedMonth = $monthIndex + 1;
-    $this->monthBreakdown = [];
-
-    $this->loadMonthBreakdown();
-
-    $monthName = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->format('F Y');
-
-    // Dispatch event to notify other components
-    $this->dispatch('month-selected', [
-      'month' => $this->selectedMonth,
-      'year' => $this->selectedYear,
-      'monthName' => $monthName,
-    ]);
-
-    // Dispatch event to update donut charts with breakdown data
-    $this->dispatch(
-      'breakdown-loaded',
-      byType: $this->monthBreakdown['byType'] ?? [],
-      byGroupComp: $this->monthBreakdown['byGroupComp'] ?? [],
-      total: $this->monthBreakdown['total'] ?? 0
-    );
-  }
-
-  public function closeMonthDetails()
-  {
-    $this->selectedMonth = null;
-    $this->monthBreakdown = [];
-  }
-
-  public function loadMonthBreakdown()
-  {
-    if (!$this->selectedMonth) {
-      $this->monthBreakdown = [];
-      return;
+    public function render()
+    {
+        return view('pages.dashboard.instructor-dashboard');
     }
-
-    $startOfMonth = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->startOfMonth();
-    $endOfMonth = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->endOfMonth();
-
-    $userId = auth()->id();
-    $trainer = \App\Models\Trainer::where('user_id', $userId)->first();
-
-    if (!$trainer) {
-      $this->monthBreakdown = [
-        'total' => 0,
-        'byType' => [],
-        'byGroupComp' => [],
-      ];
-      return;
-    }
-
-    // Get trainings for selected month where instructor is trainer
-    $trainings = Training::whereBetween('start_date', [$startOfMonth, $endOfMonth])
-      ->whereHas('sessions', function ($q) use ($trainer) {
-        $q->where('trainer_id', $trainer->id);
-      })
-      ->get();
-
-    // Breakdown by type
-    $byType = $trainings->groupBy('type')->map(fn($items) => $items->count())->toArray();
-
-    // Breakdown by group_comp
-    $byGroupComp = $trainings->groupBy('group_comp')->map(fn($items) => $items->count())->toArray();
-
-    $this->monthBreakdown = [
-      'total' => $trainings->count(),
-      'byType' => $byType,
-      'byGroupComp' => $byGroupComp,
-    ];
-  }
-
-  public function render()
-  {
-    return view('pages.dashboard.instructor-dashboard');
-  }
 }
