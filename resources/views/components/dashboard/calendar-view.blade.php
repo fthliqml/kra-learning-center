@@ -47,11 +47,9 @@
                         $hasEvents = count($futureEvents) > 0;
                     @endphp
                     <div class="h-full flex flex-col items-center justify-start pt-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors {{ $hasEvents ? 'cursor-pointer' : 'cursor-default' }} {{ $dayData['isToday'] ? 'bg-secondary/10' : '' }}"
-                        @if ($hasEvents)
-                            @click="showDetail = !showDetail"
+                        @if ($hasEvents) @click="showDetail = !showDetail"
                             @mouseenter="showHint = true"
-                            @mouseleave="showHint = false"
-                        @endif
+                            @mouseleave="showHint = false" @endif
                         @click.outside="showDetail = false">
 
                         {{-- Day Number --}}
@@ -92,12 +90,13 @@
                     @if ($hasEvents)
                         <div x-show="showHint && !showDetail" x-transition:enter="transition ease-out duration-100"
                             x-transition:enter-start="opacity-0" x-transition:enter-end="opacity-100"
-                            x-transition:leave="transition ease-in duration-75"
-                            x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0"
-                            x-cloak
+                            x-transition:leave="transition ease-in duration-75" x-transition:leave-start="opacity-100"
+                            x-transition:leave-end="opacity-0" x-cloak
                             class="absolute z-40 left-1/2 -translate-x-1/2 bottom-full mb-1 px-2 py-1 bg-gray-700 dark:bg-gray-600 text-white text-[10px] rounded whitespace-nowrap pointer-events-none">
                             Click to see detail
-                            <div class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-700 dark:border-t-gray-600"></div>
+                            <div
+                                class="absolute left-1/2 -translate-x-1/2 top-full w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-gray-700 dark:border-t-gray-600">
+                            </div>
                         </div>
 
                         {{-- Detail Popup (on click) --}}
@@ -108,9 +107,11 @@
                             x-cloak
                             class="absolute z-50 left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 dark:bg-gray-900 text-white rounded-lg shadow-lg p-3">
                             {{-- Close button --}}
-                            <button @click="showDetail = false" class="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors">
+                            <button @click="showDetail = false"
+                                class="absolute top-2 right-2 text-gray-400 hover:text-white transition-colors">
                                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M6 18L18 6M6 6l12 12" />
                                 </svg>
                             </button>
                             <div
