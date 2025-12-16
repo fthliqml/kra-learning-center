@@ -201,11 +201,6 @@ return [
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
-                    'label' => 'Survey 2',
-                    'href' => '/survey/2/management',
-                    'roles' => ['instructor', 'certificator', 'admin'],
-                ],
-                [
                     'label' => 'Survey 3',
                     'href' => '/survey/3/management',
                     'roles' => ['instructor', 'certificator', 'admin'],
