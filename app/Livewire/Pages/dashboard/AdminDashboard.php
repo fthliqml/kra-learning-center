@@ -8,7 +8,7 @@ use App\Models\Training;
 use Carbon\Carbon;
 use Livewire\Component;
 
-class leaderDashboard extends Component
+class AdminDashboard extends Component
 {
   public $selectedMonth = null;
   public $selectedYear = null;
@@ -23,7 +23,7 @@ class leaderDashboard extends Component
   // Stats cards
   public int $totalTrainingThisYear = 0;
   public int $upcomingSchedules = 0;
-  public int $pendingApprovals = 0;
+  public int $totalEmployees = 0;
 
   // Calendar events
   public array $calendarEvents = [];
@@ -44,40 +44,10 @@ class leaderDashboard extends Component
     $startDate = now()->startOfMonth();
     $endDate = now()->addMonths(2)->endOfMonth();
 
-    $userId = auth()->id();
-    $user = auth()->user();
-
-    // Leader/Instructor sees trainings where they are the trainer
-    if ($user->hasAnyRole(['leader', 'instructor'])) {
-      // Get trainer record for current user
-      $trainer = \App\Models\Trainer::where('user_id', $userId)->first();
-
-      if ($trainer) {
-        $trainings = Training::with(['sessions.trainer.user'])
-          ->whereBetween('start_date', [$startDate, $endDate])
-          ->whereHas('sessions', function ($q) use ($trainer) {
-            $q->where('trainer_id', $trainer->id);
-          })
-          ->get();
-      } else {
-        $trainings = collect();
-      }
-    }
-    // Employee sees trainings where they are a participant
-    elseif ($user->hasRole('employee')) {
-      $trainings = Training::with(['sessions.trainer.user'])
-        ->whereBetween('start_date', [$startDate, $endDate])
-        ->whereHas('assessments', function ($q) use ($userId) {
-          $q->where('employee_id', $userId);
-        })
-        ->get();
-    }
-    // Fallback: show all trainings
-    else {
-      $trainings = Training::with(['sessions.trainer.user'])
-        ->whereBetween('start_date', [$startDate, $endDate])
-        ->get();
-    }
+    // Admin sees all training schedules
+    $trainings = Training::with(['sessions.trainer.user'])
+      ->whereBetween('start_date', [$startDate, $endDate])
+      ->get();
 
     foreach ($trainings as $training) {
       $dateKey = $training->start_date->format('Y-m-d');
@@ -102,7 +72,7 @@ class leaderDashboard extends Component
       ];
     }
 
-    // Leader sees all certification schedules
+    // Admin sees all certification schedules
     $certifications = Certification::with(['sessions'])
       ->whereHas('sessions', function ($q) use ($startDate, $endDate) {
         $q->whereBetween('date', [$startDate, $endDate]);
@@ -177,12 +147,8 @@ class leaderDashboard extends Component
     // Upcoming schedules - trainings with start_date >= today
     $this->upcomingSchedules = Training::where('start_date', '>=', $now->startOfDay())->count();
 
-    // Pending approvals (combined: certification approval + training approval + training request)
-    $pendingCertifications = Certification::where('status', 'pending')->count();
-    $pendingTrainings = Training::where('status', 'pending')->count();
-    $pendingRequests = Request::where('status', 'pending')->count();
-
-    $this->pendingApprovals = $pendingCertifications + $pendingTrainings + $pendingRequests;
+    // Total employees (users with role employee)
+    $this->totalEmployees = \App\Models\User::where('role', 'employee')->count();
   }
 
   public function selectMonth($monthIndex)
@@ -243,108 +209,8 @@ class leaderDashboard extends Component
     ];
   }
 
-  public function getChartOptionsProperty()
-  {
-    return [
-      'chart' => [
-        'type' => 'line',
-        'height' => 350,
-        'fontFamily' => 'inherit',
-        'toolbar' => [
-          'show' => false,
-        ],
-        'zoom' => [
-          'enabled' => false,
-        ],
-        'dropShadow' => [
-          'enabled' => true,
-          'top' => 3,
-          'left' => 0,
-          'blur' => 4,
-          'opacity' => 0.1,
-        ],
-      ],
-      'series' => [
-        [
-          'name' => 'Training Count',
-          'data' => $this->monthlyTrainingData,
-        ],
-      ],
-      'stroke' => [
-        'curve' => 'smooth',
-        'width' => 3,
-      ],
-      'colors' => ['#6366f1'],
-      'fill' => [
-        'type' => 'gradient',
-        'gradient' => [
-          'shadeIntensity' => 1,
-          'opacityFrom' => 0.4,
-          'opacityTo' => 0.1,
-          'stops' => [0, 90, 100],
-        ],
-      ],
-      'xaxis' => [
-        'categories' => $this->monthLabels,
-        'labels' => [
-          'style' => [
-            'colors' => '#9ca3af',
-            'fontSize' => '12px',
-          ],
-        ],
-        'axisBorder' => [
-          'show' => false,
-        ],
-        'axisTicks' => [
-          'show' => false,
-        ],
-      ],
-      'yaxis' => [
-        'labels' => [
-          'style' => [
-            'colors' => '#9ca3af',
-            'fontSize' => '12px',
-          ],
-          'formatter' => 'function(val) { return Math.floor(val); }',
-        ],
-        'min' => 0,
-      ],
-      'grid' => [
-        'borderColor' => '#e5e7eb',
-        'strokeDashArray' => 4,
-        'xaxis' => [
-          'lines' => [
-            'show' => false,
-          ],
-        ],
-      ],
-      'markers' => [
-        'size' => 5,
-        'colors' => ['#6366f1'],
-        'strokeColors' => '#fff',
-        'strokeWidth' => 2,
-        'hover' => [
-          'size' => 8,
-          'sizeOffset' => 3,
-        ],
-      ],
-      'tooltip' => [
-        'enabled' => true,
-        'shared' => false,
-        'intersect' => true,
-        'theme' => 'light',
-        'y' => [
-          'formatter' => 'function(val) { return val + " Trainings"; }',
-        ],
-      ],
-      'dataLabels' => [
-        'enabled' => false,
-      ],
-    ];
-  }
-
   public function render()
   {
-    return view('pages.dashboard.leader-dashboard');
+    return view('pages.dashboard.admin-dashboard');
   }
 }
