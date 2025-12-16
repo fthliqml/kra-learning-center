@@ -244,7 +244,7 @@ class EditSurveyTemplate extends Component
         $this->validate([
             'templateTitle' => 'required|string|max:255',
             'templateDescription' => 'nullable|string|max:2000',
-            'templateLevel' => 'required|integer|in:1,2,3',
+            'templateLevel' => 'required|integer|in:1,3',
         ]);
 
         $previousLevel = (int) ($this->surveyLevel ?? $this->templateLevel ?? 1);

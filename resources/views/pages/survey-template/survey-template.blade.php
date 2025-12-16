@@ -62,7 +62,6 @@
                         $level = $surveyTemplate->level ?? '';
                         $colorClasses = match ($level) {
                             1 => ['badge' => 'border-green-700 bg-green-50'],
-                            2 => ['badge' => 'border-amber-700 bg-amber-50'],
                             3 => ['badge' => 'border-indigo-700 bg-indigo-50'],
                             default => ['badge' => 'border-primary bg-[#E4F3FF]'],
                         };
