@@ -132,7 +132,7 @@
             @else
                 <x-choices label="Competency" wire:model.defer="formData.competency_id" :options="$competencyOptions"
                     option-value="value" option-label="label" placeholder="Select Competency" :error="$errors->first('formData.competency_id')" single
-                    searchable class="focus-within:border-0" />
+                    searchable search-function="competencySearch" class="focus-within:border-0" />
             @endif
 
             <x-textarea label="Objective" placeholder="Describe the training objectives..."
