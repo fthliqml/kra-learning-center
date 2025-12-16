@@ -173,7 +173,7 @@ class CourseInfo extends Component
             ->get()
             ->map(fn($c) => [
                 'value' => $c->id,
-                'label' => $c->name . ' (' . $c->type . ')',
+                'label' => $c->name,
             ])
             ->toArray();
     }
@@ -181,10 +181,28 @@ class CourseInfo extends Component
     /** Search method for x-choices searchable competency dropdown */
     public function search(string $value = ''): void
     {
-        // x-choices with searchable will call this method
-        // Since competencyOptions is already filtered by group_comp,
-        // we just need to reload it (no additional filtering needed)
-        $this->loadCompetencyOptions();
+        $group = $this->course['group_comp'] ?? '';
+
+        if (!$group) {
+            $this->competencyOptions = [];
+            return;
+        }
+
+        $query = Competency::where('type', $group);
+
+        // Apply search filter if value provided
+        if (trim($value) !== '') {
+            $query->where('name', 'like', '%' . $value . '%');
+        }
+
+        $this->competencyOptions = $query
+            ->orderBy('name')
+            ->get()
+            ->map(fn($c) => [
+                'value' => $c->id,
+                'label' => $c->name,
+            ])
+            ->toArray();
     }
 
     public function updated($name): void
