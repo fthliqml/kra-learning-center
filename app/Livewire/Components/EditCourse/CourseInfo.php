@@ -118,19 +118,20 @@ class CourseInfo extends Component
     {
         // If editing existing course, hydrate
         if ($this->courseId) {
-            if ($model = Course::find($this->courseId)) {
+            if ($model = Course::with('competency')->find($this->courseId)) {
                 $this->course = [
                     'title' => $model->title,
                     'about' => $model->description,
-                    'group_comp' => $model->group_comp,
+                    'group_comp' => $model->competency->type ?? '',
                     'competency_id' => $model->competency_id,
                     'thumbnail_url' => $model->thumbnail_url,
                 ];
                 $this->hasEverSaved = true;
                 $this->persisted = true;
+                // Load competency options after setting group_comp
+                $this->loadCompetencyOptions();
             }
         }
-        $this->loadCompetencyOptions();
         $this->snapshot();
     }
 
@@ -207,19 +208,28 @@ class CourseInfo extends Component
 
     public function updated($name): void
     {
-        if (str_starts_with($name, 'course.') || $name === 'thumbnail') {
+        // Track all changes to course properties or thumbnail
+        if (str_starts_with($name, 'course.') || $name === 'thumbnail' || str_starts_with($name, 'competencyOptions')) {
             $this->computeDirty();
         }
+    }
+
+    public function updatedCourse(): void
+    {
+        // Catch any course array changes
+        $this->computeDirty();
     }
 
     public function updatedCourseTitle(): void
     {
         $this->computeDirty();
     }
+
     public function updatedCourseAbout(): void
     {
         $this->computeDirty();
     }
+
     public function updatedCourseGroupComp(): void
     {
         $this->course['competency_id'] = '';

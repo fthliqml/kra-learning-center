@@ -51,9 +51,11 @@ class LearningModules extends Component
   // Track collapsed topic IDs (UI state persist across requests)
   public array $collapsedTopicIds = [];
 
-  // Persistence flags (dirty tracking removed per latest requirement)
+  // Persistence flags with dirty tracking
   public bool $hasEverSaved = false; // at least one successful save
   public bool $persisted = false;    // reflects last known DB persistence state
+  public bool $isDirty = false; // track unsaved changes
+  protected string $originalHash = ''; // hash of saved state
   // UI error highlighting (populated during validation when save fails)
   public array $errorQuestionKeys = []; // keys like t0-s1-q2
   public array $errorResourceKeys = []; // keys like t0-s1-r3
@@ -260,6 +262,7 @@ class LearningModules extends Component
       $this->hasEverSaved = true;
       $this->persisted = true;
     }
+    $this->snapshot(); // Take snapshot after loading
   }
 
   private function makeQuestion(string $type = 'multiple'): array
@@ -272,6 +275,21 @@ class LearningModules extends Component
       'answer' => null, // index of correct option (for multiple)
       'answer_nonce' => 0, // bump to force radio group remount when answer reset
     ];
+  }
+
+  protected function snapshot(): void
+  {
+    $this->originalHash = md5(json_encode($this->topics));
+    $this->isDirty = false;
+  }
+
+  protected function computeDirty(): void
+  {
+    $currentHash = md5(json_encode($this->topics));
+    $this->isDirty = $currentHash !== $this->originalHash;
+    if ($this->isDirty) {
+      $this->persisted = false;
+    }
   }
 
   /* Topics CRUD */
@@ -289,6 +307,7 @@ class LearningModules extends Component
         ],
       ],
     ];
+    $this->computeDirty();
   }
 
   public function removeTopic(int $index): void
@@ -300,6 +319,7 @@ class LearningModules extends Component
       if ($removedId) {
         $this->collapsedTopicIds = array_values(array_filter($this->collapsedTopicIds, fn($id) => $id !== $removedId));
       }
+      $this->computeDirty();
     }
   }
 
@@ -331,6 +351,7 @@ class LearningModules extends Component
       'resources' => [],
       'quiz' => ['enabled' => false, 'questions' => []],
     ];
+    $this->computeDirty();
   }
 
   public function removeSection(int $topicIndex, int $sectionIndex): void
@@ -338,6 +359,7 @@ class LearningModules extends Component
     if (isset($this->topics[$topicIndex]['sections'][$sectionIndex])) {
       unset($this->topics[$topicIndex]['sections'][$sectionIndex]);
       $this->topics[$topicIndex]['sections'] = array_values($this->topics[$topicIndex]['sections']);
+      $this->computeDirty();
     }
   }
 
@@ -351,6 +373,7 @@ class LearningModules extends Component
     } elseif ($type === 'youtube') {
       $this->topics[$topicIndex]['sections'][$sectionIndex]['resources'][] = ['type' => 'youtube', 'url' => ''];
     }
+    $this->computeDirty();
   }
 
   public function removeSectionResource(int $topicIndex, int $sectionIndex, int $resourceIndex): void
@@ -358,6 +381,7 @@ class LearningModules extends Component
     if (isset($this->topics[$topicIndex]['sections'][$sectionIndex]['resources'][$resourceIndex])) {
       unset($this->topics[$topicIndex]['sections'][$sectionIndex]['resources'][$resourceIndex]);
       $this->topics[$topicIndex]['sections'][$sectionIndex]['resources'] = array_values($this->topics[$topicIndex]['sections'][$sectionIndex]['resources']);
+      $this->computeDirty();
     }
   }
 
@@ -371,6 +395,7 @@ class LearningModules extends Component
     if ($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['enabled'] && empty($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'])) {
       $this->addSectionQuizQuestion($topicIndex, $sectionIndex);
     }
+    $this->computeDirty();
   }
 
   public function addSectionQuizQuestion(int $topicIndex, int $sectionIndex): void
@@ -378,6 +403,7 @@ class LearningModules extends Component
     if (!isset($this->topics[$topicIndex]['sections'][$sectionIndex]))
       return;
     $this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'][] = $this->makeQuestion();
+    $this->computeDirty();
   }
 
   public function removeSectionQuizQuestion(int $topicIndex, int $sectionIndex, int $questionIndex): void
@@ -385,6 +411,7 @@ class LearningModules extends Component
     if (isset($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'][$questionIndex])) {
       unset($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'][$questionIndex]);
       $this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions'] = array_values($this->topics[$topicIndex]['sections'][$sectionIndex]['quiz']['questions']);
+      $this->computeDirty();
     }
   }
 
@@ -392,6 +419,7 @@ class LearningModules extends Component
   {
     if (isset($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]) && ($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['type'] ?? '') === 'multiple') {
       $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'][] = '';
+      $this->computeDirty();
     }
   }
 
@@ -401,11 +429,11 @@ class LearningModules extends Component
       unset($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'][$o]);
       $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options'] = array_values($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['options']);
       // Adjust answer index if needed
-      $answer =& $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer'];
+      $answer = &$this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer'];
       if (!isset($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer_nonce'])) {
         $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer_nonce'] = 0;
       }
-      $nonce =& $this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer_nonce'];
+      $nonce = &$this->topics[$t]['sections'][$s]['quiz']['questions'][$q]['answer_nonce'];
       if ($answer !== null) {
         // Reset ANY time the removed index is the answer OR shifts ordering before it
         if ($answer >= $o) {
@@ -413,6 +441,7 @@ class LearningModules extends Component
           $nonce++; // force radios remount
         }
       }
+      $this->computeDirty();
     }
   }
 
@@ -420,7 +449,7 @@ class LearningModules extends Component
   {
     if (!isset($this->topics[$t]['sections'][$s]['quiz']['questions'][$q]))
       return;
-    $question =& $this->topics[$t]['sections'][$s]['quiz']['questions'][$q];
+    $question = &$this->topics[$t]['sections'][$s]['quiz']['questions'][$q];
     if (($question['type'] ?? '') !== 'multiple')
       return;
     if (!isset($question['options'][$o]))
@@ -436,6 +465,7 @@ class LearningModules extends Component
       // bump nonce so blade radio name/key changes -> browser clears checked state
       $question['answer_nonce']++;
     }
+    $this->computeDirty();
   }
 
   public function updated($prop): void
@@ -454,12 +484,17 @@ class LearningModules extends Component
       }
     }
 
+    // Track any changes to topics array for dirty state
+    if (str_starts_with($prop, 'topics')) {
+      $this->computeDirty();
+    }
+
     // Handle PDF upload -> store -> set public URL
     if (!is_array($prop) && preg_match('/^topics\.(\d+)\.sections\.(\d+)\.resources\.(\d+)\.file$/', $prop, $m2)) {
       $t = (int) $m2[1];
       $s = (int) $m2[2];
       $r = (int) $m2[3];
-      $res =& $this->topics[$t]['sections'][$s]['resources'][$r];
+      $res = &$this->topics[$t]['sections'][$s]['resources'][$r];
       if (($res['type'] ?? null) === 'pdf' && isset($res['file']) && $res['file']) {
         $file = $res['file'];
         try {
@@ -702,6 +737,7 @@ class LearningModules extends Component
     );
     $this->hasEverSaved = true;
     $this->persisted = true;
+    $this->snapshot(); // Take snapshot after save
   }
 
   public function goNext(): void
@@ -722,5 +758,4 @@ class LearningModules extends Component
   {
     return view('components.edit-course.learning-modules');
   }
-
 }

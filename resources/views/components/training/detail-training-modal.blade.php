@@ -3,6 +3,22 @@
         <x-modal wire:model="modal" icon='o-document-text' title="Training Details"
             subtitle="Information about training details" separator
             box-class="w-[calc(100vw-2rem)] max-w-full sm:max-w-4xl h-fit">
+            @if (in_array(strtolower($selectedEvent['status'] ?? ''), ['approved', 'rejected', 'done']))
+                <div
+                    class="mt-3 mb-3 p-3 rounded-lg {{ strtolower($selectedEvent['status'] ?? '') === 'approved' ? 'bg-green-50 border border-green-200' : (strtolower($selectedEvent['status'] ?? '') === 'rejected' ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200') }}">
+                    <p
+                        class="text-sm {{ strtolower($selectedEvent['status'] ?? '') === 'approved' ? 'text-green-700' : (strtolower($selectedEvent['status'] ?? '') === 'rejected' ? 'text-red-700' : 'text-blue-700') }}">
+                        <strong>Training {{ ucfirst(strtolower($selectedEvent['status'] ?? '')) }}:</strong>
+                        @if (strtolower($selectedEvent['status'] ?? '') === 'approved')
+                            Certificates are available.
+                        @elseif(strtolower($selectedEvent['status'] ?? '') === 'rejected')
+                            This training has been rejected.
+                        @else
+                            Waiting for approval.
+                        @endif
+                    </p>
+                </div>
+            @endif
             {{-- Tabs navigation --}}
             <div
                 class="px-1 pt-2 mb-4 border-b border-gray-200 flex items-end justify-between gap-4 text-sm font-medium">
@@ -22,13 +38,21 @@
                                 <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
                             @endif
                         </button>
-                        <button type="button" wire:click="$set('activeTab','close-training')"
-                            class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'close-training' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
-                            Close Training
-                            @if ($activeTab === 'close-training')
-                                <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
-                            @endif
-                        </button>
+                        @php
+                            $trainingStatus = strtolower($selectedEvent['status'] ?? '');
+                            $showCloseTab =
+                                !in_array($trainingStatus, ['done', 'approved', 'rejected']) &&
+                                strtoupper($selectedEvent['type'] ?? '') !== 'LMS';
+                        @endphp
+                        @if ($showCloseTab)
+                            <button type="button" wire:click="$set('activeTab','close-training')"
+                                class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'close-training' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
+                                Close Training
+                                @if ($activeTab === 'close-training')
+                                    <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
+                                @endif
+                            </button>
+                        @endif
                     @endanyrole
                 </div>
                 <div class="flex items-center gap-3 pb-1">
@@ -84,10 +108,13 @@
                 <x-button wire:click="closeModal"
                     class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
                 @role('admin')
-                    @if (
-                        $activeTab === 'close-training' &&
-                            strtolower($selectedEvent['status'] ?? '') !== 'done' &&
-                            strtoupper($selectedEvent['type'] ?? '') !== 'LMS')
+                    @php
+                        $trainingStatus = strtolower($selectedEvent['status'] ?? '');
+                        $canCloseTraining =
+                            !in_array($trainingStatus, ['done', 'approved', 'rejected']) &&
+                            strtoupper($selectedEvent['type'] ?? '') !== 'LMS';
+                    @endphp
+                    @if ($activeTab === 'close-training' && $canCloseTraining)
                         <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
                             <x-button wire:click="triggerSaveDraft" spinner="triggerSaveDraft"
                                 class="btn btn-outline btn-primary">

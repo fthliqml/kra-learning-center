@@ -32,7 +32,7 @@
                             @php $row = $attendance[$emp['id']] ?? []; @endphp
                             <tr class="even:bg-gray-50 hover:bg-gray-100 transition-colors">
                                 <td class="py-2.5 px-2 text-center text-xs font-medium">{{ $idx + 1 }}</td>
-                                <td class="py-2.5 px-2 text-center font-mono text-[11px]">{{ $emp['NRP'] ?? '—' }}
+                                <td class="py-2.5 px-2 text-center font-mono text-[11px]">{{ $emp['nrp'] ?? '—' }}
                                 </td>
                                 <td class="py-2.5 px-3 font-medium">
                                     <div class="truncate" title="{{ $emp['name'] }}">{{ $emp['name'] }}</div>

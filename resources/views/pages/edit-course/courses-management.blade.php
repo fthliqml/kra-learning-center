@@ -35,8 +35,23 @@
     <x-skeletons.table :columns="5" :rows="10"
         targets="search,filterGroup,filterStatus,applyFilters,clearFilters" />
 
-    {{-- Table --}}
-    @if ($courses->isNotEmpty())
+    {{-- No Data State --}}
+    @if ($courses->isEmpty())
+        <div wire:loading.remove wire:target="search,filterGroup,filterStatus,applyFilters,clearFilters"
+            class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
+            <div class="flex flex-col items-center justify-center py-16 px-4">
+                <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
+                        d="M12 6.042A8.967 8.967 0 006 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 016 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 016-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0018 18a8.967 8.967 0 00-6 2.292m0-14.25v14.25" />
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-700 mb-1">No Data Available</h3>
+                <p class="text-sm text-gray-500 text-center">
+                    There are no course records to display at the moment.
+                </p>
+            </div>
+        </div>
+    @else
+        {{-- Table --}}
         <div wire:loading.remove wire:target="search,filterGroup,filterStatus,applyFilters,clearFilters"
             class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$courses" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
@@ -46,9 +61,16 @@
                     {{ $course->no ?? $loop->iteration }}
                 @endscope
 
+                {{-- Competency name --}}
+                @scope('cell_competency', $course)
+                    <div class="text-sm" title="{{ $course->competency->name ?? '-' }}">
+                        {{ $course->competency ? Str::limit($course->competency->name, 30) : '-' }}
+                    </div>
+                @endscope
+
                 {{-- Group Comp from related training --}}
                 @scope('cell_group_comp', $course)
-                    {{ $course->group_comp ?? '-' }}
+                    {{ $course->competency->type ?? '-' }}
                 @endscope
 
                 {{-- Status badge --}}
@@ -84,12 +106,6 @@
                 @endscope
             </x-table>
         </div>
-    @else
-        <div class="col-span-full">
-            <div class="p-6 border border-dashed rounded-lg text-center text-sm text-base-content/70 bg-base-100">
-                No courses available.
-            </div>
-        </div>
     @endif
 
     {{-- Filter Modal --}}
@@ -107,17 +123,17 @@
                     <div class="space-y-1">
                         <label class="text-xs font-semibold tracking-wide uppercase text-base-content/60">Group
                             Comp</label>
-                        <x-select wire:model="filterGroup" :options="$groupOptions" option-value="value" option-label="label"
-                            placeholder="All Groups" />
+                        <x-select wire:model.live="filterGroup" :options="$groupOptions" option-value="value"
+                            option-label="label" placeholder="All Groups" />
                     </div>
                     <div class="space-y-1">
                         <label class="text-xs font-semibold tracking-wide uppercase text-base-content/60">Status</label>
-                        <x-select wire:model="filterStatus" :options="[
+                        <x-select wire:model.live="filterStatus" :options="[
                             ['value' => 'draft', 'label' => 'Draft'],
                             ['value' => 'inactive', 'label' => 'Inactive'],
                             ['value' => 'assigned', 'label' => 'Assigned'],
-                        ]" option-value="value" option-label="label"
-                            placeholder="All Statuses" />
+                        ]" option-value="value"
+                            option-label="label" placeholder="All Statuses" />
                     </div>
                 </div>
                 <div class="flex items-center justify-between pt-2">

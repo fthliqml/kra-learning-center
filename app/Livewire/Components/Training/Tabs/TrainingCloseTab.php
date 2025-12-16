@@ -202,6 +202,19 @@ class TrainingCloseTab extends Component
             return;
         }
 
+        // Check if training is already approved or rejected
+        $status = strtolower($this->training->status ?? '');
+        if (in_array($status, ['approved', 'rejected'])) {
+            $this->error('Cannot close training that has already been ' . $status . ' by LID Section Head.', position: 'toast-top toast-center');
+            return;
+        }
+
+        // Check if training is already done
+        if ($status === 'done') {
+            $this->error('Training has already been closed.', position: 'toast-top toast-center');
+            return;
+        }
+
         // Check if training type is LMS
         $typeUpper = strtoupper($this->training->type ?? '');
         if ($typeUpper === 'LMS') {

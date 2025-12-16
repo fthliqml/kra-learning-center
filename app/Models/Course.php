@@ -161,4 +161,55 @@ class Course extends Model
 
         return (int) $units;
     }
+
+    /**
+     * Check if course has all required content (ready to be published/inactive).
+     */
+    public function isComplete(): bool
+    {
+        // Must have basic info
+        if (empty($this->title) || empty($this->description) || empty($this->competency_id)) {
+            return false;
+        }
+
+        // Must have pretest with at least 1 question
+        $pretest = $this->tests()->where('type', 'pretest')->first();
+        if (!$pretest) {
+            return false;
+        }
+        $pretestQuestions = $pretest->questions()->count();
+        if ($pretestQuestions === 0) {
+            return false;
+        }
+
+        // Must have at least 1 learning module (topic) with at least 1 section
+        $topicCount = $this->learningModules()->count();
+        if ($topicCount === 0) {
+            return false;
+        }
+        $sectionCount = Section::whereHas('topic', fn($q) => $q->where('course_id', $this->id))->count();
+        if ($sectionCount === 0) {
+            return false;
+        }
+
+        // Must have posttest with at least 1 question
+        $posttest = $this->tests()->where('type', 'posttest')->first();
+        if (!$posttest) {
+            return false;
+        }
+        $posttestQuestions = $posttest->questions()->count();
+        if ($posttestQuestions === 0) {
+            return false;
+        }
+
+        // Must have test configuration
+        if (!$pretest->passing_score && $pretest->passing_score !== 0) {
+            return false;
+        }
+        if (!$posttest->passing_score) {
+            return false;
+        }
+
+        return true;
+    }
 }
