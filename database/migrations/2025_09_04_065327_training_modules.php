@@ -22,6 +22,8 @@ return new class extends Migration
             $table->string('method');
             $table->integer('duration');
             $table->integer('frequency');
+            $table->double('theory_passing_score')->default(0);
+            $table->double('practical_passing_score')->default(0);
 
             // Timestamps
             $table->timestamps();

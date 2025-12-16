@@ -4,6 +4,7 @@ namespace App\Livewire\Components\Training;
 
 use App\Models\Training;
 use App\Models\Trainer;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use Livewire\Component;
@@ -288,8 +289,9 @@ class ScheduleView extends Component
         $q->where('trainer_id', $this->filterTrainerId);
       });
     }
+    /** @var User|null $user */
     $user = Auth::user();
-    if ($user && strtolower($user->role ?? '') !== 'admin') {
+    if ($user && !$user->hasRole('admin')) {
       $query->where(function ($q) use ($user) {
         $q->whereHas('assessments', function ($qq) use ($user) {
           $qq->where('employee_id', $user->id);
@@ -321,8 +323,8 @@ class ScheduleView extends Component
         $q->where('trainer_id', $this->filterTrainerId);
       });
     }
-    $user = Auth::user();
-    if ($user && strtolower($user->role ?? '') !== 'admin') {
+    /** @var User|null $user */    $user = Auth::user();
+    if ($user && !$user->hasRole('admin')) {
       $query->where(function ($q) use ($user) {
         $q->whereHas('assessments', function ($qq) use ($user) {
           $qq->where('employee_id', $user->id);
@@ -370,8 +372,9 @@ class ScheduleView extends Component
     $trainingsQuery = Training::select('id', 'start_date', 'end_date')
       ->whereDate('start_date', '<=', $yearEnd)
       ->whereDate('end_date', '>=', $yearStart);
+    /** @var User|null $user */
     $user = Auth::user();
-    if ($user && strtolower($user->role ?? '') !== 'admin') {
+    if ($user && !$user->hasRole('admin')) {
       $trainingsQuery->where(function ($q) use ($user) {
         $q->whereHas('assessments', function ($qq) use ($user) {
           $qq->where('employee_id', $user->id);
@@ -399,13 +402,13 @@ class ScheduleView extends Component
    */
   private function countForMonth(int $year, int $month): int
   {
-    /** @var \App\Models\User|null $user */
     $start = Carbon::createFromDate($year, $month, 1)->startOfDay();
     $end = (clone $start)->endOfMonth()->endOfDay();
     $query = Training::whereDate('start_date', '<=', $end)
       ->whereDate('end_date', '>=', $start);
+    /** @var User|null $user */
     $user = Auth::user();
-    if ($user && strtolower($user->role ?? '') !== 'admin') {
+    if ($user && !$user->hasRole('admin')) {
       $query->where(function ($q) use ($user) {
         $q->whereHas('assessments', function ($qq) use ($user) {
           $qq->where('employee_id', $user->id);
@@ -459,8 +462,9 @@ class ScheduleView extends Component
         $payload['initial_day_number'] = $start->diffInDays($target) + 1;
       }
     }
+    /** @var User|null $user */
     $user = Auth::user();
-    if ($user && strtolower($user->role ?? '') === 'admin') {
+    if ($user && $user->hasRole('admin')) {
       // Check if training is closed
       $isClosed = isset($payload['status']) && strtolower($payload['status']) === 'done';
 

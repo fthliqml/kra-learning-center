@@ -102,8 +102,11 @@ class TrainingFormModal extends Component
     private function loadCourseOptions(): void
     {
         // Include group_comp so we can auto-sync training group_comp for LMS
-        $this->courseOptions = Course::select('id', 'title', 'group_comp')->orderBy('title')->get()
-            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->group_comp])->toArray();
+        $this->courseOptions = Course::with('competency:id,type')
+            ->select('id', 'title', 'competency_id')
+            ->orderBy('title')
+            ->get()
+            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->competency->type ?? null])->toArray();
     }
 
     private function loadTrainingModuleOptions(): void
@@ -572,11 +575,12 @@ class TrainingFormModal extends Component
             return;
         }
 
-        $this->courseOptions = Course::select('id', 'title', 'group_comp')
+        $this->courseOptions = Course::with('competency:id,type')
+            ->select('id', 'title', 'competency_id')
             ->where('title', 'like', "%{$value}%")
             ->orderBy('title')
             ->get()
-            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->group_comp])
+            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->competency->type ?? null])
             ->toArray();
     }
 

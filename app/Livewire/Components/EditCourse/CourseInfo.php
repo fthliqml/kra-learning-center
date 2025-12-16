@@ -178,6 +178,15 @@ class CourseInfo extends Component
             ->toArray();
     }
 
+    /** Search method for x-choices searchable competency dropdown */
+    public function search(string $value = ''): void
+    {
+        // x-choices with searchable will call this method
+        // Since competencyOptions is already filtered by group_comp,
+        // we just need to reload it (no additional filtering needed)
+        $this->loadCompetencyOptions();
+    }
+
     public function updated($name): void
     {
         if (str_starts_with($name, 'course.') || $name === 'thumbnail') {

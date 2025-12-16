@@ -39,7 +39,7 @@ class TrainingCloseTab extends Component
     public function mount($trainingId)
     {
         $this->trainingId = $trainingId;
-        $this->training = Training::with(['assessments.employee', 'sessions'])->find($trainingId);
+        $this->training = Training::with(['assessments.employee', 'sessions', 'module'])->find($trainingId);
 
         // Load existing scores into temp array
         $this->loadTempScores();
@@ -134,8 +134,15 @@ class TrainingCloseTab extends Component
             if (!$hasPosttest || !$hasPractical) {
                 $assessment->temp_status = 'pending';
             } else {
-                $average = ((float)$posttestScore + (float)$practicalScore) / 2;
-                $assessment->temp_status = $average >= 60 ? 'passed' : 'failed';
+                // Get passing scores from training module
+                $theoryPassingScore = $this->training->module->theory_passing_score ?? 60;
+                $practicalPassingScore = $this->training->module->practical_passing_score ?? 60;
+
+                // Check if both scores meet their respective passing thresholds
+                $theoryPassed = (float)$posttestScore >= $theoryPassingScore;
+                $practicalPassed = (float)$practicalScore >= $practicalPassingScore;
+
+                $assessment->temp_status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
             }
 
             // Expose training done flag directly on assessment for blade scopes (avoid scope isolation issues)
@@ -158,14 +165,21 @@ class TrainingCloseTab extends Component
                     $assessment->posttest_score = $scores['posttest_score'];
                     $assessment->practical_score = $scores['practical_score'];
 
-                    // Calculate status based on scores (same logic as certification)
+                    // Calculate status based on scores using module passing scores
                     $posttest = $scores['posttest_score'];
                     $practical = $scores['practical_score'];
 
                     // If both scores are filled
                     if (is_numeric($posttest) && is_numeric($practical)) {
-                        $average = ((float) $posttest + (float) $practical) / 2;
-                        $assessment->status = $average >= 60 ? 'passed' : 'failed';
+                        // Get passing scores from training module
+                        $theoryPassingScore = $this->training->module->theory_passing_score ?? 60;
+                        $practicalPassingScore = $this->training->module->practical_passing_score ?? 60;
+
+                        // Check if both scores meet their respective passing thresholds
+                        $theoryPassed = (float)$posttest >= $theoryPassingScore;
+                        $practicalPassed = (float)$practical >= $practicalPassingScore;
+
+                        $assessment->status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
                     } else {
                         // If scores are not complete, keep as pending
                         $assessment->status = 'pending';
@@ -248,7 +262,7 @@ class TrainingCloseTab extends Component
                     $assessment->posttest_score = $scores['posttest_score'];
                     $assessment->practical_score = $scores['practical_score'];
 
-                    // Calculate status based on average (only posttest and practical)
+                    // Calculate status using module passing scores
                     // Check if both scores are filled
                     $posttest = $assessment->posttest_score;
                     $practical = $assessment->practical_score;
@@ -256,8 +270,15 @@ class TrainingCloseTab extends Component
                     if ($posttest === null || $posttest === '' || $practical === null || $practical === '') {
                         $assessment->status = 'pending';
                     } else {
-                        $average = ((float) $posttest + (float) $practical) / 2;
-                        $assessment->status = $average >= 60 ? 'passed' : 'failed';
+                        // Get passing scores from training module
+                        $theoryPassingScore = $this->training->module->theory_passing_score ?? 60;
+                        $practicalPassingScore = $this->training->module->practical_passing_score ?? 60;
+
+                        // Check if both scores meet their respective passing thresholds
+                        $theoryPassed = (float)$posttest >= $theoryPassingScore;
+                        $practicalPassed = (float)$practical >= $practicalPassingScore;
+
+                        $assessment->status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
                     }
 
                     $assessment->save();

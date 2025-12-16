@@ -29,18 +29,7 @@
             @endphp
 
             <!-- Add Button  -->
-            @if ($canAddPlan)
-                <x-ui.button variant="primary" wire:click="openAddModal" wire:target="openAddModal" class="h-10"
-                    wire:loading.attr="readonly">
-                    <span wire:loading.remove wire:target="openAddModal" class="flex items-center gap-2">
-                        <x-icon name="o-plus" class="size-4" />
-                        Add
-                    </span>
-                    <span wire:loading wire:target="openAddModal">
-                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                    </span>
-                </x-ui.button>
-            @endif
+
         </div>
     </div>
 
@@ -233,19 +222,34 @@
                             <x-icon name="o-academic-cap" class="size-5 text-blue-600" />
                             Training Plans
                         </h3>
-                        @if ($canEditTraining && $trainingPlansData->count() > 0)
-                            <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('training')"
-                                wire:loading.attr="disabled" class="h-8">
-                                <span wire:loading.remove wire:target="openEditModal('training')"
-                                    class="flex items-center gap-1.5">
-                                    <x-icon name="o-pencil" class="size-4" />
-                                    Edit
-                                </span>
-                                <span wire:loading wire:target="openEditModal('training')">
-                                    <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                                </span>
-                            </x-ui.button>
-                        @endif
+                        <div class="flex items-center gap-2">
+                            @if ($isCurrentYear && $trainingPlansData->count() == 0)
+                                <x-ui.button variant="primary" size="sm" wire:click="openAddModal('training')"
+                                    wire:loading.attr="disabled" class="h-8">
+                                    <span wire:loading.remove wire:target="openAddModal('training')"
+                                        class="flex items-center gap-1.5">
+                                        <x-icon name="o-plus" class="size-4" />
+                                        Add
+                                    </span>
+                                    <span wire:loading wire:target="openAddModal('training')">
+                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                    </span>
+                                </x-ui.button>
+                            @endif
+                            @if ($canEditTraining && $trainingPlansData->count() > 0)
+                                <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('training')"
+                                    wire:loading.attr="disabled" class="h-8">
+                                    <span wire:loading.remove wire:target="openEditModal('training')"
+                                        class="flex items-center gap-1.5">
+                                        <x-icon name="o-pencil" class="size-4" />
+                                        Edit
+                                    </span>
+                                    <span wire:loading wire:target="openEditModal('training')">
+                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                    </span>
+                                </x-ui.button>
+                            @endif
+                        </div>
                     </div>
                     @if ($trainingPlansData->count() > 0)
                         <div class="space-y-3">
@@ -292,19 +296,36 @@
                             <x-icon name="o-book-open" class="size-5 text-green-600" />
                             Self Learning
                         </h3>
-                        @if ($canEditSelfLearning && $selfLearningData->count() > 0)
-                            <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('self_learning')"
-                                wire:loading.attr="disabled" class="h-8">
-                                <span wire:loading.remove wire:target="openEditModal('self_learning')"
-                                    class="flex items-center gap-1.5">
-                                    <x-icon name="o-pencil" class="size-4" />
-                                    Edit
-                                </span>
-                                <span wire:loading wire:target="openEditModal('self_learning')">
-                                    <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                                </span>
-                            </x-ui.button>
-                        @endif
+                        <div class="flex items-center gap-2">
+                            @if ($isCurrentYear && $selfLearningData->count() == 0)
+                                <x-ui.button variant="primary" size="sm"
+                                    wire:click="openAddModal('self_learning')" wire:loading.attr="disabled"
+                                    class="h-8">
+                                    <span wire:loading.remove wire:target="openAddModal('self_learning')"
+                                        class="flex items-center gap-1.5">
+                                        <x-icon name="o-plus" class="size-4" />
+                                        Add
+                                    </span>
+                                    <span wire:loading wire:target="openAddModal('self_learning')">
+                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                    </span>
+                                </x-ui.button>
+                            @endif
+                            @if ($canEditSelfLearning && $selfLearningData->count() > 0)
+                                <x-ui.button variant="ghost" size="sm"
+                                    wire:click="openEditModal('self_learning')" wire:loading.attr="disabled"
+                                    class="h-8">
+                                    <span wire:loading.remove wire:target="openEditModal('self_learning')"
+                                        class="flex items-center gap-1.5">
+                                        <x-icon name="o-pencil" class="size-4" />
+                                        Edit
+                                    </span>
+                                    <span wire:loading wire:target="openEditModal('self_learning')">
+                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                    </span>
+                                </x-ui.button>
+                            @endif
+                        </div>
                     </div>
                     @if ($selfLearningData->count() > 0)
                         <div class="space-y-3">
@@ -347,19 +368,36 @@
                                 <x-icon name="o-user-group" class="size-5 text-purple-600" />
                                 Mentoring
                             </h3>
-                            @if ($canEditMentoring && $mentoringData->count() > 0)
-                                <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('mentoring')"
-                                    wire:loading.attr="disabled" class="h-8">
-                                    <span wire:loading.remove wire:target="openEditModal('mentoring')"
-                                        class="flex items-center gap-1.5">
-                                        <x-icon name="o-pencil" class="size-4" />
-                                        Edit
-                                    </span>
-                                    <span wire:loading wire:target="openEditModal('mentoring')">
-                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                                    </span>
-                                </x-ui.button>
-                            @endif
+                            <div class="flex items-center gap-2">
+                                @if ($isCurrentYear && $mentoringData->count() == 0)
+                                    <x-ui.button variant="primary" size="sm"
+                                        wire:click="openAddModal('mentoring')" wire:loading.attr="disabled"
+                                        class="h-8">
+                                        <span wire:loading.remove wire:target="openAddModal('mentoring')"
+                                            class="flex items-center gap-1.5">
+                                            <x-icon name="o-plus" class="size-4" />
+                                            Add
+                                        </span>
+                                        <span wire:loading wire:target="openAddModal('mentoring')">
+                                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                        </span>
+                                    </x-ui.button>
+                                @endif
+                                @if ($canEditMentoring && $mentoringData->count() > 0)
+                                    <x-ui.button variant="ghost" size="sm"
+                                        wire:click="openEditModal('mentoring')" wire:loading.attr="disabled"
+                                        class="h-8">
+                                        <span wire:loading.remove wire:target="openEditModal('mentoring')"
+                                            class="flex items-center gap-1.5">
+                                            <x-icon name="o-pencil" class="size-4" />
+                                            Edit
+                                        </span>
+                                        <span wire:loading wire:target="openEditModal('mentoring')">
+                                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                        </span>
+                                    </x-ui.button>
+                                @endif
+                            </div>
                         </div>
                         @if ($mentoringData->count() > 0)
                             <div class="space-y-3">
@@ -394,19 +432,35 @@
                                 <x-icon name="o-briefcase" class="size-5 text-amber-600" />
                                 Projects
                             </h3>
-                            @if ($canEditProject && $projectData->count() > 0)
-                                <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('project')"
-                                    wire:loading.attr="disabled" class="h-8">
-                                    <span wire:loading.remove wire:target="openEditModal('project')"
-                                        class="flex items-center gap-1.5">
-                                        <x-icon name="o-pencil" class="size-4" />
-                                        Edit
-                                    </span>
-                                    <span wire:loading wire:target="openEditModal('project')">
-                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                                    </span>
-                                </x-ui.button>
-                            @endif
+                            <div class="flex items-center gap-2">
+                                @if ($isCurrentYear && $projectData->count() == 0)
+                                    <x-ui.button variant="primary" size="sm"
+                                        wire:click="openAddModal('project')" wire:loading.attr="disabled"
+                                        class="h-8">
+                                        <span wire:loading.remove wire:target="openAddModal('project')"
+                                            class="flex items-center gap-1.5">
+                                            <x-icon name="o-plus" class="size-4" />
+                                            Add
+                                        </span>
+                                        <span wire:loading wire:target="openAddModal('project')">
+                                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                        </span>
+                                    </x-ui.button>
+                                @endif
+                                @if ($canEditProject && $projectData->count() > 0)
+                                    <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('project')"
+                                        wire:loading.attr="disabled" class="h-8">
+                                        <span wire:loading.remove wire:target="openEditModal('project')"
+                                            class="flex items-center gap-1.5">
+                                            <x-icon name="o-pencil" class="size-4" />
+                                            Edit
+                                        </span>
+                                        <span wire:loading wire:target="openEditModal('project')">
+                                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                        </span>
+                                    </x-ui.button>
+                                @endif
+                            </div>
                         </div>
                         @if ($projectData->count() > 0)
                             <div class="space-y-3">
@@ -439,64 +493,43 @@
     </div>
 
     {{-- Add/Edit Modal --}}
-    <x-modal wire:model="addModal" :title="$isEdit ? 'Edit Development Plan' : 'Add Development Plan'" separator box-class="max-w-3xl h-fit">
+    <x-modal wire:model="addModal" :title="$isEdit ? 'Edit Development Plan' : 'Add Development Plan'" separator box-class="max-w-3xl h-fit !overflow-visible">
         <x-form wire:submit="save" no-separator>
-            {{-- Tabs - Show all tabs for Add mode, only specific tab for Edit mode --}}
-            @if (!$isEdit)
-                <div class="border-b border-gray-200">
-                    <nav class="flex gap-6 -mb-px">
-                        <button type="button" wire:click="setActiveTab('training')"
-                            class="py-2 px-1 text-sm font-medium border-b-2 transition-colors {{ $activeTab === 'training' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                            Training
-                        </button>
-                        <button type="button" wire:click="setActiveTab('self-learning')"
-                            class="py-2 px-1 text-sm font-medium border-b-2 transition-colors {{ $activeTab === 'self-learning' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                            Self Learning
-                        </button>
-                        <button type="button" wire:click="setActiveTab('mentoring')"
-                            class="py-2 px-1 text-sm font-medium border-b-2 transition-colors {{ $activeTab === 'mentoring' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                            Mentoring
-                        </button>
-                        <button type="button" wire:click="setActiveTab('project')"
-                            class="py-2 px-1 text-sm font-medium border-b-2 transition-colors {{ $activeTab === 'project' ? 'border-primary text-primary' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
-                            Project Assignment
-                        </button>
-                    </nav>
-                </div>
-            @else
-                {{-- Edit mode: Show only the category being edited --}}
-                <div class="mb-4">
-                    <h4 class="text-sm font-medium text-gray-700">
-                        Editing:
-                        @if ($editingCategory === 'training')
-                            Training Plans
-                        @elseif($editingCategory === 'self_learning')
-                            Self Learning
-                        @elseif($editingCategory === 'mentoring')
-                            Mentoring
-                        @elseif($editingCategory === 'project')
-                            Project Assignment
-                        @endif
-                    </h4>
-                </div>
-            @endif
+            {{-- Show category being added/edited --}}
+            <div class="mb-4">
+                <h4 class="text-sm font-medium text-gray-700">
+                    {{ $isEdit ? 'Editing' : 'Adding' }}:
+                    @if ($editingCategory === 'training')
+                        Training Plans
+                    @elseif($editingCategory === 'self_learning')
+                        Self Learning
+                    @elseif($editingCategory === 'mentoring')
+                        Mentoring
+                    @elseif($editingCategory === 'project')
+                        Project Assignment
+                    @endif
+                </h4>
+            </div>
 
             {{-- Training Tab --}}
             @if ($activeTab === 'training')
                 <div class="space-y-4">
                     @foreach ($trainingPlans as $index => $plan)
-                        <div class="grid grid-cols-12 gap-4 items-end">
-                            <div class="col-span-4">
+                        <div class="grid grid-cols-12 gap-4 items-end relative">
+                            <div class="col-span-4 relative overflow-visible">
                                 <x-choices label="{{ $index === 0 ? 'Group Competency' : '' }}"
                                     wire:model.live="trainingPlans.{{ $index }}.group" :options="$typeOptions"
                                     option-value="value" option-label="label" placeholder="Select group"
-                                    class="focus-within:border-0" single />
+                                    class="focus-within:border-0 [&_.choices__list--dropdown]:absolute [&_.choices__list--dropdown]:z-[9999] [&_.choices__list--dropdown]:!max-h-60"
+                                    single />
                             </div>
-                            <div class="{{ count($trainingPlans) > 1 ? 'col-span-7' : 'col-span-8' }}">
+                            <div
+                                class="{{ count($trainingPlans) > 1 ? 'col-span-7' : 'col-span-8' }} relative overflow-visible">
                                 <x-choices label="{{ $index === 0 ? 'Competency' : '' }}"
                                     wire:model="trainingPlans.{{ $index }}.competency_id" :options="$this->getCompetenciesByType($trainingPlans[$index]['group'] ?? '')"
                                     option-value="value" option-label="label" placeholder="Select competency"
-                                    class="focus-within:border-0" single />
+                                    class="focus-within:border-0 [&_.choices__list--dropdown]:absolute [&_.choices__list--dropdown]:z-[9999] [&_.choices__list--dropdown]:!max-h-60"
+                                    single />
                             </div>
                             @if (count($trainingPlans) > 1)
                                 <div class="col-span-1">

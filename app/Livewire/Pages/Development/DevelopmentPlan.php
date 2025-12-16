@@ -103,12 +103,18 @@ class DevelopmentPlan extends Component
         $this->activeTab = $tab;
     }
 
-    public function openAddModal()
+    public function openAddModal($category = 'training')
     {
         $this->resetForm();
         $this->isEdit = false;
-        $this->editingCategory = null; // Reset editing category for add mode
-        $this->activeTab = 'training'; // Start with training tab
+        $this->editingCategory = $category; // Set editing category for add mode
+        // Set active tab based on category
+        $this->activeTab = match ($category) {
+            'self_learning' => 'self-learning',
+            'mentoring' => 'mentoring',
+            'project' => 'project',
+            default => 'training',
+        };
         $this->addModal = true;
     }
 
@@ -501,7 +507,8 @@ class DevelopmentPlan extends Component
 
     private function saveTrainingPlans($user, $isDraft = false)
     {
-        $status = $isDraft ? 'draft' : 'pending_spv';
+        // If user is supervisor, skip supervisor approval and go directly to LID
+        $status = $isDraft ? 'draft' : ($user->position === 'supervisor' ? 'pending_leader' : 'pending_spv');
 
         foreach ($this->trainingPlans as $plan) {
             if (!empty($plan['competency_id'])) {
@@ -530,7 +537,8 @@ class DevelopmentPlan extends Component
 
     private function saveSelfLearningPlan($user, $isDraft = false)
     {
-        $status = $isDraft ? 'draft' : 'pending_spv';
+        // If user is supervisor, skip supervisor approval and go directly to LID
+        $status = $isDraft ? 'draft' : ($user->position === 'supervisor' ? 'pending_leader' : 'pending_spv');
 
         foreach ($this->selfLearningPlans as $plan) {
             // Skip empty rows
@@ -563,7 +571,8 @@ class DevelopmentPlan extends Component
 
     private function saveMentoringPlan($user, $isDraft = false)
     {
-        $status = $isDraft ? 'draft' : 'pending_spv';
+        // If user is supervisor, skip supervisor approval and go directly to LID
+        $status = $isDraft ? 'draft' : ($user->position === 'supervisor' ? 'pending_leader' : 'pending_spv');
 
         foreach ($this->mentoringPlans as $plan) {
             // Skip empty rows
@@ -594,7 +603,8 @@ class DevelopmentPlan extends Component
 
     private function saveProjectPlan($user, $isDraft = false)
     {
-        $status = $isDraft ? 'draft' : 'pending_spv';
+        // If user is supervisor, skip supervisor approval and go directly to LID
+        $status = $isDraft ? 'draft' : ($user->position === 'supervisor' ? 'pending_leader' : 'pending_spv');
 
         foreach ($this->projectPlans as $plan) {
             // Skip empty rows

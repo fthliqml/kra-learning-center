@@ -163,7 +163,7 @@ return [
             'icon' => 'folder-open',
             'href' => '/courses/management',
             'positions' => ['section_head', 'department_head', 'division_head'],
-            'roles' => ['instructor', 'certificator', 'admin'],
+            'roles' => ['multimedia', 'instructor', 'certificator', 'admin'],
         ],
 
         // Certification - LID Roles + Leadership Positions
@@ -207,6 +207,7 @@ return [
             'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
+            'positions' => ['section_head', 'department_head', 'division_head'],
             'roles' => ['instructor', 'certificator', 'admin'],
             'submenu' => [
                 [
@@ -217,16 +218,19 @@ return [
                 [
                     'label' => 'Survey 1',
                     'href' => '/survey/1/management',
+                    'positions' => ['section_head', 'department_head', 'division_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Survey 2',
                     'href' => '/survey/2/management',
+                    'positions' => ['section_head', 'department_head', 'division_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Survey 3',
                     'href' => '/survey/3/management',
+                    'positions' => ['section_head', 'department_head', 'division_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
             ],

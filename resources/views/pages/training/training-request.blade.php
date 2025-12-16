@@ -25,7 +25,7 @@
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
-                @if (auth()->check() && auth()->user()->hasRole('spv'))
+                @if (auth()->check() && auth()->user()->hasPosition('supervisor'))
                     <!-- Add Button (SPV only) -->
                     <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal"
                         class="h-10" wire:loading.attr="readonly">
@@ -134,15 +134,20 @@
                 class="focus-within:border-0" :readonly="true" />
 
             @if ($mode === 'preview')
+                <x-input label="Group Competency" placeholder="Auto filled from competency"
+                    wire:model.defer="formData.group_comp" class="focus-within:border-0" :readonly="true" />
                 <x-input label="Competency" :value="$formData['competency_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
             @else
-                <x-choices label="Competency" wire:model.live="formData.competency_id" :options="$competencies"
-                    option-value="id" option-label="name" placeholder="Select competency..."
-                    class="focus-within:border-0" hint="Type at least 2 chars" searchable single />
-            @endif
+                <x-choices label="Group Competency" wire:model.live="selectedGroupComp" :options="$groupCompOptions"
+                    option-value="value" option-label="label" placeholder="Select group competency first..."
+                    class="focus-within:border-0" searchable single clearable />
 
-            <x-input label="Group Competency" placeholder="Auto filled from competency"
-                wire:model.defer="formData.group_comp" class="focus-within:border-0" :readonly="true" />
+                <x-choices label="Competency" wire:model.live="formData.competency_id" :options="$competencies"
+                    option-value="id" option-label="name" :placeholder="$selectedGroupComp ? 'Select competency...' : 'Please select group competency first'" class="focus-within:border-0"
+                    :hint="$selectedGroupComp
+                        ? 'Type at least 2 chars'
+                        : 'Select group competency to enable this field'" searchable single />
+            @endif
 
             @if ($mode === 'preview')
                 <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"

@@ -32,6 +32,8 @@ class Module extends Component
         'method' => '',
         'duration' => '',
         'frequency' => '',
+        'theory_passing_score' => '',
+        'practical_passing_score' => '',
     ];
 
     protected $rules = [
@@ -42,6 +44,8 @@ class Module extends Component
         'formData.method' => 'nullable|string|max:255',
         'formData.duration' => 'required|numeric|min:1',
         'formData.frequency' => 'required|integer|min:1',
+        'formData.theory_passing_score' => 'required|numeric|min:0|max:100',
+        'formData.practical_passing_score' => 'required|numeric|min:0|max:100',
     ];
 
     public function updated($property): void
@@ -72,6 +76,8 @@ class Module extends Component
             'method' => $module->method,
             'duration' => $module->duration,
             'frequency' => $module->frequency,
+            'theory_passing_score' => $module->theory_passing_score,
+            'practical_passing_score' => $module->practical_passing_score,
         ];
 
         $this->mode = 'preview';
@@ -93,6 +99,8 @@ class Module extends Component
             'method' => $module->method,
             'duration' => $module->duration,
             'frequency' => $module->frequency,
+            'theory_passing_score' => $module->theory_passing_score,
+            'practical_passing_score' => $module->practical_passing_score,
         ];
 
         $this->mode = 'edit';

@@ -17,11 +17,15 @@ class TrainingModule extends Model
         'method',
         'duration',
         'frequency',
+        'theory_passing_score',
+        'practical_passing_score',
     ];
 
     protected $casts = [
         'duration' => 'integer',
         'frequency' => 'integer',
+        'theory_passing_score' => 'double',
+        'practical_passing_score' => 'double',
     ];
 
     /**

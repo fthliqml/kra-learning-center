@@ -3,6 +3,8 @@
         @php
             $typeUpper = strtoupper($training->type ?? '');
             $isDone = strtolower($training->status ?? '') === 'done';
+            $theoryMin = $training->module->theory_passing_score ?? null;
+            $practicalMin = $training->module->practical_passing_score ?? null;
         @endphp
 
         @if ($typeUpper === 'LMS')
@@ -18,6 +20,23 @@
                 <p class="text-sm text-green-700">
                     <strong>Training Closed:</strong> This training has been completed and marked as done.
                 </p>
+            </div>
+        @elseif($theoryMin !== null || $practicalMin !== null)
+            <div
+                class="p-3 md:p-4 rounded-lg border border-blue-200 bg-blue-50 text-xs md:text-sm text-blue-700 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                <div class="font-medium">Minimum Passing Scores:</div>
+                <div class="flex flex-wrap items-center gap-3">
+                    @if ($theoryMin !== null)
+                        <span class="inline-flex items-center gap-1"><span class="font-semibold">Theory
+                                (Posttest)</span><span>&ge;
+                                {{ rtrim(rtrim(number_format((float) $theoryMin, 2, '.', ''), '0'), '.') }}</span></span>
+                    @endif
+                    @if ($practicalMin !== null)
+                        <span class="inline-flex items-center gap-1"><span
+                                class="font-semibold">Practical</span><span>&ge;
+                                {{ rtrim(rtrim(number_format((float) $practicalMin, 2, '.', ''), '0'), '.') }}</span></span>
+                    @endif
+                </div>
             </div>
         @endif
 

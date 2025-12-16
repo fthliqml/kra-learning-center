@@ -157,6 +157,17 @@
                     :readonly="$mode === 'preview'" />
             </div>
 
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-input label="Theory Passing Score (%)" type="number"
+                    wire:model.defer="formData.theory_passing_score" placeholder="80" class="focus-within:border-0"
+                    min="0" max="100" step="0.01" :error="$errors->first('formData.theory_passing_score')" :readonly="$mode === 'preview'" />
+
+                <x-input label="Practical Passing Score (%)" type="number"
+                    wire:model.defer="formData.practical_passing_score" placeholder="80"
+                    class="focus-within:border-0" min="0" max="100" step="0.01" :error="$errors->first('formData.practical_passing_score')"
+                    :readonly="$mode === 'preview'" />
+            </div>
+
             {{-- Actions --}}
             <x-slot:actions>
                 <x-ui.button @click="$wire.modal = false" type="button">
