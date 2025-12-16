@@ -23,10 +23,21 @@ class DetailTrainingModal extends Component
 
     protected $listeners = [
         'open-detail-training-modal' => 'open',
-        'confirm-delete-training' => 'onConfirmDelete',
         'training-closed' => 'onTrainingClosed',
         'close-modal' => 'closeModal',
     ];
+
+    public function triggerSaveDraft(): void
+    {
+        // Forward action to Close tab component
+        $this->dispatch('training-close-save-draft');
+    }
+
+    public function triggerCloseTraining(): void
+    {
+        // Forward action to Close tab component
+        $this->dispatch('training-close-close');
+    }
 
     // Session helper methods removed; handled inside child tabs
 
@@ -84,7 +95,7 @@ class DetailTrainingModal extends Component
         if (!$this->selectedEvent)
             return collect();
         $period = CarbonPeriod::create($this->selectedEvent['start_date'], $this->selectedEvent['end_date']);
-        return collect($period)->map(function ($date, $index) {
+        return collect($period)->map(function (\Carbon\Carbon $date, $index) {
             return [
                 'id' => $index + 1,
                 'name' => $date->format('d M Y'),
@@ -107,62 +118,6 @@ class DetailTrainingModal extends Component
         $this->modal = false;
     }
 
-    public function requestDeleteConfirm(): void
-    {
-        $id = $this->selectedEvent['id'] ?? null;
-        // Dispatch Livewire event to global ConfirmDialog component (positional arguments)
-        $this->dispatch('confirm', 'Delete Confirmation', 'Are you sure you want to delete this training along with all sessions and attendance?', 'confirm-delete-training', $id);
-    }
-
-    public function onConfirmDelete($id = null): void
-    {
-        // Ensure the confirmation corresponds to the currently opened training (if id is passed)
-        if ($id && isset($this->selectedEvent['id']) && (int) $id !== (int) $this->selectedEvent['id']) {
-            return;
-        }
-        $this->deleteTraining();
-    }
-
-    public function deleteTraining()
-    {
-        if (!$this->selectedEvent || !isset($this->selectedEvent['id'])) {
-            return;
-        }
-        $id = $this->selectedEvent['id'];
-        try {
-            DB::transaction(function () use ($id) {
-                // Load training with sessions to collect session IDs
-                $training = Training::with('sessions')->find($id);
-                if (!$training)
-                    return;
-
-                $sessionIds = $training->sessions->pluck('id')->all();
-                if (!empty($sessionIds)) {
-                    // Delete attendances under sessions
-                    TrainingAttendance::whereIn('session_id', $sessionIds)->delete();
-                }
-                // Delete sessions
-                \App\Models\TrainingSession::where('training_id', $id)->delete();
-                // Delete assessments if relationship exists on table (best effort)
-                if (method_exists($training, 'assessments')) {
-                    $training->assessments()->delete();
-                }
-                // Finally delete training
-                $training->delete();
-            });
-
-            // Notify parent and close
-            $this->dispatch('training-deleted', ['id' => $id]);
-            $this->success('Training deleted.', position: 'toast-top toast-center');
-            $this->modal = false;
-            // Close confirm dialog and stop spinner
-            $this->dispatch('confirm-done');
-        } catch (\Throwable $e) {
-            $this->error('Failed to delete training.');
-            $this->dispatch('confirm-done');
-        }
-    }
-
     public function render()
     {
         return view('components.training.detail-training-modal', [
@@ -170,4 +125,3 @@ class DetailTrainingModal extends Component
         ]);
     }
 }
-

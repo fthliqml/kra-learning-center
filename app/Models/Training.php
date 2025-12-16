@@ -11,6 +11,7 @@ class Training extends Model
 {
     protected $fillable = [
         'course_id',
+        'module_id',
         'name',
         'type',
         'group_comp',
@@ -61,6 +62,14 @@ class Training extends Model
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id');
+    }
+
+    /**
+     * Link to an optional training module (nullable FK in migration).
+     */
+    public function module()
+    {
+        return $this->belongsTo(TrainingModule::class, 'module_id');
     }
 
     /**

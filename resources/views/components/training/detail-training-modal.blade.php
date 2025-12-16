@@ -84,18 +84,25 @@
                 <x-button wire:click="closeModal"
                     class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
                 @role('admin')
-                    <div class="flex items-center sm:items-center justify-center gap-3 w-full sm:w-auto">
-                        <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto"
-                            spinner="requestDeleteConfirm">
-                            <x-icon name="o-trash" /><span class="">Delete</span>
-                        </x-button>
-                    </div>
+                    @if (
+                        $activeTab === 'close-training' &&
+                            strtolower($selectedEvent['status'] ?? '') !== 'done' &&
+                            strtoupper($selectedEvent['type'] ?? '') !== 'LMS')
+                        <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                            <x-button wire:click="triggerSaveDraft" spinner="triggerSaveDraft"
+                                class="btn btn-outline btn-primary">
+                                <x-icon name="o-document-text" />
+                                <span>Save Draft</span>
+                            </x-button>
+                            <x-button wire:click="triggerCloseTraining" spinner="triggerCloseTraining"
+                                class="btn btn-primary">
+                                <x-icon name="o-check-circle" />
+                                <span>Close Training</span>
+                            </x-button>
+                        </div>
+                    @endif
                 @endrole
             </div>
-            @role('admin')
-                <div class="mt-4 text-xs text-gray-500 text-right">Deleting will remove all days, sessions, and attendances.
-                </div>
-            @endrole
         </x-modal>
     @endif
 </div>

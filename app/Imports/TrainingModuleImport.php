@@ -2,6 +2,7 @@
 
 namespace App\Imports;
 
+use App\Models\Competency;
 use App\Models\TrainingModule;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
@@ -16,9 +17,12 @@ class TrainingModuleImport implements ToModel, WithHeadingRow, WithValidation
      */
     public function model(array $row)
     {
+        // Find competency by code
+        $competency = Competency::where('code', $row['competency_code'])->first();
+
         return new TrainingModule([
             'title' => $row['module_title'],
-            'group_comp' => $row['group_competency'],
+            'competency_id' => $competency?->id,
             'objective' => $row['objective'],
             'training_content' => $row['training_content'],
             'method' => $row['method'],
@@ -36,7 +40,7 @@ class TrainingModuleImport implements ToModel, WithHeadingRow, WithValidation
     {
         return [
             'module_title' => 'required|string',
-            'group_competency' => 'required|string',
+            'competency_code' => 'required|string|exists:competency,code',
             'objective' => 'nullable|string',
             'training_content' => 'nullable|string',
             'method' => 'nullable|string',

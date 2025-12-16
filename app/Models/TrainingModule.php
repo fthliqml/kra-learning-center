@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class TrainingModule extends Model
 {
@@ -10,7 +11,7 @@ class TrainingModule extends Model
 
     protected $fillable = [
         'title',
-        'group_comp',
+        'competency_id',
         'objective',
         'training_content',
         'method',
@@ -22,4 +23,12 @@ class TrainingModule extends Model
         'duration' => 'integer',
         'frequency' => 'integer',
     ];
+
+    /**
+     * Get the competency associated with this training module.
+     */
+    public function competency(): BelongsTo
+    {
+        return $this->belongsTo(Competency::class);
+    }
 }

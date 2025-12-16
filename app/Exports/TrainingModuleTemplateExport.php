@@ -16,7 +16,7 @@ class TrainingModuleTemplateExport implements FromCollection, WithHeadings, With
 
     public function headings(): array
     {
-        return ['No', 'Module Title', 'Group Competency', 'Objective', 'Training Content', 'Method', 'Duration (hours)', 'Frequency (days)'];
+        return ['No', 'Module Title', 'Competency Code', 'Objective', 'Training Content', 'Method', 'Duration (hours)', 'Frequency (days)'];
     }
 
     public function styles(Worksheet $sheet)
