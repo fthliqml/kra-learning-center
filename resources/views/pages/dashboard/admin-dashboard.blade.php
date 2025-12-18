@@ -24,23 +24,23 @@
                     </div>
                 </div>
 
-                {{-- Upcoming Schedules --}}
+                {{-- Total Employees --}}
                 <div
                     class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Upcoming Schedules</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $upcomingSchedules }}
-                                <span class="text-base font-normal text-gray-400">sessions</span>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Employees</p>
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalEmployees }}
+                                <span class="text-base font-normal text-gray-400">employees</span>
                             </p>
                         </div>
                         <div class="p-3 bg-secondary rounded-xl">
-                            <x-mary-icon name="o-calendar-days" class="w-7 h-7 text-white" />
+                            <x-mary-icon name="o-users" class="w-7 h-7 text-white" />
                         </div>
                     </div>
                     <div class="mt-3 flex items-center text-sm text-gray-500 dark:text-gray-400">
                         <x-mary-icon name="o-information-circle" class="w-4 h-4 mr-1" />
-                        <span>Starting from today</span>
+                        <span>Active employees</span>
                     </div>
                 </div>
             </div>
@@ -162,17 +162,17 @@
             </div>
         </div>
 
-        {{-- Right Column: Calendar + Pending Approvals --}}
+        {{-- Right Column: Calendar + Upcoming Schedules --}}
         <div class="lg:col-span-1 space-y-6">
             {{-- Calendar View (Mini) --}}
             <livewire:components.dashboard.calendar-view :events="$calendarEvents" />
 
-            {{-- Pending Approvals List --}}
-            <livewire:components.dashboard.pending-approvals />
+            {{-- Upcoming Schedules List --}}
+            <livewire:components.dashboard.upcoming-schedules />
         </div>
     </div>
 
-    {{-- ApexCharts Script --}}
+    {{-- ApexCharts Script (same as leader) --}}
     @push('scripts')
         <script>
             document.addEventListener('livewire:initialized', function() {
@@ -183,7 +183,6 @@
                 const chartElement = document.querySelector("#training-chart");
                 if (!chartElement) return;
 
-                // Clear any existing chart
                 chartElement.innerHTML = '';
 
                 const options = {
@@ -206,12 +205,10 @@
                             color: '#6366f1'
                         },
                         events: {
-                            // Handle click on data point
                             dataPointSelection: function(event, chartContext, config) {
                                 const monthIndex = config.dataPointIndex;
                                 @this.call('selectMonth', monthIndex);
                             },
-                            // Handle click on marker
                             markerClick: function(event, chartContext, {
                                 seriesIndex,
                                 dataPointIndex,
@@ -332,21 +329,16 @@
 
                 const chart = new ApexCharts(chartElement, options);
                 chart.render();
-
-                // Store chart instance for later use
                 window.trainingChart = chart;
             }
 
-            // Reinitialize chart when Livewire updates
             document.addEventListener('livewire:navigated', function() {
                 setTimeout(initTrainingChart, 100);
             });
 
-            // Donut chart instances
             let donutTypeChart = null;
             let donutGroupChart = null;
 
-            // Listen for breakdown data loaded
             Livewire.on('breakdown-loaded', ({
                 byType,
                 byGroupComp,
@@ -366,12 +358,10 @@
                 const el = document.querySelector('#donut-type-chart');
                 if (!el) return;
 
-                // Destroy existing chart
                 if (donutTypeChart) {
                     donutTypeChart.destroy();
                 }
 
-                // Map type labels
                 const typeLabels = {
                     'IN': 'In-House',
                     'OUT': 'Out-House',
@@ -455,7 +445,6 @@
                 const el = document.querySelector('#donut-group-chart');
                 if (!el) return;
 
-                // Destroy existing chart
                 if (donutGroupChart) {
                     donutGroupChart.destroy();
                 }
