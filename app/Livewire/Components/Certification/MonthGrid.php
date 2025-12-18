@@ -4,6 +4,7 @@ namespace App\Livewire\Components\Certification;
 
 use Livewire\Component;
 use App\Models\CertificationSession;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 class MonthGrid extends Component
@@ -21,8 +22,9 @@ class MonthGrid extends Component
             'session_id' => $session->id,
             'certification_id' => $cert?->id,
         ];
+        /** @var User|null $user */
         $user = Auth::user();
-        $isAdmin = $user && strtolower($user->role ?? '') === 'admin';
+        $isAdmin = (bool) ($user?->hasRole('admin'));
 
         // Check if certification is closed
         $isClosed = in_array(strtolower($cert?->status ?? ''), ['closed', 'done', 'completed']);
@@ -64,8 +66,9 @@ class MonthGrid extends Component
 
     public function addForDate(string $isoDate): void
     {
+        /** @var User|null $user */
         $user = Auth::user();
-        $isAdmin = $user && strtolower($user->role ?? '') === 'admin';
+        $isAdmin = (bool) ($user?->hasRole('admin'));
         if (!$isAdmin) return;
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $isoDate)) return;
         $this->dispatch('open-certification-form-date', ['date' => $isoDate]);

@@ -207,7 +207,7 @@
             @php
                 $canModerate =
                     auth()->check() &&
-                    auth()->user()->hasRole('leader') &&
+                    auth()->user()->role === 'section_head' &&
                     strtolower(auth()->user()->section ?? '') === 'lid';
                 $isPending = strtolower($formData['status'] ?? 'pending') === 'pending';
             @endphp

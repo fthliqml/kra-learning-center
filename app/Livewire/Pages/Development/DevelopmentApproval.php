@@ -72,7 +72,7 @@ class DevelopmentApproval extends Component
     {
         $user = Auth::user();
         return $user
-            && strtolower(trim($user->role ?? '')) === 'leader'
+            && in_array(strtolower(trim($user->role ?? '')), ['section_head', 'dept_head', 'div_head', 'director'])
             && strtolower(trim($user->section ?? '')) === 'lid';
     }
 
@@ -141,7 +141,7 @@ class DevelopmentApproval extends Component
         if ($this->search) {
             $query->where(function ($q) {
                 $q->where('name', 'like', "%{$this->search}%")
-                    ->orWhere('NRP', 'like', "%{$this->search}%")
+                    ->orWhere('nrp', 'like', "%{$this->search}%")
                     ->orWhere('section', 'like', "%{$this->search}%");
             });
         }
@@ -213,7 +213,7 @@ class DevelopmentApproval extends Component
         $user = User::find($userId);
         $this->selectedUserData = [
             'name' => $user->name,
-            'nrp' => $user->NRP,
+            'nrp' => $user->nrp,
             'section' => $user->section,
             'position' => $user->position,
         ];

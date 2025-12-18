@@ -32,6 +32,11 @@ class Posttest extends Component
             abort(403, 'You are not assigned to this course.');
         }
 
+        // Gate: before schedule start, user can only view overview
+        if ($userId && !$course->isAvailableForUser($userId)) {
+            return redirect()->route('courses-overview.show', ['course' => $course->id]);
+        }
+
         // Ensure enrollment exists
         $enrollment = null;
         if ($userId) {
@@ -183,7 +188,8 @@ class Posttest extends Component
             }
         }
 
-        return view('pages.courses.posttest', [
+        /** @var \Illuminate\View\View&\App\Support\Ide\LivewireViewMacros $view */
+        $view = view('pages.courses.posttest', [
             'course' => $this->course,
             'posttest' => $this->posttest,
             'questions' => $this->questions,
@@ -191,7 +197,9 @@ class Posttest extends Component
             'userId' => $userId,
             'sectionsList' => $sectionsList,
             'showMaterialPicker' => $showMaterialPicker,
-        ])->layout('layouts.livewire.course', [
+        ]);
+
+        return $view->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'posttest',
             'progress' => $this->course->progressForUser(),

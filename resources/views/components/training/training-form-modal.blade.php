@@ -105,8 +105,9 @@
                                 <!-- Trainer -->
                                 <x-choices label="Trainer" wire:model="trainerId" :options="$trainersSearchable"
                                     search-function="trainerSearch" debounce="300ms" option-value="id"
-                                    option-label="name" placeholder="Search name of trainer..." class="focus-within:border-0"
-                                    hint="Type at least 2 chars" searchable single clearable />
+                                    option-label="name" placeholder="Search name of trainer..."
+                                    class="focus-within:border-0" hint="Type at least 2 chars" searchable single
+                                    clearable />
 
                                 <!-- Participants Section -->
                                 <x-choices label="Select Participants" wire:model="participants" :options="$usersSearchable"

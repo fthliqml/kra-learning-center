@@ -9,6 +9,9 @@
         <p class="text-sm text-gray-500 dark:text-gray-400">Hi, {{ auth()->user()->name }}</p>
     </div>
 
+    {{-- Admin/Leadership Dashboard with Charts --}}
+    @if (Auth::user()->hasRole('admin') ||
+            in_array(Auth::user()->role, ['section_head', 'dept_head', 'div_head', 'director']))
     {{-- Admin/Instructor/Leader/Employee Dashboard --}}
     @if (Auth::user()->hasRole('admin'))
         @livewire('pages.dashboard.admin-dashboard')

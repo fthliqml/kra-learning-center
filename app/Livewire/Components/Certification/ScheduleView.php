@@ -3,6 +3,7 @@
 namespace App\Livewire\Components\Certification;
 
 use App\Models\CertificationSession;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Collection;
@@ -180,8 +181,9 @@ class ScheduleView extends Component
 
     public function addCertificationForDate(string $isoDate): void
     {
+        /** @var User|null $user */
         $user = Auth::user();
-        if (!$user || strtolower($user->role ?? '') !== 'admin') {
+        if (!$user || !$user->hasRole('admin')) {
             return; // only admin can quick-add
         }
         // Basic guard: ensure date looks like YYYY-MM-DD

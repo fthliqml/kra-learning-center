@@ -17,6 +17,8 @@ class PostTestQuestions extends Component
   public ?int $courseId = null;
   public bool $hasEverSaved = false;
   public bool $persisted = false;
+  public bool $isDirty = false; // track unsaved changes
+  protected string $originalHash = ''; // hash of saved state
   public array $errorQuestionIndexes = [];
 
   // Listen for new course draft creation so we can attach and persist
@@ -80,6 +82,22 @@ class PostTestQuestions extends Component
       $this->hasEverSaved = true;
       $this->persisted = true;
     }
+    $this->snapshot(); // Take snapshot after loading
+  }
+
+  protected function snapshot(): void
+  {
+    $this->originalHash = md5(json_encode($this->questions));
+    $this->isDirty = false;
+  }
+
+  protected function computeDirty(): void
+  {
+    $currentHash = md5(json_encode($this->questions));
+    $this->isDirty = $currentHash !== $this->originalHash;
+    if ($this->isDirty) {
+      $this->persisted = false;
+    }
   }
 
   private function makeQuestion(string $type = 'multiple'): array
@@ -97,6 +115,7 @@ class PostTestQuestions extends Component
   public function addQuestion(): void
   {
     $this->questions[] = $this->makeQuestion();
+    $this->computeDirty();
   }
 
   public function removeQuestion(int $index): void
@@ -104,6 +123,7 @@ class PostTestQuestions extends Component
     if (isset($this->questions[$index])) {
       unset($this->questions[$index]);
       $this->questions = array_values($this->questions);
+      $this->computeDirty();
     }
   }
 
@@ -111,6 +131,7 @@ class PostTestQuestions extends Component
   {
     if (isset($this->questions[$qIndex]) && $this->questions[$qIndex]['type'] === 'multiple') {
       $this->questions[$qIndex]['options'][] = '';
+      $this->computeDirty();
     }
   }
 
@@ -122,7 +143,7 @@ class PostTestQuestions extends Component
       if (($this->questions[$qIndex]['type'] ?? '') === 'multiple') {
         if (!isset($this->questions[$qIndex]['answer_nonce']))
           $this->questions[$qIndex]['answer_nonce'] = 0;
-        $ans =& $this->questions[$qIndex]['answer'];
+        $ans = &$this->questions[$qIndex]['answer'];
         if ($ans !== null) {
           if ($ans == $oIndex) {
             $ans = null;
@@ -132,11 +153,13 @@ class PostTestQuestions extends Component
           }
         }
       }
+      $this->computeDirty();
     }
   }
 
   public function updated($prop): void
   {
+    // Handle question type changes
     if (!is_array($prop) && preg_match('/^questions\\.(\\d+)\\.type$/', $prop, $m)) {
       $i = (int) $m[1];
       $type = $this->questions[$i]['type'] ?? null;
@@ -148,13 +171,18 @@ class PostTestQuestions extends Component
         $this->questions[$i]['answer'] = null;
       }
     }
+
+    // Track any changes to questions array for dirty state
+    if (str_starts_with($prop, 'questions')) {
+      $this->computeDirty();
+    }
   }
 
   public function setCorrectAnswer(int $qIndex, int $oIndex): void
   {
     if (!isset($this->questions[$qIndex]))
       return;
-    $q =& $this->questions[$qIndex];
+    $q = &$this->questions[$qIndex];
     if (($q['type'] ?? '') !== 'multiple')
       return;
     if (!isset($q['options'][$oIndex]))
@@ -167,6 +195,7 @@ class PostTestQuestions extends Component
     if ($new === null) {
       $q['answer_nonce']++;
     }
+    $this->computeDirty();
   }
 
   public function reorderByIds(array $orderedIds): void
@@ -200,6 +229,7 @@ class PostTestQuestions extends Component
       $new[] = $left;
     }
     $this->questions = $new;
+    $this->computeDirty();
   }
 
   public function goBack(): void
@@ -287,6 +317,7 @@ class PostTestQuestions extends Component
     $this->persisted = true;
     $this->hasEverSaved = true;
     $this->errorQuestionIndexes = [];
+    $this->snapshot(); // Take snapshot after successful save
     $this->success('Post test questions saved successfully', timeout: 4000, position: 'toast-top toast-center');
   }
 

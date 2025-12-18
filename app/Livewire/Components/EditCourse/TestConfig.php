@@ -5,6 +5,7 @@ namespace App\Livewire\Components\EditCourse;
 use Livewire\Component;
 use Mary\Traits\Toast;
 use App\Models\Test;
+use App\Models\Course;
 use Illuminate\Support\Facades\DB;
 
 class TestConfig extends Component
@@ -103,6 +104,18 @@ class TestConfig extends Component
 
     public function finish(): void
     {
+        // Check if course is complete and update status accordingly
+        if ($this->courseId) {
+            $course = Course::find($this->courseId);
+            if ($course && $course->isComplete()) {
+                // Change status from draft to inactive (ready to be assigned)
+                $course->update(['status' => 'inactive']);
+                $this->success('Course completed and ready to be assigned!', timeout: 4000, position: 'toast-top toast-center');
+            } elseif ($course && $course->status === 'draft') {
+                $this->warning('Course saved as draft. Complete all sections to make it ready.', timeout: 5000, position: 'toast-top toast-center');
+            }
+        }
+
         // Navigate back to courses management page (full redirect similar to CourseInfo::goManagement)
         $this->redirectRoute('courses-management.index', navigate: true);
     }

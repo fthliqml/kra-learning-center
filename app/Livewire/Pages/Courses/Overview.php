@@ -15,6 +15,7 @@ class Overview extends Component
     public int $assignUsers = 0;
     public int $durationDays = 0;
     public string $accordion = '';
+    public bool $canStart = true;
 
     public function mount(Course $course)
     {
@@ -36,6 +37,9 @@ class Overview extends Component
             abort(403, 'You are not assigned to this course.');
         }
 
+        // Availability: before schedule start, user can view overview only
+        $this->canStart = $userId ? $course->isAvailableForUser($userId) : false;
+
         // Ensure an enrollment record exists for progress tracking
         if ($userId) {
             $course->userCourses()->firstOrCreate(
@@ -45,6 +49,7 @@ class Overview extends Component
         }
 
         $this->course = $course->load([
+            'competency:id,type',
             'learningModules.sections.resources' => function ($q) {
                 // simple ordering for consistency
                 $q->orderBy('id');

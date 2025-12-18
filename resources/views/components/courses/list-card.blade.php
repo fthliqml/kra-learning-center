@@ -2,6 +2,9 @@
     if (!isset($course) || $course === null) {
         return;
     }
+
+    $userId = auth()->id();
+    $canStart = $userId ? $course->isAvailableForUser((int) $userId) : false;
 @endphp
 <div wire:key="course-list-{{ $course->id }}"
     x-on:click="if(!$event.target.closest('[data-card-action]')) { (window.Livewire && Livewire.navigate) ? Livewire.navigate('{{ route('courses-overview.show', $course) }}') : window.location.assign('{{ route('courses-overview.show', $course) }}'); }"
@@ -27,7 +30,7 @@
                 <div class="mb-1 flex items-center gap-2 mt-3">
                     <span
                         class="inline-flex items-center gap-1 rounded-full bg-primary/5 text-primary px-2 py-0.5 text-[11px] font-medium">
-                        {{ $course->group_comp }}
+                        {{ $course->competency->type ?? '—' }}
                     </span>
                 </div>
 
@@ -104,6 +107,13 @@
                     class="inline-flex items-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
                     aria-label="See results" @click.stop>
                     <span>See Results</span>
+                    <span aria-hidden="true">→</span>
+                </a>
+            @elseif (!$canStart)
+                <a wire:navigate href="{{ route('courses-overview.show', $course) }}" data-card-action
+                    class="inline-flex items-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
+                    aria-label="Go to course overview" @click.stop>
+                    <span>Course Overview</span>
                     <span aria-hidden="true">→</span>
                 </a>
             @elseif ($progress > 0)

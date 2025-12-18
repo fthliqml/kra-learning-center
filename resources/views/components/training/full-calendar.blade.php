@@ -32,7 +32,8 @@
                                 @endphp
                                 @php
                                     $type = strtoupper($training['type'] ?? '');
-                                    $isDone = strtolower($training['status'] ?? '') === 'done';
+                                    $status = strtolower($training['status'] ?? '');
+                                    $isDone = in_array($status, ['done', 'approved', 'rejected']);
                                     $isFaded = $training['is_faded'] ?? false;
                                     switch ($type) {
                                         case 'IN':
@@ -98,7 +99,8 @@
                                 @endphp
                                 @php
                                     $type = strtoupper($training['type'] ?? '');
-                                    $isDone = strtolower($training['status'] ?? '') === 'done';
+                                    $status = strtolower($training['status'] ?? '');
+                                    $isDone = in_array($status, ['done', 'approved', 'rejected']);
                                     $isFaded = $training['is_faded'] ?? false;
                                     switch ($type) {
                                         case 'IN':

@@ -16,14 +16,22 @@ return new class extends Migration
 
             // User details
             $table->string('name');
-            $table->string('email')->unique();
-            $table->string('password');
-            $table->string('section');
-            $table->integer('NRP');
-            $table->enum('role', ['employee', 'spv', 'instructor', 'certificator', 'admin', 'leader'])->default('employee');
-            $table->rememberToken();
+            $table->integer('nrp');
+            $table->string('email')->unique(); // For development login
+            $table->string('password'); // For development login
+            $table->string('section')->nullable();
+            $table->string('department')->nullable();
+            $table->string('division')->nullable();
+            $table->enum('position', ['employee', 'supervisor', 'section_head', 'department_head', 'division_head', 'director'])->default('employee');
 
             // Timestamps
+            $table->timestamps();
+        });
+
+        Schema::create('user_roles', function (Blueprint $table) {
+            $table->id();
+            $table->foreignId('user_id')->constrained('users')->onDelete('cascade');
+            $table->enum('role', ['instructor', 'certificator', 'admin', 'multimedia']);
             $table->timestamps();
         });
 
@@ -48,6 +56,7 @@ return new class extends Migration
      */
     public function down(): void
     {
+        Schema::dropIfExists('user_roles');
         Schema::dropIfExists('users');
         Schema::dropIfExists('password_reset_tokens');
         Schema::dropIfExists('sessions');

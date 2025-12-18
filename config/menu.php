@@ -10,28 +10,32 @@ return [
             'href' => '/',
         ],
 
-        // Competency - Admin, Leader
+        // Competency - Admin Role + Leadership Positions
         [
             'id' => 'competency',
             'label' => 'Competency',
             'icon' => 'archive-box',
             'href' => '/competency',
-            'roles' => ['admin', 'leader'],
+            'positions' => ['section_head', 'department_head', 'division_head'],
+            'roles' => ['admin'],
             'submenu' => [
                 [
                     'label' => 'Competency Book',
                     'href' => '/competency/book',
-                    'roles' => ['admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['admin'],
                 ],
                 [
                     'label' => 'Competency Value',
                     'href' => '/competency/value',
-                    'roles' => ['admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['admin'],
                 ],
                 [
                     'label' => 'Competency Matrix',
                     'href' => '/competency/matrix',
-                    'roles' => ['admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['admin'],
                 ],
             ],
         ],
@@ -50,18 +54,19 @@ return [
                 [
                     'label' => 'Development Approval',
                     'href' => '/development/approval',
-                    'roles' => ['spv', 'leader'],
+                    'positions' => ['supervisor', 'section_head', 'department_head', 'division_head'],
                 ],
             ],
         ],
 
-        // Courses - Employee and Supervisor
+        // Courses - Employee and Supervisor (Exclude LID)
         [
             'id' => 'courses',
             'label' => 'Courses',
             'icon' => 'book-open',
             'href' => '/courses',
-            'roles' => ['employee', 'spv'],
+            'positions' => ['employee', 'supervisor'],
+            'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
         ],
 
         // Training - Employee and Supervisor
@@ -70,17 +75,19 @@ return [
             'label' => 'Training',
             'icon' => 'academic-cap',
             'href' => '#',
-            'roles' => ['employee', 'spv'],
+            'positions' => ['employee', 'supervisor'],
+            'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
             'submenu' => [
                 [
                     'label' => 'Training Schedule',
                     'href' => '/training/schedule',
-                    'roles' => ['employee', 'spv'],
+                    'positions' => ['employee', 'supervisor'],
+                    'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
                 ],
                 [
                     'label' => 'Training Request',
                     'href' => '/training/request',
-                    'roles' => ['spv'],
+                    'positions' => ['supervisor'],
                 ],
             ],
         ],
@@ -91,103 +98,116 @@ return [
             'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
-            'roles' => ['employee', 'spv'],
+            'positions' => ['employee', 'supervisor'],
+            'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
             'submenu' => [
                 [
                     'label' => 'Survey 1',
                     'href' => '/survey/1',
-                    'roles' => ['employee', 'spv'],
+                    'positions' => ['employee', 'supervisor'],
+                    'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
                 ],
                 [
                     'label' => 'Survey 3',
                     'href' => '/survey/3',
-                    'roles' => ['spv'],
+                    'positions' => ['supervisor'],
                 ],
             ],
         ],
 
-        // Training - Admin, Instructor, Certificator, Leader
+        // Training - LID Roles + Leadership Positions
         [
             'id' => 'training-admin',
             'label' => 'Training',
             'icon' => 'academic-cap',
             'href' => '#',
-            'roles' => ['admin', 'instructor', 'certificator', 'leader'],
+            'positions' => ['section_head', 'department_head', 'division_head'],
+            'roles' => ['admin', 'instructor', 'certificator'],
             'submenu' => [
                 [
                     'label' => 'Trainer',
                     'href' => '/training/trainer',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Training Module',
                     'href' => '/training/module',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Training Schedule',
                     'href' => '/training/schedule',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Training Request',
                     'href' => '/training/request',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Training Approval',
                     'href' => '/training/approval',
-                    'roles' => ['leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
                 ],
             ],
         ],
 
-        // Course Management - Admin, Instructor, Certificator, Leader
+        // Course Management - LID Roles + Leadership Positions
         [
             'id' => 'courses-management',
             'label' => 'Course',
             'icon' => 'folder-open',
             'href' => '/courses/management',
-            'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+            'positions' => ['section_head', 'department_head', 'division_head'],
+            'roles' => ['multimedia', 'instructor', 'certificator', 'admin'],
         ],
 
-        // Certification - Certificator, Admin, Leader
+        // Certification - LID Roles + Leadership Positions
         [
             'id' => 'certification',
             'label' => 'Certification',
             'icon' => 'check-badge',
             'href' => '#',
-            'roles' => ['certificator', 'admin', 'leader'],
+            'positions' => ['section_head', 'department_head', 'division_head'],
+            'roles' => ['certificator', 'admin'],
             'submenu' => [
                 [
                     'label' => 'Certification Module',
                     'href' => '/certification/module',
-                    'roles' => ['certificator', 'admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['certificator', 'admin'],
                 ],
                 [
                     'label' => 'Certification Schedule',
                     'href' => '/certification/schedule',
-                    'roles' => ['certificator', 'admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['certificator', 'admin'],
                 ],
                 [
                     'label' => 'Certification Point',
                     'href' => '/certification/point',
-                    'roles' => ['certificator', 'admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['certificator', 'admin'],
                 ],
                 [
                     'label' => 'Certification Approval',
                     'href' => '/certification/approval',
-                    'roles' => ['leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
                 ],
             ],
         ],
 
-        // Survey Management - Admin, Instructor, Certificator
+        // Survey Management - LID Roles Only
         [
             'id' => 'survey',
             'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
+            'positions' => ['section_head', 'department_head', 'division_head'],
             'roles' => ['instructor', 'certificator', 'admin'],
             'submenu' => [
                 [
@@ -198,16 +218,19 @@ return [
                 [
                     'label' => 'Survey 1',
                     'href' => '/survey/1/management',
+                    'positions' => ['section_head', 'department_head', 'division_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Survey 2',
                     'href' => '/survey/2/management',
+                    'positions' => ['section_head', 'department_head', 'division_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Survey 3',
                     'href' => '/survey/3/management',
+                    'positions' => ['section_head', 'department_head', 'division_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
             ],
@@ -231,23 +254,26 @@ return [
             ],
         ],
 
-        // Reports - Admin, Instructor, Certificator, Leader
+        // Reports - LID Roles + Leadership Positions
         [
             'id' => 'reports',
             'label' => 'Reports',
             'icon' => 'chart-bar',
             'href' => '#',
-            'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+            'positions' => ['section_head', 'department_head', 'division_head'],
+            'roles' => ['instructor', 'certificator', 'admin'],
             'submenu' => [
                 [
                     'label' => 'Training Activity',
                     'href' => '/reports/training-activity',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Certification Activity',
                     'href' => '/reports/certification-activity',
-                    'roles' => ['instructor', 'certificator', 'admin', 'leader'],
+                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'roles' => ['instructor', 'certificator', 'admin'],
                 ],
             ],
         ],

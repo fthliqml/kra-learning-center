@@ -60,7 +60,7 @@
 
                 {{-- NRP --}}
                 @scope('cell_nrp', $user)
-                    <div class="text-center">{{ $user->NRP ?? '-' }}</div>
+                    <div class="text-center">{{ $user->nrp ?? '-' }}</div>
                 @endscope
 
                 {{-- Section --}}
@@ -88,9 +88,9 @@
                         };
                         $label = match ($status) {
                             'pending_spv' => 'Pending SPV',
-                            'pending_leader' => 'Pending Leader',
+                            'pending_leader' => 'Pending LID',
                             'rejected_spv' => 'Rejected by SPV',
-                            'rejected_leader' => 'Rejected by Leader',
+                            'rejected_leader' => 'Rejected by LID',
                             default => ucfirst($status),
                         };
                     @endphp
