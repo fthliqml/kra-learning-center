@@ -104,6 +104,48 @@ class Course extends Model
     }
 
     /**
+     * Determine whether the user can start/continue this course now.
+     * Rule: user must be assigned via TrainingAssessment, and at least one related training
+     * (for this course + user) has start_date <= today (or start_date is NULL).
+     */
+    public function isAvailableForUser(int $userId): bool
+    {
+        if (!$userId) {
+            return false;
+        }
+
+        $today = Carbon::today();
+        return $this->trainings()
+            ->whereHas('assessments', fn($a) => $a->where('employee_id', $userId))
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->exists();
+    }
+
+    /**
+     * If the course is not yet available, returns the earliest upcoming start_date.
+     * Returns null if no start_date is set (or user not assigned).
+     */
+    public function nextAvailableDateForUser(int $userId): ?Carbon
+    {
+        if (!$userId) {
+            return null;
+        }
+
+        $today = Carbon::today();
+        $row = $this->trainings()
+            ->whereHas('assessments', fn($a) => $a->where('employee_id', $userId))
+            ->whereNotNull('start_date')
+            ->whereDate('start_date', '>', $today)
+            ->orderBy('start_date')
+            ->select(['id', 'start_date'])
+            ->first();
+
+        return $row?->start_date ? Carbon::parse($row->start_date)->startOfDay() : null;
+    }
+
+    /**
      * Compute progress percentage for a specific user (or current auth user).
      */
     public function progressForUser(?User $user = null): int

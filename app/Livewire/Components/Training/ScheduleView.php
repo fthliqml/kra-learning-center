@@ -428,7 +428,7 @@ class ScheduleView extends Component
         return $this->trainings->filter(fn($t) => $c->between(Carbon::parse($t->start_date), Carbon::parse($t->end_date)))
             ->values()->map(function ($t) use ($iso) {
                 $status = strtolower($t->status ?? '');
-                $isClosed = in_array($status, ['closed', 'done', 'completed', 'approved', 'rejected']);
+                $isClosed = in_array($status, ['done', 'approved', 'rejected']);
                 $isPast = Carbon::parse($iso)->endOfDay()->isPast();
 
                 return [
@@ -442,7 +442,8 @@ class ScheduleView extends Component
                     'sessions' => $t->sessions,
                     'is_closed' => $isClosed,
                     'is_past' => $isPast,
-                    'is_faded' => $isClosed || $isPast,
+                    // Fade only when training is closed; do not fade merely because date has passed.
+                    'is_faded' => $isClosed,
                 ];
             })->toArray();
     }

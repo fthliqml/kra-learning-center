@@ -23,6 +23,9 @@
             <div
                 class="px-1 pt-2 mb-4 border-b border-gray-200 flex items-end justify-between gap-4 text-sm font-medium">
                 <div class="flex gap-6">
+                    @php
+                        $isLms = strtoupper($selectedEvent['type'] ?? '') === 'LMS';
+                    @endphp
                     <button type="button" wire:click="$set('activeTab','information')"
                         class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'information' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
                         Information
@@ -31,28 +34,22 @@
                         @endif
                     </button>
                     @anyrole('admin', 'instructor')
-                        <button type="button" wire:click="$set('activeTab','attendance')"
-                            class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'attendance' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
-                            Attendance
-                            @if ($activeTab === 'attendance')
-                                <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
-                            @endif
-                        </button>
-                        @php
-                            $trainingStatus = strtolower($selectedEvent['status'] ?? '');
-                            $showCloseTab =
-                                !in_array($trainingStatus, ['done', 'approved', 'rejected']) &&
-                                strtoupper($selectedEvent['type'] ?? '') !== 'LMS';
-                        @endphp
-                        @if ($showCloseTab)
-                            <button type="button" wire:click="$set('activeTab','close-training')"
-                                class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'close-training' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
-                                Close Training
-                                @if ($activeTab === 'close-training')
+                        @if (!$isLms)
+                            <button type="button" wire:click="$set('activeTab','attendance')"
+                                class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'attendance' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
+                                Attendance
+                                @if ($activeTab === 'attendance')
                                     <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
                                 @endif
                             </button>
                         @endif
+                        <button type="button" wire:click="$set('activeTab','close-training')"
+                            class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'close-training' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
+                            Close Training
+                            @if ($activeTab === 'close-training')
+                                <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
+                            @endif
+                        </button>
                     @endanyrole
                 </div>
                 <div class="flex items-center gap-3 pb-1">
@@ -93,7 +90,7 @@
 
             @anyrole('admin', 'instructor')
                 {{-- Attendance Section --}}
-                @if ($activeTab === 'attendance')
+                @if (!$isLms && $activeTab === 'attendance')
                     <livewire:components.training.tabs.training-attendance-tab :training-id="$selectedEvent['id']" :day-number="$dayNumber"
                         :key="'att-' . $selectedEvent['id'] . '-' . $dayNumber" lazy />
                 @endif
@@ -110,9 +107,7 @@
                 @role('admin')
                     @php
                         $trainingStatus = strtolower($selectedEvent['status'] ?? '');
-                        $canCloseTraining =
-                            !in_array($trainingStatus, ['done', 'approved', 'rejected']) &&
-                            strtoupper($selectedEvent['type'] ?? '') !== 'LMS';
+                        $canCloseTraining = !in_array($trainingStatus, ['done', 'approved', 'rejected']);
                     @endphp
                     @if ($activeTab === 'close-training' && $canCloseTraining)
                         <div class="flex items-center gap-3 w-full sm:w-auto justify-end">

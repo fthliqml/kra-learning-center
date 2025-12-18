@@ -45,6 +45,11 @@ class ModulePage extends Component
             abort(403, 'You are not assigned to this course.');
         }
 
+        // Gate: before schedule start, user can only view overview
+        if ($userId && !$course->isAvailableForUser($userId)) {
+            return redirect()->route('courses-overview.show', ['course' => $course->id]);
+        }
+
         // Ensure enrollment for progress tracking exists and mark in_progress on first engagement
         $enrollment = null;
         if ($userId) {
@@ -625,8 +630,9 @@ class ModulePage extends Component
             $hasSectionQuiz = SectionQuizQuestion::where('section_id', $activeSection->id)->exists();
         }
 
-        // Return page view and pass layout variables via layoutData()
-        return view('pages.courses.module-page', [
+        // Return page view and pass layout variables
+        /** @var \Illuminate\View\View&\App\Support\Ide\LivewireViewMacros $view */
+        $view = view('pages.courses.module-page', [
             'course' => $this->course,
             'topics' => $this->course->learningModules,
             'activeTopic' => $activeTopic,
@@ -640,7 +646,9 @@ class ModulePage extends Component
             'hasSectionQuiz' => $hasSectionQuiz,
             'quizQuestions' => $this->quizQuestions,
             'quizResult' => $this->quizResult,
-        ])->layout('layouts.livewire.course', [
+        ]);
+
+        return $view->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'module',
             'progress' => $this->course->progressForUser(),

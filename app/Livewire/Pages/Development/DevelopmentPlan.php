@@ -813,11 +813,11 @@ class DevelopmentPlan extends Component
         $projectCount = $projectData->count();
         $totalPlans = $trainingPlanCount + $selfLearningCount + $mentoringCount + $projectCount;
 
-        // Training Realization: Count training plans where user has completed training
-        // with matching competency and passed status
+        // Training Realization: count training plans that already have a closed training
+        // (done/approved/rejected). This matches the realization badge semantics.
         $trainingRealized = 0;
         foreach ($trainingPlansData as $plan) {
-            if ($plan->isRealized()) {
+            if ($plan->hasClosedTraining()) {
                 $trainingRealized++;
             }
         }

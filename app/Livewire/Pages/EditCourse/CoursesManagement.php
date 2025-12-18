@@ -86,7 +86,12 @@ class CoursesManagement extends Component
         $query = Course::query()
             ->with('competency:id,name,type')
             ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
-            ->when($this->filterGroup ?? $this->filter, fn($q, $group) => $q->where('group_comp', $group))
+            ->when($this->filterGroup ?? $this->filter, function ($q, $group) {
+                $value = trim((string) $group);
+                if ($value !== '') {
+                    $q->whereHas('competency', fn($qq) => $qq->where('type', $value));
+                }
+            })
             ->when($this->filterStatus, fn($q, $status) => $q->where('status', $status))
             ->orderBy('created_at', 'desc');
 
