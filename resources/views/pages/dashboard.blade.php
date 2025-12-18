@@ -9,17 +9,19 @@
         <p class="text-sm text-gray-500 dark:text-gray-400">Hi, {{ auth()->user()->name }}</p>
     </div>
 
-    {{-- Admin/Leadership Dashboard with Charts --}}
-    @if (Auth::user()->hasRole('admin') ||
-            in_array(Auth::user()->role, ['section_head', 'dept_head', 'div_head', 'director']))
-    {{-- Admin/Instructor/Leader/Employee Dashboard --}}
-    @if (Auth::user()->hasRole('admin'))
+    @php
+        $user = Auth::user();
+        $positionRole = strtolower((string) ($user?->role ?? ''));
+    @endphp
+
+    {{-- Dashboard by role/position --}}
+    @if ($user?->hasRole('admin'))
         @livewire('pages.dashboard.admin-dashboard')
-    @elseif (Auth::user()->hasRole('instructor'))
+    @elseif ($user?->hasRole('instructor'))
         @livewire('pages.dashboard.instructor-dashboard')
-    @elseif (Auth::user()->hasRole('leader'))
+    @elseif (in_array($positionRole, ['section_head', 'dept_head', 'div_head', 'director'], true))
         @livewire('pages.dashboard.leader-dashboard')
-    @elseif (Auth::user()->hasRole('employee'))
+    @else
         @livewire('pages.dashboard.employee-dashboard')
     @endif
 @endsection

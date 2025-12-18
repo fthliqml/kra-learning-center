@@ -148,7 +148,8 @@ class AdminDashboard extends Component
     $this->upcomingSchedules = Training::where('start_date', '>=', $now->startOfDay())->count();
 
     // Total employees (users with role employee)
-    $this->totalEmployees = \App\Models\User::where('role', 'employee')->count();
+    // After introducing user_roles, "role" is an accessor mapped from position and not a DB column.
+    $this->totalEmployees = \App\Models\User::where('position', 'employee')->count();
   }
 
   public function selectMonth($monthIndex)
