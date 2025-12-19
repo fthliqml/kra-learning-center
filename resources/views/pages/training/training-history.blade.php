@@ -84,10 +84,21 @@
                 {{-- Custom cell untuk kolom Certificate --}}
                 @scope('cell_certificate', $history)
                     <div class="flex justify-center">
-                        @if ($history->status === 'passed')
-                            <a href="#" class="text-blue-600 hover:text-blue-800 underline text-sm">
-                                View Certificate
-                            </a>
+                        @if ($history->status === 'passed' && !empty($history->certificate_path) && !empty($history->assessment_id))
+                            @if (!empty($history->survey_level1_id) && empty($history->survey_level1_completed))
+                                <span class="text-gray-600 text-sm">
+                                    Isi <a
+                                        href="{{ route('survey.take', ['level' => 1, 'surveyId' => $history->survey_level1_id]) }}"
+                                        class="text-blue-600 hover:text-blue-800 underline" rel="noopener">
+                                        Survey Level 1
+                                    </a> untuk melihat certificate.
+                                </span>
+                            @else
+                                <a href="{{ route('certificate.training.view', $history->assessment_id) }}"
+                                    class="text-blue-600 hover:text-blue-800 underline text-sm" target="_blank" rel="noopener">
+                                    View Certificate
+                                </a>
+                            @endif
                         @else
                             <span class="text-gray-400 text-sm">-</span>
                         @endif

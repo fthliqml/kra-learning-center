@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\SurveyResponse;
+use App\Models\TrainingSurvey;
 use App\Models\TrainingAssessment;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -32,6 +34,25 @@ class CertificateController extends Controller
 
         if (!$canView) {
             abort(403, 'You are not authorized to view this certificate');
+        }
+
+        // Gate: participants must complete Survey level 1 before viewing their own certificate
+        if ($user->id === $assessment->employee_id) {
+            $surveyId = TrainingSurvey::query()
+                ->where('training_id', $assessment->training_id)
+                ->where('level', 1)
+                ->value('id');
+
+            // If no Survey Level 1 is configured for this training, don't block certificate viewing.
+            $isSurveyComplete = !$surveyId || SurveyResponse::query()
+                ->where('survey_id', $surveyId)
+                ->where('employee_id', $user->id)
+                ->where('is_completed', true)
+                ->exists();
+
+            if (!$isSurveyComplete) {
+                abort(403, 'Please complete Survey Level 1 before viewing your certificate.');
+            }
         }
 
         // Check if certificate exists
