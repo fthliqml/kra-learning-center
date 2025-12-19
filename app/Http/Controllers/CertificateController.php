@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\TrainingAssessment;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Auth;
@@ -17,6 +18,7 @@ class CertificateController extends Controller
         $assessment = TrainingAssessment::with(['training', 'employee'])->findOrFail($assessmentId);
 
         // Check if user is authorized to view
+        /** @var User|null $user */
         $user = Auth::user();
         if (!$user) {
             abort(403, 'Unauthorized');
@@ -26,7 +28,7 @@ class CertificateController extends Controller
         // 1. User is the participant themselves
         // 2. User is in leadership position (section_head, dept_head, div_head, director)
         $canView = $user->id === $assessment->employee_id ||
-            in_array(strtolower($user->role ?? ''), ['section_head', 'dept_head', 'div_head', 'director']);
+            $user->hasAnyPosition(['section_head', 'department_head', 'division_head', 'director']);
 
         if (!$canView) {
             abort(403, 'You are not authorized to view this certificate');

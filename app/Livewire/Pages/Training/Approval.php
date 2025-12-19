@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Training;
 
 use App\Models\Training;
+use App\Models\User;
 use App\Services\TrainingCertificateService;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -201,11 +202,16 @@ class Approval extends Component
      */
     protected function canModerate(): bool
     {
+        /** @var User|null $user */
         $user = Auth::user();
-        if (!$user)
+
+        if (!$user) {
             return false;
+        }
+
         // Only section head from LID can moderate
-        return strtolower(trim($user->role ?? '')) === 'section_head' && strtolower(trim($user->section ?? '')) === 'lid';
+        return $user->hasPosition('section_head')
+            && strtolower(trim($user->section ?? '')) === 'lid';
     }
 
     /** Approve selected request */

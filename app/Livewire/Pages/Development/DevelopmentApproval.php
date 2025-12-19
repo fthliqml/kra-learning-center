@@ -61,8 +61,10 @@ class DevelopmentApproval extends Component
      */
     public function isSpv(): bool
     {
+        /** @var User|null $user */
         $user = Auth::user();
-        return $user && strtolower(trim($user->role ?? '')) === 'spv';
+
+        return (bool) $user?->hasPosition('supervisor');
     }
 
     /**
@@ -70,9 +72,11 @@ class DevelopmentApproval extends Component
      */
     public function isLeaderLid(): bool
     {
+        /** @var User|null $user */
         $user = Auth::user();
+
         return $user
-            && in_array(strtolower(trim($user->role ?? '')), ['section_head', 'dept_head', 'div_head', 'director'])
+            && $user->hasAnyPosition(['section_head', 'department_head', 'division_head', 'director'])
             && strtolower(trim($user->section ?? '')) === 'lid';
     }
 

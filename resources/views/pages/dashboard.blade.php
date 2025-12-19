@@ -11,7 +11,7 @@
 
     @php
         $user = Auth::user();
-        $positionRole = strtolower((string) ($user?->role ?? ''));
+        $isLeader = $user?->hasAnyPosition(['section_head', 'department_head', 'division_head', 'director']) ?? false;
     @endphp
 
     {{-- Dashboard by role/position --}}
@@ -19,7 +19,7 @@
         @livewire('pages.dashboard.admin-dashboard')
     @elseif ($user?->hasRole('instructor'))
         @livewire('pages.dashboard.instructor-dashboard')
-    @elseif (in_array($positionRole, ['section_head', 'dept_head', 'div_head', 'director'], true))
+    @elseif ($isLeader)
         @livewire('pages.dashboard.leader-dashboard')
     @else
         @livewire('pages.dashboard.employee-dashboard')

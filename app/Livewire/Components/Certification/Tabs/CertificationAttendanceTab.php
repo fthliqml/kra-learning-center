@@ -45,7 +45,7 @@ class CertificationAttendanceTab extends Component
         /** @var \App\Models\User|null $user */
         $user = Auth::user();
         // Check if user is in leadership position
-        if ($user && in_array(strtolower($user->role ?? ''), ['section_head', 'dept_head', 'div_head', 'director'])) {
+        if ($user && method_exists($user, 'hasAnyPosition') && $user->hasAnyPosition(['section_head', 'department_head', 'division_head', 'director'])) {
             $this->readOnly = true;
         }
 

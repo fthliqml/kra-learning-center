@@ -205,10 +205,12 @@
         <x-slot:actions>
             <x-ui.button @click="$wire.modal = false" type="button">Close</x-ui.button>
             @php
+                $user = auth()->user();
                 $canModerate =
-                    auth()->check() &&
-                    auth()->user()->role === 'section_head' &&
-                    strtolower(auth()->user()->section ?? '') === 'lid';
+                    $user &&
+                    method_exists($user, 'hasPosition') &&
+                    $user->hasPosition('section_head') &&
+                    strtolower($user->section ?? '') === 'lid';
                 $isPending = strtolower($formData['status'] ?? 'pending') === 'pending';
             @endphp
             @if ($canModerate && $isPending)
