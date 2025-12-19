@@ -21,7 +21,7 @@
         <div class="mb-1 flex items-center gap-2">
             <span
                 class="inline-flex items-center gap-1 rounded-full bg-primary/5 text-primary px-2 py-0.5 text-[11px] font-medium">
-                {{ $course->group_comp ?? '—' }}
+                {{ $course->competency->type ?? '—' }}
             </span>
         </div>
         <div class="font-semibold text-gray-900 line-clamp-2 min-h-[2.5rem]">

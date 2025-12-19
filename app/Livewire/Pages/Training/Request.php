@@ -29,6 +29,12 @@ class Request extends Component
     /** Competency options for x-choices */
     public array $competencies = [];
 
+    /** Group Comp options for dropdown */
+    public array $groupCompOptions = [];
+
+    /** Selected group comp for filtering */
+    public string $selectedGroupComp = '';
+
     public array $formData = [
         'user_id' => '',
         'user_name' => '',
@@ -49,9 +55,10 @@ class Request extends Component
 
     public function mount(): void
     {
+        /** @var User|null $auth */
         $auth = Auth::user();
         $authId = Auth::id();
-        if ($auth && strtolower($auth->role ?? '') === 'spv') {
+        if ($auth && $auth->hasPosition('supervisor')) {
             $section = $auth->section;
             $this->users = User::query()
                 ->select('id', 'name', 'section')
@@ -73,8 +80,29 @@ class Request extends Component
             ->values()
             ->all();
 
-        // Load competencies for dropdown
+        // Load unique group comp types for dropdown
+        $this->groupCompOptions = Competency::query()
+            ->select('type')
+            ->distinct()
+            ->orderBy('type')
+            ->get()
+            ->map(fn($c) => ['value' => $c->type, 'label' => $c->type])
+            ->all();
+
+        // Initially load all competencies (will be filtered when group comp is selected)
+        $this->loadCompetencies();
+    }
+
+    protected function loadCompetencies(): void
+    {
+        // Only load competencies if group comp is selected
+        if (!$this->selectedGroupComp) {
+            $this->competencies = [];
+            return;
+        }
+
         $this->competencies = Competency::query()
+            ->where('type', $this->selectedGroupComp)
             ->orderBy('name')
             ->get()
             ->map(fn($c) => ['id' => $c->id, 'name' => $c->name])
@@ -86,6 +114,13 @@ class Request extends Component
         // Only reset page for search/filter, not for modal or form data
         if (in_array($property, ['search', 'filter'])) {
             $this->resetPage();
+        }
+
+        // When group comp changes, reload competencies and reset selection
+        if ($property === 'selectedGroupComp') {
+            $this->loadCompetencies();
+            $this->formData['competency_id'] = '';
+            $this->formData['group_comp'] = $this->selectedGroupComp;
         }
     }
 
@@ -108,12 +143,13 @@ class Request extends Component
     public function openCreateModal(): void
     {
         // Only SPV can create training requests
+        /** @var User|null $user */
         $user = Auth::user();
-        if (!$user || (strtolower($user->role ?? '') !== 'spv')) {
+        if (!$user || !$user->hasPosition('supervisor')) {
             $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only SPV can create training requests.');
             return;
         }
-        $this->reset(['formData', 'selectedId']);
+        $this->reset(['formData', 'selectedId', 'selectedGroupComp']);
         $this->formData = [
             'user_id' => '',
             'user_name' => '',
@@ -122,6 +158,7 @@ class Request extends Component
             'group_comp' => '',
             'reason' => '',
         ];
+        $this->loadCompetencies(); // Reload all competencies
         $this->mode = 'create';
         $this->modal = true;
         $this->resetValidation();
@@ -261,10 +298,11 @@ class Request extends Component
      */
     protected function canModerate(): bool
     {
+        /** @var User|null $user */
         $user = Auth::user();
         if (!$user) return false;
-        // Assuming leader role stored in users.role as 'leader'
-        return strtolower(trim($user->role ?? '')) === 'leader' && strtolower(trim($user->section ?? '')) === 'lid';
+        // Only section head from LID can moderate
+        return $user->hasPosition('section_head') && strtolower(trim($user->section ?? '')) === 'lid';
     }
 
     /** Approve selected request */
@@ -319,8 +357,9 @@ class Request extends Component
     public function save(): void
     {
         // Guard again on save
+        /** @var User|null $user */
         $user = Auth::user();
-        if (!$user || (strtolower($user->role ?? '') !== 'spv')) {
+        if (!$user || !$user->hasPosition('supervisor')) {
             $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only SPV can create training requests.');
             return;
         }

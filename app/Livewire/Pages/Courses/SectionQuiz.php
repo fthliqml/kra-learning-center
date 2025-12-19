@@ -31,6 +31,11 @@ class SectionQuiz extends Component
             ->exists();
         if (!$assigned) abort(403);
 
+        // Gate: before schedule start, user can only view overview
+        if ($userId && !$course->isAvailableForUser($userId)) {
+            return redirect()->route('courses-overview.show', ['course' => $course->id]);
+        }
+
         // Ensure section belongs to the course
         $sec = $section;
         $topicIds = $course->learningModules()->pluck('id')->all();
@@ -120,11 +125,14 @@ class SectionQuiz extends Component
             if ($doneInTopic > 0 && $doneInTopic === $count) $completedModuleIds[] = $topic->id;
         }
 
-        return view('pages.courses.section-quiz', [
+        /** @var \Illuminate\View\View&\App\Support\Ide\LivewireViewMacros $view */
+        $view = view('pages.courses.section-quiz', [
             'course' => $this->course,
             'section' => $this->section,
             'questions' => $this->questions,
-        ])->layout('layouts.livewire.course', [
+        ]);
+
+        return $view->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'module',
             'progress' => $this->course->progressForUser(),

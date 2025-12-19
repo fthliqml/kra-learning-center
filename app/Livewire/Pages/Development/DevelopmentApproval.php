@@ -61,8 +61,10 @@ class DevelopmentApproval extends Component
      */
     public function isSpv(): bool
     {
+        /** @var User|null $user */
         $user = Auth::user();
-        return $user && strtolower(trim($user->role ?? '')) === 'spv';
+
+        return (bool) $user?->hasPosition('supervisor');
     }
 
     /**
@@ -70,9 +72,11 @@ class DevelopmentApproval extends Component
      */
     public function isLeaderLid(): bool
     {
+        /** @var User|null $user */
         $user = Auth::user();
+
         return $user
-            && strtolower(trim($user->role ?? '')) === 'leader'
+            && $user->hasAnyPosition(['section_head', 'department_head', 'division_head', 'director'])
             && strtolower(trim($user->section ?? '')) === 'lid';
     }
 
@@ -141,7 +145,7 @@ class DevelopmentApproval extends Component
         if ($this->search) {
             $query->where(function ($q) {
                 $q->where('name', 'like', "%{$this->search}%")
-                    ->orWhere('NRP', 'like', "%{$this->search}%")
+                    ->orWhere('nrp', 'like', "%{$this->search}%")
                     ->orWhere('section', 'like', "%{$this->search}%");
             });
         }
@@ -213,7 +217,7 @@ class DevelopmentApproval extends Component
         $user = User::find($userId);
         $this->selectedUserData = [
             'name' => $user->name,
-            'nrp' => $user->NRP,
+            'nrp' => $user->nrp,
             'section' => $user->section,
             'position' => $user->position,
         ];

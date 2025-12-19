@@ -9,14 +9,19 @@
         <p class="text-sm text-gray-500 dark:text-gray-400">Hi, {{ auth()->user()->name }}</p>
     </div>
 
-    {{-- Admin/Instructor/Leader/Employee Dashboard --}}
-    @if (Auth::user()->hasRole('admin'))
+    @php
+        $user = Auth::user();
+        $isLeader = $user?->hasAnyPosition(['section_head', 'department_head', 'division_head', 'director']) ?? false;
+    @endphp
+
+    {{-- Dashboard by role/position --}}
+    @if ($user?->hasRole('admin'))
         @livewire('pages.dashboard.admin-dashboard')
-    @elseif (Auth::user()->hasRole('instructor'))
+    @elseif ($user?->hasRole('instructor'))
         @livewire('pages.dashboard.instructor-dashboard')
-    @elseif (Auth::user()->hasRole('leader'))
+    @elseif ($isLeader)
         @livewire('pages.dashboard.leader-dashboard')
-    @elseif (Auth::user()->hasRole('employee'))
+    @else
         @livewire('pages.dashboard.employee-dashboard')
     @endif
 @endsection

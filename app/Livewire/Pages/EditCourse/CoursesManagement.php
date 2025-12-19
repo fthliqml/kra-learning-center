@@ -69,6 +69,7 @@ class CoursesManagement extends Component
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
             ['key' => 'title', 'label' => 'Title', 'class' => 'w-[300px]'],
+            ['key' => 'competency', 'label' => 'Competency', 'class' => '!text-center w-[200px]'],
             ['key' => 'group_comp', 'label' => 'Group Comp', 'class' => '!text-center'],
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center'],
@@ -83,8 +84,14 @@ class CoursesManagement extends Component
     public function courses()
     {
         $query = Course::query()
+            ->with('competency:id,name,type')
             ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
-            ->when($this->filterGroup ?? $this->filter, fn($q, $group) => $q->where('group_comp', $group))
+            ->when($this->filterGroup ?? $this->filter, function ($q, $group) {
+                $value = trim((string) $group);
+                if ($value !== '') {
+                    $q->whereHas('competency', fn($qq) => $qq->where('type', $value));
+                }
+            })
             ->when($this->filterStatus, fn($q, $status) => $q->where('status', $status))
             ->orderBy('created_at', 'desc');
 

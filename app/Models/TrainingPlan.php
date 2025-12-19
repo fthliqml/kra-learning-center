@@ -204,9 +204,38 @@ class TrainingPlan extends Model
         return \App\Models\Training::query()
             ->whereIn('status', ['in_progress'])
             ->whereYear('start_date', $this->year)
-            ->whereNotNull('module_id')
-            ->whereHas('module', function ($q) {
-                $q->where('competency_id', $this->competency_id);
+            ->where(function ($q) {
+                $q->whereHas('module', function ($m) {
+                    $m->where('competency_id', $this->competency_id);
+                })->orWhereHas('course', function ($c) {
+                    $c->where('competency_id', $this->competency_id);
+                });
+            })
+            ->whereHas('assessments', function ($q) {
+                $q->where('employee_id', $this->user_id);
+            })
+            ->exists();
+    }
+
+    /**
+     * Check if there's a closed/completed training for this plan (training already finished/closed).
+     * This is used for realization badge display (not for pass/fail).
+     */
+    public function hasClosedTraining(): bool
+    {
+        if (!$this->user_id || !$this->competency_id || !$this->year) {
+            return false;
+        }
+
+        return \App\Models\Training::query()
+            ->whereIn('status', ['done', 'approved', 'rejected'])
+            ->whereYear('start_date', $this->year)
+            ->where(function ($q) {
+                $q->whereHas('module', function ($m) {
+                    $m->where('competency_id', $this->competency_id);
+                })->orWhereHas('course', function ($c) {
+                    $c->where('competency_id', $this->competency_id);
+                });
             })
             ->whereHas('assessments', function ($q) {
                 $q->where('employee_id', $this->user_id);
@@ -220,7 +249,11 @@ class TrainingPlan extends Model
      */
     public function getRealizationStatus(): string
     {
-        if ($this->isRealized()) {
+        // Badge should reflect training lifecycle:
+        // - completed: training already closed (done/approved/rejected)
+        // - scheduled: training exists and is running/scheduled (in_progress)
+        // - waiting: no training yet
+        if ($this->hasClosedTraining()) {
             return 'completed';
         }
 

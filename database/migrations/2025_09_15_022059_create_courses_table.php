@@ -18,7 +18,7 @@ return new class extends Migration
             $table->string('title');
             $table->text('description');
             $table->string('thumbnail_url')->nullable();
-            $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
+            $table->foreignId('competency_id')->nullable()->constrained('competency');
             $table->enum('status', ['draft', 'inactive', 'assigned']);
 
             // Timestamps

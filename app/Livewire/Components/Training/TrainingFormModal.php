@@ -102,8 +102,25 @@ class TrainingFormModal extends Component
     private function loadCourseOptions(): void
     {
         // Include group_comp so we can auto-sync training group_comp for LMS
-        $this->courseOptions = Course::select('id', 'title', 'group_comp')->orderBy('title')->get()
-            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->group_comp])->toArray();
+        $this->courseOptions = Course::with('competency:id,type')
+            ->select('id', 'title', 'competency_id')
+            ->orderBy('title')
+            ->get()
+            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->competency->type ?? null])->toArray();
+    }
+
+    private function getCourseGroupComp(?int $courseId): ?string
+    {
+        if (!$courseId) {
+            return null;
+        }
+
+        $course = Course::with('competency:id,type')
+            ->select('id', 'competency_id')
+            ->find($courseId);
+
+        $group = trim((string) ($course?->competency?->type ?? ''));
+        return $group !== '' ? $group : null;
     }
 
     private function loadTrainingModuleOptions(): void
@@ -160,11 +177,13 @@ class TrainingFormModal extends Component
         }
 
         if ($id) {
-            // Always trust DB as the source of truth for group_comp
-            $course = Course::select('title', 'group_comp')->find($id);
+            // Sync group_comp from the related competency type (courses table has no group_comp column)
+            $course = Course::with('competency:id,type')
+                ->select('id', 'title', 'competency_id')
+                ->find($id);
             if ($course) {
                 $title = $course->title;
-                $group = $course->group_comp;
+                $group = $course->competency?->type;
             }
             $this->course_id = $id;
         }
@@ -572,11 +591,12 @@ class TrainingFormModal extends Component
             return;
         }
 
-        $this->courseOptions = Course::select('id', 'title', 'group_comp')
+        $this->courseOptions = Course::with('competency:id,type')
+            ->select('id', 'title', 'competency_id')
             ->where('title', 'like', "%{$value}%")
             ->orderBy('title')
             ->get()
-            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->group_comp])
+            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->competency->type ?? null])
             ->toArray();
     }
 
@@ -659,7 +679,7 @@ class TrainingFormModal extends Component
 
         $groupToPersist = $this->group_comp;
         if ($this->training_type === 'LMS' && $this->course_id) {
-            $syncedGroup = Course::where('id', $this->course_id)->value('group_comp');
+            $syncedGroup = $this->getCourseGroupComp((int) $this->course_id);
             if ($syncedGroup) {
                 $this->group_comp = $syncedGroup;
                 $groupToPersist = $syncedGroup;
@@ -783,7 +803,7 @@ class TrainingFormModal extends Component
             $training->name = $this->training_name;
         }
         if ($this->training_type === 'LMS') {
-            $syncedGroup = Course::where('id', $this->course_id)->value('group_comp');
+            $syncedGroup = $this->getCourseGroupComp((int) $this->course_id);
             if ($syncedGroup) {
                 $this->group_comp = $syncedGroup;
                 $training->group_comp = $syncedGroup;
@@ -978,7 +998,7 @@ class TrainingFormModal extends Component
     {
         // Defensive sync: ensure UI always reflects DB group for LMS selection
         if ($this->training_type === 'LMS' && !empty($this->course_id)) {
-            $dbGroup = Course::where('id', (int) $this->course_id)->value('group_comp');
+            $dbGroup = $this->getCourseGroupComp((int) $this->course_id);
             if ($dbGroup !== null) {
                 $trimmed = trim((string) $dbGroup);
                 if ($this->group_comp !== $trimmed) {

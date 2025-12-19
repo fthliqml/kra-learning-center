@@ -48,9 +48,10 @@ class TrainingAttendanceTab extends Component
             $this->loading = false;
             return;
         }
-        // Determine read-only mode: training is closed (done)
+        // Determine read-only mode: training is closed (done, approved, or rejected)
         // Everyone (including admin) cannot edit attendance for closed training
-        $this->readOnly = strtolower($this->training->status ?? '') === 'done';
+        $status = strtolower($this->training->status ?? '');
+        $this->readOnly = in_array($status, ['done', 'approved', 'rejected']);
         $this->sessions = $this->training->sessions->sortBy('day_number')->values()->toArray();
 
         // derive employees from all attendance records across sessions
@@ -60,7 +61,7 @@ class TrainingAttendanceTab extends Component
                 $employeeMap[$att->employee->id] = [
                     'id' => $att->employee->id,
                     'name' => $att->employee->name,
-                    'NRP' => $att->employee->NRP ?? null,
+                    'nrp' => $att->employee->nrp ?? $att->employee->NRP ?? null,
                     'section' => $att->employee->section ?? null,
                 ];
             }

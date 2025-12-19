@@ -5,6 +5,7 @@ namespace App\Livewire\Pages\Survey;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use App\Models\TrainingSurvey;
+use App\Models\User;
 
 class SurveyManagement extends Component
 {
@@ -29,15 +30,23 @@ class SurveyManagement extends Component
 
     public function surveys()
     {
+        /** @var User|null $user */
         $user = Auth::user();
+        if (!$user) {
+            return TrainingSurvey::query()->whereRaw('1 = 0')->paginate(10);
+        }
+
         $base = TrainingSurvey::query()->where('level', (int) $this->surveyLevel)
             ->with(['training', 'training.assessments']);
 
         // Admin/Leader see all, others filtered
-        $role = strtolower((string) ($user->role ?? ''));
-        $isAdminOrLeader = in_array($role, ['admin', 'leader'], true);
-        if ($user && !$isAdminOrLeader) {
-            if ($role === 'instructor') {
+        $isAdmin = method_exists($user, 'hasRole') && $user->hasRole('admin');
+        $isInstructor = method_exists($user, 'hasRole') && $user->hasRole('instructor');
+        $isLeader = method_exists($user, 'hasAnyPosition')
+            && $user->hasAnyPosition(['section_head', 'department_head', 'division_head', 'director']);
+
+        if (!$isAdmin && !$isLeader) {
+            if ($isInstructor) {
                 $base = TrainingSurvey::forInstructorUserId($user->id)->where('level', (int) $this->surveyLevel)->with(['training', 'training.assessments']);
             } else {
                 $base = TrainingSurvey::forEmployeeId($user->id)->where('level', (int) $this->surveyLevel)->with(['training', 'training.assessments']);

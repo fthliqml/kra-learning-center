@@ -44,7 +44,8 @@ class CertificationAttendanceTab extends Component
         // Leader role can only view (readonly)
         /** @var \App\Models\User|null $user */
         $user = Auth::user();
-        if ($user?->hasRole('leader')) {
+        // Check if user is in leadership position
+        if ($user && method_exists($user, 'hasAnyPosition') && $user->hasAnyPosition(['section_head', 'department_head', 'division_head', 'director'])) {
             $this->readOnly = true;
         }
 
