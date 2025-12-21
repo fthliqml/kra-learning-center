@@ -17,18 +17,16 @@
 
 <div x-data="{
     isOpen: false,
-    expandedMenus: [],
+    expandedMenu: null,
     toggle(id) {
         if (!this.isOpen) {
             this.isOpen = true
-            const i = this.expandedMenus.indexOf(id);
-            i > -1 ? this.expandedMenus.splice(i, 1) : this.expandedMenus.push(id);
+            this.expandedMenu = this.expandedMenu === id ? null : id;
         } else {
-            const i = this.expandedMenus.indexOf(id);
-            i > -1 ? this.expandedMenus.splice(i, 1) : this.expandedMenus.push(id);
+            this.expandedMenu = this.expandedMenu === id ? null : id;
         }
     },
-    has(id) { return this.expandedMenus.includes(id); },
+    has(id) { return this.expandedMenu === id; },
 }" class="relative flex transition-all duration-500 ease-in-out"
     :class="isOpen ? 'md:min-w-64' : 'md:min-w-23'">
     <!-- Toggle -->
@@ -54,10 +52,10 @@
             ?
             'w-64 h-[85vh] top-[15vh] translate-x-0' :
             'w-23 h-fit top-[15vh] rounded-br-[60px] !rounded-tr-[60px] -translate-x-full md:translate-x-0'">
-        <div class="flex flex-col h-full p-4 pr-[24px]" :class="!isOpen && 'pl-[10px] pr-[30px]'">
+        <div class="flex flex-col h-full p-4 pr-[24px] overflow-hidden" :class="!isOpen && 'pl-[10px] pr-[30px]'">
 
             <!-- Nav -->
-            <nav class="flex-1 space-y-2 transition-all duration-1000 ease-out"
+            <nav class="flex-1 space-y-2 transition-all duration-1000 ease-out overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-white/50 hover:scrollbar-thumb-white/70 scrollbar-track-transparent pr-1"
                 :class="isOpen ? 'mt-[15px]' : 'space-y-3'">
 
                 @foreach ($menuItems as $item)

@@ -222,12 +222,6 @@ return [
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
-                    'label' => 'Survey 2',
-                    'href' => '/survey/2/management',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
-                    'roles' => ['instructor', 'certificator', 'admin'],
-                ],
-                [
                     'label' => 'Survey 3',
                     'href' => '/survey/3/management',
                     'positions' => ['section_head', 'department_head', 'division_head'],
