@@ -65,6 +65,15 @@
                                 <x-input label="Group Competency" wire:model="group_comp" readonly
                                     icon="o-clipboard-document" class="focus-within:border-0 bg-gray-50"
                                     hint="{{ $training_type === 'LMS' ? 'Synced from selected Course' : 'Synced from selected Training Module' }}" />
+                            @elseif ($training_type === 'OUT')
+                                <x-choices label="Competency" wire:model.live="competency_id" :options="$competencyOptions"
+                                    option-value="id" option-label="name" placeholder="Select competency"
+                                    icon="o-academic-cap" single searchable class="focus-within:border-0"
+                                    search-function="searchCompetency" debounce="300ms"
+                                    wire:key="competency-select-{{ $isEdit ? $trainingId : 'new' }}-{{ $competency_id }}" />
+                                <x-input label="Group Competency" wire:model="group_comp" readonly
+                                    icon="o-clipboard-document" class="focus-within:border-0 bg-gray-50"
+                                    hint="Auto-filled from selected competency" />
                             @else
                                 <x-choices label="Group Competency" wire:model="group_comp" :options="$groupCompOptions"
                                     option-value="id" option-label="name" icon="o-clipboard-document" single

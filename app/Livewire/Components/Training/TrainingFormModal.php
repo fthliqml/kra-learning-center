@@ -5,6 +5,7 @@ namespace App\Livewire\Components\Training;
 
 use App\Models\Course;
 use App\Http\Requests\TrainingFormRequest;
+use App\Models\Competency;
 use App\Models\SurveyResponse;
 use App\Models\Trainer;
 use App\Models\Training;
@@ -41,6 +42,9 @@ class TrainingFormModal extends Component
     public $start_time = '';
     public $end_time = '';
     public $course_id = null; // Only for LMS type
+
+    // Only for OUT type
+    public $competency_id = null;
 
     // id trainer
     public $trainerId = null;
@@ -94,10 +98,12 @@ class TrainingFormModal extends Component
         $this->trainerSearch();
         $this->loadCourseOptions();
         $this->loadTrainingModuleOptions();
+        $this->loadCompetencyOptions();
     }
 
     public array $courseOptions = [];
     public array $trainingModuleOptions = [];
+    public array $competencyOptions = [];
 
     private function loadCourseOptions(): void
     {
@@ -120,6 +126,31 @@ class TrainingFormModal extends Component
             ->find($courseId);
 
         $group = trim((string) ($course?->competency?->type ?? ''));
+        return $group !== '' ? $group : null;
+    }
+
+    private function loadCompetencyOptions(): void
+    {
+        $this->competencyOptions = Competency::query()
+            ->select('id', 'code', 'name')
+            ->orderBy('name')
+            ->limit(50)
+            ->get()
+            ->map(fn($c) => ['id' => $c->id, 'name' => trim($c->code . ' - ' . $c->name)])
+            ->toArray();
+    }
+
+    private function getCompetencyGroupComp(?int $competencyId): ?string
+    {
+        if (!$competencyId) {
+            return null;
+        }
+
+        $competency = Competency::query()
+            ->select('id', 'type')
+            ->find($competencyId);
+
+        $group = trim((string) ($competency?->type ?? ''));
         return $group !== '' ? $group : null;
     }
 
@@ -198,9 +229,39 @@ class TrainingFormModal extends Component
         }
     }
 
+    public function updatedCompetencyId($value): void
+    {
+        if (empty($value) && $value !== 0 && $value !== '0') {
+            $this->competency_id = null;
+            $this->group_comp = 'BMC';
+            return;
+        }
+
+        $id = null;
+
+        // Handle when x-choices passes the whole option object
+        if (is_array($value) || is_object($value)) {
+            $arr = is_array($value) ? $value : (array) $value;
+            $id = isset($arr['id']) ? (int) $arr['id'] : (isset($arr['value']) ? (int) $arr['value'] : null);
+        } else {
+            $id = is_numeric($value) ? (int) $value : null;
+        }
+
+        $this->competency_id = $id;
+
+        $group = $this->getCompetencyGroupComp($id);
+        if ($group !== null) {
+            $this->group_comp = $group;
+        }
+    }
+
     public function updatedTrainingType($value): void
     {
         $this->resetValidation();
+
+        if ($value !== 'OUT') {
+            $this->competency_id = null;
+        }
 
         // Reset related fields when switching training type
         // Don't reset group_comp for LMS if course already selected (will be synced from course)
@@ -228,6 +289,8 @@ class TrainingFormModal extends Component
             // Out-House: reset both
             $this->course_id = null;
             $this->selected_module_id = null;
+            $this->competency_id = null;
+            $this->loadCompetencyOptions();
         }
     }
 
@@ -334,6 +397,7 @@ class TrainingFormModal extends Component
         $this->start_time = '';
         $this->end_time = '';
         $this->course_id = null;
+        $this->competency_id = null;
         $this->activeTab = 'training';
         $this->trainerId = null;
         $this->room = [
@@ -441,7 +505,8 @@ class TrainingFormModal extends Component
             },
             'assessments',
             'course',
-            'module'
+            'module',
+            'competency'
         ])->find($this->trainingId);
 
         if (!$training) {
@@ -458,11 +523,15 @@ class TrainingFormModal extends Component
         // Reload options FIRST to ensure selected module/course is included
         $this->loadCourseOptions();
         $this->loadTrainingModuleOptions();
+        $this->loadCompetencyOptions();
 
         // Populate base fields
         $this->training_type = $training->type; // Locked in UI while editing
         $this->originalTrainingType = $training->type;
-        $this->group_comp = $training->group_comp;
+        $this->competency_id = $training->competency_id;
+        $this->group_comp = $training->type === 'OUT'
+            ? ($training->competency?->type ?? $training->group_comp)
+            : $training->group_comp;
         $this->course_id = $training->course_id;
 
         // Set selected_module_id based on training type
@@ -619,6 +688,26 @@ class TrainingFormModal extends Component
             ->toArray();
     }
 
+    public function searchCompetency(string $value = ''): void
+    {
+        if (empty($value)) {
+            $this->loadCompetencyOptions();
+            return;
+        }
+
+        $this->competencyOptions = Competency::query()
+            ->select('id', 'code', 'name')
+            ->where(function ($q) use ($value) {
+                $q->where('name', 'like', "%{$value}%")
+                    ->orWhere('code', 'like', "%{$value}%");
+            })
+            ->orderBy('name')
+            ->limit(50)
+            ->get()
+            ->map(fn($c) => ['id' => $c->id, 'name' => trim($c->code . ' - ' . $c->name)])
+            ->toArray();
+    }
+
     // Fallback universal watcher to ensure course->group sync always runs
     public function updated($name, $value): void
     {
@@ -686,6 +775,14 @@ class TrainingFormModal extends Component
             }
         }
 
+        if ($this->training_type === 'OUT' && $this->competency_id) {
+            $syncedGroup = $this->getCompetencyGroupComp((int) $this->competency_id);
+            if ($syncedGroup) {
+                $this->group_comp = $syncedGroup;
+                $groupToPersist = $syncedGroup;
+            }
+        }
+
         $training = Training::create([
             'name' => $this->training_type === 'LMS' ? ($courseTitle ?? 'LMS') : $this->training_name,
             'type' => $this->training_type,
@@ -694,6 +791,7 @@ class TrainingFormModal extends Component
             'end_date' => $endDate,
             'course_id' => $this->training_type === 'LMS' ? $this->course_id : null,
             'module_id' => $this->training_type === 'IN' ? $this->selected_module_id : null,
+            'competency_id' => $this->training_type === 'OUT' ? $this->competency_id : null,
         ]);
 
         $surveys = $this->createSurveysForTraining($training);
@@ -732,6 +830,7 @@ class TrainingFormModal extends Component
             'training_name' => $this->training_name,
             'training_type' => $this->training_type,
             'group_comp' => $this->group_comp,
+            'competency_id' => $this->competency_id,
             'date' => $this->date,
             'trainerId' => $this->trainerId,
             'course_id' => $this->course_id,
@@ -792,18 +891,29 @@ class TrainingFormModal extends Component
         if ($this->training_type === 'LMS') {
             $training->course_id = $this->course_id;
             $training->module_id = null;
+            $training->competency_id = null;
             $training->name = $courseTitle ?? $training->name;
         } elseif ($this->training_type === 'IN') {
             $training->course_id = null;
             $training->module_id = $this->selected_module_id;
+            $training->competency_id = null;
             $training->name = $this->training_name;
         } else {
             $training->course_id = null;
             $training->module_id = null;
+            $training->competency_id = $this->competency_id;
             $training->name = $this->training_name;
         }
         if ($this->training_type === 'LMS') {
             $syncedGroup = $this->getCourseGroupComp((int) $this->course_id);
+            if ($syncedGroup) {
+                $this->group_comp = $syncedGroup;
+                $training->group_comp = $syncedGroup;
+            } else {
+                $training->group_comp = $this->group_comp;
+            }
+        } elseif ($this->training_type === 'OUT') {
+            $syncedGroup = $this->getCompetencyGroupComp((int) $this->competency_id);
             if ($syncedGroup) {
                 $this->group_comp = $syncedGroup;
                 $training->group_comp = $syncedGroup;

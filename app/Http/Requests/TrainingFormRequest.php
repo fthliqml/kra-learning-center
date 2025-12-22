@@ -27,7 +27,8 @@ class TrainingFormRequest extends FormRequest
                 'participants.*' => 'integer|exists:users,id',
             ];
         }
-        return [
+
+        $rules = [
             'training_name' => 'required|string|min:3',
             'training_type' => 'required',
             'group_comp' => 'required',
@@ -40,6 +41,12 @@ class TrainingFormRequest extends FormRequest
             'participants' => 'required|array|min:1',
             'participants.*' => 'integer|exists:users,id',
         ];
+
+        if ($this->input('training_type') === 'OUT') {
+            $rules['competency_id'] = 'required|integer|exists:competency,id';
+        }
+
+        return $rules;
     }
 
     public function messages(): array
@@ -47,6 +54,8 @@ class TrainingFormRequest extends FormRequest
         return [
             'training_name.required' => 'Training name is required.',
             'course_id.required' => 'Course must be selected for LMS.',
+            'competency_id.required' => 'Competency must be selected for Out-House.',
+            'competency_id.exists' => 'Selected competency does not exist.',
             'training_type.required' => 'Training type is required.',
             'group_comp.required' => 'Group competency is required.',
             'training_name.min' => 'Training name must be at least 3 characters.',

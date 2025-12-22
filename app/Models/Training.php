@@ -12,6 +12,7 @@ class Training extends Model
     protected $fillable = [
         'course_id',
         'module_id',
+        'competency_id',
         'name',
         'type',
         'group_comp',
@@ -70,6 +71,11 @@ class Training extends Model
     public function module()
     {
         return $this->belongsTo(TrainingModule::class, 'module_id');
+    }
+
+    public function competency()
+    {
+        return $this->belongsTo(Competency::class, 'competency_id');
     }
 
     /**
