@@ -18,36 +18,34 @@ class MyCourses extends Component
   {
     $userId = auth()->id();
 
-    // Get courses that user is actually assigned to via training assessments
-    $this->courses = UserCourse::with([
-      'course' => function ($q) use ($userId) {
-        $q->whereHas('trainings', function ($t) use ($userId) {
-          $t->whereHas('assessments', function ($a) use ($userId) {
-            $a->where('employee_id', $userId);
-          });
-        });
-      }
-    ])
+    // Show all courses the user has worked on, ordered by last activity (updated_at)
+    // but only if the course is assigned to the user via training assessments.
+    $this->courses = UserCourse::query()
       ->where('user_id', $userId)
-      ->whereNotIn('status', ['completed', 'failed'])
-      ->get()
-      ->filter(function ($userCourse) {
-        // Filter out courses that don't have the training assignment
-        return $userCourse->course !== null;
+      ->where('status', '!=', 'failed')
+      ->whereHas('course.trainings.assessments', function ($a) use ($userId) {
+        $a->where('employee_id', $userId);
       })
+      ->with('course')
+      ->orderByDesc('updated_at')
+      ->get()
       ->map(function ($userCourse) {
         // Get progress from UserCourse attribute
         $progress = $userCourse->progress_percentage ?? 0;
+        $isCompleted = ($userCourse->status === 'completed') || ((int) $progress >= 100);
 
         return [
           'id' => $userCourse->course->id,
-          'thumbnail' => $userCourse->course->thumbnail_url ?? '/images/reporting.jpg',
+          'thumbnail_url' => $userCourse->course->thumbnail_url,
           'category' => $userCourse->course->group_comp ?? 'General',
           'title' => $userCourse->course->title ?? 'Untitled Course',
           'progress' => $progress,
+          'status' => $userCourse->status,
+          'is_completed' => $isCompleted,
+          'last_activity' => optional($userCourse->updated_at)->diffForHumans(),
+          'last_activity_at' => optional($userCourse->updated_at)->toIso8601String(),
         ];
       })
-      ->take(5) // Show max 5 courses
       ->toArray();
   }
 
