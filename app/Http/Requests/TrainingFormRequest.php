@@ -17,7 +17,6 @@ class TrainingFormRequest extends FormRequest
             return [
                 'course_id' => 'required|integer|exists:courses,id',
                 'training_type' => 'required',
-                'group_comp' => 'required',
                 'date' => 'required|string|min:10',
                 'room.name' => 'nullable|string|max:100',
                 'room.location' => 'nullable|string|max:150',
@@ -29,9 +28,10 @@ class TrainingFormRequest extends FormRequest
         }
 
         $rules = [
-            'training_name' => 'required|string|min:3',
+            'training_name' => $this->input('training_type') === 'OUT'
+                ? 'nullable|string|min:3'
+                : 'required|string|min:3',
             'training_type' => 'required',
-            'group_comp' => 'required',
             'date' => 'required|string|min:10',
             'trainerId' => 'required|integer|exists:trainer,id',
             'room.name' => 'required|string|max:100',
@@ -57,7 +57,6 @@ class TrainingFormRequest extends FormRequest
             'competency_id.required' => 'Competency must be selected for Out-House.',
             'competency_id.exists' => 'Selected competency does not exist.',
             'training_type.required' => 'Training type is required.',
-            'group_comp.required' => 'Group competency is required.',
             'training_name.min' => 'Training name must be at least 3 characters.',
             'date.required' => 'Training date range is required.',
             'date.min' => 'Training date range format is invalid.',

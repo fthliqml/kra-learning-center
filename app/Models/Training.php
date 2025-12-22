@@ -15,7 +15,6 @@ class Training extends Model
         'competency_id',
         'name',
         'type',
-        'group_comp',
         'start_date',
         'end_date',
         'status',
@@ -76,6 +75,25 @@ class Training extends Model
     public function competency()
     {
         return $this->belongsTo(Competency::class, 'competency_id');
+    }
+
+    public function groupComp(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $group = $this->competency?->type;
+
+                if (!$group && ($this->type === 'IN' || $this->type === null)) {
+                    $group = $this->module?->competency?->type;
+                }
+
+                if (!$group && ($this->type === 'LMS' || $this->type === null)) {
+                    $group = $this->course?->competency?->type;
+                }
+
+                return $group;
+            }
+        );
     }
 
     /**
