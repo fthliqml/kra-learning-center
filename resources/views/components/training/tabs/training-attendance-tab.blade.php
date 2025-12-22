@@ -46,7 +46,7 @@
                                     ]" option-value="value" option-label="label"
                                         wire:model.defer="attendance.{{ $emp['id'] }}.status" :placeholder="null"
                                         :disabled="$readOnly"
-                                        class="!w-full !max-w-[9.5rem] !min-h-0 !h-7 [&_input]:!py-0 [&_.select-trigger]:!py-0 text-xs focus-within:outline-0 {{ $readOnly ? 'opacity-60 cursor-not-allowed' : '' }}" />
+                                        class="!w-full !min-w-[7rem] !min-h-0 !h-8 text-xs focus-within:outline-0 {{ $readOnly ? 'opacity-60 cursor-not-allowed' : '' }}" />
                                 </td>
                                 <td class="py-2.5 px-2 text-center">
                                     <input type="text" wire:model.defer="attendance.{{ $emp['id'] }}.remark"
