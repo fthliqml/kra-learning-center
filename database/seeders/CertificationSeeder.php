@@ -21,7 +21,7 @@ class CertificationSeeder extends Seeder
   public function run(): void
   {
     $modules = CertificationModule::all();
-    $employees = User::whereIn('role', ['employee', 'spv'])->get();
+    $employees = User::whereIn('position', ['employee', 'supervisor'])->get();
 
     if ($modules->isEmpty() || $employees->isEmpty()) {
       $this->command->warn('Make sure CertificationModule and User seeders run first!');

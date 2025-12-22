@@ -30,7 +30,7 @@ class TrainingHistorySeeder extends Seeder
     // Get or create trainers
     $trainers = Trainer::all();
     if ($trainers->isEmpty()) {
-      $trainerUser = User::where('role', 'instructor')->first() ?? User::first();
+      $trainerUser = User::whereHas('userRoles', fn($q) => $q->where('role', 'instructor'))->first() ?? User::first();
       $trainers = collect([
         Trainer::create([
           'user_id' => $trainerUser->id,
@@ -143,7 +143,7 @@ class TrainingHistorySeeder extends Seeder
 
       // Add some random employees to these trainings too
       $randomEmployees = User::where('id', '!=', $employee->id)
-        ->where('role', 'employee')
+        ->where('position', 'employee')
         ->inRandomOrder()
         ->limit(rand(3, 8))
         ->get();

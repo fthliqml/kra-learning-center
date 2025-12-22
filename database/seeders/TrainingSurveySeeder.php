@@ -76,8 +76,8 @@ class TrainingSurveySeeder extends Seeder
           }
         }
 
-        // Assign survey responses to all users with role employee (or at least 1 demo user)
-        $users = User::where('role', 'employee')->get();
+        // Assign survey responses to all users with position employee (or at least 1 demo user)
+        $users = User::where('position', 'employee')->get();
         if ($users->isEmpty()) {
           // fallback: assign to demo user
           $users = User::where('email', 'employee@example.com')->get();
