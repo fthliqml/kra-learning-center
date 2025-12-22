@@ -136,7 +136,7 @@ class CertificationActivityReport extends Component
       $reports->push((object) [
         'id' => $participant->id,
         'no' => $no++,
-        'nrp' => $employee?->NRP ?? '-',
+        'nrp' => $employee?->nrp ?? '-',
         'name' => $employee?->name ?? '-',
         'section' => $employee?->section ?? '-',
         'competency' => $module?->competency ?? '-',
