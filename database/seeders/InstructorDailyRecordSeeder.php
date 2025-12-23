@@ -23,30 +23,17 @@ class InstructorDailyRecordSeeder extends Seeder
     }
 
     $activities = [
-      'JAI' => [
-        'Conducted safety training session for new employees',
-        'Led practical welding workshop for production team',
-        'Facilitated quality control training module',
-        'Delivered leadership skills development program',
-        'Conducted equipment operation training',
-        'Led problem-solving workshop session',
-        'Facilitated team building activities',
-        'Conducted technical skills assessment',
-        'Delivered customer service excellence training',
-        'Led process improvement workshop',
-      ],
-      'JAO' => [
-        'Attended external training on ISO 9001 standards',
-        'Participated in industry conference on safety practices',
-        'Completed online certification course',
-        'Attended vendor training on new equipment',
-        'Participated in regional training summit',
-        'Completed advanced instructor certification',
-        'Attended workshop on modern teaching methods',
-        'Participated in cross-company knowledge sharing',
-        'Completed safety officer refresher course',
-        'Attended leadership development seminar',
-      ],
+      '101' => 'Formal Teaching',
+      '102' => 'Non Formal Teaching',
+      '201' => 'Formal Development',
+      '202' => 'Non Formal Development',
+      '301' => 'Develop Training Aid',
+      '302' => 'Prepare/Report',
+      '303' => 'Observasi & Konsultasi Teknis',
+      '304' => 'Project/Job Assignment',
+      '305' => 'Meeting',
+      '306' => 'Travel',
+      '400' => 'Others',
     ];
 
     $remarks = [
@@ -81,8 +68,8 @@ class InstructorDailyRecordSeeder extends Seeder
           continue;
         }
 
-        $group = rand(1, 100) <= 70 ? 'JAI' : 'JAO'; // 70% JAI, 30% JAO
-        $activity = $activities[$group][array_rand($activities[$group])];
+        $code = array_rand($activities);
+        $activity = $activities[$code];
         $remark = $remarks[array_rand($remarks)];
         $hour = rand(1, 100) <= 80
           ? rand(6, 8) + (rand(0, 1) * 0.5) // 80% chance: 6-8.5 hours
@@ -91,7 +78,7 @@ class InstructorDailyRecordSeeder extends Seeder
         InstructorDailyRecord::create([
           'instructor_id' => $instructor->id,
           'date' => $date->format('Y-m-d'),
-          'group' => $group,
+          'code' => $code,
           'activity' => $activity,
           'remarks' => $remark,
           'hour' => $hour,
