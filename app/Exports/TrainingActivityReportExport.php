@@ -30,7 +30,7 @@ class TrainingActivityReportExport implements FromCollection, WithHeadings, With
       'sessions.trainer',
       'assessments.employee',
     ])
-      ->where('status', 'done')
+      ->where('status', 'approved')
       ->when($this->dateFrom, fn($q) => $q->whereDate('end_date', '>=', $this->dateFrom))
       ->when($this->dateTo, fn($q) => $q->whereDate('end_date', '<=', $this->dateTo))
       ->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%'));
@@ -60,7 +60,12 @@ class TrainingActivityReportExport implements FromCollection, WithHeadings, With
         })
         : ($days * 8);
 
-      $durationText = $totalHours . ' Hours (' . $days . ' Days)';
+      // For LMS trainings, only show days; others show hours and days
+      if (strtoupper($training->type ?? '') === 'LMS') {
+        $durationText = $days . ' Days';
+      } else {
+        $durationText = $totalHours . ' Hours (' . $days . ' Days)';
+      }
 
       $startDate = $training->start_date ? Carbon::parse($training->start_date)->format('d M Y') : '-';
       $endDate = $training->end_date ? Carbon::parse($training->end_date)->format('d M Y') : '-';

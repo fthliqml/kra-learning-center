@@ -84,12 +84,12 @@ class TrainingActivityReport extends Component
     {
         [$dateFrom, $dateTo] = $this->parseDateRange();
 
-        // Get all trainings with status 'done' within date range
+        // Get all trainings with status 'approved' within date range
         $query = Training::with([
             'sessions.trainer',
             'assessments.employee',
         ])
-            ->where('status', 'done')
+            ->where('status', 'approved')
             ->when($dateFrom, fn($q) => $q->whereDate('end_date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->whereDate('end_date', '<=', $dateTo))
             ->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%'));
@@ -122,7 +122,12 @@ class TrainingActivityReport extends Component
                 })
                 : ($days * 8); // Default 8 hours per day
 
-            $durationText = $totalHours . ' Hours (' . $days . ' Days)';
+            // For LMS type, show only days; for others, show hours and days
+            if (strtoupper($training->type ?? '') === 'LMS') {
+                $durationText = $days . ' Days';
+            } else {
+                $durationText = $totalHours . ' Hours (' . $days . ' Days)';
+            }
 
             // Period
             $startDate = $training->start_date ? Carbon::parse($training->start_date)->format('d-m-Y') : '-';
