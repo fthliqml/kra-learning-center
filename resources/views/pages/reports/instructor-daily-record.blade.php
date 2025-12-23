@@ -9,7 +9,7 @@
             class="flex gap-3 flex-col w-full lg:w-auto items-center justify-center lg:justify-end md:gap-2 md:flex-row">
             <div class="flex items-center justify-center gap-2">
                 {{-- Add Button --}}
-                <x-button class="btn-primary h-10" href="#" disabled title="Coming soon">
+                <x-button class="btn-primary h-10" wire:click="$dispatch('open-daily-record-modal')">
                     <span class="flex items-center gap-2">
                         <x-icon name="o-plus" class="size-4" />
                         Add
@@ -103,16 +103,6 @@
                     <div class="text-center font-mono text-xs">{{ $record->code }}</div>
                 @endscope
 
-                {{-- Group --}}
-                @scope('cell_group', $record)
-                    <div class="text-center">
-                        <span
-                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium {{ $record->group === 'JAI' ? 'bg-blue-100 text-blue-700' : 'bg-amber-100 text-amber-700' }}">
-                            {{ $record->group }}
-                        </span>
-                    </div>
-                @endscope
-
                 {{-- Activity --}}
                 @scope('cell_activity', $record)
                     <div class="truncate max-w-[250px]" title="{{ $record->activity }}">
@@ -123,7 +113,7 @@
                 {{-- Remarks --}}
                 @scope('cell_remarks', $record)
                     <div class="truncate max-w-[180px] text-xs" title="{{ $record->remarks }}">
-                        {{ $record->remarks ?? '-' }}
+                        {{ $record->remarks ?: '-' }}
                     </div>
                 @endscope
 
@@ -135,17 +125,26 @@
                 {{-- Action --}}
                 @scope('cell_action', $record)
                     <div class="flex gap-1 justify-center">
-                        {{-- Edit Button (disabled for now) --}}
+                        {{-- Edit Button --}}
                         <x-button icon="o-pencil-square" class="btn-circle btn-ghost btn-sm bg-blue-50 text-blue-600"
-                            disabled title="Edit (Coming soon)" />
+                            wire:click="$dispatch('open-daily-record-modal', { id: {{ $record->id }} })"
+                            title="Edit" />
 
                         {{-- Delete Button --}}
                         <x-button icon="o-trash" class="btn-circle btn-ghost btn-sm bg-red-50 text-red-600"
-                            wire:click="deleteRecord({{ $record->id }})"
-                            wire:confirm="Are you sure you want to delete this record?" title="Delete" />
+                            wire:click="$dispatch('confirm', {
+                                title: 'Delete Record',
+                                text: 'Are you sure you want to delete this record?',
+                                action: 'delete-record',
+                                id: {{ $record->id }}
+                            })"
+                            title="Delete" />
                     </div>
                 @endscope
             </x-table>
         </div>
     @endif
+
+    <livewire:components.confirm-dialog />
+    <livewire:components.instructor-daily-record-modal />
 </div>

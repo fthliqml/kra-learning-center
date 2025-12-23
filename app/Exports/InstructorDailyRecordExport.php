@@ -59,7 +59,6 @@ class InstructorDailyRecordExport implements FromCollection, WithHeadings, WithS
       $record->instructor->name ?? '-',
       $record->date ? Carbon::parse($record->date)->format('d-m-Y') : '-',
       $record->code,
-      $record->group,
       $record->activity,
       $record->remarks ?? '-',
       number_format($record->hour, 1),
@@ -74,7 +73,6 @@ class InstructorDailyRecordExport implements FromCollection, WithHeadings, WithS
       'Name',
       'Date',
       'Code',
-      'Group',
       'Activity',
       'Remarks',
       'Hour',
@@ -84,7 +82,7 @@ class InstructorDailyRecordExport implements FromCollection, WithHeadings, WithS
   public function styles(Worksheet $sheet): array
   {
     // Auto-size columns
-    foreach (range('A', 'I') as $col) {
+    foreach (range('A', 'H') as $col) {
       $sheet->getColumnDimension($col)->setAutoSize(true);
     }
 
