@@ -44,7 +44,6 @@ class CertificationModuleImport implements ToModel, WithHeadingRow, WithValidati
             'code' => $row['code'] ?? null,
             'module_title' => $row['module_title'] ?? null,
             'competency_id' => $competencyId ? (int) $competencyId : null,
-            'competency' => $competencyLabel,
             'level' => $row['level'] ?? null,
             'group_certification' => $row['group_certification'] ?? null,
             'points_per_module' => isset($row['points_per_module']) ? (int) $row['points_per_module'] : 0,

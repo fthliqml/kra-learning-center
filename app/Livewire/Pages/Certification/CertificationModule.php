@@ -32,7 +32,6 @@ class CertificationModule extends Component
         'code' => '',
         'module_title' => '',
         'competency_id' => null,
-        'competency' => '',
         'level' => '',
         'group_certification' => '',
         'points_per_module' => null,
@@ -142,6 +141,13 @@ class CertificationModule extends Component
         return $this->formatCompetencyLabel((string) $c->code, (string) $c->name);
     }
 
+    public function getSelectedCompetencyLabelProperty(): string
+    {
+        $currentId = $this->form['competency_id'] ?? null;
+        $id = is_numeric($currentId) ? (int) $currentId : null;
+        return $this->competencyLabelById($id) ?? '-';
+    }
+
     public function searchCompetency(string $value = ''): void
     {
         $currentId = $this->form['competency_id'] ?? null;
@@ -180,7 +186,9 @@ class CertificationModule extends Component
                 $q->where(function ($inner) use ($term) {
                     $inner->where('code', 'like', $term)
                         ->orWhere('module_title', 'like', $term)
-                        ->orWhere('competency', 'like', $term)
+                        ->orWhereHas('competency', function ($qc) use ($term) {
+                            $qc->where('code', 'like', $term)->orWhere('name', 'like', $term);
+                        })
                         ->orWhere('level', 'like', $term);
                 });
             })
@@ -258,7 +266,6 @@ class CertificationModule extends Component
             'code' => '',
             'module_title' => '',
             'competency_id' => null,
-            'competency' => '',
             'level' => '',
             'group_certification' => '',
             'points_per_module' => null,
@@ -286,15 +293,11 @@ class CertificationModule extends Component
         $this->editingId = $model->id;
 
         $competencyId = $model->competency_id;
-        if (!$competencyId) {
-            $competencyId = $this->parseCompetencyIdFromLabel($model->competency);
-        }
 
         $this->form = [
             'code' => $model->code,
             'module_title' => $model->module_title,
             'competency_id' => $competencyId ? (int) $competencyId : null,
-            'competency' => $model->competency,
             'level' => $model->level,
             'group_certification' => $model->group_certification,
             'points_per_module' => $model->points_per_module,
@@ -322,8 +325,7 @@ class CertificationModule extends Component
             $this->validate();
 
             $competencyId = is_numeric($this->form['competency_id'] ?? null) ? (int) $this->form['competency_id'] : null;
-            $competencyLabel = $this->competencyLabelById($competencyId);
-            if (!$competencyId || $competencyLabel === null) {
+            if (!$competencyId || $this->competencyLabelById($competencyId) === null) {
                 throw new \RuntimeException('Invalid competency selection.');
             }
 
@@ -332,7 +334,6 @@ class CertificationModule extends Component
                 'module_title' => $this->form['module_title'],
                 'level' => $this->form['level'],
                 'competency_id' => $competencyId,
-                'competency' => $competencyLabel,
                 'group_certification' => $this->form['group_certification'],
                 'points_per_module' => (int) $this->form['points_per_module'],
                 'new_gex' => (float) $this->form['new_gex'],

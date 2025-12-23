@@ -24,7 +24,6 @@ class CertificationModule extends Model
         'code',
         'module_title',
         'level',
-        'competency',
         'competency_id',
         'group_certification',
         'points_per_module',

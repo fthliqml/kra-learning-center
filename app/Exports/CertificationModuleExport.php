@@ -19,7 +19,7 @@ class CertificationModuleExport implements FromCollection, WithHeadings, WithMap
      */
     public function collection()
     {
-        return CertificationModule::orderBy('code')->get();
+        return CertificationModule::with('competency')->orderBy('code')->get();
     }
 
     public function headings(): array
@@ -46,11 +46,14 @@ class CertificationModuleExport implements FromCollection, WithHeadings, WithMap
     public function map($m): array
     {
         $this->rowNumber++;
+        $competencyLabel = $m->competency
+            ? trim((string) $m->competency->code . ' - ' . (string) $m->competency->name)
+            : '-';
         return [
             $this->rowNumber,
             $m->code,
             $m->module_title,
-            $m->competency,
+            $competencyLabel,
             $m->level,
             $m->group_certification,
             (int) $m->points_per_module,

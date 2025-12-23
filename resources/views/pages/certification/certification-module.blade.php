@@ -167,7 +167,7 @@
             @endif
 
             @if ($mode === 'preview')
-                <x-input label="Competency" wire:model="form.competency" readonly class="focus-within:border-0" />
+                <x-input label="Competency" :value="$this->selectedCompetencyLabel" readonly class="focus-within:border-0" />
             @else
                 <x-choices label="Competency" wire:model.defer="form.competency_id" :options="$competencyOptions"
                     option-value="id" option-label="name" placeholder="Select competency"
