@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Certification;
 
 use App\Models\CertificationModule as CertificationModuleModel;
+use App\Models\Competency;
 use App\Exports\CertificationModuleExport;
 use App\Exports\CertificationModuleTemplateExport;
 use App\Imports\CertificationModuleImport;
@@ -30,6 +31,7 @@ class CertificationModule extends Component
     public array $form = [
         'code' => '',
         'module_title' => '',
+        'competency_id' => null,
         'competency' => '',
         'level' => '',
         'group_certification' => '',
@@ -53,6 +55,98 @@ class CertificationModule extends Component
         ['value' => 'MACHINING', 'label' => 'MACHINING'],
         ['value' => 'PPT AND PPM', 'label' => 'PPT AND PPM'],
     ];
+
+    /**
+     * Options for competency selector.
+     * Stored value in DB is a string label, e.g. "BC004 - Adaptability".
+     */
+    public array $competencyOptions = [];
+
+    public function mount(): void
+    {
+        $this->loadCompetencyOptions();
+    }
+
+    private function formatCompetencyLabel(string $code, string $name): string
+    {
+        return trim($code . ' - ' . $name);
+    }
+
+    private function loadCompetencyOptions(?int $ensureId = null, string $search = ''): void
+    {
+        $query = Competency::query()
+            ->select('id', 'code', 'name')
+            ->orderBy('name');
+
+        $search = trim($search);
+        if ($search !== '') {
+            $term = "%{$search}%";
+            $query->where(function ($q) use ($term) {
+                $q->where('code', 'like', $term)->orWhere('name', 'like', $term);
+            });
+        }
+
+        $options = $query
+            ->limit(50)
+            ->get()
+            ->map(function ($c) {
+                $label = $this->formatCompetencyLabel((string) $c->code, (string) $c->name);
+                return ['id' => (int) $c->id, 'name' => $label];
+            })
+            ->values()
+            ->all();
+
+        if ($ensureId) {
+            $existingIds = array_column($options, 'id');
+            if (!in_array($ensureId, $existingIds, true)) {
+                $selected = Competency::query()->select('id', 'code', 'name')->find($ensureId);
+                if ($selected) {
+                    $label = $this->formatCompetencyLabel((string) $selected->code, (string) $selected->name);
+                    array_unshift($options, ['id' => (int) $selected->id, 'name' => $label]);
+                }
+            }
+        }
+
+        $this->competencyOptions = $options;
+    }
+
+    private function parseCompetencyIdFromLabel(?string $label): ?int
+    {
+        if (!is_string($label)) {
+            return null;
+        }
+        $raw = trim($label);
+        if ($raw === '') {
+            return null;
+        }
+        $code = $raw;
+        if (str_contains($raw, ' - ')) {
+            $code = trim(explode(' - ', $raw, 2)[0]);
+        }
+        if ($code === '') {
+            return null;
+        }
+        $id = Competency::query()->where('code', $code)->value('id');
+        return $id ? (int) $id : null;
+    }
+
+    private function competencyLabelById(?int $id): ?string
+    {
+        if (!$id) {
+            return null;
+        }
+        $c = Competency::query()->select('id', 'code', 'name')->find($id);
+        if (!$c) {
+            return null;
+        }
+        return $this->formatCompetencyLabel((string) $c->code, (string) $c->name);
+    }
+
+    public function searchCompetency(string $value = ''): void
+    {
+        $currentId = $this->form['competency_id'] ?? null;
+        $this->loadCompetencyOptions(is_numeric($currentId) ? (int) $currentId : null, $value);
+    }
 
     public function updated($property): void
     {
@@ -145,7 +239,7 @@ class CertificationModule extends Component
         return [
             'form.code' => ['required', 'string', 'max:50', $uniqueCode],
             'form.module_title' => ['required', 'string', 'max:255'],
-            'form.competency' => ['required', 'string', 'max:255'],
+            'form.competency_id' => ['required', 'integer', 'exists:competency,id'],
             'form.level' => ['required', 'in:Basic,Intermediate,Advanced'],
             'form.group_certification' => ['required', 'in:ENGINE,MACHINING,PPT AND PPM'],
             'form.points_per_module' => ['required', 'integer', 'min:0'],
@@ -163,6 +257,7 @@ class CertificationModule extends Component
         $this->form = [
             'code' => '',
             'module_title' => '',
+            'competency_id' => null,
             'competency' => '',
             'level' => '',
             'group_certification' => '',
@@ -181,6 +276,7 @@ class CertificationModule extends Component
     {
         $this->mode = 'create';
         $this->resetForm();
+        $this->loadCompetencyOptions();
         $this->modal = true;
     }
 
@@ -188,9 +284,16 @@ class CertificationModule extends Component
     {
         $model = CertificationModuleModel::findOrFail($id);
         $this->editingId = $model->id;
+
+        $competencyId = $model->competency_id;
+        if (!$competencyId) {
+            $competencyId = $this->parseCompetencyIdFromLabel($model->competency);
+        }
+
         $this->form = [
             'code' => $model->code,
             'module_title' => $model->module_title,
+            'competency_id' => $competencyId ? (int) $competencyId : null,
             'competency' => $model->competency,
             'level' => $model->level,
             'group_certification' => $model->group_certification,
@@ -203,6 +306,7 @@ class CertificationModule extends Component
             'practical_passing_score' => (float) $model->practical_passing_score,
         ];
         $this->mode = 'edit';
+        $this->loadCompetencyOptions($this->form['competency_id']);
         $this->modal = true;
     }
 
@@ -217,11 +321,18 @@ class CertificationModule extends Component
         try {
             $this->validate();
 
+            $competencyId = is_numeric($this->form['competency_id'] ?? null) ? (int) $this->form['competency_id'] : null;
+            $competencyLabel = $this->competencyLabelById($competencyId);
+            if (!$competencyId || $competencyLabel === null) {
+                throw new \RuntimeException('Invalid competency selection.');
+            }
+
             $attrs = [
                 'code' => $this->form['code'],
                 'module_title' => $this->form['module_title'],
                 'level' => $this->form['level'],
-                'competency' => $this->form['competency'],
+                'competency_id' => $competencyId,
+                'competency' => $competencyLabel,
                 'group_certification' => $this->form['group_certification'],
                 'points_per_module' => (int) $this->form['points_per_module'],
                 'new_gex' => (float) $this->form['new_gex'],

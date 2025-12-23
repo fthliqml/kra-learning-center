@@ -3,18 +3,48 @@
 namespace App\Imports;
 
 use App\Models\CertificationModule;
+use App\Models\Competency;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\WithValidation;
 
 class CertificationModuleImport implements ToModel, WithHeadingRow, WithValidation
 {
+    private function parseCompetencyCode(?string $value): ?string
+    {
+        if (!is_string($value)) {
+            return null;
+        }
+        $raw = trim($value);
+        if ($raw === '') {
+            return null;
+        }
+        if (str_contains($raw, ' - ')) {
+            return trim(explode(' - ', $raw, 2)[0]);
+        }
+        return $raw;
+    }
+
     public function model(array $row)
     {
+        $competencyLabel = $row['competency'] ?? null;
+        $competencyId = null;
+        $code = $this->parseCompetencyCode(is_string($competencyLabel) ? $competencyLabel : null);
+        if ($code) {
+            $competencyId = Competency::query()->where('code', $code)->value('id');
+            if ($competencyId) {
+                $competency = Competency::query()->select('code', 'name')->find($competencyId);
+                if ($competency) {
+                    $competencyLabel = trim((string) $competency->code . ' - ' . (string) $competency->name);
+                }
+            }
+        }
+
         return new CertificationModule([
             'code' => $row['code'] ?? null,
             'module_title' => $row['module_title'] ?? null,
-            'competency' => $row['competency'] ?? null,
+            'competency_id' => $competencyId ? (int) $competencyId : null,
+            'competency' => $competencyLabel,
             'level' => $row['level'] ?? null,
             'group_certification' => $row['group_certification'] ?? null,
             'points_per_module' => isset($row['points_per_module']) ? (int) $row['points_per_module'] : 0,
