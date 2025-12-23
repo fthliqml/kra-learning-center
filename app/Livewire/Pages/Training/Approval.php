@@ -135,7 +135,21 @@ class Approval extends Component
             $query->where(function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%")
                     ->orWhere('type', 'like', "%{$term}%")
-                    ->orWhere('group_comp', 'like', "%{$term}%");
+                    ->orWhereHas('competency', function ($cq) use ($term) {
+                        $cq->where('type', 'like', "%{$term}%")
+                            ->orWhere('name', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%");
+                    })
+                    ->orWhereHas('module.competency', function ($cq) use ($term) {
+                        $cq->where('type', 'like', "%{$term}%")
+                            ->orWhere('name', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%");
+                    })
+                    ->orWhereHas('course.competency', function ($cq) use ($term) {
+                        $cq->where('type', 'like', "%{$term}%")
+                            ->orWhere('name', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%");
+                    });
             });
         }
 

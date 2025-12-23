@@ -29,22 +29,30 @@ class SurveyEmployee extends Component
             return collect(); // atau paginator kosong
         }
 
-        // Ambil survey yang punya response untuk user ini
-        $base = TrainingSurvey::with([
-            'training',
-            'surveyResponses' => function ($q) use ($user) {
-                $q->where('employee_id', $user->id);
-            }
-        ])
-            ->whereHas('surveyResponses', function ($q) use ($user) {
-                $q->where('employee_id', $user->id)
-                    ->when($this->filterStatus, function ($q) {
-                        if ($this->filterStatus === 'complete') {
-                            $q->where('is_completed', 1);
-                        } elseif ($this->filterStatus === 'incomplete') {
-                            $q->where('is_completed', 0);
-                        }
-                    });
+        // Ambil survey untuk employee berdasarkan training assessments.
+        // NOTE: Jangan mengharuskan survey_responses sudah ada, karena response bisa dibuat saat submit.
+        $base = TrainingSurvey::query()
+            ->forEmployee($user->id)
+            ->with([
+                'training',
+                // My response only (for badge/status)
+                'surveyResponses' => function ($q) use ($user) {
+                    $q->where('employee_id', $user->id);
+                }
+            ])
+            ->withCount('surveyResponses')
+            ->when($this->filterStatus, function ($q) use ($user) {
+                // When filtering, only include surveys that have a response for this user
+                $q->whereHas('surveyResponses', function ($rq) use ($user) {
+                    $rq->where('employee_id', $user->id)
+                        ->when($this->filterStatus, function ($rq) {
+                            if ($this->filterStatus === 'complete') {
+                                $rq->where('is_completed', 1);
+                            } elseif ($this->filterStatus === 'incomplete') {
+                                $rq->where('is_completed', 0);
+                            }
+                        });
+                });
             })
             ->when($this->surveyLevel, fn($q) => $q->where('level', (int) $this->surveyLevel))
             ->when($this->search, fn($q) => $q->whereHas(
@@ -72,7 +80,7 @@ class SurveyEmployee extends Component
             $start = $paginator->firstItem() ?? 0;
             $survey->no = $start + $index;
             $survey->training_name = $survey->training?->name ?? '-';
-            $survey->participants = $survey->surveyResponses->count();
+            $survey->participants = (int) ($survey->survey_responses_count ?? 0);
             $startDate = $survey->training?->start_date;
             $endDate = $survey->training?->end_date;
             $survey->date = ($startDate && $endDate)
@@ -88,11 +96,12 @@ class SurveyEmployee extends Component
             $status = $survey->badge_status; // complete | incomplete | null
             $isDraft = ($survey->status ?? '') === 'draft';
             $trainingStatus = strtolower($survey->training?->status ?? '');
+            $trainingReady = in_array($trainingStatus, ['done', 'approved'], true);
 
             if ($status === 'complete') {
                 $survey->badge_label = 'Complete';
                 $survey->badge_class = 'badge-primary bg-primary/95';
-            } elseif ($isDraft || $trainingStatus !== 'done') {
+            } elseif ($isDraft || !$trainingReady) {
                 $survey->badge_label = 'Not Ready';
                 $survey->badge_class = 'badge-warning';
             } elseif ($status === 'incomplete') {
@@ -103,7 +112,7 @@ class SurveyEmployee extends Component
                 $survey->badge_class = 'badge-ghost';
             }
             // Determine if Start Survey button should be disabled
-            $survey->start_disabled = $isDraft || $trainingStatus !== 'done';
+            $survey->start_disabled = $isDraft || !$trainingReady;
             return $survey;
         });
     }
