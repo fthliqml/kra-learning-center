@@ -25,7 +25,15 @@
                 </x-button>
 
                 {{-- Date Range Filter --}}
-                <div class="relative">
+                <div class="relative" x-data="{ hasValue: @js(!empty($dateRange)) }" x-init="$watch('$wire.dateRange', value => hasValue = !!value);
+                // Also listen for flatpickr changes
+                $nextTick(() => {
+                    const input = $el.querySelector('input[type=hidden], input.flatpickr-input');
+                    if (input && input._flatpickr) {
+                        input._flatpickr.config.onChange.push(() => hasValue = true);
+                        input._flatpickr.config.onClose.push(() => hasValue = !!input.value);
+                    }
+                });">
                     <x-datepicker wire:model.live="dateRange" icon="o-calendar"
                         class="!w-52 !h-10 focus-within:border-0" :config="[
                             'mode' => 'range',
@@ -33,12 +41,10 @@
                             'altFormat' => 'd-m-Y',
                             'dateFormat' => 'Y-m-d',
                         ]" />
-                    @if (!$dateRange)
-                        <span
-                            class="absolute left-9 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                            Filter by date...
-                        </span>
-                    @endif
+                    <span x-show="!hasValue" x-cloak
+                        class="absolute left-9 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                        Filter by date...
+                    </span>
                 </div>
 
                 {{-- Clear Filter Button --}}
