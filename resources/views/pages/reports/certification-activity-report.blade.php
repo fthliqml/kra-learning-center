@@ -49,7 +49,7 @@
     <x-skeletons.certification-activity-report-table />
 
     {{-- No Data State --}}
-    @if (($reports->total() ?? 0) === 0)
+    @if ($reports->isEmpty())
         <div wire:loading.remove class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
             <div class="flex flex-col items-center justify-center py-16 px-4">
                 <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
