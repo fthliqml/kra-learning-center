@@ -55,12 +55,14 @@
                                 placeholder="Edit training name or leave as selected module"
                                 class="focus-within:border-0" hint="You can customize the training name" />
                         @elseif ($training_type === 'OUT')
-                            <x-choices label="Competency" wire:model.live="competency_id" :options="$competencyOptions"
-                                option-value="id" option-label="name" placeholder="Select competency"
-                                icon="o-academic-cap" single searchable class="focus-within:border-0"
-                                search-function="searchCompetency" debounce="300ms"
-                                @change-selection="$wire.set('competency_id', $event.detail.value)"
-                                wire:key="competency-select-{{ $isEdit ? $trainingId : 'new' }}-{{ $competency_id }}" />
+                            <div
+                                wire:key="competency-select-wrap-{{ $isEdit ? $trainingId : 'new' }}-{{ $competency_id }}">
+                                <x-choices label="Competency" wire:model.live="competency_id" :options="$competencyOptions"
+                                    option-value="id" option-label="name" placeholder="Select competency"
+                                    icon="o-academic-cap" single searchable class="focus-within:border-0"
+                                    search-function="searchCompetency" debounce="300ms"
+                                    @change-selection="const v = $event.detail?.value; if (v === null || v === undefined || v === '') return; $wire.set('competency_id', v)" />
+                            </div>
                             <x-input wire:model.live="training_name" label="Training Name (Optional)"
                                 placeholder="Auto-filled from selected competency (optional)"
                                 class="focus-within:border-0" hint="Auto-filled from selected competency" />

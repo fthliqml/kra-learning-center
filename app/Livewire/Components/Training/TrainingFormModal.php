@@ -134,15 +134,33 @@ class TrainingFormModal extends Component
         return $group !== '' ? $group : null;
     }
 
-    private function loadCompetencyOptions(): void
+    private function loadCompetencyOptions(?int $ensureCompetencyId = null): void
     {
-        $this->competencyOptions = Competency::query()
+        $options = Competency::query()
             ->select('id', 'code', 'name')
             ->orderBy('name')
             ->limit(50)
             ->get()
             ->map(fn($c) => ['id' => $c->id, 'name' => trim($c->code . ' - ' . $c->name)])
             ->toArray();
+
+        if ($ensureCompetencyId) {
+            $existingIds = array_column($options, 'id');
+            if (!in_array($ensureCompetencyId, $existingIds, true)) {
+                $selected = Competency::query()
+                    ->select('id', 'code', 'name')
+                    ->find($ensureCompetencyId);
+
+                if ($selected) {
+                    array_unshift($options, [
+                        'id' => $selected->id,
+                        'name' => trim($selected->code . ' - ' . $selected->name),
+                    ]);
+                }
+            }
+        }
+
+        $this->competencyOptions = $options;
     }
 
     private function getCompetencyGroupComp(?int $competencyId): ?string
@@ -414,8 +432,13 @@ class TrainingFormModal extends Component
             // Out-House: reset both
             $this->course_id = null;
             $this->selected_module_id = null;
-            $this->competency_id = null;
-            $this->loadCompetencyOptions();
+
+            // In edit mode, keep existing competency selection.
+            if (!$this->isEdit) {
+                $this->competency_id = null;
+            }
+
+            $this->loadCompetencyOptions($this->parseCompetencyIdFromValue($this->competency_id));
         }
     }
 
@@ -649,15 +672,16 @@ class TrainingFormModal extends Component
             return;
         }
 
-        // Reload options FIRST to ensure selected module/course is included
+        // Reload options FIRST to ensure selected module/course/competency is included
         $this->loadCourseOptions();
         $this->loadTrainingModuleOptions();
-        $this->loadCompetencyOptions();
+        $this->loadCompetencyOptions($training->competency_id);
 
         // Populate base fields
+        // Set competency_id before training_type so the training_type watcher can keep the selection in OUT-house.
+        $this->competency_id = $training->competency_id;
         $this->training_type = $training->type; // Locked in UI while editing
         $this->originalTrainingType = $training->type;
-        $this->competency_id = $training->competency_id;
         $this->group_comp = $training->type === 'OUT'
             ? ($training->competency?->type ?? $training->group_comp)
             : $training->group_comp;
@@ -824,11 +848,11 @@ class TrainingFormModal extends Component
     public function searchCompetency(string $value = ''): void
     {
         if (empty($value)) {
-            $this->loadCompetencyOptions();
+            $this->loadCompetencyOptions($this->parseCompetencyIdFromValue($this->competency_id));
             return;
         }
 
-        $this->competencyOptions = Competency::query()
+        $options = Competency::query()
             ->select('id', 'code', 'name')
             ->where(function ($q) use ($value) {
                 $q->where('name', 'like', "%{$value}%")
@@ -839,6 +863,25 @@ class TrainingFormModal extends Component
             ->get()
             ->map(fn($c) => ['id' => $c->id, 'name' => trim($c->code . ' - ' . $c->name)])
             ->toArray();
+
+        // Ensure current selection remains visible in the list (important for edit mode)
+        $selectedId = $this->parseCompetencyIdFromValue($this->competency_id);
+        if ($selectedId) {
+            $existingIds = array_column($options, 'id');
+            if (!in_array($selectedId, $existingIds, true)) {
+                $selected = Competency::query()
+                    ->select('id', 'code', 'name')
+                    ->find($selectedId);
+                if ($selected) {
+                    array_unshift($options, [
+                        'id' => $selected->id,
+                        'name' => trim($selected->code . ' - ' . $selected->name),
+                    ]);
+                }
+            }
+        }
+
+        $this->competencyOptions = $options;
     }
 
     // Fallback universal watcher to ensure course->group sync always runs
