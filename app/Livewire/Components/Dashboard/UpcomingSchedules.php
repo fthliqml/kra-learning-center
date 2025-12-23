@@ -22,9 +22,20 @@ class UpcomingSchedules extends Component
   {
     $this->items = [];
     $now = Carbon::now();
+    $todayStart = $now->copy()->startOfDay();
 
     // Get upcoming trainings (max 5)
-    $trainingsQuery = Training::where('start_date', '>=', $now);
+    // Include trainings happening today (start_date can be midnight) and ongoing range trainings that overlap today.
+    $trainingsQuery = Training::query()
+      ->whereNotNull('start_date')
+      ->where(function ($q) use ($todayStart) {
+        $q->where('start_date', '>=', $todayStart)
+          ->orWhere(function ($qq) use ($todayStart) {
+            $qq->whereNotNull('end_date')
+              ->where('start_date', '<', $todayStart)
+              ->where('end_date', '>=', $todayStart);
+          });
+      });
 
     // If employeeId is provided, filter trainings where they are a participant
     if ($this->employeeId) {
@@ -39,8 +50,20 @@ class UpcomingSchedules extends Component
       ->get();
 
     foreach ($upcomingTrainings as $training) {
-      $dateInfo = $training->start_date
-        ? $training->start_date->format('d M Y')
+      $effectiveDate = $training->start_date;
+
+      // If training is ongoing today (range overlaps today), show today's date instead of the original start date.
+      if (
+        $training->start_date
+        && $training->start_date->lt($todayStart)
+        && $training->end_date
+        && $training->end_date->gte($todayStart)
+      ) {
+        $effectiveDate = $todayStart;
+      }
+
+      $dateInfo = $effectiveDate
+        ? $effectiveDate->format('d M Y')
         : 'No date';
 
       $this->items[] = [
@@ -48,7 +71,7 @@ class UpcomingSchedules extends Component
         'info' => $dateInfo,
         'type' => 'training',
         'id' => $training->id,
-        'date' => $training->start_date,
+        'date' => $effectiveDate,
       ];
     }
 
@@ -64,24 +87,27 @@ class UpcomingSchedules extends Component
 
     $upcomingCertifications = $certificationsQuery
       ->get()
-      ->filter(function ($cert) use ($now) {
+      ->filter(function ($cert) use ($todayStart) {
         $firstSession = $cert->sessions->first();
-        return $firstSession && $firstSession->date >= $now;
+        if (!$firstSession || empty($firstSession->date)) {
+          return false;
+        }
+        $sessionDate = Carbon::parse($firstSession->date);
+        return $sessionDate->startOfDay()->greaterThanOrEqualTo($todayStart);
       })
       ->take(5);
 
     foreach ($upcomingCertifications as $cert) {
       $firstSession = $cert->sessions->first();
-      $dateInfo = $firstSession && $firstSession->date
-        ? Carbon::parse($firstSession->date)->format('d M Y')
-        : 'No date';
+      $sessionDate = $firstSession && $firstSession->date ? Carbon::parse($firstSession->date) : null;
+      $dateInfo = $sessionDate ? $sessionDate->format('d M Y') : 'No date';
 
       $this->items[] = [
         'title' => $cert->name ?? 'Certification',
         'info' => $dateInfo,
         'type' => 'certification',
         'id' => $cert->id,
-        'date' => $firstSession?->date,
+        'date' => $sessionDate,
       ];
     }
 
