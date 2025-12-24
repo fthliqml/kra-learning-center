@@ -76,13 +76,13 @@ return [
             'icon' => 'academic-cap',
             'href' => '#',
             'positions' => ['employee', 'supervisor'],
-            'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
+            'exclude_roles' => ['admin', 'instructor', 'certificator'],
             'submenu' => [
                 [
                     'label' => 'Training Schedule',
                     'href' => '/training/schedule',
                     'positions' => ['employee', 'supervisor'],
-                    'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
+                    'exclude_roles' => ['admin', 'instructor', 'certificator'],
                 ],
                 [
                     'label' => 'Training Request',
@@ -99,13 +99,13 @@ return [
             'icon' => 'document-text',
             'href' => '#',
             'positions' => ['employee', 'supervisor'],
-            'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
+            'exclude_roles' => ['admin', 'instructor', 'certificator'],
             'submenu' => [
                 [
                     'label' => 'Survey 1',
                     'href' => '/survey/1',
                     'positions' => ['employee', 'supervisor'],
-                    'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
+                    'exclude_roles' => ['admin', 'instructor', 'certificator'],
                 ],
                 [
                     'label' => 'Survey 3',
@@ -255,19 +255,19 @@ return [
             'icon' => 'chart-bar',
             'href' => '#',
             'positions' => ['section_head', 'department_head', 'division_head'],
-            'roles' => ['instructor', 'certificator', 'admin'],
+            'roles' => ['instructor', 'certificator', 'admin', 'multimedia'],
             'submenu' => [
                 [
                     'label' => 'Training Activity',
                     'href' => '/reports/training-activity',
                     'positions' => ['section_head', 'department_head', 'division_head'],
-                    'roles' => ['instructor', 'certificator', 'admin'],
+                    'roles' => ['instructor', 'certificator', 'admin', 'multimedia'],
                 ],
                 [
                     'label' => 'Certification Activity',
                     'href' => '/reports/certification-activity',
                     'positions' => ['section_head', 'department_head', 'division_head'],
-                    'roles' => ['instructor', 'certificator', 'admin'],
+                    'roles' => ['instructor', 'certificator', 'admin', 'multimedia'],
                 ],
                 [
                     'label' => 'Instructor Daily Record',

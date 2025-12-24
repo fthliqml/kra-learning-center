@@ -17,7 +17,7 @@
     {{-- Dashboard by role/position --}}
     @if ($user?->hasRole('admin'))
         @livewire('pages.dashboard.admin-dashboard')
-    @elseif ($user?->hasRole('instructor'))
+    @elseif ($user?->hasRole('instructor') || $user?->hasRole('multimedia'))
         @livewire('pages.dashboard.instructor-dashboard')
     @elseif ($isLeader)
         @livewire('pages.dashboard.leader-dashboard')

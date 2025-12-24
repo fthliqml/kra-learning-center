@@ -76,7 +76,7 @@
                 {{-- Status badge --}}
                 @scope('cell_status', $course)
                     @php
-                        $status = $course->status ?? 'inactive';
+                        $status = $course->computed_status ?? ($course->status ?? 'inactive');
                         $badgeClass = match ($status) {
                             'draft' => 'badge-warning',
                             'assigned' => 'badge-primary bg-primary/95',

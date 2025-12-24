@@ -166,8 +166,14 @@
                     class="focus-within:border-0" :error="$errors->first('form.module_title')" />
             @endif
 
-            <x-input label="Competency" placeholder="Enter competency" wire:model.defer="form.competency"
-                class="focus-within:border-0" :error="$errors->first('form.competency')" :readonly="$mode === 'preview'" />
+            @if ($mode === 'preview')
+                <x-input label="Competency" :value="$this->selectedCompetencyLabel" readonly class="focus-within:border-0" />
+            @else
+                <x-choices label="Competency" wire:model.defer="form.competency_id" :options="$competencyOptions"
+                    option-value="id" option-label="name" placeholder="Select competency"
+                    class="focus-within:border-0" :error="$errors->first('form.competency_id')" searchable search-function="searchCompetency"
+                    debounce="300ms" single />
+            @endif
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <x-input label="Code" placeholder="Enter code" wire:model.defer="form.code"

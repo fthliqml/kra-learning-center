@@ -17,14 +17,23 @@
             @scope('cell_status', $survey)
                 @php
                     $status = $survey->status ?? 'incomplete';
+
+                    $label = match ($status) {
+                        'draft' => 'Draft',
+                        'completed' => 'Completed',
+                        // NOTE: 'incomplete' means survey is published/in progress (not all participants completed yet)
+                        'incomplete' => 'In Progress',
+                        default => str($status)->title(),
+                    };
                     // Map to badge classes (no variant prop)
                     $badgeClass = match ($status) {
                         'draft' => 'badge-warning',
                         'completed' => 'badge-primary bg-primary/95',
-                        'incomplete' => ' badge primary badge-soft',
+                        'incomplete' => 'badge-primary badge-soft',
+                        default => 'badge-ghost',
                     };
                 @endphp
-                <x-badge :value="str($status)->title()" :class="$badgeClass" />
+                <x-badge :value="$label" :class="$badgeClass" />
             @endscope
 
             @scope('cell_action', $survey)

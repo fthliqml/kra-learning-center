@@ -33,7 +33,6 @@ class TrainingImport implements ToCollection, WithHeadingRow
                 }
 
                 $type = strtoupper(trim((string) ($row['type'] ?? '')));
-                $groupComp = trim((string) ($row['group_comp'] ?? ''));
                 $startDate = trim((string) ($row['start_date'] ?? ''));
                 $endDate = trim((string) ($row['end_date'] ?? ''));
                 $participantsRaw = trim((string) ($row['participants'] ?? ''));
@@ -49,9 +48,6 @@ class TrainingImport implements ToCollection, WithHeadingRow
                 $rowErrors = [];
                 if (!in_array($type, ['IN', 'OUT', 'LMS'])) {
                     $rowErrors[] = "Row {$excelRow}: Invalid Type '{$type}'";
-                }
-                if ($groupComp === '') {
-                    $rowErrors[] = "Row {$excelRow}: Group Comp required";
                 }
                 if ($startDate === '' || !$this->isValidDate($startDate)) {
                     $rowErrors[] = "Row {$excelRow}: Start Date invalid";
@@ -135,7 +131,6 @@ class TrainingImport implements ToCollection, WithHeadingRow
                 $training = Training::create([
                     'name' => $type === 'LMS' ? ($courseTitle ?: 'LMS') : $trainingName,
                     'type' => $type,
-                    'group_comp' => $groupComp,
                     'start_date' => $start,
                     'end_date' => $end,
                     'course_id' => $type === 'LMS' ? $courseId : null,

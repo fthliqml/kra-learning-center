@@ -27,7 +27,7 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
     public function collection()
     {
         $query = CertificationParticipant::with([
-            'certification.certificationModule',
+            'certification.certificationModule.competency',
             'employee',
             'scores.session',
         ])
@@ -39,7 +39,10 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
             ->when($this->search, function ($q) {
                 $q->whereHas('employee', fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
                     ->orWhereHas('certification', fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
-                    ->orWhereHas('certification.certificationModule', fn($query) => $query->where('competency', 'like', '%' . $this->search . '%'));
+                    ->orWhereHas('certification.certificationModule.competency', function ($query) {
+                        $term = '%' . $this->search . '%';
+                        $query->where('code', 'like', $term)->orWhere('name', 'like', $term);
+                    });
             });
 
         return $query->get();
@@ -51,6 +54,10 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
         $certification = $participant->certification;
         $module = $certification?->certificationModule;
         $employee = $participant->employee;
+
+        $competencyLabel = $module?->competency
+            ? trim((string) $module->competency->code . ' - ' . (string) $module->competency->name)
+            : '-';
 
         // Get theory and practical scores from certification_scores
         $theoryScore = null;
@@ -78,10 +85,10 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
 
         return [
             $this->rowNumber,
-            $employee?->NRP ?? '-',
+            $employee?->nrp ?? ($employee?->NRP ?? '-'),
             $employee?->name ?? '-',
             $employee?->section ?? '-',
-            $module?->competency ?? '-',
+            $competencyLabel,
             $theoryScore !== null ? number_format($theoryScore, 1) : '-',
             $practicalScore !== null ? number_format($practicalScore, 1) : '-',
             ucfirst($remarks),

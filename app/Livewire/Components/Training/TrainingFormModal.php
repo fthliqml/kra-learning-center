@@ -5,6 +5,7 @@ namespace App\Livewire\Components\Training;
 
 use App\Models\Course;
 use App\Http\Requests\TrainingFormRequest;
+use App\Models\Competency;
 use App\Models\SurveyResponse;
 use App\Models\Trainer;
 use App\Models\Training;
@@ -36,11 +37,19 @@ class TrainingFormModal extends Component
     public $training_name = '';
     public $training_type = 'IN';
     public $group_comp = 'BMC';
+
+    // Training name edit tracking (mainly for OUT-house auto-fill behavior)
+    public bool $trainingNameManuallyEdited = false;
+    private bool $trainingNameWasAutoFilled = false;
+    private bool $isSettingTrainingNameProgrammatically = false;
     public $selected_module_id = null; // For In-House type: selected training module
     public $date = '';
     public $start_time = '';
     public $end_time = '';
     public $course_id = null; // Only for LMS type
+
+    // Only for OUT type
+    public $competency_id = null;
 
     // id trainer
     public $trainerId = null;
@@ -94,10 +103,12 @@ class TrainingFormModal extends Component
         $this->trainerSearch();
         $this->loadCourseOptions();
         $this->loadTrainingModuleOptions();
+        $this->loadCompetencyOptions();
     }
 
     public array $courseOptions = [];
     public array $trainingModuleOptions = [];
+    public array $competencyOptions = [];
 
     private function loadCourseOptions(): void
     {
@@ -121,6 +132,145 @@ class TrainingFormModal extends Component
 
         $group = trim((string) ($course?->competency?->type ?? ''));
         return $group !== '' ? $group : null;
+    }
+
+    private function loadCompetencyOptions(?int $ensureCompetencyId = null): void
+    {
+        $options = Competency::query()
+            ->select('id', 'code', 'name')
+            ->orderBy('name')
+            ->limit(50)
+            ->get()
+            ->map(fn($c) => ['id' => $c->id, 'name' => trim($c->code . ' - ' . $c->name)])
+            ->toArray();
+
+        if ($ensureCompetencyId) {
+            $existingIds = array_column($options, 'id');
+            if (!in_array($ensureCompetencyId, $existingIds, true)) {
+                $selected = Competency::query()
+                    ->select('id', 'code', 'name')
+                    ->find($ensureCompetencyId);
+
+                if ($selected) {
+                    array_unshift($options, [
+                        'id' => $selected->id,
+                        'name' => trim($selected->code . ' - ' . $selected->name),
+                    ]);
+                }
+            }
+        }
+
+        $this->competencyOptions = $options;
+    }
+
+    private function getCompetencyGroupComp(?int $competencyId): ?string
+    {
+        if (!$competencyId) {
+            return null;
+        }
+
+        $competency = Competency::query()
+            ->select('id', 'type')
+            ->find($competencyId);
+
+        $group = trim((string) ($competency?->type ?? ''));
+        return $group !== '' ? $group : null;
+    }
+
+    private function getCompetencyTrainingName(?int $competencyId): ?string
+    {
+        if (!$competencyId) {
+            return null;
+        }
+
+        $competency = Competency::query()
+            ->select('id', 'name')
+            ->find($competencyId);
+
+        $name = trim((string) ($competency?->name ?? ''));
+        return $name !== '' ? $name : null;
+    }
+
+    private function parseCompetencyIdFromValue(mixed $value): ?int
+    {
+        if ($value === null) {
+            return null;
+        }
+
+        // Option object/array from select components
+        if (is_array($value) || is_object($value)) {
+            $arr = is_array($value) ? $value : (array) $value;
+            $candidate = $arr['id'] ?? ($arr['value'] ?? null);
+            if (is_numeric($candidate)) {
+                return (int) $candidate;
+            }
+
+            // Sometimes only label is provided (e.g. "CODE - Name")
+            $label = $arr['name'] ?? ($arr['label'] ?? null);
+            if (is_string($label)) {
+                return $this->parseCompetencyIdFromValue($label);
+            }
+            return null;
+        }
+
+        // Scalar
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+
+        if (!is_string($value)) {
+            return null;
+        }
+
+        $raw = trim($value);
+        if ($raw === '') {
+            return null;
+        }
+
+        // Try to extract code from "CODE - Name"
+        $code = null;
+        if (str_contains($raw, ' - ')) {
+            $code = trim(explode(' - ', $raw, 2)[0]);
+        }
+        if ($code) {
+            $id = Competency::query()->where('code', $code)->value('id');
+            return $id ? (int) $id : null;
+        }
+
+        return null;
+    }
+
+    private function parseCompetencyNameFromValue(mixed $value): ?string
+    {
+        // If we get label like "CODE - Name", extract Name.
+        if (is_array($value) || is_object($value)) {
+            $arr = is_array($value) ? $value : (array) $value;
+            $value = $arr['name'] ?? ($arr['label'] ?? null);
+        }
+        if (!is_string($value)) {
+            return null;
+        }
+        $raw = trim($value);
+        if ($raw === '') {
+            return null;
+        }
+        if (str_contains($raw, ' - ')) {
+            $name = trim(explode(' - ', $raw, 2)[1] ?? '');
+            return $name !== '' ? $name : null;
+        }
+        return null;
+    }
+
+    private function setTrainingNameProgrammatically(?string $name, bool $autoFilled = false): void
+    {
+        $this->isSettingTrainingNameProgrammatically = true;
+        $this->training_name = (string) ($name ?? '');
+        $this->isSettingTrainingNameProgrammatically = false;
+
+        $this->trainingNameWasAutoFilled = $autoFilled;
+        if ($autoFilled) {
+            $this->trainingNameManuallyEdited = false;
+        }
     }
 
     private function loadTrainingModuleOptions(): void
@@ -148,7 +298,7 @@ class TrainingFormModal extends Component
             // Normal IN-HOUSE module selection
             $module = TrainingModule::with('competency')->find((int) $value);
             if ($module) {
-                $this->training_name = $module->title;
+                $this->setTrainingNameProgrammatically($module->title, autoFilled: true);
                 $this->group_comp = $module->competency?->type ?? 'BMC';
             }
         }
@@ -189,7 +339,7 @@ class TrainingFormModal extends Component
         }
 
         if ($title) {
-            $this->training_name = $title;
+            $this->setTrainingNameProgrammatically($title, autoFilled: true);
         }
         if ($group !== null) {
             // Mirror DB value exactly (trim only)
@@ -198,9 +348,61 @@ class TrainingFormModal extends Component
         }
     }
 
+    public function updatedTrainingName($value): void
+    {
+        if ($this->isSettingTrainingNameProgrammatically) {
+            return;
+        }
+
+        $this->trainingNameManuallyEdited = true;
+        $this->trainingNameWasAutoFilled = false;
+    }
+
+    public function updatedCompetencyId($value): void
+    {
+        if (empty($value) && $value !== 0 && $value !== '0') {
+            $this->competency_id = null;
+            $this->group_comp = 'BMC';
+            return;
+        }
+
+        $id = $this->parseCompetencyIdFromValue($value);
+        $this->competency_id = $id;
+
+        $group = $this->getCompetencyGroupComp($id);
+        if ($group !== null) {
+            $this->group_comp = $group;
+        }
+
+        // Auto-fill training name from competency for OUT-house (editable & optional)
+        if ($this->training_type === 'OUT') {
+            $shouldAutofillName = trim((string) $this->training_name) === ''
+                || $this->trainingNameWasAutoFilled
+                || !$this->trainingNameManuallyEdited;
+
+            if ($shouldAutofillName) {
+                $name = null;
+                if ($id) {
+                    $name = $this->getCompetencyTrainingName($id);
+                }
+                if ($name === null) {
+                    // Fallback if lookup fails or id can't be parsed but UI label is available
+                    $name = $this->parseCompetencyNameFromValue($value);
+                }
+                if ($name !== null) {
+                    $this->setTrainingNameProgrammatically($name, autoFilled: true);
+                }
+            }
+        }
+    }
+
     public function updatedTrainingType($value): void
     {
         $this->resetValidation();
+
+        if ($value !== 'OUT') {
+            $this->competency_id = null;
+        }
 
         // Reset related fields when switching training type
         // Don't reset group_comp for LMS if course already selected (will be synced from course)
@@ -208,6 +410,8 @@ class TrainingFormModal extends Component
             $this->group_comp = 'BMC'; // Reset to default
         }
         $this->training_name = '';
+        $this->trainingNameManuallyEdited = false;
+        $this->trainingNameWasAutoFilled = false;
 
         // If editing and moving from a non LMS -> LMS, require confirmation
         if ($this->isEdit && $value === 'LMS' && $this->originalTrainingType !== 'LMS') {
@@ -228,6 +432,13 @@ class TrainingFormModal extends Component
             // Out-House: reset both
             $this->course_id = null;
             $this->selected_module_id = null;
+
+            // In edit mode, keep existing competency selection.
+            if (!$this->isEdit) {
+                $this->competency_id = null;
+            }
+
+            $this->loadCompetencyOptions($this->parseCompetencyIdFromValue($this->competency_id));
         }
     }
 
@@ -235,6 +446,8 @@ class TrainingFormModal extends Component
     {
         $this->training_type = 'LMS';
         $this->training_name = '';
+        $this->trainingNameManuallyEdited = false;
+        $this->trainingNameWasAutoFilled = false;
         $this->course_id = null;
         $this->selected_module_id = null;
         $this->group_comp = 'BMC';
@@ -327,6 +540,8 @@ class TrainingFormModal extends Component
     public function resetForm()
     {
         $this->training_name = '';
+        $this->trainingNameManuallyEdited = false;
+        $this->trainingNameWasAutoFilled = false;
         $this->training_type = 'IN';
         $this->group_comp = 'BMC';
         $this->selected_module_id = null;
@@ -334,6 +549,7 @@ class TrainingFormModal extends Component
         $this->start_time = '';
         $this->end_time = '';
         $this->course_id = null;
+        $this->competency_id = null;
         $this->activeTab = 'training';
         $this->trainerId = null;
         $this->room = [
@@ -441,7 +657,8 @@ class TrainingFormModal extends Component
             },
             'assessments',
             'course',
-            'module'
+            'module',
+            'competency'
         ])->find($this->trainingId);
 
         if (!$training) {
@@ -455,14 +672,19 @@ class TrainingFormModal extends Component
             return;
         }
 
-        // Reload options FIRST to ensure selected module/course is included
+        // Reload options FIRST to ensure selected module/course/competency is included
         $this->loadCourseOptions();
         $this->loadTrainingModuleOptions();
+        $this->loadCompetencyOptions($training->competency_id);
 
         // Populate base fields
+        // Set competency_id before training_type so the training_type watcher can keep the selection in OUT-house.
+        $this->competency_id = $training->competency_id;
         $this->training_type = $training->type; // Locked in UI while editing
         $this->originalTrainingType = $training->type;
-        $this->group_comp = $training->group_comp;
+        $this->group_comp = $training->type === 'OUT'
+            ? ($training->competency?->type ?? $training->group_comp)
+            : $training->group_comp;
         $this->course_id = $training->course_id;
 
         // Set selected_module_id based on training type
@@ -479,10 +701,14 @@ class TrainingFormModal extends Component
             $this->selected_module_id = null;
         }
         if ($training->type !== 'LMS') {
-            $this->training_name = $training->name;
+            $this->setTrainingNameProgrammatically($training->name, autoFilled: false);
         } else {
-            $this->training_name = $training->course?->title ?? $training->name;
+            $this->setTrainingNameProgrammatically($training->course?->title ?? $training->name, autoFilled: false);
         }
+
+        // In edit mode, treat existing name as manual to avoid unexpected overrides.
+        $this->trainingNameManuallyEdited = true;
+        $this->trainingNameWasAutoFilled = false;
 
         // Date range (keep existing).
         if ($training->start_date && $training->end_date) {
@@ -619,11 +845,55 @@ class TrainingFormModal extends Component
             ->toArray();
     }
 
+    public function searchCompetency(string $value = ''): void
+    {
+        if (empty($value)) {
+            $this->loadCompetencyOptions($this->parseCompetencyIdFromValue($this->competency_id));
+            return;
+        }
+
+        $options = Competency::query()
+            ->select('id', 'code', 'name')
+            ->where(function ($q) use ($value) {
+                $q->where('name', 'like', "%{$value}%")
+                    ->orWhere('code', 'like', "%{$value}%");
+            })
+            ->orderBy('name')
+            ->limit(50)
+            ->get()
+            ->map(fn($c) => ['id' => $c->id, 'name' => trim($c->code . ' - ' . $c->name)])
+            ->toArray();
+
+        // Ensure current selection remains visible in the list (important for edit mode)
+        $selectedId = $this->parseCompetencyIdFromValue($this->competency_id);
+        if ($selectedId) {
+            $existingIds = array_column($options, 'id');
+            if (!in_array($selectedId, $existingIds, true)) {
+                $selected = Competency::query()
+                    ->select('id', 'code', 'name')
+                    ->find($selectedId);
+                if ($selected) {
+                    array_unshift($options, [
+                        'id' => $selected->id,
+                        'name' => trim($selected->code . ' - ' . $selected->name),
+                    ]);
+                }
+            }
+        }
+
+        $this->competencyOptions = $options;
+    }
+
     // Fallback universal watcher to ensure course->group sync always runs
     public function updated($name, $value): void
     {
         if ($name === 'course_id') {
             $this->updatedCourseId($value);
+        }
+
+        // Fallback to ensure competency -> training name/group sync runs reliably for OUT-house
+        if ($name === 'competency_id') {
+            $this->updatedCompetencyId($value);
         }
     }
 
@@ -677,23 +947,37 @@ class TrainingFormModal extends Component
             return;
         }
 
-        $groupToPersist = $this->group_comp;
+        // group_comp is no longer persisted on trainings; keep it as UI-only display value.
         if ($this->training_type === 'LMS' && $this->course_id) {
             $syncedGroup = $this->getCourseGroupComp((int) $this->course_id);
             if ($syncedGroup) {
                 $this->group_comp = $syncedGroup;
-                $groupToPersist = $syncedGroup;
+            }
+        }
+
+        if ($this->training_type === 'OUT' && $this->competency_id) {
+            $syncedGroup = $this->getCompetencyGroupComp((int) $this->competency_id);
+            if ($syncedGroup) {
+                $this->group_comp = $syncedGroup;
+            }
+        }
+
+        $finalName = $this->training_name;
+        if ($this->training_type === 'OUT' && trim((string) $finalName) === '' && $this->competency_id) {
+            $fallback = $this->getCompetencyTrainingName((int) $this->competency_id);
+            if ($fallback !== null) {
+                $finalName = $fallback;
             }
         }
 
         $training = Training::create([
-            'name' => $this->training_type === 'LMS' ? ($courseTitle ?? 'LMS') : $this->training_name,
+            'name' => $this->training_type === 'LMS' ? ($courseTitle ?? 'LMS') : $finalName,
             'type' => $this->training_type,
-            'group_comp' => $groupToPersist,
             'start_date' => $startDate,
             'end_date' => $endDate,
             'course_id' => $this->training_type === 'LMS' ? $this->course_id : null,
             'module_id' => $this->training_type === 'IN' ? $this->selected_module_id : null,
+            'competency_id' => $this->training_type === 'OUT' ? $this->competency_id : null,
         ]);
 
         $surveys = $this->createSurveysForTraining($training);
@@ -731,7 +1015,7 @@ class TrainingFormModal extends Component
         return [
             'training_name' => $this->training_name,
             'training_type' => $this->training_type,
-            'group_comp' => $this->group_comp,
+            'competency_id' => $this->competency_id,
             'date' => $this->date,
             'trainerId' => $this->trainerId,
             'course_id' => $this->course_id,
@@ -792,26 +1076,38 @@ class TrainingFormModal extends Component
         if ($this->training_type === 'LMS') {
             $training->course_id = $this->course_id;
             $training->module_id = null;
+            $training->competency_id = null;
             $training->name = $courseTitle ?? $training->name;
         } elseif ($this->training_type === 'IN') {
             $training->course_id = null;
             $training->module_id = $this->selected_module_id;
+            $training->competency_id = null;
             $training->name = $this->training_name;
         } else {
             $training->course_id = null;
             $training->module_id = null;
-            $training->name = $this->training_name;
+            $training->competency_id = $this->competency_id;
+            $name = $this->training_name;
+            if (trim((string) $name) === '' && $this->competency_id) {
+                $fallback = $this->getCompetencyTrainingName((int) $this->competency_id);
+                if ($fallback !== null) {
+                    $name = $fallback;
+                }
+            }
+            $training->name = $name;
         }
-        if ($this->training_type === 'LMS') {
+
+        // group_comp is no longer persisted on trainings; keep it as UI-only display value.
+        if ($this->training_type === 'LMS' && $this->course_id) {
             $syncedGroup = $this->getCourseGroupComp((int) $this->course_id);
             if ($syncedGroup) {
                 $this->group_comp = $syncedGroup;
-                $training->group_comp = $syncedGroup;
-            } else {
-                $training->group_comp = $this->group_comp;
             }
-        } else {
-            $training->group_comp = $this->group_comp;
+        } elseif ($this->training_type === 'OUT' && $this->competency_id) {
+            $syncedGroup = $this->getCompetencyGroupComp((int) $this->competency_id);
+            if ($syncedGroup) {
+                $this->group_comp = $syncedGroup;
+            }
         }
         $training->start_date = $startDate;
         $training->end_date = $endDate;
@@ -1003,6 +1299,37 @@ class TrainingFormModal extends Component
                 $trimmed = trim((string) $dbGroup);
                 if ($this->group_comp !== $trimmed) {
                     $this->group_comp = $trimmed;
+                }
+            }
+        }
+
+        // Defensive sync: OUT-house competency should auto-fill group + name
+        // (robust to select components that send option objects or label strings)
+        if ($this->training_type === 'OUT' && !empty($this->competency_id)) {
+            $shouldAutofillName = trim((string) $this->training_name) === ''
+                || $this->trainingNameWasAutoFilled
+                || !$this->trainingNameManuallyEdited;
+
+            $shouldSyncGroup = trim((string) $this->group_comp) === '' || $this->group_comp === 'BMC';
+
+            if ($shouldAutofillName || $shouldSyncGroup) {
+                $id = $this->parseCompetencyIdFromValue($this->competency_id);
+
+                if ($id) {
+                    $dbGroup = $this->getCompetencyGroupComp($id);
+                    if ($dbGroup !== null && $this->group_comp !== $dbGroup) {
+                        $this->group_comp = $dbGroup;
+                    }
+                }
+
+                if ($shouldAutofillName) {
+                    $name = $id ? $this->getCompetencyTrainingName($id) : null;
+                    if ($name === null) {
+                        $name = $this->parseCompetencyNameFromValue($this->competency_id);
+                    }
+                    if ($name !== null && $this->training_name !== $name) {
+                        $this->setTrainingNameProgrammatically($name, autoFilled: true);
+                    }
                 }
             }
         }

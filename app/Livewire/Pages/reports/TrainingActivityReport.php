@@ -59,24 +59,24 @@ class TrainingActivityReport extends Component
     public function headers(): array
     {
         return [
-            ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-[50px]'],
-            ['key' => 'event_code', 'label' => 'Event Code', 'class' => '!text-center w-[100px]'],
-            ['key' => 'training_name', 'label' => 'Training Name', 'class' => 'w-[200px]'],
-            ['key' => 'group_comp', 'label' => 'Group Comp', 'class' => '!text-center w-[100px]'],
-            ['key' => 'type', 'label' => 'Type', 'class' => '!text-center w-[80px]'],
-            ['key' => 'instructor', 'label' => 'Instructor', 'class' => 'w-[150px]'],
-            ['key' => 'venue', 'label' => 'Venue', 'class' => 'w-[180px]'],
-            ['key' => 'nrp', 'label' => 'NRP', 'class' => '!text-center w-[100px]'],
-            ['key' => 'employee_name', 'label' => 'Name', 'class' => 'w-[150px]'],
-            ['key' => 'section', 'label' => 'Section', 'class' => '!text-center w-[80px]'],
-            ['key' => 'period', 'label' => 'Period', 'class' => '!text-center w-[180px]'],
-            ['key' => 'duration', 'label' => 'Duration', 'class' => '!text-center w-[120px]'],
-            ['key' => 'theory_score', 'label' => 'Theory', 'class' => '!text-center w-[80px]'],
-            ['key' => 'practical_score', 'label' => 'Practical', 'class' => '!text-center w-[80px]'],
-            ['key' => 'remarks', 'label' => 'Remarks', 'class' => '!text-center w-[100px]'],
-            ['key' => 'date_report', 'label' => 'Date Report', 'class' => '!text-center w-[120px]'],
-            ['key' => 'certificate', 'label' => 'Certificate', 'class' => '!text-center w-[100px]'],
-            ['key' => 'note', 'label' => 'Note', 'class' => 'w-[150px]'],
+            ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-[60px]'],
+            ['key' => 'event_code', 'label' => 'Event Code', 'class' => '!text-center w-[120px]'],
+            ['key' => 'training_name', 'label' => 'Training Name', 'class' => 'w-[260px]'],
+            ['key' => 'group_comp', 'label' => 'Group Comp', 'class' => '!text-center w-[110px]'],
+            ['key' => 'type', 'label' => 'Type', 'class' => '!text-center w-[90px]'],
+            ['key' => 'instructor', 'label' => 'Instructor', 'class' => 'w-[180px]'],
+            ['key' => 'venue', 'label' => 'Venue', 'class' => 'w-[220px]'],
+            ['key' => 'nrp', 'label' => 'NRP', 'class' => '!text-center w-[110px]'],
+            ['key' => 'employee_name', 'label' => 'Name', 'class' => 'w-[180px]'],
+            ['key' => 'section', 'label' => 'Section', 'class' => '!text-center w-[90px]'],
+            ['key' => 'period', 'label' => 'Period', 'class' => '!text-center w-[220px]'],
+            ['key' => 'duration', 'label' => 'Duration', 'class' => '!text-center w-[140px]'],
+            ['key' => 'theory_score', 'label' => 'Theory', 'class' => '!text-center w-[90px]'],
+            ['key' => 'practical_score', 'label' => 'Practical', 'class' => '!text-center w-[90px]'],
+            ['key' => 'remarks', 'label' => 'Remarks', 'class' => '!text-center w-[110px]'],
+            ['key' => 'date_report', 'label' => 'Date Report', 'class' => '!text-center w-[130px]'],
+            ['key' => 'certificate', 'label' => 'Certificate', 'class' => '!text-center w-[110px]'],
+            ['key' => 'note', 'label' => 'Note', 'class' => 'w-[200px]'],
         ];
     }
 
@@ -84,12 +84,12 @@ class TrainingActivityReport extends Component
     {
         [$dateFrom, $dateTo] = $this->parseDateRange();
 
-        // Get all trainings with status 'done' within date range
+        // Get all trainings with status 'approved' within date range
         $query = Training::with([
             'sessions.trainer',
             'assessments.employee',
         ])
-            ->where('status', 'done')
+            ->where('status', 'approved')
             ->when($dateFrom, fn($q) => $q->whereDate('end_date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->whereDate('end_date', '<=', $dateTo))
             ->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%'));
@@ -122,7 +122,12 @@ class TrainingActivityReport extends Component
                 })
                 : ($days * 8); // Default 8 hours per day
 
-            $durationText = $totalHours . ' Hours (' . $days . ' Days)';
+            // For LMS type, show only days; for others, show hours and days
+            if (strtoupper($training->type ?? '') === 'LMS') {
+                $durationText = $days . ' Days';
+            } else {
+                $durationText = $totalHours . ' Hours (' . $days . ' Days)';
+            }
 
             // Period
             $startDate = $training->start_date ? Carbon::parse($training->start_date)->format('d-m-Y') : '-';

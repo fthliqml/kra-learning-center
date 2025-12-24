@@ -69,7 +69,8 @@
         </div>
     @else
         {{-- Table --}}
-        <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+        <div wire:loading.remove
+            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto overflow-y-auto max-h-[70vh]">
             <x-table :headers="$headers" :rows="$reports" striped
                 class="[&>tbody>tr>td]:!py-4 [&>thead>tr>th]:!py-4 text-sm" with-pagination>
 
@@ -80,7 +81,7 @@
 
                 {{-- NRP --}}
                 @scope('cell_nrp', $report)
-                    <div class="text-center font-mono text-xs">{{ $report->nrp }}</div>
+                    <div class="text-center font-mono text-sm">{{ $report->nrp }}</div>
                 @endscope
 
                 {{-- Name --}}
@@ -92,7 +93,7 @@
 
                 {{-- Section --}}
                 @scope('cell_section', $report)
-                    <div class="text-center text-xs">{{ $report->section }}</div>
+                    <div class="text-center text-sm">{{ $report->section }}</div>
                 @endscope
 
                 {{-- Competency --}}
@@ -152,14 +153,14 @@
 
                 {{-- Note --}}
                 @scope('cell_note', $report)
-                    <div class="truncate max-w-[150px] text-xs" title="{{ $report->note }}">
+                    <div class="truncate max-w-[150px] text-sm" title="{{ $report->note }}">
                         {{ $report->note }}
                     </div>
                 @endscope
 
                 {{-- Date --}}
                 @scope('cell_date', $report)
-                    <div class="text-center text-xs whitespace-nowrap">{{ $report->date }}</div>
+                    <div class="text-center text-sm whitespace-nowrap">{{ $report->date }}</div>
                 @endscope
             </x-table>
         </div>

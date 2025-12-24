@@ -19,6 +19,31 @@ class EditSurveyForm extends Component
     public $surveyLevel = 1;
     public ?int $selectedTemplateId = null;
 
+    // Save draft flags with dirty tracking (same UX pattern as pre/post test editor)
+    public bool $hasEverSaved = false;
+    public bool $persisted = false;
+    public bool $isDirty = false;
+    protected string $originalHash = '';
+
+    protected function snapshot(): void
+    {
+        $this->originalHash = md5(json_encode($this->questions));
+        $this->isDirty = false;
+    }
+
+    protected function computeDirty(): void
+    {
+        // If we never took a snapshot yet, treat changes as dirty only after user edits.
+        if ($this->originalHash === '') {
+            return;
+        }
+        $currentHash = md5(json_encode($this->questions));
+        $this->isDirty = $currentHash !== $this->originalHash;
+        if ($this->isDirty) {
+            $this->persisted = false;
+        }
+    }
+
     public function importFromTemplate($templateId = null)
     {
         $templateId = $templateId ?? $this->selectedTemplateId;
@@ -47,6 +72,8 @@ class EditSurveyForm extends Component
             ];
         }
         $this->questions = array_merge($this->questions, $imported);
+        $this->isDirty = true;
+        $this->persisted = false;
         $this->success('Template questions imported and appended successfully.', timeout: 4000, position: 'toast-top toast-center');
         // Close modal on UI
         if (method_exists($this, 'dispatch')) {
@@ -83,6 +110,12 @@ class EditSurveyForm extends Component
             ];
         }
         $this->questions = $loaded;
+
+        if (!empty($loaded)) {
+            $this->hasEverSaved = true;
+            $this->persisted = true;
+            $this->snapshot();
+        }
     }
 
     public function makeQuestion(string $type = 'multiple')
@@ -98,6 +131,8 @@ class EditSurveyForm extends Component
     public function addQuestion(): void
     {
         $this->questions[] = $this->makeQuestion();
+        $this->isDirty = true;
+        $this->persisted = false;
     }
 
     #[On('clearQuestions')]
@@ -106,6 +141,8 @@ class EditSurveyForm extends Component
         // User confirmed: clear all questions
         $this->questions = [];
         $this->errorQuestionIndexes = [];
+        $this->isDirty = true;
+        $this->persisted = false;
         $this->success('All questions cleared.', timeout: 3000, position: 'toast-top toast-center');
         // notify confirm dialog to close and stop processing state
         $this->dispatch('confirm-done');
@@ -116,6 +153,8 @@ class EditSurveyForm extends Component
         if (isset($this->questions[$index])) {
             unset($this->questions[$index]);
             $this->questions = array_values($this->questions);
+            $this->isDirty = true;
+            $this->persisted = false;
         }
     }
 
@@ -123,6 +162,8 @@ class EditSurveyForm extends Component
     {
         if (isset($this->questions[$qIndex]) && $this->questions[$qIndex]['question_type'] === 'multiple') {
             $this->questions[$qIndex]['options'][] = '';
+            $this->isDirty = true;
+            $this->persisted = false;
         }
     }
 
@@ -131,6 +172,8 @@ class EditSurveyForm extends Component
         if (isset($this->questions[$qIndex]['options'][$oIndex])) {
             unset($this->questions[$qIndex]['options'][$oIndex]);
             $this->questions[$qIndex]['options'] = array_values($this->questions[$qIndex]['options']);
+            $this->isDirty = true;
+            $this->persisted = false;
         }
     }
 
@@ -169,6 +212,32 @@ class EditSurveyForm extends Component
             $new[] = $left;
         }
         $this->questions = $new;
+        $this->isDirty = true;
+        $this->persisted = false;
+    }
+
+    public function updated($prop): void
+    {
+        // Handle question type changes
+        if (!is_array($prop) && preg_match('/^questions\.(\d+)\.question_type$/', $prop, $m)) {
+            $i = (int) $m[1];
+            $type = $this->questions[$i]['question_type'] ?? null;
+            if ($type === 'essay') {
+                $this->questions[$i]['options'] = [];
+            } elseif ($type === 'multiple' && empty($this->questions[$i]['options'])) {
+                $this->questions[$i]['options'] = [''];
+            }
+        }
+
+        if (str_starts_with((string) $prop, 'questions')) {
+            // If snapshot exists, compute dirty precisely; otherwise mark dirty once user edits.
+            if ($this->originalHash !== '') {
+                $this->computeDirty();
+            } else {
+                $this->isDirty = true;
+                $this->persisted = false;
+            }
+        }
     }
 
     public function saveDraft(): void
@@ -270,11 +339,46 @@ class EditSurveyForm extends Component
         });
 
         $this->errorQuestionIndexes = []; // clear highlights on success
+        $this->persisted = true;
+        $this->hasEverSaved = true;
+        $this->snapshot();
         $this->success(
             'Survey questions saved successfully',
             timeout: 4000,
             position: 'toast-top toast-center'
         );
+    }
+
+    public function save(): void
+    {
+        // Publish-like save: enforce minimum questions to move out of draft
+        if (count($this->questions) < 5) {
+            $this->error(
+                'To change status from Draft, please add at least 5 questions, then click Save.',
+                timeout: 7000,
+                position: 'toast-top toast-center'
+            );
+            return;
+        }
+
+        // Reuse draft save behavior for validation + persistence,
+        // but force status to INCOMPLETE after successful save.
+        $this->saveDraft();
+
+        // If validation failed, saveDraft already showed errors.
+        if (!empty($this->errorQuestionIndexes)) {
+            return;
+        }
+
+        $survey = TrainingSurvey::find($this->surveyId);
+        if (!$survey) {
+            return;
+        }
+
+        if ($survey->status !== TrainingSurvey::STATUS_INCOMPLETE) {
+            $survey->status = TrainingSurvey::STATUS_INCOMPLETE;
+            $survey->save();
+        }
     }
 
     public function mount()

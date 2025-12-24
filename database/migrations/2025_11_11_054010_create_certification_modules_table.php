@@ -14,11 +14,13 @@ return new class extends Migration
         Schema::create('certification_modules', function (Blueprint $table) {
             $table->id();
 
+            // Foreign key
+            $table->foreignId('competency_id')->nullable()->constrained('competency')->nullOnDelete();
+
             // Module details
             $table->string('code');
             $table->string('module_title');
             $table->string('level');
-            $table->string('competency');
             $table->enum('group_certification', ['ENGINE', 'MACHINING', 'PPT AND PPM']);
             $table->integer('points_per_module');
             $table->double('new_gex');
