@@ -69,8 +69,7 @@
         </div>
     @else
         {{-- Table --}}
-        <div wire:loading.remove
-            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto overflow-y-auto max-h-[70vh]">
+        <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$reports" striped
                 class="[&>tbody>tr>td]:!py-4 [&>thead>tr>th]:!py-4 text-sm" with-pagination>
 
