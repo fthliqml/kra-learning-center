@@ -19,11 +19,14 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="7" :rows="10" targets="search,filter" />
+    <div class="rounded-lg border border-gray-200 shadow-all">
+        <x-skeletons.training-history-table />
+    </div>
 
     {{-- No Data State --}}
     @if ($histories->isEmpty())
-        <div wire:loading.remove class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
+        <div wire:loading.remove wire:target="search,filter"
+            class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
             <div class="flex flex-col items-center justify-center py-16 px-4">
                 <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -41,7 +44,8 @@
         </div>
     @else
         {{-- Table --}}
-        <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+        <div wire:loading.remove wire:target="search,filter"
+            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$histories" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- Custom cell untuk kolom Nomor --}}
@@ -95,7 +99,8 @@
                                 </span>
                             @else
                                 <a href="{{ route('certificate.training.view', $history->assessment_id) }}"
-                                    class="text-blue-600 hover:text-blue-800 underline text-sm" target="_blank" rel="noopener">
+                                    class="text-blue-600 hover:text-blue-800 underline text-sm" target="_blank"
+                                    rel="noopener">
                                     View Certificate
                                 </a>
                             @endif

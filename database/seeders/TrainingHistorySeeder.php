@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Models\Competency;
 use App\Models\Trainer;
 use App\Models\Training;
 use App\Models\TrainingAssessment;
@@ -27,6 +28,16 @@ class TrainingHistorySeeder extends Seeder
       return;
     }
 
+    // Get admin@example.com user to also add training history
+    $admin = User::where('email', 'admin@example.com')->first();
+
+    // Get competencies for random assignment
+    $competencies = Competency::all();
+    if ($competencies->isEmpty()) {
+      $this->command->warn('No competencies found. Skipping TrainingHistorySeeder.');
+      return;
+    }
+
     // Get or create trainers
     $trainers = Trainer::all();
     if ($trainers->isEmpty()) {
@@ -41,7 +52,6 @@ class TrainingHistorySeeder extends Seeder
     }
 
     $trainingTypes = ['IN', 'OUT', 'LMS'];
-    $groupComps = ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC'];
     $trainingNames = [
       'Spring Boot Fundamentals',
       'Laravel Advanced Techniques',
@@ -62,12 +72,23 @@ class TrainingHistorySeeder extends Seeder
       'Node.js Backend Development',
       'Vue.js Framework',
       'Software Testing Strategies',
-      'Leadership & Management'
+      'Leadership & Management',
+      'Angular Framework Mastery',
+      'MongoDB Database Management',
+      'GraphQL API Development',
+      'TypeScript Advanced Patterns',
+      'Redis Caching Strategies',
+      'Elasticsearch Full-Text Search',
+      'Kafka Message Streaming',
+      'PostgreSQL Performance Tuning',
+      'TDD & BDD Testing',
+      'System Design Principles',
+      'Clean Code Architecture'
     ];
 
-    // Create 20 completed trainings (15 passed + 5 failed)
-    for ($i = 0; $i < 20; $i++) {
-      $isPassed = $i < 15; // First 15 are passed, last 5 are failed
+    // Create 31 completed trainings (23 passed + 8 failed)
+    for ($i = 0; $i < 31; $i++) {
+      $isPassed = $i < 23; // First 23 are passed, last 8 are failed
 
       // Random dates in the past (last 6 months)
       $daysAgo = rand(30, 180);
@@ -78,6 +99,7 @@ class TrainingHistorySeeder extends Seeder
       $training = Training::create([
         'name' => $trainingNames[$i],
         'type' => $trainingTypes[array_rand($trainingTypes)],
+        'competency_id' => $competencies->random()->id,
         'start_date' => $start->toDateString(),
         'end_date' => $end->toDateString(),
         'status' => 'done', // Important: must be 'done' to show in history
@@ -140,6 +162,29 @@ class TrainingHistorySeeder extends Seeder
         ]);
       }
 
+      // Create attendance and assessment for admin@example.com if exists
+      if ($admin) {
+        foreach ($sessions as $session) {
+          TrainingAttendance::create([
+            'session_id' => $session->id,
+            'employee_id' => $admin->id,
+            'status' => 'present',
+            'notes' => null,
+            'recorded_at' => Carbon::parse($session->date)->setTime(8, 0),
+          ]);
+        }
+
+        // Admin always passed with good scores
+        TrainingAssessment::create([
+          'training_id' => $training->id,
+          'employee_id' => $admin->id,
+          'pretest_score' => rand(85, 95),
+          'posttest_score' => rand(90, 100),
+          'practical_score' => rand(85, 95),
+          'status' => 'passed',
+        ]);
+      }
+
       // Add some random employees to these trainings too
       $randomEmployees = User::where('id', '!=', $employee->id)
         ->where('position', 'employee')
@@ -172,8 +217,11 @@ class TrainingHistorySeeder extends Seeder
     }
 
     $this->command->info('Training history seeded successfully!');
-    $this->command->info('- 15 passed trainings for employee@example.com');
-    $this->command->info('- 5 failed trainings for employee@example.com');
+    $this->command->info('- 23 passed trainings for employee@example.com');
+    $this->command->info('- 8 failed trainings for employee@example.com');
+    if ($admin) {
+      $this->command->info('- 31 passed trainings for admin@example.com');
+    }
     $this->command->info('- Random attendances for other employees');
   }
 }
