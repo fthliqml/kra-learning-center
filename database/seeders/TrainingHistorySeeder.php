@@ -78,7 +78,6 @@ class TrainingHistorySeeder extends Seeder
       $training = Training::create([
         'name' => $trainingNames[$i],
         'type' => $trainingTypes[array_rand($trainingTypes)],
-        'group_comp' => $groupComps[array_rand($groupComps)],
         'start_date' => $start->toDateString(),
         'end_date' => $end->toDateString(),
         'status' => 'done', // Important: must be 'done' to show in history

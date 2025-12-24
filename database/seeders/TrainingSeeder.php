@@ -21,23 +21,26 @@ class TrainingSeeder extends Seeder
      */
     public function run(): void
     {
-        // 1. Ensure a trainer exists (reuse for all trainings)
+        // 1. Ensure trainers exist
+        // First trainer: internal user (instructor@example.com)
+        $instructorUser = User::where('email', 'instructor@example.com')->first();
         $trainer = Trainer::create([
-            'user_id' => 1,
-            'institution' => "KRA"
-
+            'user_id' => $instructorUser?->id,
+            'institution' => 'KRA',
         ]);
 
+        // Second trainer: external (no user_id)
         Trainer::create([
-            'user_id' => 10,
-            'institution' => "KRA"
-
+            'user_id' => null,
+            'name' => 'Ahmad Fauzi',
+            'institution' => 'PT. Safety Training Indonesia',
         ]);
 
+        // Third trainer: external (no user_id)
         Trainer::create([
-            'user_id' => 10,
-            'institution' => "KRA"
-
+            'user_id' => null,
+            'name' => 'Budi Santoso',
+            'institution' => 'Lembaga Sertifikasi Profesi',
         ]);
 
         // 2. Employees pool for assessments/attendances
@@ -76,7 +79,6 @@ class TrainingSeeder extends Seeder
             $training = Training::create([
                 'name' => 'Safety Induction #' . $i,
                 'type' => 'IN',
-                'group_comp' => $module->competency?->type ?? 'BMC',
                 'module_id' => $module->id,
                 'start_date' => $start->toDateString(),
                 'end_date' => $end->toDateString(),

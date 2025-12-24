@@ -22,8 +22,7 @@
                         class="shrink-0 w-28 sm:w-32 aspect-[16/9] rounded-xl overflow-hidden bg-gray-100 dark:bg-gray-700">
                         @if (!empty($course['thumbnail_url']))
                             <img src="{{ Storage::url($course['thumbnail_url']) }}" alt="{{ $course['title'] }}"
-                                class="w-full h-full object-cover" loading="lazy"
-                                onerror="this.onerror=null;this.src='/images/reporting.jpg';">
+                                class="w-full h-full object-cover" loading="lazy">
                         @else
                             <div
                                 class="h-full w-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-800">
