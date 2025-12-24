@@ -1,13 +1,16 @@
 <div>
     {{-- Main Content: 2 Columns Layout --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {{-- Left Column: Welcome Banner + My Courses --}}
+        {{-- Left Column: Welcome Banner + My Courses + Pending Surveys --}}
         <div class="lg:col-span-2 space-y-6">
             {{-- Welcome Banner --}}
             <livewire:components.dashboard.welcome-banner />
 
             {{-- My Courses --}}
             <livewire:components.dashboard.my-courses />
+
+            {{-- Pending Surveys --}}
+            <livewire:components.dashboard.pending-surveys />
         </div>
 
         {{-- Right Column: Calendar + Upcoming Schedules --}}

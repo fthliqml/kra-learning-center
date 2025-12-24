@@ -1,10 +1,18 @@
 <div>
-    <div class="w-full flex gap-5 mb-5 lg:mb-9 items-center">
+    {{-- Header --}}
+    <div class="w-full grid gap-4 lg:gap-5 mb-5 lg:mb-9 grid-cols-1 lg:grid-cols-2 items-center">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
             Survey Template
         </h1>
 
-        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
+        <div class="flex gap-2 flex-col w-full items-center justify-center lg:justify-end sm:flex-row flex-wrap">
+            {{-- Default Template Settings Button --}}
+            <x-button wire:click="$dispatch('open-default-template-modal')" class="btn-outline btn-primary h-10"
+                title="Set default templates for each competency group">
+                <x-icon name="o-cog-6-tooth" class="size-4" />
+                <span class="hidden sm:inline">Defaults</span>
+            </x-button>
+
             <x-ui.button variant="primary" wire:click="addPage" wire:target="addPage" class="h-10"
                 wire:loading.attr="readonly">
                 <span wire:loading.remove wire:target="addPage" size="lg" class="flex items-center gap-2">
@@ -16,13 +24,13 @@
                 </span>
             </x-ui.button>
 
-            <x-select wire:model="filter" :options="$filterOptions" option-value="value" option-label="label"
-                placeholder="Filter" wire:change="$refresh"
-                class="!h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+            <x-select wire:model.live="filter" :options="$filterOptions" option-value="value" option-label="label"
+                placeholder="All Levels"
+                class="!w-32 !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                 icon-right="o-funnel" />
-            <x-search-input placeholder="Search..." class="max-w-md" wire:model.live.debounce.600ms="search" />
-        </div>
 
+            <x-search-input placeholder="Search..." class="!w-48" wire:model.live.debounce.600ms="search" />
+        </div>
     </div>
 
     <x-skeletons.survey-template-skeleton />
@@ -92,4 +100,6 @@
         {{ $surveyTemplates->links('pagination::tailwind') }}
     </div>
 
+    {{-- Default Template Modal --}}
+    <livewire:components.survey-template.default-template-modal />
 </div>
