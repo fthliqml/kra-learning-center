@@ -272,8 +272,8 @@ return [
                 [
                     'label' => 'Instructor Daily Record',
                     'href' => '/reports/instructor-daily-record',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
-                    'roles' => ['instructor', 'admin'],
+                    'positions' => ['section_head'],
+                    'roles' => ['instructor', 'certificator', 'admin', 'multimedia'],
                 ],
             ],
         ],
