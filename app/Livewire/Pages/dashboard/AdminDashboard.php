@@ -72,8 +72,9 @@ class AdminDashboard extends Component
       ];
     }
 
-    // Admin sees all certification schedules
+    // Admin sees only active certification schedules (exclude closed/done/completed)
     $certifications = Certification::with(['sessions'])
+      ->whereNotIn('status', ['closed', 'done', 'completed'])
       ->whereHas('sessions', function ($q) use ($startDate, $endDate) {
         $q->whereBetween('date', [$startDate, $endDate]);
       })
