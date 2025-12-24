@@ -87,7 +87,42 @@ class Approval extends Component
             return collect();
         }
 
-        // Get unique participants from attendances
+        // For LMS type, participants come from assessments (no physical attendance)
+        // For other types (IN, OUT), participants come from attendances
+        if (strtoupper($training->type) === 'LMS') {
+            // LMS: Get participants from assessments
+            $participants = $training->assessments->map(function ($assessment, $index) use ($training) {
+                $employee = $assessment->employee;
+
+                if (!$employee) {
+                    return null;
+                }
+
+                // For LMS, no physical attendance - use course progress or assessment data
+                $theoryScore = $assessment->posttest_score;
+                $practiceScore = $assessment->practical_score;
+                $status = $assessment->status ?? 'pending';
+                $certificatePath = $assessment->certificate_path;
+
+                return (object) [
+                    'no' => $index + 1,
+                    'nrp' => $employee->nrp ?? '-',
+                    'name' => $employee->name ?? '-',
+                    'section' => $employee->section ?? '-',
+                    'absent' => '-', // N/A for LMS
+                    'theory_score' => $theoryScore,
+                    'practice_score' => $practiceScore,
+                    'status' => $status,
+                    'certificate_path' => $certificatePath,
+                    'employee_id' => $employee->id,
+                    'assessment_id' => $assessment->id,
+                ];
+            })->filter()->values();
+
+            return $participants;
+        }
+
+        // For IN/OUT types: Get unique participants from attendances
         $participants = $training->attendances->unique('employee_id')->map(function ($attendance, $index) use ($training) {
             $employee = $attendance->employee;
 
