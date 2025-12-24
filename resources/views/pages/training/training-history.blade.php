@@ -25,8 +25,7 @@
 
     {{-- No Data State --}}
     @if ($histories->isEmpty())
-        <div wire:loading.remove wire:target="search,filter"
-            class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
+        <div wire:loading.remove class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
             <div class="flex flex-col items-center justify-center py-16 px-4">
                 <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
@@ -44,8 +43,7 @@
         </div>
     @else
         {{-- Table --}}
-        <div wire:loading.remove wire:target="search,filter"
-            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+        <div wire:loading.remove class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$histories" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- Custom cell untuk kolom Nomor --}}
