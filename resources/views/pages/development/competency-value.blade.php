@@ -170,19 +170,21 @@
     {{-- Modal Add/Edit Competency Value --}}
     <x-modal wire:model="modal" :title="$mode === 'create' ? 'Add Competency Value' : 'Edit Competency Value'" separator box-class="max-w-xl h-fit">
         <x-form wire:submit="save" no-separator>
-            <x-select label="Type" wire:model.live="formType" :options="$typeOptions" option-value="value"
-                option-label="label" placeholder="Select type to filter competencies" class="focus-within:border-0" />
+            <x-choices label="Type" wire:model.live="formType" :options="$typeOptions" option-value="value"
+                option-label="label" placeholder="Select type to filter competencies" class="focus-within:border-0"
+                single />
 
-            <x-choices label="Competency" wire:model="formData.competency_id" :options="$competencyOptions" option-value="id"
+            <x-choices label="Competency" wire:model.live="formData.competency_id" :options="$competencyOptions" option-value="id"
                 option-label="name"
                 placeholder="{{ empty($formType) ? 'Select type first...' : 'Select competency...' }}" searchable
-                single class="focus-within:border-0" :disabled="empty($formType)" />
+                single class="focus-within:border-0"
+                @change-selection="const v = $event.detail?.value; if (v === null || v === undefined || v === '') return; $wire.set('formData.competency_id', v)" />
             @error('formData.competency_id')
                 <div class="text-error text-xs -mt-2">{{ $message }}</div>
             @enderror
 
-            <x-select label="Position" wire:model="formData.position" :options="$positionOptions" option-value="value"
-                option-label="label" placeholder="Select position" class="focus-within:border-0" />
+            <x-choices label="Position" wire:model="formData.position" :options="$positionOptions" option-value="value"
+                option-label="label" placeholder="Select position" class="focus-within:border-0" single />
             @error('formData.position')
                 <div class="text-error text-xs -mt-2">{{ $message }}</div>
             @enderror

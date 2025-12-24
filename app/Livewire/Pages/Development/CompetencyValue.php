@@ -65,16 +65,18 @@ class CompetencyValue extends Component
 
     public function loadCompetencyOptions(): void
     {
-        $query = Competency::orderBy('code');
-
-        if (!empty($this->formType)) {
-            $query->where('type', $this->formType);
+        if (empty($this->formType)) {
+            $this->competencyOptions = [];
+            return;
         }
+
+        $query = Competency::orderBy('code')
+            ->where('type', $this->formType);
 
         $this->competencyOptions = $query->get()
             ->map(fn($c) => [
                 'id' => $c->id,
-                'name' => "[{$c->code}] {$c->name}",
+                'name' => $c->name,
                 'code' => $c->code,
                 'type' => $c->type,
             ])

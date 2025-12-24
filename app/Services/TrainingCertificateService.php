@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Training;
 use App\Models\TrainingAssessment;
 use App\Models\User;
+use App\Models\CompetencyMatrix;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
@@ -239,6 +240,9 @@ class TrainingCertificateService
     {
         $count = 0;
 
+        // Resolve competency for this training (supports direct, module-based, and LMS/course-based mapping)
+        $competencyId = $this->resolveCompetencyId($training);
+
         // Get all passed participants
         $passedAssessments = TrainingAssessment::where('training_id', $training->id)
             ->where('status', 'passed')
@@ -261,6 +265,14 @@ class TrainingCertificateService
                 $assessment->update([
                     'certificate_path' => $certificatePath
                 ]);
+
+                // Ensure competency matrix entry exists for this employee & competency
+                if ($competencyId && $employee) {
+                    CompetencyMatrix::firstOrCreate([
+                        'competency_id' => $competencyId,
+                        'employees_trained_id' => $employee->id,
+                    ]);
+                }
                 $count++;
             } else {
                 Log::error("Failed to generate certificate for Assessment ID {$assessment->id}");
@@ -268,6 +280,34 @@ class TrainingCertificateService
         }
 
         return $count;
+    }
+
+    /**
+     * Resolve competency_id for a training, supporting direct, module, and course mapping.
+     */
+    protected function resolveCompetencyId(Training $training): ?int
+    {
+        if (!empty($training->competency_id)) {
+            return $training->competency_id;
+        }
+
+        // In-house or unspecified type: prefer module competency
+        $type = strtoupper((string) ($training->type ?? ''));
+
+        if ($type === 'IN' || $type === '') {
+            if ($training->module && !empty($training->module->competency_id)) {
+                return $training->module->competency_id;
+            }
+        }
+
+        // LMS type: prefer course competency
+        if ($type === 'LMS' || $type === '') {
+            if ($training->course && !empty($training->course->competency_id)) {
+                return $training->course->competency_id;
+            }
+        }
+
+        return null;
     }
 
     /**
