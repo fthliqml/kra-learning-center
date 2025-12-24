@@ -93,15 +93,8 @@
                 <x-input label="Type" :value="$selectedCompetency->type" readonly class="focus-within:border-0" />
 
                 @if (count($employeesTrained) > 0)
-                    <x-textarea label="Employees Trained" :value="implode(
-                        chr(10),
-                        array_map(
-                            fn($e, $i) => $i + 1 . '. ' . ($e['name'] ?? '-'),
-                            $employeesTrained,
-                            array_keys($employeesTrained),
-                        ),
-                    )" readonly class="focus-within:border-0"
-                        rows="8" />
+                    <x-textarea label="Employees Trained" wire:model="employeesTrainedText" readonly
+                        class="focus-within:border-0" rows="8" />
                 @else
                     <x-input label="Employees Trained" value="No employees trained yet" readonly
                         class="focus-within:border-0 italic" />

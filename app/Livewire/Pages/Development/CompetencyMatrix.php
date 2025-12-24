@@ -24,6 +24,7 @@ class CompetencyMatrix extends Component
     public $detailModal = false;
     public $selectedCompetency = null;
     public $employeesTrained = [];
+    public $employeesTrainedText = '';
 
     public $typeOptions = [
         ['value' => 'BMC', 'label' => 'BMC'],
@@ -43,16 +44,32 @@ class CompetencyMatrix extends Component
 
     public function openDetailModal($competencyId)
     {
+        // Load competency basic info
         $this->selectedCompetency = Competency::find($competencyId);
 
-        if ($this->selectedCompetency) {
-            $this->employeesTrained = CompetencyMatrixModel::with('employeeTrained')
-                ->where('competency_id', $competencyId)
-                ->get()
-                ->map(fn($matrix) => $matrix->employeeTrained)
-                ->filter()
-                ->values()
-                ->toArray();
+        // Always derive employee list directly from competency_matrixs table
+        // so it matches the withCount('matrixEntries') used in the main table.
+        $matrixRows = CompetencyMatrixModel::with('employeeTrained')
+            ->where('competency_id', $competencyId)
+            ->get();
+
+        $this->employeesTrained = $matrixRows
+            ->map(function ($row) {
+                $employee = $row->employeeTrained;
+                return [
+                    'name' => $employee->name ?? 'Unknown Employee (ID ' . $row->employees_trained_id . ')',
+                ];
+            })
+            ->toArray();
+
+        // Pre-format text lines "1. Name" for the textarea
+        $this->employeesTrainedText = collect($this->employeesTrained)
+            ->values()
+            ->map(fn($employee, $index) => ($index + 1) . '. ' . ($employee['name'] ?? '-'))
+            ->implode("\n");
+
+        if (!$this->selectedCompetency) {
+            $this->employeesTrainedText = '';
         }
 
         $this->detailModal = true;
@@ -63,6 +80,7 @@ class CompetencyMatrix extends Component
         $this->detailModal = false;
         $this->selectedCompetency = null;
         $this->employeesTrained = [];
+        $this->employeesTrainedText = '';
     }
 
     public function headers(): array
