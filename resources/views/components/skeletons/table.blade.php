@@ -1,6 +1,6 @@
 @props(['columns' => 5, 'rows' => 10, 'targets' => 'search'])
 
-<div class="w-full p-2 overflow-x-auto">
+<div {{ $attributes->merge(['class' => 'w-full p-2 overflow-x-auto']) }} wire:loading wire:target="{{ $targets }}">
     <table class="w-full table-auto border-collapse">
         <thead>
             <tr>
