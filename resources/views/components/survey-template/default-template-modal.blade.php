@@ -12,29 +12,26 @@
 
             <x-hr class="my-4" />
 
-            {{-- Group Comp → Template Mapping --}}
+            {{-- Default Template for Level --}}
             <div class="space-y-4">
                 <p class="text-sm text-gray-600">
-                    Select the default template to use when a training is closed for each competency group.
-                    The survey will be automatically populated with questions from the selected template.
+                    Select the default template to use for this survey level. The survey will be automatically populated
+                    with questions from the selected template when training is closed.
                 </p>
-
-                @foreach ($groupCompOptions as $option)
-                    <div class="flex items-center gap-4">
-                        <label class="w-24 text-sm font-medium text-gray-700 flex-shrink-0">
-                            {{ $option['value'] }}
-                        </label>
-                        <x-select wire:model="defaults.{{ $option['value'] }}" :options="$templateOptions" option-value="value"
-                            option-label="label" placeholder="Select template..." class="flex-1" />
-                    </div>
-                @endforeach
+                <div class="flex items-center gap-4">
+                    <label class="w-32 text-sm font-medium text-gray-700 flex-shrink-0">
+                        Default Template
+                    </label>
+                    <x-select wire:model="defaultTemplateId" :options="$templateOptions" option-value="value" option-label="label"
+                        placeholder="Select template..." class="flex-1" />
+                </div>
             </div>
 
             <div class="bg-blue-50 border border-blue-200 rounded-lg p-3 mt-4">
                 <p class="text-xs text-blue-700">
-                    <strong>Note:</strong> When a training is closed, a Level 1 survey will be automatically created
-                    using the default template for the training's competency group. If no default is set, the survey
-                    will be created without pre-populated questions.
+                    <strong>Note:</strong> When a training is closed, a survey for the selected level will be
+                    automatically created using the default template. If no default is set, the survey will be created
+                    without pre-populated questions.
                 </p>
             </div>
         </div>
@@ -43,7 +40,7 @@
             <x-button wire:click="$set('modal', false)" class="btn-ghost">Cancel</x-button>
             <x-button wire:click="save" class="btn-primary" spinner="save">
                 <x-icon name="o-check" class="w-4 h-4" />
-                Save Defaults
+                Save Default
             </x-button>
         </x-slot:actions>
     </x-modal>

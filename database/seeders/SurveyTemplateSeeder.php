@@ -6,6 +6,7 @@ use Illuminate\Database\Seeder;
 use App\Models\SurveyTemplate;
 use App\Models\SurveyTemplateQuestion;
 use App\Models\SurveyTemplateOption;
+use App\Models\SurveyTemplateDefault;
 
 class SurveyTemplateSeeder extends Seeder
 {
@@ -15,166 +16,135 @@ class SurveyTemplateSeeder extends Seeder
   public function run(): void
   {
     $templates = [
+      // Level 1 templates: Kepuasan terhadap instruktur/trainer
       [
-        'title' => 'Evaluasi Pelatihan Operator Excavator',
-        'description' => 'Survei untuk menilai efektivitas pelatihan operator alat berat.',
+        'title' => 'Survey Kepuasan Instruktur - Umum',
+        'description' => 'Survey untuk menilai kepuasan peserta terhadap instruktur atau trainer pelatihan.',
         'status' => 'active',
         'level' => 1,
         'questions' => [
           [
-            'text' => 'Bagaimana tingkat kepuasan Anda terhadap materi pelatihan yang disampaikan?',
+            'text' => 'Bagaimana penilaian Anda terhadap kemampuan instruktur dalam mengajar?',
             'type' => 'multiple',
-            'options' => ['Sangat Puas', 'Puas', 'Cukup', 'Kurang Puas', 'Tidak Puas'],
+            'options' => ['Sangat Baik', 'Baik', 'Cukup', 'Kurang', 'Buruk'],
           ],
           [
-            'text' => 'Apakah instruktur menyampaikan materi dengan jelas dan mudah dipahami?',
-            'type' => 'multiple',
-            'options' => ['Sangat Setuju', 'Setuju', 'Netral', 'Tidak Setuju', 'Sangat Tidak Setuju'],
-          ],
-          [
-            'text' => 'Bagaimana penilaian Anda terhadap fasilitas dan peralatan pelatihan?',
-            'type' => 'multiple',
-            'options' => ['Sangat Baik', 'Baik', 'Cukup', 'Kurang', 'Sangat Kurang'],
-          ],
-          [
-            'text' => 'Apakah durasi pelatihan sudah sesuai dengan kebutuhan?',
-            'type' => 'multiple',
-            'options' => ['Sangat Sesuai', 'Sesuai', 'Cukup', 'Kurang Sesuai', 'Tidak Sesuai'],
-          ],
-          [
-            'text' => 'Apa saran Anda untuk meningkatkan kualitas pelatihan ini?',
-            'type' => 'essay',
-            'options' => [],
-          ],
-        ],
-      ],
-      [
-        'title' => 'Survei Kepatuhan Safety Pekerja Lapangan',
-        'description' => 'Menilai kepatuhan terhadap standar keselamatan di area kerja.',
-        'status' => 'active',
-        'level' => 1,
-        'questions' => [
-          [
-            'text' => 'Seberapa sering Anda menggunakan APD lengkap saat bekerja?',
+            'text' => 'Apakah instruktur menjawab pertanyaan peserta dengan jelas?',
             'type' => 'multiple',
             'options' => ['Selalu', 'Sering', 'Kadang-kadang', 'Jarang', 'Tidak Pernah'],
           ],
           [
-            'text' => 'Bagaimana pemahaman Anda terhadap prosedur keselamatan kerja?',
+            'text' => 'Bagaimana sikap instruktur selama pelatihan?',
             'type' => 'multiple',
-            'options' => ['Sangat Paham', 'Paham', 'Cukup Paham', 'Kurang Paham', 'Tidak Paham'],
+            'options' => ['Sangat Ramah', 'Ramah', 'Cukup', 'Kurang Ramah', 'Tidak Ramah'],
           ],
           [
-            'text' => 'Apakah briefing safety pagi memberikan informasi yang bermanfaat?',
+            'text' => 'Apakah materi yang disampaikan instruktur mudah dipahami?',
             'type' => 'multiple',
-            'options' => ['Sangat Bermanfaat', 'Bermanfaat', 'Cukup', 'Kurang Bermanfaat', 'Tidak Bermanfaat'],
+            'options' => ['Sangat Mudah', 'Mudah', 'Cukup', 'Sulit', 'Sangat Sulit'],
           ],
           [
-            'text' => 'Bagaimana kondisi peralatan safety di area kerja Anda?',
-            'type' => 'multiple',
-            'options' => ['Sangat Baik', 'Baik', 'Cukup', 'Kurang', 'Sangat Kurang'],
-          ],
-          [
-            'text' => 'Apa kendala utama dalam menerapkan prosedur keselamatan kerja?',
+            'text' => 'Saran untuk instruktur agar pelatihan lebih baik:',
             'type' => 'essay',
             'options' => [],
           ],
         ],
       ],
       [
-        'title' => 'Evaluasi Workshop Maintenance Alat Berat',
-        'description' => 'Menilai efektivitas workshop pemeliharaan mesin dan alat berat.',
+        'title' => 'Survey Kepuasan Instruktur - Teknis',
+        'description' => 'Survey kepuasan peserta terhadap instruktur pelatihan teknis.',
         'status' => 'active',
         'level' => 1,
         'questions' => [
           [
-            'text' => 'Bagaimana tingkat kepuasan Anda terhadap praktik hands-on dalam workshop?',
+            'text' => 'Bagaimana penjelasan instruktur mengenai materi teknis?',
             'type' => 'multiple',
-            'options' => ['Sangat Puas', 'Puas', 'Cukup', 'Kurang Puas', 'Tidak Puas'],
+            'options' => ['Sangat Jelas', 'Jelas', 'Cukup', 'Kurang Jelas', 'Tidak Jelas'],
           ],
           [
-            'text' => 'Apakah materi workshop relevan dengan pekerjaan sehari-hari Anda?',
-            'type' => 'multiple',
-            'options' => ['Sangat Relevan', 'Relevan', 'Cukup Relevan', 'Kurang Relevan', 'Tidak Relevan'],
-          ],
-          [
-            'text' => 'Bagaimana kualitas alat dan spare part yang digunakan dalam workshop?',
-            'type' => 'multiple',
-            'options' => ['Sangat Baik', 'Baik', 'Cukup', 'Kurang', 'Sangat Kurang'],
-          ],
-          [
-            'text' => 'Apakah Anda merasa lebih percaya diri setelah mengikuti workshop ini?',
-            'type' => 'multiple',
-            'options' => ['Sangat Percaya Diri', 'Percaya Diri', 'Biasa Saja', 'Kurang Percaya Diri', 'Tidak Percaya Diri'],
-          ],
-          [
-            'text' => 'Topik maintenance apa yang perlu ditambahkan di workshop berikutnya?',
-            'type' => 'essay',
-            'options' => [],
-          ],
-        ],
-      ],
-      [
-        'title' => 'Feedback Program Kaizen Mingguan',
-        'description' => 'Mengukur partisipasi dan efektivitas program continuous improvement.',
-        'status' => 'active',
-        'level' => 1,
-        'questions' => [
-          [
-            'text' => 'Seberapa aktif Anda berpartisipasi dalam program Kaizen?',
-            'type' => 'multiple',
-            'options' => ['Sangat Aktif', 'Aktif', 'Cukup Aktif', 'Kurang Aktif', 'Tidak Aktif'],
-          ],
-          [
-            'text' => 'Apakah ide Kaizen Anda mendapat respon yang baik dari atasan?',
+            'text' => 'Apakah instruktur memberikan contoh praktik yang relevan?',
             'type' => 'multiple',
             'options' => ['Selalu', 'Sering', 'Kadang-kadang', 'Jarang', 'Tidak Pernah'],
           ],
           [
-            'text' => 'Bagaimana dampak program Kaizen terhadap produktivitas tim Anda?',
+            'text' => 'Bagaimana kemampuan instruktur dalam mengatasi masalah teknis saat pelatihan?',
             'type' => 'multiple',
-            'options' => ['Sangat Positif', 'Positif', 'Netral', 'Negatif', 'Sangat Negatif'],
+            'options' => ['Sangat Baik', 'Baik', 'Cukup', 'Kurang', 'Buruk'],
           ],
           [
-            'text' => 'Apakah reward untuk ide Kaizen terbaik sudah memadai?',
+            'text' => 'Apakah instruktur mendorong peserta untuk aktif bertanya?',
             'type' => 'multiple',
-            'options' => ['Sangat Memadai', 'Memadai', 'Cukup', 'Kurang Memadai', 'Tidak Memadai'],
+            'options' => ['Selalu', 'Sering', 'Kadang-kadang', 'Jarang', 'Tidak Pernah'],
           ],
           [
-            'text' => 'Berikan contoh improvement yang sudah Anda implementasikan melalui Kaizen.',
+            'text' => 'Saran untuk instruktur pelatihan teknis:',
+            'type' => 'essay',
+            'options' => [],
+          ],
+        ],
+      ],
+      // Level 3 templates: Kepuasan supervisor terhadap karyawan
+      [
+        'title' => 'Survey Supervisor - Kinerja Karyawan',
+        'description' => 'Survey supervisor untuk menilai kinerja karyawan setelah pelatihan.',
+        'status' => 'active',
+        'level' => 3,
+        'questions' => [
+          [
+            'text' => 'Bagaimana peningkatan kinerja karyawan setelah mengikuti pelatihan?',
+            'type' => 'multiple',
+            'options' => ['Sangat Meningkat', 'Meningkat', 'Cukup', 'Tidak Meningkat', 'Menurun'],
+          ],
+          [
+            'text' => 'Apakah karyawan menerapkan pengetahuan yang didapat dalam pekerjaan?',
+            'type' => 'multiple',
+            'options' => ['Selalu', 'Sering', 'Kadang-kadang', 'Jarang', 'Tidak Pernah'],
+          ],
+          [
+            'text' => 'Bagaimana sikap karyawan terhadap tugas dan tanggung jawab?',
+            'type' => 'multiple',
+            'options' => ['Sangat Baik', 'Baik', 'Cukup', 'Kurang', 'Buruk'],
+          ],
+          [
+            'text' => 'Apakah karyawan menunjukkan inisiatif dalam pekerjaan?',
+            'type' => 'multiple',
+            'options' => ['Selalu', 'Sering', 'Kadang-kadang', 'Jarang', 'Tidak Pernah'],
+          ],
+          [
+            'text' => 'Saran untuk pengembangan karyawan:',
             'type' => 'essay',
             'options' => [],
           ],
         ],
       ],
       [
-        'title' => 'Survei Efektivitas Program 5S Area Produksi',
-        'description' => 'Menilai penerapan prinsip 5S (Seiri, Seiton, Seiso, Seiketsu, Shitsuke) di area kerja.',
+        'title' => 'Survey Supervisor - Perilaku Kerja',
+        'description' => 'Survey supervisor untuk menilai perilaku kerja karyawan pasca pelatihan.',
         'status' => 'active',
-        'level' => 1,
+        'level' => 3,
         'questions' => [
           [
-            'text' => 'Bagaimana tingkat kerapian area kerja Anda saat ini?',
+            'text' => 'Bagaimana disiplin karyawan dalam menjalankan tugas?',
             'type' => 'multiple',
-            'options' => ['Sangat Rapi', 'Rapi', 'Cukup Rapi', 'Kurang Rapi', 'Tidak Rapi'],
+            'options' => ['Sangat Disiplin', 'Disiplin', 'Cukup', 'Kurang Disiplin', 'Tidak Disiplin'],
           ],
           [
-            'text' => 'Apakah semua peralatan sudah memiliki tempat penyimpanan yang jelas?',
+            'text' => 'Apakah karyawan bekerja sama dengan tim secara efektif?',
             'type' => 'multiple',
-            'options' => ['Semua', 'Sebagian Besar', 'Sebagian', 'Sedikit', 'Tidak Ada'],
+            'options' => ['Sangat Baik', 'Baik', 'Cukup', 'Kurang', 'Buruk'],
           ],
           [
-            'text' => 'Seberapa rutin tim Anda melakukan cleaning area kerja?',
+            'text' => 'Bagaimana komunikasi karyawan dengan atasan dan rekan kerja?',
             'type' => 'multiple',
-            'options' => ['Setiap Hari', 'Beberapa Kali Seminggu', 'Seminggu Sekali', 'Jarang', 'Tidak Pernah'],
+            'options' => ['Sangat Baik', 'Baik', 'Cukup', 'Kurang', 'Buruk'],
           ],
           [
-            'text' => 'Apakah standar 5S sudah dipahami oleh seluruh anggota tim?',
+            'text' => 'Apakah karyawan mematuhi prosedur dan aturan kerja?',
             'type' => 'multiple',
-            'options' => ['Sangat Paham', 'Paham', 'Cukup Paham', 'Kurang Paham', 'Tidak Paham'],
+            'options' => ['Selalu', 'Sering', 'Kadang-kadang', 'Jarang', 'Tidak Pernah'],
           ],
           [
-            'text' => 'Apa tantangan terbesar dalam menerapkan 5S di area kerja Anda?',
+            'text' => 'Saran untuk peningkatan perilaku kerja karyawan:',
             'type' => 'essay',
             'options' => [],
           ],
@@ -182,11 +152,18 @@ class SurveyTemplateSeeder extends Seeder
       ],
     ];
 
+    $levelDefaults = [];
     foreach ($templates as $templateData) {
       $questions = $templateData['questions'];
       unset($templateData['questions']);
 
       $template = SurveyTemplate::create($templateData);
+
+      // Simpan id template pertama untuk tiap level sebagai default
+      $level = $template->level;
+      if (!isset($levelDefaults[$level])) {
+        $levelDefaults[$level] = $template->id;
+      }
 
       foreach ($questions as $order => $questionData) {
         $question = SurveyTemplateQuestion::create([
@@ -206,6 +183,11 @@ class SurveyTemplateSeeder extends Seeder
           }
         }
       }
+    }
+
+    // Set default template untuk tiap level
+    foreach ($levelDefaults as $level => $templateId) {
+      SurveyTemplateDefault::setDefaultForLevel($templateId, $level);
     }
   }
 }
