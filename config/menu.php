@@ -56,6 +56,11 @@ return [
                     'href' => '/development/approval',
                     'positions' => ['supervisor', 'section_head', 'department_head', 'division_head'],
                 ],
+                [
+                    'label' => 'Development Approved',
+                    'href' => '/development/approved',
+                    'roles' => ['admin'],
+                ],
             ],
         ],
 

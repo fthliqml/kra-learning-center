@@ -505,10 +505,45 @@ class DevelopmentPlan extends Component
         }
     }
 
+    /**
+     * Determine initial status for a plan when submitted (non-draft).
+     *
+     * Rules:
+     * - If saving as draft  -> always 'draft'.
+     * - If employee is a supervisor -> skip SPV layer, go directly to Leader (pending_leader).
+     * - Otherwise, if there is any supervisor in the same section/department as the employee
+     *   -> first approval goes to SPV (pending_spv).
+     * - If there is no such supervisor -> skip SPV, send directly to Leader LID (pending_leader).
+     */
+    private function determineInitialStatus(User $user, bool $isDraft = false): string
+    {
+        if ($isDraft) {
+            return 'draft';
+        }
+
+        // If the requester is a supervisor, never route to themselves as SPV
+        if (strtolower(trim($user->position ?? '')) === 'supervisor') {
+            return 'pending_leader';
+        }
+
+        // Check if there is any supervisor in the same section or department
+        $hasSpvInArea = User::query()
+            ->whereRaw('LOWER(TRIM(position)) = ?', ['supervisor'])
+            ->when($user->section, function ($q) use ($user) {
+                $q->where('section', $user->section);
+            })
+            ->when(!$user->section && $user->department, function ($q) use ($user) {
+                // Fallback by department if section is not set
+                $q->where('department', $user->department);
+            })
+            ->exists();
+
+        return $hasSpvInArea ? 'pending_spv' : 'pending_leader';
+    }
+
     private function saveTrainingPlans($user, $isDraft = false)
     {
-        // If user is supervisor, skip supervisor approval and go directly to LID
-        $status = $isDraft ? 'draft' : ($user->position === 'supervisor' ? 'pending_leader' : 'pending_spv');
+        $status = $this->determineInitialStatus($user, $isDraft);
 
         foreach ($this->trainingPlans as $plan) {
             if (!empty($plan['competency_id'])) {
@@ -537,8 +572,7 @@ class DevelopmentPlan extends Component
 
     private function saveSelfLearningPlan($user, $isDraft = false)
     {
-        // If user is supervisor, skip supervisor approval and go directly to LID
-        $status = $isDraft ? 'draft' : ($user->position === 'supervisor' ? 'pending_leader' : 'pending_spv');
+        $status = $this->determineInitialStatus($user, $isDraft);
 
         foreach ($this->selfLearningPlans as $plan) {
             // Skip empty rows
@@ -571,8 +605,7 @@ class DevelopmentPlan extends Component
 
     private function saveMentoringPlan($user, $isDraft = false)
     {
-        // If user is supervisor, skip supervisor approval and go directly to LID
-        $status = $isDraft ? 'draft' : ($user->position === 'supervisor' ? 'pending_leader' : 'pending_spv');
+        $status = $this->determineInitialStatus($user, $isDraft);
 
         foreach ($this->mentoringPlans as $plan) {
             // Skip empty rows
@@ -603,8 +636,7 @@ class DevelopmentPlan extends Component
 
     private function saveProjectPlan($user, $isDraft = false)
     {
-        // If user is supervisor, skip supervisor approval and go directly to LID
-        $status = $isDraft ? 'draft' : ($user->position === 'supervisor' ? 'pending_leader' : 'pending_spv');
+        $status = $this->determineInitialStatus($user, $isDraft);
 
         foreach ($this->projectPlans as $plan) {
             // Skip empty rows

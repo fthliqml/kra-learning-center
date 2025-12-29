@@ -113,4 +113,5 @@ Route::middleware('auth')->group(function () {
   // Development
   Route::get('/development/plan', DevelopmentPlan::class)->name('development-plan.index');
   Route::get('/development/approval', DevelopmentApproval::class)->name('development-approval.index');
+  Route::get('/development/approved', \App\Livewire\Pages\Development\DevelopmentApproved::class)->name('development-approved.index');
 });
