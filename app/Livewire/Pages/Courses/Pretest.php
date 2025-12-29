@@ -39,6 +39,11 @@ class Pretest extends Component
             abort(403, 'You are not assigned to this course.');
         }
 
+        // Gate: before schedule start, user can only view overview
+        if ($userId && !$course->isAvailableForUser($userId)) {
+            return redirect()->route('courses-overview.show', ['course' => $course->id]);
+        }
+
         // Ensure enrollment exists and mark status in_progress on first engagement
         if ($userId) {
             $enrollment = $course->userCourses()->firstOrCreate(
@@ -103,13 +108,16 @@ class Pretest extends Component
 
     public function render()
     {
-        return view('pages.courses.pretest', [
+        /** @var \Illuminate\View\View&\App\Support\Ide\LivewireViewMacros $view */
+        $view = view('pages.courses.pretest', [
             'course' => $this->course,
             'pretest' => $this->pretest,
             'questions' => $this->questions,
             'pretestId' => $this->pretest?->id,
             'userId' => Auth::id(),
-        ])->layout('layouts.livewire.course', [
+        ]);
+
+        return $view->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'pretest',
             'progress' => $this->course->progressForUser(),

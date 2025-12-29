@@ -4,11 +4,7 @@
             wire:model.defer="templateTitle" />
         <x-textarea label="Description" placeholder="Describe this template" class="focus-within:border-0" rows="4"
             wire:model.defer="templateDescription" />
-        <x-select label="Level" :options="[
-            ['value' => 1, 'label' => 'Level 1'],
-            ['value' => 2, 'label' => 'Level 2'],
-            ['value' => 3, 'label' => 'Level 3'],
-        ]" option-value="value" option-label="label" class="w-52"
+        <x-select label="Level" :options="[['value' => 1, 'label' => 'Level 1'], ['value' => 3, 'label' => 'Level 3']]" option-value="value" option-label="label" class="w-52"
             wire:model.defer="templateLevel" />
     </div>
     <div class="flex justify-end">

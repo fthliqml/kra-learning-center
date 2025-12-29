@@ -16,9 +16,11 @@ class PretestQuestions extends Component
   public array $questions = [];
   // Parent should pass course id to enable persistence (same pattern as LearningModules)
   public ?int $courseId = null;
-  // Simple save draft flags (no dirty tracking to avoid overhead with large arrays)
+  // Save draft flags with dirty tracking
   public bool $hasEverSaved = false;
   public bool $persisted = false; // mimic persistence success
+  public bool $isDirty = false; // track unsaved changes
+  protected string $originalHash = ''; // hash of saved state
   // Error highlighting: indexes of invalid questions
   public array $errorQuestionIndexes = [];
 
@@ -88,6 +90,22 @@ class PretestQuestions extends Component
       ];
     }
     $this->questions = $loaded;
+    $this->snapshot(); // Take snapshot after loading
+  }
+
+  protected function snapshot(): void
+  {
+    $this->originalHash = md5(json_encode($this->questions));
+    $this->isDirty = false;
+  }
+
+  protected function computeDirty(): void
+  {
+    $currentHash = md5(json_encode($this->questions));
+    $this->isDirty = $currentHash !== $this->originalHash;
+    if ($this->isDirty) {
+      $this->persisted = false;
+    }
   }
 
   private function makeQuestion(string $type = 'multiple'): array
@@ -105,6 +123,7 @@ class PretestQuestions extends Component
   public function addQuestion(): void
   {
     $this->questions[] = $this->makeQuestion();
+    $this->computeDirty();
   }
 
   public function removeQuestion(int $index): void
@@ -112,6 +131,7 @@ class PretestQuestions extends Component
     if (isset($this->questions[$index])) {
       unset($this->questions[$index]);
       $this->questions = array_values($this->questions);
+      $this->computeDirty();
     }
   }
 
@@ -119,6 +139,7 @@ class PretestQuestions extends Component
   {
     if (isset($this->questions[$qIndex]) && $this->questions[$qIndex]['type'] === 'multiple') {
       $this->questions[$qIndex]['options'][] = '';
+      $this->computeDirty();
     }
   }
 
@@ -132,7 +153,7 @@ class PretestQuestions extends Component
         if (!isset($this->questions[$qIndex]['answer_nonce'])) {
           $this->questions[$qIndex]['answer_nonce'] = 0;
         }
-        $ans =& $this->questions[$qIndex]['answer'];
+        $ans = &$this->questions[$qIndex]['answer'];
         if ($ans !== null) {
           if ($ans == $oIndex) { // removed the selected answer
             $ans = null;
@@ -142,11 +163,13 @@ class PretestQuestions extends Component
           }
         }
       }
+      $this->computeDirty();
     }
   }
 
   public function updated($prop): void
   {
+    // Handle question type changes
     if (!is_array($prop) && preg_match('/^questions\\.(\d+)\\.type$/', $prop, $m)) {
       $i = (int) $m[1];
       $type = $this->questions[$i]['type'] ?? null;
@@ -158,13 +181,18 @@ class PretestQuestions extends Component
         $this->questions[$i]['answer'] = null;
       }
     }
+
+    // Track any changes to questions array for dirty state
+    if (str_starts_with($prop, 'questions')) {
+      $this->computeDirty();
+    }
   }
 
   public function setCorrectAnswer(int $qIndex, int $oIndex): void
   {
     if (!isset($this->questions[$qIndex]))
       return;
-    $q =& $this->questions[$qIndex];
+    $q = &$this->questions[$qIndex];
     if (($q['type'] ?? '') !== 'multiple')
       return;
     if (!isset($q['options'][$oIndex]))
@@ -177,6 +205,7 @@ class PretestQuestions extends Component
     if ($new === null) {
       $q['answer_nonce']++;
     }
+    $this->computeDirty();
   }
 
   public function reorderByIds(array $orderedIds): void
@@ -214,6 +243,7 @@ class PretestQuestions extends Component
       $new[] = $left;
     }
     $this->questions = $new;
+    $this->computeDirty();
   }
 
   public function goNext(): void
@@ -329,6 +359,7 @@ class PretestQuestions extends Component
     $this->persisted = true;
     $this->hasEverSaved = true;
     $this->errorQuestionIndexes = []; // clear highlights on success
+    $this->snapshot(); // Take snapshot after successful save
     $this->success(
       'Pretest questions saved successfully',
       timeout: 4000,

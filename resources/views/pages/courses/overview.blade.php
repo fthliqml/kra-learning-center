@@ -4,7 +4,7 @@
         <nav class="text-xs mb-4 text-gray-500 flex items-center gap-1" aria-label="Breadcrumb">
             <a wire:navigate href="{{ route('courses.index') }}" class="hover:text-primary">Courses</a>
             <span>/</span>
-            <span class="text-gray-500 line-clamp-1">{{ $course->group_comp }}</span>
+            <span class="text-gray-500 line-clamp-1">{{ $course->competency->type ?? '—' }}</span>
             <span>/</span>
             <span class="text-gray-700 font-medium line-clamp-1">{{ $course->title }}</span>
         </nav>
@@ -174,7 +174,13 @@
                         </li>
                     </ol>
                     @php $progress = (int) ($course->progressForUser() ?? 0); @endphp
-                    @if ($progress === 100)
+                    @if (!$canStart && $progress < 100)
+                        <button type="button" disabled
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-gray-300 rounded-md h-10 cursor-not-allowed"
+                            aria-label="Course not available yet">
+                            Not available yet
+                        </button>
+                    @elseif ($progress === 100)
                         <a wire:navigate href="{{ route('courses-result.index', $course) }}"
                             class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
                             aria-label="See results">

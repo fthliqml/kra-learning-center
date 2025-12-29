@@ -37,17 +37,21 @@ class CertificationHistory extends Component
         $userId = Auth::id();
 
         $query = CertificationParticipant::query()
-            ->with(['certification.certificationModule', 'scores'])
+            ->with(['certification.certificationModule.competency', 'scores'])
             ->where('employee_id', $userId)
             ->whereHas('certification', function ($q) {
-                $q->where('status', 'approved');
+                // Show certifications that have been fully processed
+                $q->whereIn('status', ['approved', 'completed']);
             })
             ->when($this->search, function ($q) {
                 $q->whereHas('certification', function ($query) {
                     $query->where('name', 'like', '%' . $this->search . '%')
                         ->orWhereHas('certificationModule', function ($moduleQuery) {
-                            $moduleQuery->where('name', 'like', '%' . $this->search . '%')
-                                ->orWhere('competency', 'like', '%' . $this->search . '%');
+                            $moduleQuery->where('module_title', 'like', '%' . $this->search . '%')
+                                ->orWhereHas('competency', function ($competencyQuery) {
+                                    $term = '%' . $this->search . '%';
+                                    $competencyQuery->where('code', 'like', $term)->orWhere('name', 'like', $term);
+                                });
                         });
                 });
             })
@@ -56,6 +60,10 @@ class CertificationHistory extends Component
         return $query->paginate(10)->through(function ($participant) {
             $certification = $participant->certification;
             $module = $certification->certificationModule;
+
+            $competencyLabel = $module?->competency
+                ? trim((string) $module->competency->code . ' - ' . (string) $module->competency->name)
+                : '-';
 
             // Determine overall status from scores
             $status = null;
@@ -70,7 +78,7 @@ class CertificationHistory extends Component
             return (object) [
                 'id' => $certification->id,
                 'certification_name' => $certification->name,
-                'competency' => $module->competency ?? '-',
+                'competency' => $competencyLabel,
                 'approved_date' => $certification->approved_at,
                 'status' => $status,
             ];

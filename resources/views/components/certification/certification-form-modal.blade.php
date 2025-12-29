@@ -27,9 +27,12 @@
                 <x-tab name="config" label="Certification Config" icon="o-academic-cap">
                     <div class="space-y-4">
                         <!-- Module and Name -->
-                        <x-select label="Certification Module" wire:model="module_id" wire:change="syncNameFromModule"
-                            :options="$moduleOptions" option-value="id" option-label="title" placeholder="Select module"
-                            icon="o-rectangle-group" />
+                        <div wire:key="cert-module-select-{{ $isEdit ? $certificationId : 'new' }}-{{ $module_id }}">
+                            <x-choices label="Certification Module" wire:model.live="module_id" :options="$moduleOptions"
+                                option-value="id" option-label="title" placeholder="Select module"
+                                icon="o-rectangle-group" single searchable search-function="searchModule"
+                                debounce="300ms" />
+                        </div>
                         <x-input wire:model="certification_name" label="Certification Name"
                             placeholder="Auto-filled from module, or customize as needed"
                             class="focus-within:border-0" />

@@ -3,10 +3,29 @@
         <x-modal wire:model="modal" icon='o-document-text' title="Training Details"
             subtitle="Information about training details" separator
             box-class="w-[calc(100vw-2rem)] max-w-full sm:max-w-4xl h-fit">
+            @if (in_array(strtolower($selectedEvent['status'] ?? ''), ['approved', 'rejected', 'done']))
+                <div
+                    class="mt-3 mb-3 p-3 rounded-lg {{ strtolower($selectedEvent['status'] ?? '') === 'approved' ? 'bg-green-50 border border-green-200' : (strtolower($selectedEvent['status'] ?? '') === 'rejected' ? 'bg-red-50 border border-red-200' : 'bg-blue-50 border border-blue-200') }}">
+                    <p
+                        class="text-sm {{ strtolower($selectedEvent['status'] ?? '') === 'approved' ? 'text-green-700' : (strtolower($selectedEvent['status'] ?? '') === 'rejected' ? 'text-red-700' : 'text-blue-700') }}">
+                        <strong>Training {{ ucfirst(strtolower($selectedEvent['status'] ?? '')) }}:</strong>
+                        @if (strtolower($selectedEvent['status'] ?? '') === 'approved')
+                            Certificates are available.
+                        @elseif(strtolower($selectedEvent['status'] ?? '') === 'rejected')
+                            This training has been rejected.
+                        @else
+                            Waiting for approval.
+                        @endif
+                    </p>
+                </div>
+            @endif
             {{-- Tabs navigation --}}
             <div
                 class="px-1 pt-2 mb-4 border-b border-gray-200 flex items-end justify-between gap-4 text-sm font-medium">
                 <div class="flex gap-6">
+                    @php
+                        $isLms = strtoupper($selectedEvent['type'] ?? '') === 'LMS';
+                    @endphp
                     <button type="button" wire:click="$set('activeTab','information')"
                         class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'information' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
                         Information
@@ -15,13 +34,15 @@
                         @endif
                     </button>
                     @anyrole('admin', 'instructor')
-                        <button type="button" wire:click="$set('activeTab','attendance')"
-                            class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'attendance' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
-                            Attendance
-                            @if ($activeTab === 'attendance')
-                                <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
-                            @endif
-                        </button>
+                        @if (!$isLms)
+                            <button type="button" wire:click="$set('activeTab','attendance')"
+                                class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'attendance' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
+                                Attendance
+                                @if ($activeTab === 'attendance')
+                                    <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
+                                @endif
+                            </button>
+                        @endif
                         <button type="button" wire:click="$set('activeTab','close-training')"
                             class="pb-3 relative cursor-pointer focus:outline-none focus-visible:outline-none focus:ring-0 focus-visible:ring-0 outline-none transition {{ $activeTab === 'close-training' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
                             Close Training
@@ -69,7 +90,7 @@
 
             @anyrole('admin', 'instructor')
                 {{-- Attendance Section --}}
-                @if ($activeTab === 'attendance')
+                @if (!$isLms && $activeTab === 'attendance')
                     <livewire:components.training.tabs.training-attendance-tab :training-id="$selectedEvent['id']" :day-number="$dayNumber"
                         :key="'att-' . $selectedEvent['id'] . '-' . $dayNumber" lazy />
                 @endif
@@ -84,18 +105,26 @@
                 <x-button wire:click="closeModal"
                     class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
                 @role('admin')
-                    <div class="flex items-center sm:items-center justify-center gap-3 w-full sm:w-auto">
-                        <x-button wire:click="requestDeleteConfirm" class="btn-error w-fit sm:w-auto"
-                            spinner="requestDeleteConfirm">
-                            <x-icon name="o-trash" /><span class="">Delete</span>
-                        </x-button>
-                    </div>
+                    @php
+                        $trainingStatus = strtolower($selectedEvent['status'] ?? '');
+                        $canCloseTraining = !in_array($trainingStatus, ['done', 'approved', 'rejected']);
+                    @endphp
+                    @if ($activeTab === 'close-training' && $canCloseTraining)
+                        <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+                            <x-button wire:click="triggerSaveDraft" spinner="triggerSaveDraft"
+                                class="btn btn-outline btn-primary">
+                                <x-icon name="o-document-text" />
+                                <span>Save Draft</span>
+                            </x-button>
+                            <x-button wire:click="triggerCloseTraining" spinner="triggerCloseTraining"
+                                class="btn btn-primary">
+                                <x-icon name="o-check-circle" />
+                                <span>Close Training</span>
+                            </x-button>
+                        </div>
+                    @endif
                 @endrole
             </div>
-            @role('admin')
-                <div class="mt-4 text-xs text-gray-500 text-right">Deleting will remove all days, sessions, and attendances.
-                </div>
-            @endrole
         </x-modal>
     @endif
 </div>

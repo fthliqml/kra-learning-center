@@ -69,6 +69,7 @@ class CoursesManagement extends Component
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
             ['key' => 'title', 'label' => 'Title', 'class' => 'w-[300px]'],
+            ['key' => 'competency', 'label' => 'Competency', 'class' => '!text-center w-[200px]'],
             ['key' => 'group_comp', 'label' => 'Group Comp', 'class' => '!text-center'],
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center'],
@@ -83,9 +84,37 @@ class CoursesManagement extends Component
     public function courses()
     {
         $query = Course::query()
+            ->with('competency:id,name,type')
+            ->withCount([
+                'trainings as assigned_trainings_count' => fn($t) => $t->whereHas('assessments'),
+            ])
             ->when($this->search, fn($q) => $q->where('title', 'like', "%{$this->search}%"))
-            ->when($this->filterGroup ?? $this->filter, fn($q, $group) => $q->where('group_comp', $group))
-            ->when($this->filterStatus, fn($q, $status) => $q->where('status', $status))
+            ->when($this->filterGroup ?? $this->filter, function ($q, $group) {
+                $value = trim((string) $group);
+                if ($value !== '') {
+                    $q->whereHas('competency', fn($qq) => $qq->where('type', $value));
+                }
+            })
+            ->when($this->filterStatus, function ($q, $status) {
+                // Status in management is derived:
+                // - assigned: has at least one training with assessments
+                // - inactive: no such assignment (and not draft)
+                // - draft: uses DB column
+                if ($status === 'assigned') {
+                    $q->whereHas('trainings', fn($t) => $t->whereHas('assessments'));
+                    return;
+                }
+
+                if ($status === 'inactive') {
+                    $q->where(function ($w) {
+                        $w->whereNull('status')->orWhere('status', '!=', 'draft');
+                    })->whereDoesntHave('trainings', fn($t) => $t->whereHas('assessments'));
+                    return;
+                }
+
+                // Fallback to DB status for other states
+                $q->where('status', $status);
+            })
             ->orderBy('created_at', 'desc');
 
         $paginator = $query->paginate(10)->onEachSide(1);
@@ -93,6 +122,14 @@ class CoursesManagement extends Component
         return $paginator->through(function ($course, $index) use ($paginator) {
             $start = $paginator->firstItem() ?? 0;
             $course->no = $start + $index;
+
+            // Compute status used by the management UI
+            $dbStatus = $course->status ?? 'inactive';
+            $isAssigned = (int) ($course->assigned_trainings_count ?? 0) > 0;
+            $course->computed_status = $dbStatus === 'draft'
+                ? 'draft'
+                : ($isAssigned ? 'assigned' : 'inactive');
+
             return $course;
         });
     }

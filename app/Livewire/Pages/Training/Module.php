@@ -5,6 +5,7 @@ namespace App\Livewire\Pages\Training;
 use App\Exports\TrainingModuleExport;
 use App\Exports\TrainingModuleTemplateExport;
 use App\Imports\TrainingModuleImport;
+use App\Models\Competency;
 use App\Models\TrainingModule;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -23,33 +24,30 @@ class Module extends Component
     public $search = '';
     public $filter = null;
 
-    public $groupOptions = [
-        ['value' => 'BMC', 'label' => 'BMC'],
-        ['value' => 'BC', 'label' => 'BC'],
-        ['value' => 'MMP', 'label' => 'MMP'],
-        ['value' => 'LC', 'label' => 'LC'],
-        ['value' => 'MDP', 'label' => 'MDP'],
-        ['value' => 'TOC', 'label' => 'TOC'],
-    ];
+    public array $competencyOptions = [];
 
     public $formData = [
         'title' => '',
-        'group_comp' => '',
+        'competency_id' => '',
         'objective' => '',
         'training_content' => '',
         'method' => '',
         'duration' => '',
         'frequency' => '',
+        'theory_passing_score' => '',
+        'practical_passing_score' => '',
     ];
 
     protected $rules = [
         'formData.title' => 'required|string|max:255',
-        'formData.group_comp' => 'required|string',
+        'formData.competency_id' => 'required|exists:competency,id',
         'formData.objective' => 'nullable|string',
         'formData.training_content' => 'nullable|string',
         'formData.method' => 'nullable|string|max:255',
         'formData.duration' => 'required|numeric|min:1',
         'formData.frequency' => 'required|integer|min:1',
+        'formData.theory_passing_score' => 'required|numeric|min:0|max:100',
+        'formData.practical_passing_score' => 'required|numeric|min:0|max:100',
     ];
 
     public function updated($property): void
@@ -67,6 +65,29 @@ class Module extends Component
 
         $this->resetValidation();
     }
+    public function openDetailModal($id)
+    {
+        $module = TrainingModule::with('competency')->findOrFail($id);
+
+        $this->selectedId = $id;
+        $this->formData = [
+            'title' => $module->title,
+            'competency_id' => $module->competency->name ?? '-',
+            'objective' => $module->objective,
+            'training_content' => $module->training_content,
+            'method' => $module->method,
+            'duration' => $module->duration,
+            'frequency' => $module->frequency,
+            'theory_passing_score' => $module->theory_passing_score,
+            'practical_passing_score' => $module->practical_passing_score,
+        ];
+
+        $this->mode = 'preview';
+        $this->modal = true;
+
+        $this->resetValidation();
+    }
+
     public function openEditModal($id)
     {
         $module = TrainingModule::findOrFail($id);
@@ -74,12 +95,14 @@ class Module extends Component
         $this->selectedId = $id;
         $this->formData = [
             'title' => $module->title,
-            'group_comp' => $module->group_comp,
+            'competency_id' => $module->competency_id,
             'objective' => $module->objective,
             'training_content' => $module->training_content,
             'method' => $module->method,
             'duration' => $module->duration,
             'frequency' => $module->frequency,
+            'theory_passing_score' => $module->theory_passing_score,
+            'practical_passing_score' => $module->practical_passing_score,
         ];
 
         $this->mode = 'edit';
@@ -93,7 +116,7 @@ class Module extends Component
 
         $this->validate([
             'formData.title' => 'required|string|max:255',
-            'formData.group_comp' => 'required|string',
+            'formData.competency_id' => 'required|exists:competency,id',
             'formData.objective' => 'required|string',
             'formData.training_content' => 'required|string',
             'formData.method' => 'required|string',
@@ -126,36 +149,26 @@ class Module extends Component
     {
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
-            ['key' => 'title', 'label' => 'Module Title', 'class' => 'w-[300px]'],
-            ['key' => 'group_comp', 'label' => 'Group Comp', 'class' => '!text-center'],
-            [
-                'key' => 'duration',
-                'label' => 'Duration',
-                'class' => '!text-center',
-                'format' => fn($row, $field) => $field . ' Hours',
-            ],
-            [
-                'key' => 'frequency',
-                'label' => 'Frequency',
-                'class' => '!text-center',
-                'format' => fn($row, $field) => $field . ' Days',
-            ],
+            ['key' => 'title', 'label' => 'Module Title', 'class' => 'w-[400px]'],
+            ['key' => 'competency.name', 'label' => 'Competency', 'class' => 'min-w-[150px]'],
+            ['key' => 'competency.type', 'label' => 'Group Comp', 'class' => '!text-center'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center'],
         ];
     }
 
     public function modules()
     {
-        $query = TrainingModule::query()
+        $query = TrainingModule::with('competency')
             ->when(
                 $this->search,
                 fn($q) =>
                 $q->where('title', 'like', '%' . $this->search . '%')
+                    ->orWhereHas('competency', fn($q2) => $q2->where('name', 'like', '%' . $this->search . '%'))
             )
             ->when(
                 $this->filter,
                 fn($q) =>
-                $q->where('group_comp', $this->filter)
+                $q->whereHas('competency', fn($q2) => $q2->where('type', $this->filter))
             )
             ->orderBy('created_at', 'asc');
 
@@ -210,12 +223,46 @@ class Module extends Component
 
 
 
+    /** Search method for x-choices searchable competency dropdown */
+    public function competencySearch(string $value = ''): void
+    {
+        $query = Competency::query();
+
+        // Apply search filter if value provided
+        if (trim($value) !== '') {
+            $query->where('name', 'like', '%' . $value . '%');
+        }
+
+        $this->competencyOptions = $query
+            ->orderBy('name')
+            ->get()
+            ->map(fn($c) => ['value' => $c->id, 'label' => $c->name . ' (' . $c->type . ')'])
+            ->toArray();
+    }
+
+    public function mount(): void
+    {
+        // Initialize competencyOptions on mount
+        $this->competencyOptions = Competency::orderBy('name')
+            ->get()
+            ->map(fn($c) => ['value' => $c->id, 'label' => $c->name . ' (' . $c->type . ')'])
+            ->toArray();
+    }
+
     public function render()
     {
+        // Group comp filter options - only unique types
+        $groupCompOptions = Competency::select('type')
+            ->distinct()
+            ->orderBy('type')
+            ->get()
+            ->map(fn($c) => ['value' => $c->type, 'label' => $c->type])
+            ->toArray();
 
         return view('pages.training.training-module', [
             'modules' => $this->modules(),
-            'headers' => $this->headers()
+            'headers' => $this->headers(),
+            'groupCompOptions' => $groupCompOptions,
         ]);
     }
 }

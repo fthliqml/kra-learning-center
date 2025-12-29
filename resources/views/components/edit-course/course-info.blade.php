@@ -5,9 +5,15 @@
     <x-textarea label="About Course" placeholder="Describe this course" class="focus-within:border-0"
         wire:model.live.debounce.500ms="course.about" />
 
-    <x-select label="Group Competency" :options="$groupOptions" option-value="value" option-label="label"
-        placeholder="Select group" wire:change="$refresh" class="focus-within:border-0"
-        wire:model="course.group_comp" />
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <x-choices label="Group Competency" :options="$this->groupOptions" option-value="value" option-label="label"
+            placeholder="Select group" wire:model.live="course.group_comp" single searchable
+            class="focus-within:border-0" />
+
+        <x-choices label="Competency" :options="$competencyOptions" option-value="value" option-label="label"
+            placeholder="Select competency" wire:model.live="course.competency_id" single searchable
+            class="focus-within:border-0" />
+    </div>
 
     <div>
         <label class="block mb-2 text-sm font-medium">Choose Thumbnail</label>
@@ -36,16 +42,16 @@
         </div>
     </div>
 
-    <div class="flex flex-wrap items-center justify-between gap-3 pt-2">
-        <div class="flex items-center gap-3">
+    <div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-base-300/50">
+        <div class="flex items-center gap-3 mt-5">
             <x-ui.button type="button" variant="secondary" class="border-gray-300" wire:click="saveDraft"
                 wire:loading.attr="disabled" wire:target="saveDraft" spinner="saveDraft">
                 <x-icon name="o-bookmark" class="size-4" />
                 <span>Save Draft</span>
             </x-ui.button>
-            <x-ui.save-draft-status :dirty="$isDirty" :ever="$hasEverSaved" :persisted="$persisted" />
+            <x-ui.save-draft-status :dirty="$isDirty ?? false" :ever="$hasEverSaved ?? false" :persisted="$persisted ?? false" />
         </div>
-        <div class="flex gap-2">
+        <div class="flex gap-2 ml-auto mt-5">
             <x-ui.button type="button" variant="primary" class="gap-2" wire:click="goManagement">
                 <x-icon name="o-arrow-left" class="size-4" />
                 <span>Back To Management</span>

@@ -59,14 +59,48 @@ class CertificationFormModal extends Component
         $this->loadModuleOptions();
     }
 
-    private function loadModuleOptions(): void
+    private function loadModuleOptions(?int $ensureModuleId = null, string $search = ''): void
     {
-        $this->moduleOptions = CertificationModule::active()
+        $query = CertificationModule::query()
             ->select('id', 'module_title')
-            ->orderBy('module_title')
+            ->orderBy('module_title');
+
+        // Default behavior: only show active modules.
+        // If editing an old schedule referencing an inactive module, we still "ensure" it below.
+        $query->where('is_active', true);
+
+        $search = trim($search);
+        if ($search !== '') {
+            $term = "%{$search}%";
+            $query->where(function ($q) use ($term) {
+                $q->where('module_title', 'like', $term)
+                    ->orWhere('code', 'like', $term);
+            });
+        }
+
+        $options = $query
+            ->limit(50)
             ->get()
-            ->map(fn($m) => ['id' => $m->id, 'title' => $m->module_title])
+            ->map(fn($m) => ['id' => (int) $m->id, 'title' => (string) $m->module_title])
             ->toArray();
+
+        if ($ensureModuleId) {
+            $existingIds = array_column($options, 'id');
+            if (!in_array($ensureModuleId, $existingIds, true)) {
+                $selected = CertificationModule::query()->select('id', 'module_title')->find($ensureModuleId);
+                if ($selected) {
+                    array_unshift($options, ['id' => (int) $selected->id, 'title' => (string) $selected->module_title]);
+                }
+            }
+        }
+
+        $this->moduleOptions = $options;
+    }
+
+    public function searchModule(string $value = ''): void
+    {
+        $ensure = $this->module_id ? (int) $this->module_id : null;
+        $this->loadModuleOptions($ensure, $value);
     }
 
     public function updatedModuleId($value): void
@@ -121,6 +155,7 @@ class CertificationFormModal extends Component
     public function openModal(): void
     {
         $this->resetForm();
+        $this->loadModuleOptions();
         $this->showModal = true;
     }
 
@@ -156,6 +191,7 @@ class CertificationFormModal extends Component
             return;
         }
         $this->module_id = $cert->module_id;
+        $this->loadModuleOptions($this->module_id);
         $this->autoModuleTitle = $cert->certificationModule?->module_title;
         $this->certification_name = $cert->name ?: ($this->autoModuleTitle ?? '');
         $theory = $cert->sessions->first(function ($s) {

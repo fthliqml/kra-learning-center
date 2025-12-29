@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Training;
 
 use App\Models\Training;
+use App\Models\User;
 use App\Services\TrainingCertificateService;
 use Livewire\Component;
 use Livewire\WithPagination;
@@ -27,9 +28,9 @@ class Approval extends Component
     ];
 
     public $groupOptions = [
-        ['value' => 'Pending', 'label' => 'Pending'],
-        ['value' => 'Approved', 'label' => 'Approved'],
-        ['value' => 'Rejected', 'label' => 'Rejected'],
+        ['value' => 'done', 'label' => 'Done (Ready for Approval)'],
+        ['value' => 'approved', 'label' => 'Approved'],
+        ['value' => 'rejected', 'label' => 'Rejected'],
     ];
 
     public function mount(): void
@@ -86,7 +87,42 @@ class Approval extends Component
             return collect();
         }
 
-        // Get unique participants from attendances
+        // For LMS type, participants come from assessments (no physical attendance)
+        // For other types (IN, OUT), participants come from attendances
+        if (strtoupper($training->type) === 'LMS') {
+            // LMS: Get participants from assessments
+            $participants = $training->assessments->map(function ($assessment, $index) use ($training) {
+                $employee = $assessment->employee;
+
+                if (!$employee) {
+                    return null;
+                }
+
+                // For LMS, no physical attendance - use course progress or assessment data
+                $theoryScore = $assessment->posttest_score;
+                $practiceScore = $assessment->practical_score;
+                $status = $assessment->status ?? 'pending';
+                $certificatePath = $assessment->certificate_path;
+
+                return (object) [
+                    'no' => $index + 1,
+                    'nrp' => $employee->nrp ?? '-',
+                    'name' => $employee->name ?? '-',
+                    'section' => $employee->section ?? '-',
+                    'absent' => '-', // N/A for LMS
+                    'theory_score' => $theoryScore,
+                    'practice_score' => $practiceScore,
+                    'status' => $status,
+                    'certificate_path' => $certificatePath,
+                    'employee_id' => $employee->id,
+                    'assessment_id' => $assessment->id,
+                ];
+            })->filter()->values();
+
+            return $participants;
+        }
+
+        // For IN/OUT types: Get unique participants from attendances
         $participants = $training->attendances->unique('employee_id')->map(function ($attendance, $index) use ($training) {
             $employee = $attendance->employee;
 
@@ -134,28 +170,36 @@ class Approval extends Component
             $query->where(function ($q) use ($term) {
                 $q->where('name', 'like', "%{$term}%")
                     ->orWhere('type', 'like', "%{$term}%")
-                    ->orWhere('group_comp', 'like', "%{$term}%");
+                    ->orWhereHas('competency', function ($cq) use ($term) {
+                        $cq->where('type', 'like', "%{$term}%")
+                            ->orWhere('name', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%");
+                    })
+                    ->orWhereHas('module.competency', function ($cq) use ($term) {
+                        $cq->where('type', 'like', "%{$term}%")
+                            ->orWhere('name', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%");
+                    })
+                    ->orWhereHas('course.competency', function ($cq) use ($term) {
+                        $cq->where('type', 'like', "%{$term}%")
+                            ->orWhere('name', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%");
+                    });
             });
         }
 
-        // Filter by display status (done = pending for display)
+        // Filter by actual status
         if ($this->filter && strtolower($this->filter) !== 'all') {
             $filterStatus = strtolower($this->filter);
-
-            if ($filterStatus === 'pending') {
-                $query->where('status', 'done');
-            } else {
-                $query->where('status', $filterStatus);
-            }
+            $query->where('status', $filterStatus);
         }
 
         return $query
             ->orderBy('created_at', 'desc')
             ->paginate(10)
             ->through(function ($training) {
-                // Map status: done -> pending for display
-                $displayStatus = $training->status === 'done' ? 'pending' : $training->status;
-
+                // Keep status as is - 'done' means closed and waiting for approval
+                // Once approved, status will be 'approved' and certificates generated
                 return (object) [
                     'id' => $training->id,
                     'training_name' => $training->name,
@@ -163,8 +207,8 @@ class Approval extends Component
                     'group_comp' => $training->group_comp ?? '-',
                     'start_date' => $training->start_date,
                     'end_date' => $training->end_date,
-                    'status' => $displayStatus,
-                    'actual_status' => $training->status, // Store actual status for updates
+                    'status' => $training->status, // Show actual status
+                    'actual_status' => $training->status,
                 ];
             });
     }
@@ -185,9 +229,7 @@ class Approval extends Component
             return;
         }
 
-        // Map status: done -> pending for display
-        $displayStatus = $training->status === 'done' ? 'pending' : $training->status;
-
+        // Show actual status - 'done' means closed and ready for approval
         $this->selectedId = $training->id;
         $this->activeTab = 'information'; // Reset to information tab
         $this->formData = [
@@ -197,7 +239,7 @@ class Approval extends Component
             'start_date' => $training->start_date ? $training->start_date->format('d F Y') : '-',
             'end_date' => $training->end_date ? $training->end_date->format('d F Y') : '-',
             'created_at' => $training->created_at->format('d F Y'),
-            'status' => $displayStatus,
+            'status' => $training->status,
             'actual_status' => $training->status,
         ];
         $this->modal = true;
@@ -209,10 +251,16 @@ class Approval extends Component
      */
     protected function canModerate(): bool
     {
+        /** @var User|null $user */
         $user = Auth::user();
-        if (!$user)
+
+        if (!$user) {
             return false;
-        return strtolower(trim($user->role ?? '')) === 'leader' && strtolower(trim($user->section ?? '')) === 'lid';
+        }
+
+        // Only section head from LID can moderate
+        return $user->hasPosition('section_head')
+            && strtolower(trim($user->section ?? '')) === 'lid';
     }
 
     /** Approve selected request */
@@ -243,6 +291,9 @@ class Approval extends Component
         $certificatesGenerated = $certificateService->generateCertificatesForTraining($training);
 
         $this->formData['status'] = 'approved';
+
+        // Notify other components that training status changed
+        $this->dispatch('training-closed', ['id' => $training->id, 'status' => 'approved']);
 
         if ($certificatesGenerated > 0) {
             $this->success("Training approved successfully. {$certificatesGenerated} certificate(s) generated.", position: 'toast-top toast-center');
@@ -275,6 +326,10 @@ class Approval extends Component
         $training->update(['status' => 'rejected']);
 
         $this->formData['status'] = 'rejected';
+
+        // Notify other components that training status changed
+        $this->dispatch('training-closed', ['id' => $training->id, 'status' => 'rejected']);
+
         $this->error('Training rejected', position: 'toast-top toast-center');
 
         $this->modal = false;

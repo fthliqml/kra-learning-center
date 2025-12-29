@@ -2,7 +2,9 @@
 
 namespace App\Livewire\Pages\Training;
 
-use App\Models\TrainingAttendance;
+use App\Models\SurveyResponse;
+use App\Models\TrainingSurvey;
+use App\Models\TrainingAssessment;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
@@ -45,86 +47,89 @@ class History extends Component
     {
         $userId = Auth::id();
 
-        $query = TrainingAttendance::query()
+        if (!$userId) {
+            return TrainingAssessment::query()->whereRaw('1 = 0')->paginate(10);
+        }
+
+        $query = TrainingAssessment::query()
             ->with([
-                'session.training.course',
-                'session.training.sessions.trainer.user', // untuk ambil instructor
-                'session.training.assessments' => function ($q) use ($userId) {
-                    $q->where('employee_id', $userId);
-                }
+                'training.course',
+                'training.sessions.trainer.user',
             ])
             ->where('employee_id', $userId)
-            ->whereHas('session.training', function ($q) {
-                $q->where('status', 'done');
+            ->whereHas('training', function ($q) {
+                $q->whereIn('status', ['done', 'approved']);
             })
             ->when($this->search, function ($q) {
-                $q->whereHas('session.training', function ($query) {
-                    $query->where('name', 'like', '%' . $this->search . '%');
-                });
+                $term = $this->search;
+                $q->whereHas('training', fn($tq) => $tq->where('name', 'like', '%' . $term . '%'));
             })
             ->when($this->filter, function ($q) {
-                $q->whereHas('session.training', function ($query) {
-                    $query->where('type', $this->filter);
-                });
+                $type = $this->filter;
+                $q->whereHas('training', fn($tq) => $tq->where('type', $type));
             })
-            ->orderBy('created_at', 'desc');
+            ->orderByDesc('id');
 
-        // Group by training_id untuk menghindari duplikasi
-        $attendances = $query->get()->groupBy('session.training_id');
+        $paginator = $query->paginate(10)->onEachSide(1);
 
-        // Convert ke collection dengan data yang sudah di-aggregate
-        $items = $attendances->map(function ($attendanceGroup) {
-            $training = $attendanceGroup->first()->session->training;
+        $assessments = $paginator->getCollection();
+        $trainingIds = $assessments
+            ->pluck('training_id')
+            ->filter()
+            ->unique()
+            ->values();
 
-            // Ambil assessment jika ada
-            $assessment = $training->assessments->first();
-            $status = $assessment ? $assessment->status : null;
+        $surveyLevel1ByTrainingId = TrainingSurvey::query()
+            ->whereIn('training_id', $trainingIds)
+            ->where('level', 1)
+            ->get(['id', 'training_id'])
+            ->keyBy('training_id');
 
-            // Ambil instructor (trainer) dari session pertama training
-            $firstSession = $training->sessions->first();
+        $surveyIds = $surveyLevel1ByTrainingId->pluck('id')->values();
+
+        $completedSurveyIds = SurveyResponse::query()
+            ->whereIn('survey_id', $surveyIds)
+            ->where('employee_id', $userId)
+            ->where('is_completed', true)
+            ->pluck('survey_id')
+            ->all();
+
+        $completedSurveyIdSet = array_fill_keys($completedSurveyIds, true);
+
+        return $paginator->through(function ($assessment, $index) use ($paginator, $surveyLevel1ByTrainingId, $completedSurveyIdSet) {
+            $training = $assessment->training;
+
+            // Ambil instructor (trainer) dari session pertama training (jika ada)
+            $firstSession = $training?->sessions?->first();
             $instructor = $firstSession && $firstSession->trainer
                 ? ($firstSession->trainer->name ?? $firstSession->trainer->user->name ?? '-')
                 : '-';
 
-            // Format type label
-            $typeLabel = match ($training->type) {
+            $typeLabel = match ($training?->type) {
                 'IN' => 'In-House',
                 'OUT' => 'Out-House',
                 'LMS' => 'LMS',
-                default => $training->type
+                default => (string) ($training?->type ?? '-')
             };
 
-            return (object) [
-                'id' => $training->id,
-                'training_name' => $training->name,
-                'type' => $typeLabel,
-                'group_comp' => $training->group_comp,
-                'instructor' => $instructor,
-                'status' => $status,
-                'certificate' => 'View Certificate', // hardcode untuk link
-                'start_date' => $training->start_date,
-            ];
-        })->sortByDesc('start_date')->values();
-
-        // Manual pagination
-        $perPage = 10;
-        $currentPage = $this->getPage();
-        $total = $items->count();
-
-        $paginated = $items->slice(($currentPage - 1) * $perPage, $perPage)->values();
-
-        $paginator = new \Illuminate\Pagination\LengthAwarePaginator(
-            $paginated,
-            $total,
-            $perPage,
-            $currentPage,
-            ['path' => request()->url()]
-        );
-
-        return $paginator->onEachSide(1)->through(function ($item, $index) use ($paginator) {
             $start = $paginator->firstItem() ?? 0;
-            $item->no = $start + $index;
-            return $item;
+
+            $surveyLevel1Id = $training?->id ? ($surveyLevel1ByTrainingId[$training->id]->id ?? null) : null;
+            $isSurveyLevel1Completed = $surveyLevel1Id ? isset($completedSurveyIdSet[$surveyLevel1Id]) : false;
+
+            return (object) [
+                'no' => $start + $index,
+                'id' => $training?->id,
+                'training_name' => $training?->name ?? '-',
+                'type' => $typeLabel,
+                'group_comp' => $training?->group_comp,
+                'instructor' => $instructor,
+                'status' => $assessment->status,
+                'assessment_id' => $assessment->id,
+                'certificate_path' => $assessment->certificate_path,
+                'survey_level1_id' => $surveyLevel1Id,
+                'survey_level1_completed' => $isSurveyLevel1Completed,
+            ];
         });
     }
 

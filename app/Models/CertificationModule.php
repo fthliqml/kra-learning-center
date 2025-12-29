@@ -24,7 +24,7 @@ class CertificationModule extends Model
         'code',
         'module_title',
         'level',
-        'competency',
+        'competency_id',
         'group_certification',
         'points_per_module',
         'new_gex',
@@ -64,5 +64,10 @@ class CertificationModule extends Model
     public function certifications(): HasMany
     {
         return $this->hasMany(Certification::class, 'module_id');
+    }
+
+    public function competency()
+    {
+        return $this->belongsTo(Competency::class, 'competency_id');
     }
 }

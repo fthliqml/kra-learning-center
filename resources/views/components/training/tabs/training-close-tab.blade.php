@@ -1,24 +1,31 @@
-<div class="space-y-4">
+<div class="space-y-4" x-data="{ tempScores: @entangle('tempScores') }">
     @if ($training)
         @php
-            $typeUpper = strtoupper($training->type ?? '');
-            $isDone = strtolower($training->status ?? '') === 'done';
+            $isLms = strtoupper($training->type ?? '') === 'LMS';
+            $isDone = in_array(strtolower($training->status ?? ''), ['done', 'approved', 'rejected']);
+            $theoryMin = $training->module->theory_passing_score ?? null;
+            $practicalMin = $training->module->practical_passing_score ?? null;
         @endphp
 
-        @if ($typeUpper === 'LMS')
-            <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg">
-                <p class="text-sm text-amber-700">
-                    <strong>Note:</strong> LMS trainings are managed through the learning platform and cannot be
-                    closed
-                    manually from here.
-                </p>
-            </div>
-        @elseif ($isDone)
-            <div class="p-4 bg-green-50 border border-green-200 rounded-lg">
-                <p class="text-sm text-green-700">
-                    <strong>Training Closed:</strong> This training has been completed and marked as done.
-                </p>
-            </div>
+        @if (!$isDone)
+            @if(!$isLms && ($theoryMin !== null || $practicalMin !== null))
+                <div
+                    class="p-3 md:p-4 rounded-lg border border-blue-200 bg-blue-50 text-xs md:text-sm text-blue-700 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
+                    <div class="font-medium">Minimum Passing Scores:</div>
+                    <div class="flex flex-wrap items-center gap-3">
+                        @if ($theoryMin !== null)
+                            <span class="inline-flex items-center gap-1"><span class="font-semibold">Theory
+                                    (Posttest)</span><span>&ge;
+                                    {{ rtrim(rtrim(number_format((float) $theoryMin, 2, '.', ''), '0'), '.') }}</span></span>
+                        @endif
+                        @if ($practicalMin !== null)
+                            <span class="inline-flex items-center gap-1"><span
+                                    class="font-semibold">Practical</span><span>&ge;
+                                    {{ rtrim(rtrim(number_format((float) $practicalMin, 2, '.', ''), '0'), '.') }}</span></span>
+                        @endif
+                    </div>
+                </div>
+            @endif
         @endif
 
         {{-- Search --}}
@@ -28,7 +35,7 @@
         </div>
 
         {{-- Table --}}
-        <div class="rounded-lg border border-gray-200 shadow-sm overflow-x-auto" x-data="{ tempScores: @entangle('tempScores') }">
+        <div class="rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
             <x-table :headers="$headers" :rows="$assessments" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- Custom cell untuk kolom Nomor --}}
@@ -36,110 +43,74 @@
                     {{ $assessment->no ?? $loop->iteration }}
                 @endscope
 
-                {{-- Custom cell untuk Pretest Score --}}
-                @scope('cell_pretest_score', $assessment)
-                    @php $trainingDone = $assessment->training_done ?? false; @endphp
-                    <div class="flex justify-center">
-                        @if ($trainingDone)
-                            <div tabindex="-1"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
-                                {{ $assessment->pretest_score ?? '-' }}
-                            </div>
-                        @else
-                            <input type="number" min="0" max="100" step="0.1"
-                                wire:model.live.debounce.300ms="tempScores.{{ $assessment->id }}.pretest_score"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:outline-none focus-visible:outline-none focus:ring-1 focus:ring-primary focus:border-primary ring-0"
-                                placeholder="0-100">
-                        @endif
-                    </div>
-                @endscope
-
                 {{-- Custom cell untuk Posttest Score --}}
                 @scope('cell_posttest_score', $assessment)
-                    @php $trainingDone = $assessment->training_done ?? false; @endphp
                     <div class="flex justify-center">
-                        @if ($trainingDone)
+                        @php $trainingDone = $assessment->training_done ?? false; @endphp
+                        @if (!empty($assessment->is_lms))
                             <div tabindex="-1"
                                 class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
-                                {{ $assessment->posttest_score ?? '-' }}
-                            </div>
+                                {{ $assessment->temp_posttest ?? '-' }}</div>
+                        @elseif ($trainingDone)
+                            <div tabindex="-1"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
+                                {{ $assessment->posttest_score ?? '-' }}</div>
                         @else
                             <input type="number" min="0" max="100" step="0.1"
-                                wire:model.live.debounce.300ms="tempScores.{{ $assessment->id }}.posttest_score"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:outline-none focus-visible:outline-none focus:ring-1 focus:ring-primary focus:border-primary ring-0"
+                                wire:model.live="tempScores.{{ $assessment->id }}.posttest_score"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary"
                                 placeholder="0-100">
                         @endif
                     </div>
                 @endscope
 
-                {{-- Custom cell untuk Practical Score --}}
-                @scope('cell_practical_score', $assessment)
-                    @php $trainingDone = $assessment->training_done ?? false; @endphp
-                    <div class="flex justify-center">
-                        @if ($trainingDone)
-                            <div tabindex="-1"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
-                                {{ $assessment->practical_score ?? '-' }}
-                            </div>
-                        @else
-                            <input type="number" min="0" max="100" step="0.1"
-                                wire:model.live.debounce.300ms="tempScores.{{ $assessment->id }}.practical_score"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:outline-none focus-visible:outline-none focus:ring-1 focus:ring-primary focus:border-primary ring-0"
-                                placeholder="0-100">
-                        @endif
-                    </div>
-                @endscope
+                @if (!$isLms)
+                    {{-- Custom cell untuk Practical Score --}}
+                    @scope('cell_practical_score', $assessment)
+                        <div class="flex justify-center">
+                            @php $trainingDone = $assessment->training_done ?? false; @endphp
+                            @if ($trainingDone)
+                                <div tabindex="-1"
+                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
+                                    {{ $assessment->practical_score ?? '-' }}</div>
+                            @else
+                                <input type="number" min="0" max="100" step="0.1"
+                                    wire:model.live="tempScores.{{ $assessment->id }}.practical_score"
+                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    placeholder="0-100">
+                            @endif
+                        </div>
+                    @endscope
+                @endif
 
-                {{-- Custom cell untuk Average Score --}}
-                @scope('cell_average_score', $assessment)
-                    <div class="text-center font-medium" x-data="{
-                        get average() {
-                            let posttest = parseFloat(tempScores[{{ $assessment->id }}]?.posttest_score) || 0;
-                            let practical = parseFloat(tempScores[{{ $assessment->id }}]?.practical_score) || 0;
-                            // Calculate average: (posttest + practical) / 2, treat empty as 0
-                            let avg = (posttest + practical) / 2;
-                            return Math.round(avg * 10) / 10;
-                        }
-                    }" x-text="average > 0 ? average : '-'">
-                    </div>
-                @endscope
+                @if ($isLms)
+                    {{-- Custom cell untuk Progress --}}
+                    @scope('cell_progress', $assessment)
+                        <div class="flex justify-center">
+                            <span class="text-sm text-gray-700">{{ (int) ($assessment->lms_progress ?? 0) }}%</span>
+                        </div>
+                    @endscope
+                @endif
 
                 {{-- Custom cell untuk Status --}}
                 @scope('cell_status', $assessment)
-                    @php $trainingDone = $assessment->training_done ?? false; @endphp
-                    <div class="flex justify-center" x-data="{
-                        get status() {
-                            @if ($trainingDone) return '{{ $assessment->status }}';
-                                @else
-                                    let posttest = parseFloat(tempScores[{{ $assessment->id }}]?.posttest_score) || 0;
-                                    let practical = parseFloat(tempScores[{{ $assessment->id }}]?.practical_score) || 0;
-                                    // Calculate average: (posttest + practical) / 2, treat empty as 0
-                                    let avg = (posttest + practical) / 2;
-                                    if (avg === 0) return 'in_progress';
-                                    return avg >= 60 ? 'passed' : 'failed'; @endif
-                        }
-                    }">
-                        <span x-show="status === 'passed'" class="badge badge-success badge-sm">Passed</span>
-                        <span x-show="status === 'failed'" class="badge badge-error badge-sm">Failed</span>
-                        <span x-show="status === 'in_progress'" class="badge badge-warning badge-sm">In Progress</span>
+                    @php
+                        $status = $assessment->temp_status ?? 'pending';
+                    @endphp
+                    <div class="flex justify-center">
+                        @if ($status === 'passed')
+                            <span class="badge badge-success badge-sm">Passed</span>
+                        @elseif($status === 'failed')
+                            <span class="badge badge-error badge-sm">Failed</span>
+                        @elseif($status === 'in_progress')
+                            <span class="badge badge-warning badge-sm">In Progress</span>
+                        @else
+                            <span class="badge badge-neutral badge-sm">Pending</span>
+                        @endif
                     </div>
                 @endscope
             </x-table>
         </div>
-
-        {{-- Action Buttons --}}
-        @if (!$isDone && $typeUpper !== 'LMS')
-            <div class="flex justify-end gap-2 pt-4">
-                <x-button wire:click="saveDraft" spinner="saveDraft" class="btn btn-outline btn-primary">
-                    <x-icon name="o-document-text" class="w-5 h-5" />
-                    Save Draft
-                </x-button>
-                <x-button wire:click="closeTraining" spinner="closeTraining" class="btn btn-primary">
-                    <x-icon name="o-check-circle" class="w-5 h-5" />
-                    Close Training
-                </x-button>
-            </div>
-        @endif
     @else
         <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center">
             <p class="text-sm text-gray-600">Training data not found.</p>

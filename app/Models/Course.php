@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\Section;
@@ -18,7 +19,7 @@ class Course extends Model
         'title',
         'description',
         'thumbnail_url',
-        'group_comp',
+        'competency_id',
         'status',
     ];
 
@@ -71,6 +72,14 @@ class Course extends Model
     }
 
     /**
+     * Get the competency associated with this course.
+     */
+    public function competency(): BelongsTo
+    {
+        return $this->belongsTo(Competency::class, 'competency_id');
+    }
+
+    /**
      * Scope: only courses assigned to a given user id.
      */
     public function scopeAssignedToUser($query, $userId)
@@ -92,6 +101,48 @@ class Course extends Model
                     $a->where('employee_id', $userId);
                 });
         });
+    }
+
+    /**
+     * Determine whether the user can start/continue this course now.
+     * Rule: user must be assigned via TrainingAssessment, and at least one related training
+     * (for this course + user) has start_date <= today (or start_date is NULL).
+     */
+    public function isAvailableForUser(int $userId): bool
+    {
+        if (!$userId) {
+            return false;
+        }
+
+        $today = Carbon::today();
+        return $this->trainings()
+            ->whereHas('assessments', fn($a) => $a->where('employee_id', $userId))
+            ->where(function ($q) use ($today) {
+                $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->exists();
+    }
+
+    /**
+     * If the course is not yet available, returns the earliest upcoming start_date.
+     * Returns null if no start_date is set (or user not assigned).
+     */
+    public function nextAvailableDateForUser(int $userId): ?Carbon
+    {
+        if (!$userId) {
+            return null;
+        }
+
+        $today = Carbon::today();
+        $row = $this->trainings()
+            ->whereHas('assessments', fn($a) => $a->where('employee_id', $userId))
+            ->whereNotNull('start_date')
+            ->whereDate('start_date', '>', $today)
+            ->orderBy('start_date')
+            ->select(['id', 'start_date'])
+            ->first();
+
+        return $row?->start_date ? Carbon::parse($row->start_date)->startOfDay() : null;
     }
 
     /**
@@ -151,5 +202,56 @@ class Course extends Model
         $units += 1;
 
         return (int) $units;
+    }
+
+    /**
+     * Check if course has all required content (ready to be published/inactive).
+     */
+    public function isComplete(): bool
+    {
+        // Must have basic info
+        if (empty($this->title) || empty($this->description) || empty($this->competency_id)) {
+            return false;
+        }
+
+        // Must have pretest with at least 1 question
+        $pretest = $this->tests()->where('type', 'pretest')->first();
+        if (!$pretest) {
+            return false;
+        }
+        $pretestQuestions = $pretest->questions()->count();
+        if ($pretestQuestions === 0) {
+            return false;
+        }
+
+        // Must have at least 1 learning module (topic) with at least 1 section
+        $topicCount = $this->learningModules()->count();
+        if ($topicCount === 0) {
+            return false;
+        }
+        $sectionCount = Section::whereHas('topic', fn($q) => $q->where('course_id', $this->id))->count();
+        if ($sectionCount === 0) {
+            return false;
+        }
+
+        // Must have posttest with at least 1 question
+        $posttest = $this->tests()->where('type', 'posttest')->first();
+        if (!$posttest) {
+            return false;
+        }
+        $posttestQuestions = $posttest->questions()->count();
+        if ($posttestQuestions === 0) {
+            return false;
+        }
+
+        // Must have test configuration
+        if (!$pretest->passing_score && $pretest->passing_score !== 0) {
+            return false;
+        }
+        if (!$posttest->passing_score) {
+            return false;
+        }
+
+        return true;
     }
 }

@@ -29,11 +29,13 @@ class User extends Authenticatable
      */
     protected $fillable = [
         'name',
+        'nrp',
         'email',
         'password',
         'section',
-        'NRP',
-        'role',
+        'department',
+        'division',
+        'position',
     ];
 
     /**
@@ -54,22 +56,9 @@ class User extends Authenticatable
     protected function casts(): array
     {
         return [
+            'nrp' => 'integer',
             'password' => 'hashed',
-            'NRP' => 'integer',
         ];
-    }
-
-    /**
-     * Normalize NRP casing so $user->nrp works even if DB column is 'NRP'.
-     */
-    protected function nrp(): Attribute
-    {
-        return Attribute::make(
-            get: function () {
-                // Support both 'NRP' and 'nrp' DB column names
-                return $this->attributes['nrp'] ?? $this->attributes['NRP'] ?? null;
-            },
-        );
     }
 
     /**
@@ -86,6 +75,14 @@ class User extends Authenticatable
     public function trainingAssessments(): HasMany
     {
         return $this->hasMany(TrainingAssessment::class, 'employee_id');
+    }
+
+    /**
+     * Get the user roles (instructor, certification, admin).
+     */
+    public function userRoles(): HasMany
+    {
+        return $this->hasMany(UserRole::class);
     }
 
     /**
@@ -121,31 +118,118 @@ class User extends Authenticatable
         return $this->hasMany(Request::class, 'created_by');
     }
 
-    /* =====================
-     |  Role Utilities
-     |  Single role stored on users.role (string)
-     |===================== */
-    public function hasRole(string $role): bool
+    /**
+     * Get the training plans for the user.
+     */
+    public function trainingPlans(): HasMany
     {
-        return strtolower(trim($this->role ?? '')) === strtolower(trim($role));
+        return $this->hasMany(TrainingPlan::class);
     }
 
+    /**
+     * Get the self learning plans for the user.
+     */
+    public function selfLearningPlans(): HasMany
+    {
+        return $this->hasMany(SelfLearningPlan::class);
+    }
+
+    /**
+     * Get the mentoring plans for the user.
+     */
+    public function mentoringPlans(): HasMany
+    {
+        return $this->hasMany(MentoringPlan::class);
+    }
+
+    /**
+     * Get the project plans for the user.
+     */
+    public function projectPlans(): HasMany
+    {
+        return $this->hasMany(ProjectPlan::class);
+    }
+
+    /* =====================
+     |  Position & Role Utilities
+     |  Position: employee, supervisor, section_head, department_head, division_head, director
+     |  Roles stored in user_roles table (instructor, certification, admin)
+     |===================== */
+
+    /**
+     * Accessor for 'role' - returns position for backward compatibility
+     * Maps position names to specific role names
+     */
+    protected function role(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $position = $this->position ?? 'employee';
+                // Map position to role names
+                return match (strtolower($position)) {
+                    'supervisor' => 'spv',
+                    'section_head' => 'section_head',
+                    'department_head' => 'dept_head',
+                    'division_head' => 'div_head',
+                    'director' => 'director',
+                    default => 'employee',
+                };
+            }
+        );
+    }
+
+    /**
+     * Check if user has a specific position
+     */
+    public function hasPosition(string $position): bool
+    {
+        return strtolower(trim($this->position ?? '')) === strtolower(trim($position));
+    }
+
+    /**
+     * Check if user has any of the given positions
+     */
+    public function hasAnyPosition(array|string $positions): bool
+    {
+        $positions = is_array($positions) ? $positions : explode(',', $positions);
+        $positions = array_map(fn($p) => strtolower(trim($p)), $positions);
+        return in_array(strtolower(trim($this->position ?? '')), $positions);
+    }
+
+    /**
+     * Check if user has a specific functional role (from user_roles table)
+     * Functional roles: instructor, certification, admin
+     */
+    public function hasRole(string $role): bool
+    {
+        return $this->userRoles()->where('role', strtolower(trim($role)))->exists();
+    }
+
+    /**
+     * Check if user has any of the given functional roles
+     */
     public function hasAnyRole(array|string $roles): bool
     {
         $roles = is_array($roles) ? $roles : explode(',', $roles);
-        $current = strtolower(trim($this->role ?? ''));
-        foreach ($roles as $r) {
-            if ($current === strtolower(trim($r)))
-                return true;
-        }
-        return false;
+        $roles = array_map(fn($r) => strtolower(trim($r)), $roles);
+        return $this->userRoles()->whereIn('role', $roles)->exists();
     }
 
+    /**
+     * Check if user has all of the given functional roles
+     */
     public function hasAllRoles(array|string $roles): bool
     {
-        // Because we only store one role string, "all roles" only true if exactly one requested and it matches.
         $roles = is_array($roles) ? $roles : explode(',', $roles);
-        $roles = array_values(array_filter(array_map(fn($r) => trim($r), $roles)));
-        return count($roles) === 1 && $this->hasRole($roles[0]);
+        $roles = array_values(array_filter(array_map(fn($r) => strtolower(trim($r)), $roles)));
+
+        $userRoles = $this->userRoles()->pluck('role')->map(fn($r) => strtolower(trim($r)))->toArray();
+
+        foreach ($roles as $role) {
+            if (!in_array($role, $userRoles)) {
+                return false;
+            }
+        }
+        return true;
     }
 }

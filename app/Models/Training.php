@@ -11,9 +11,10 @@ class Training extends Model
 {
     protected $fillable = [
         'course_id',
+        'module_id',
+        'competency_id',
         'name',
         'type',
-        'group_comp',
         'start_date',
         'end_date',
         'status',
@@ -61,6 +62,38 @@ class Training extends Model
     public function course()
     {
         return $this->belongsTo(Course::class, 'course_id');
+    }
+
+    /**
+     * Link to an optional training module (nullable FK in migration).
+     */
+    public function module()
+    {
+        return $this->belongsTo(TrainingModule::class, 'module_id');
+    }
+
+    public function competency()
+    {
+        return $this->belongsTo(Competency::class, 'competency_id');
+    }
+
+    public function groupComp(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $group = $this->competency?->type;
+
+                if (!$group && ($this->type === 'IN' || $this->type === null)) {
+                    $group = $this->module?->competency?->type;
+                }
+
+                if (!$group && ($this->type === 'LMS' || $this->type === null)) {
+                    $group = $this->course?->competency?->type;
+                }
+
+                return $group;
+            }
+        );
     }
 
     /**

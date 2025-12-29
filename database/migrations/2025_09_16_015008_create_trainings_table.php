@@ -16,11 +16,12 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreignId('course_id')->nullable()->constrained('courses')->nullOnDelete();
+            $table->foreignId('module_id')->nullable()->constrained('training_modules')->nullOnDelete();
+            $table->foreignId('competency_id')->nullable()->constrained('competency')->nullOnDelete();
 
             // Details
             $table->string('name');
             $table->enum('type', ['IN', 'OUT', 'LMS']);
-            $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
             $table->date('start_date');
             $table->date('end_date')->nullable();
             $table->enum('status', ['canceled', 'in_progress', 'done', 'approved', 'rejected'])->default('in_progress');

@@ -3,6 +3,7 @@
 namespace App\Livewire\Pages\Certification;
 
 use App\Models\Certification;
+use App\Models\User;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Illuminate\Support\Facades\Auth;
@@ -75,7 +76,7 @@ class CertificationApproval extends Component
         }
 
         $certification = Certification::with([
-            'certificationModule',
+            'certificationModule.competency',
             'participants.employee',
             'participants.scores.session',
         ])->find($this->selectedId);
@@ -132,7 +133,7 @@ class CertificationApproval extends Component
 
     public function approvals()
     {
-        $query = Certification::with('certificationModule')
+        $query = Certification::with('certificationModule.competency')
             ->whereIn('status', ['completed', 'approved', 'rejected']);
 
         // Filter by search
@@ -142,7 +143,10 @@ class CertificationApproval extends Component
                 $q->where('name', 'like', "%{$term}%")
                     ->orWhereHas('certificationModule', function ($moduleQuery) use ($term) {
                         $moduleQuery->where('module_title', 'like', "%{$term}%")
-                            ->orWhere('competency', 'like', "%{$term}%");
+                            ->orWhereHas('competency', function ($competencyQuery) use ($term) {
+                                $like = "%{$term}%";
+                                $competencyQuery->where('code', 'like', $like)->orWhere('name', 'like', $like);
+                            });
                     });
             });
         }
@@ -166,11 +170,16 @@ class CertificationApproval extends Component
                 // Map status: completed -> pending for display
                 $displayStatus = $certification->status === 'completed' ? 'pending' : $certification->status;
 
+                $module = $certification->certificationModule;
+                $competencyLabel = $module?->competency
+                    ? trim((string) $module->competency->code . ' - ' . (string) $module->competency->name)
+                    : '-';
+
                 return (object) [
                     'id' => $certification->id,
                     'certification_name' => $certification->name,
-                    'module_name' => $certification->certificationModule->module_title ?? '-',
-                    'competency' => $certification->certificationModule->competency ?? '-',
+                    'module_name' => $module?->module_title ?? '-',
+                    'competency' => $competencyLabel,
                     'date' => $certification->created_at,
                     'status' => $displayStatus,
                     'actual_status' => $certification->status, // Store actual status for updates
@@ -188,7 +197,7 @@ class CertificationApproval extends Component
 
     public function openDetailModal(int $id): void
     {
-        $certification = Certification::with('certificationModule')->find($id);
+        $certification = Certification::with('certificationModule.competency')->find($id);
 
         if (!$certification) {
             return;
@@ -197,12 +206,17 @@ class CertificationApproval extends Component
         // Map status: completed -> pending for display
         $displayStatus = $certification->status === 'completed' ? 'pending' : $certification->status;
 
+        $module = $certification->certificationModule;
+        $competencyLabel = $module?->competency
+            ? trim((string) $module->competency->code . ' - ' . (string) $module->competency->name)
+            : '-';
+
         $this->selectedId = $certification->id;
         $this->activeTab = 'information'; // Reset to information tab
         $this->formData = [
             'certification_name' => $certification->name,
-            'module_name' => $certification->certificationModule->module_title ?? '-',
-            'competency' => $certification->certificationModule->competency ?? '-',
+            'module_name' => $module?->module_title ?? '-',
+            'competency' => $competencyLabel,
             'created_at' => $certification->created_at->format('d F Y'),
             'status' => $displayStatus,
             'actual_status' => $certification->status,
@@ -216,10 +230,16 @@ class CertificationApproval extends Component
      */
     protected function canModerate(): bool
     {
+        /** @var User|null $user */
         $user = Auth::user();
-        if (!$user)
+
+        if (!$user) {
             return false;
-        return strtolower(trim($user->role ?? '')) === 'leader' && strtolower(trim($user->section ?? '')) === 'lid';
+        }
+
+        // Only section head from LID can moderate
+        return $user->hasPosition('section_head')
+            && strtolower(trim($user->section ?? '')) === 'lid';
     }
 
     /** Approve selected request */

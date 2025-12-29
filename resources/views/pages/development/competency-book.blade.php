@@ -2,13 +2,13 @@
     @livewire('components.confirm-dialog')
 
     {{-- Header --}}
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
-                grid-cols-1 lg:grid-cols-2 items-center">
-        <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
+    <div class="w-full flex flex-col lg:flex-row gap-5 mb-5 lg:mb-9 items-center justify-between">
+        <h1 class="text-primary text-4xl font-bold text-center lg:text-start whitespace-nowrap">
             Competency Book
         </h1>
 
-        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
+        <div
+            class="flex gap-3 flex-col w-full lg:w-auto items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
                 {{-- Dropdown Export / Import --}}
@@ -56,7 +56,7 @@
                 <!-- Filter -->
                 <x-select wire:model.live="filter" :options="$typeOptions" option-value="value" option-label="label"
                     placeholder="All"
-                    class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
+                    class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
             </div>
 
@@ -65,8 +65,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="5" :rows="10"
-        targets="search,filter,save,deleteCompetency,file,openCreateModal" />
+    <x-skeletons.table :columns="5" :rows="10" targets="search,filter,save,deleteCompetency,file" />
 
     {{-- No Data State --}}
     @if ($competencies->isEmpty())

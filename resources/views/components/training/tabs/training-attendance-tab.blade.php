@@ -32,7 +32,7 @@
                             @php $row = $attendance[$emp['id']] ?? []; @endphp
                             <tr class="even:bg-gray-50 hover:bg-gray-100 transition-colors">
                                 <td class="py-2.5 px-2 text-center text-xs font-medium">{{ $idx + 1 }}</td>
-                                <td class="py-2.5 px-2 text-center font-mono text-[11px]">{{ $emp['NRP'] ?? '—' }}
+                                <td class="py-2.5 px-2 text-center font-mono text-[11px]">{{ $emp['nrp'] ?? '—' }}
                                 </td>
                                 <td class="py-2.5 px-3 font-medium">
                                     <div class="truncate" title="{{ $emp['name'] }}">{{ $emp['name'] }}</div>
@@ -46,7 +46,7 @@
                                     ]" option-value="value" option-label="label"
                                         wire:model.defer="attendance.{{ $emp['id'] }}.status" :placeholder="null"
                                         :disabled="$readOnly"
-                                        class="!w-full !max-w-[9.5rem] !min-h-0 !h-7 [&_input]:!py-0 [&_.select-trigger]:!py-0 text-xs focus-within:outline-0 {{ $readOnly ? 'opacity-60 cursor-not-allowed' : '' }}" />
+                                        class="!w-full !min-w-[7rem] !min-h-0 !h-8 text-xs focus-within:outline-0 {{ $readOnly ? 'opacity-60 cursor-not-allowed' : '' }}" />
                                 </td>
                                 <td class="py-2.5 px-2 text-center">
                                     <input type="text" wire:model.defer="attendance.{{ $emp['id'] }}.remark"

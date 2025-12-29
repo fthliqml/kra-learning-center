@@ -74,12 +74,14 @@
                         $classes =
                             [
                                 'pending' => 'bg-amber-100 text-amber-700',
+                                'done' => 'bg-blue-100 text-blue-700',
                                 'approved' => 'bg-emerald-100 text-emerald-700',
                                 'rejected' => 'bg-rose-100 text-rose-700',
                             ][$status] ?? 'bg-gray-100 text-gray-700';
+                        $statusLabel = $status === 'done' ? 'Ready for Approval' : ucfirst($status);
                     @endphp
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
-                        {{ ucfirst($status) }}
+                        {{ $statusLabel }}
                     </span>
                 @endscope
 
@@ -129,14 +131,16 @@
                             $classes =
                                 [
                                     'pending' => 'bg-amber-100 text-amber-700',
+                                    'done' => 'bg-blue-100 text-blue-700',
                                     'approved' => 'bg-emerald-100 text-emerald-700',
                                     'rejected' => 'bg-rose-100 text-rose-700',
                                 ][$status] ?? 'bg-gray-100 text-gray-700';
+                            $statusLabel = $status === 'done' ? 'Ready for Approval' : ucfirst($status);
                         @endphp
                         <div class="text-xs font-semibold">Status</div>
                         <span
                             class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
-                            {{ ucfirst($status) }}
+                            {{ $statusLabel }}
                         </span>
                     </div>
                 </x-form>
@@ -293,13 +297,15 @@
         <x-slot:actions>
             <x-ui.button @click="$wire.modal = false" type="button">Close</x-ui.button>
             @php
+                $user = auth()->user();
                 $canModerate =
-                    auth()->check() &&
-                    auth()->user()->hasRole('leader') &&
-                    strtolower(auth()->user()->section ?? '') === 'lid';
-                $isPending = strtolower($formData['status'] ?? 'pending') === 'pending';
+                    $user &&
+                    method_exists($user, 'hasPosition') &&
+                    $user->hasPosition('section_head') &&
+                    strtolower($user->section ?? '') === 'lid';
+                $isDone = strtolower($formData['status'] ?? '') === 'done';
             @endphp
-            @if ($canModerate && $isPending)
+            @if ($canModerate && $isDone)
                 <x-ui.button variant="danger" type="button" wire:click="reject" wire:target="reject"
                     wire:loading.attr="disabled" class="bg-rose-600 hover:bg-rose-700 border-rose-600 text-white">
                     <span wire:loading.remove wire:target="reject" class="flex items-center gap-2">

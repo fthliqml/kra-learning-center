@@ -4,6 +4,7 @@ namespace App\Livewire\Components\Certification;
 
 use Livewire\Component;
 use App\Models\CertificationSession;
+use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 
 class AgendaList extends Component
@@ -20,8 +21,9 @@ class AgendaList extends Component
             'session_id' => $session->id,
             'certification_id' => $cert?->id,
         ];
+        /** @var User|null $user */
         $user = Auth::user();
-        $isAdmin = $user && strtolower($user->role ?? '') === 'admin';
+        $isAdmin = (bool) ($user?->hasRole('admin'));
 
         // Check if certification is closed
         $isClosed = in_array(strtolower($cert?->status ?? ''), ['closed', 'done', 'completed']);

@@ -16,12 +16,14 @@ return new class extends Migration
 
             // Details
             $table->string('title');
-            $table->enum('group_comp', ['BMC', 'BC', 'MMP', 'LC', 'MDP', 'TOC']);
+            $table->foreignId('competency_id')->nullable()->constrained('competency')->nullOnDelete();
             $table->text('objective');
             $table->text('training_content');
             $table->string('method');
             $table->integer('duration');
             $table->integer('frequency');
+            $table->double('theory_passing_score')->default(0);
+            $table->double('practical_passing_score')->default(0);
 
             // Timestamps
             $table->timestamps();

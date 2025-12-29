@@ -47,6 +47,7 @@ class Courses extends Component
 
         $query = Course::query()
             ->with([
+                'competency:id,type',
                 // Load only the current user's enrollment (if any) for progress bar without N+1
                 'userCourses' => function ($q) use ($userId) {
                     if ($userId) {
@@ -72,7 +73,7 @@ class Courses extends Component
             ->when($this->filter, function ($q) {
                 $value = trim((string) $this->filter);
                 if ($value !== '') {
-                    $q->where('group_comp', $value);
+                    $q->whereHas('competency', fn($qq) => $qq->where('type', $value));
                 }
             })
             ->orderBy('created_at', 'desc');

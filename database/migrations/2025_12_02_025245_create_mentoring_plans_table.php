@@ -16,13 +16,28 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('mentor_id')->constrained('users')->cascadeOnDelete();
+            $table->foreignId('mentor_id')->nullable()->constrained('users')->nullOnDelete();
 
             // Plan Details
-            $table->string('objective');
-            $table->string('method');
-            $table->integer('frequency');
-            $table->integer('duration');
+            $table->text('objective')->nullable();
+            $table->string('method')->nullable();
+            $table->integer('frequency')->default(0);
+            $table->integer('duration')->default(0);
+
+            // Status & Period
+            $table->string('status')->default('draft');
+            $table->unsignedSmallInteger('year');
+
+            // SPV Approval (Level 1)
+            $table->foreignId('spv_approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('spv_approved_at')->nullable();
+
+            // Leader LID Approval (Level 2)
+            $table->foreignId('leader_approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('leader_approved_at')->nullable();
+
+            // Rejection reason
+            $table->text('rejection_reason')->nullable();
 
             // Timestamps
             $table->timestamps();

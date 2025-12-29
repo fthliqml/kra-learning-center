@@ -25,7 +25,7 @@
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
 
             <div class="flex items-center justify-center gap-2">
-                @if (auth()->check() && auth()->user()->hasRole('spv'))
+                @if (auth()->check() && auth()->user()->hasPosition('supervisor'))
                     <!-- Add Button (SPV only) -->
                     <x-ui.button variant="primary" wire:click="openCreateModal" wire:target="openCreateModal"
                         class="h-10" wire:loading.attr="readonly">
@@ -70,7 +70,8 @@
         </div>
     @else
         {{-- Table --}}
-        <div class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
+        <div wire:loading.remove wire:target="search,filter,approve,reject"
+            class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$requests" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
                 {{-- No --}}
@@ -134,15 +135,28 @@
                 class="focus-within:border-0" :readonly="true" />
 
             @if ($mode === 'preview')
+                <x-input label="Group Competency" placeholder="Auto filled from competency"
+                    wire:model.defer="formData.group_comp" class="focus-within:border-0" :readonly="true" />
                 <x-input label="Competency" :value="$formData['competency_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
             @else
-                <x-choices label="Competency" wire:model="formData.competency_id" :options="$competencies" option-value="id"
-                    option-label="name" placeholder="Select competency..." class="focus-within:border-0"
-                    hint="Type at least 2 chars" searchable single />
+                <x-choices label="Group Competency" wire:model.live="selectedGroupComp" :options="$groupCompOptions"
+                    option-value="value" option-label="label" placeholder="Select group competency first..."
+                    class="focus-within:border-0" searchable single clearable />
+
+                <x-choices label="Competency" wire:model.live="formData.competency_id" :options="$competencies"
+                    option-value="id" option-label="name" :placeholder="$selectedGroupComp ? 'Select competency...' : 'Please select group competency first'" class="focus-within:border-0"
+                    :hint="$selectedGroupComp
+                        ? 'Type at least 2 chars'
+                        : 'Select group competency to enable this field'" searchable single />
             @endif
 
-            <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
-                class="focus-within:border-0" :error="$errors->first('formData.reason')" :readonly="$mode === 'preview'" />
+            @if ($mode === 'preview')
+                <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
+                    class="focus-within:border-0" :error="$errors->first('formData.reason')" :readonly="true" />
+            @else
+                <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
+                    class="focus-within:border-0" :error="$errors->first('formData.reason')" />
+            @endif
 
             <div class="mt-3">
                 {{-- Status badge in detail mode --}}
@@ -178,10 +192,12 @@
                     </x-ui.button>
                 @else
                     @php
+                        $user = auth()->user();
                         $canModerate =
-                            auth()->check() &&
-                            auth()->user()->hasRole('leader') &&
-                            strtolower(auth()->user()->section ?? '') === 'lid';
+                            $user &&
+                            method_exists($user, 'hasPosition') &&
+                            $user->hasPosition('section_head') &&
+                            strtolower($user->section ?? '') === 'lid';
                         $isPending = strtolower($formData['status'] ?? 'pending') === 'pending';
                     @endphp
                     @if ($canModerate && $isPending)

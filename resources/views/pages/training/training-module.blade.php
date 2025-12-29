@@ -53,7 +53,7 @@
                 </x-ui.button>
 
                 {{-- Filter --}}
-                <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
+                <x-select wire:model.live="filter" :options="$groupCompOptions" option-value="value" option-label="label"
                     placeholder="All"
                     class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
@@ -95,6 +95,9 @@
                 {{-- Custom cell untuk kolom Action --}}
                 @scope('cell_action', $module)
                     <div class="flex gap-2 justify-center">
+                        <!-- Detail -->
+                        <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
+                            wire:click="openDetailModal({{ $module->id }})" />
 
                         <!-- Edit -->
                         <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
@@ -123,9 +126,14 @@
             <x-input label="Title" placeholder="Title of the training module..." wire:model.defer="formData.title"
                 class="focus-within:border-0" :error="$errors->first('formData.title')" :readonly="$mode === 'preview'" />
 
-            <x-select label="Group Competency" wire:model.defer="formData.group_comp" :options="$groupOptions"
-                option-value="value" option-label="label" placeholder="Select Group Competency" :error="$errors->first('formData.group_comp')"
-                :disabled="$mode === 'preview'" />
+            @if ($mode === 'preview')
+                <x-input label="Competency" placeholder="Competency" wire:model="formData.competency_id"
+                    class="focus-within:border-0" readonly />
+            @else
+                <x-choices label="Competency" wire:model.defer="formData.competency_id" :options="$competencyOptions"
+                    option-value="value" option-label="label" placeholder="Select Competency" :error="$errors->first('formData.competency_id')" single
+                    searchable search-function="competencySearch" class="focus-within:border-0" />
+            @endif
 
             <x-textarea label="Objective" placeholder="Describe the training objectives..."
                 class="focus-within:border-0" wire:model.defer="formData.objective" :error="$errors->first('formData.objective')"
@@ -140,12 +148,23 @@
                 :readonly="$mode === 'preview'" />
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <x-input label="Duration" type="number" wire:model.defer="formData.duration" placeholder="6 Hours"
-                    class="focus-within:border-0" min="1" step="0.5" :error="$errors->first('formData.duration')"
-                    :readonly="$mode === 'preview'" />
+                <x-input label="Duration (Hours)" type="number" wire:model.defer="formData.duration"
+                    placeholder="6 Hours" class="focus-within:border-0" min="1" step="0.5"
+                    :error="$errors->first('formData.duration')" :readonly="$mode === 'preview'" />
 
-                <x-input label="Frequency" type="number" wire:model.defer="formData.frequency"
+                <x-input label="Frequency (Days)" type="number" wire:model.defer="formData.frequency"
                     placeholder="15 Days" class="focus-within:border-0" min="1" :error="$errors->first('formData.frequency')"
+                    :readonly="$mode === 'preview'" />
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-input label="Theory Passing Score (%)" type="number"
+                    wire:model.defer="formData.theory_passing_score" placeholder="80" class="focus-within:border-0"
+                    min="0" max="100" step="0.01" :error="$errors->first('formData.theory_passing_score')" :readonly="$mode === 'preview'" />
+
+                <x-input label="Practical Passing Score (%)" type="number"
+                    wire:model.defer="formData.practical_passing_score" placeholder="80"
+                    class="focus-within:border-0" min="0" max="100" step="0.01" :error="$errors->first('formData.practical_passing_score')"
                     :readonly="$mode === 'preview'" />
             </div>
 
