@@ -17,11 +17,8 @@ class TrainingSurveyService
    */
   public function createSurveyForTraining(Training $training): ?TrainingSurvey
   {
-    // Get group_comp from training's competency
-    $groupComp = $this->getGroupCompForTraining($training);
-
-    // Get default template for this group_comp
-    $defaultTemplate = SurveyTemplateDefault::getDefaultTemplate($groupComp, 1);
+    // Get default template for level 1
+    $defaultTemplate = SurveyTemplateDefault::getDefaultTemplate(1);
 
     // Check if survey already exists
     $existingSurvey = TrainingSurvey::where('training_id', $training->id)
@@ -72,28 +69,7 @@ class TrainingSurveyService
     });
   }
 
-  /**
-   * Get group_comp from training (via competency relationship).
-   */
-  protected function getGroupCompForTraining(Training $training): ?string
-  {
-    // Try direct competency
-    if ($training->competency_id && $training->competency) {
-      return $training->competency->type;
-    }
-
-    // Try via module
-    if ($training->module_id && $training->module?->competency) {
-      return $training->module->competency->type;
-    }
-
-    // Try via course
-    if ($training->course_id && $training->course?->competency) {
-      return $training->course->competency->type;
-    }
-
-    return null;
-  }
+  // Removed group competency logic
 
   /**
    * Copy questions from template to survey.
