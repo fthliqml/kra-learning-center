@@ -94,7 +94,7 @@
                             class="btn-circle btn-ghost p-2 bg-tetriary hover:opacity-85" spinner wire:navigate
                             href="{{ route('edit-course.index', ['course' => $course->id]) }}" />
                         <!-- Delete -->
-                        <x-button icon="o-trash" tooltip-right="Delete Course"
+                        <x-button icon="o-trash" tooltip-left="Delete Course"
                             class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85" spinner
                             wire:click="$dispatch('confirm', {
                             title: 'Are you sure you want to delete?',

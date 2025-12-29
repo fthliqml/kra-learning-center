@@ -19,7 +19,9 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="7" :rows="10" targets="search,filter" />
+    <div class="rounded-lg border border-gray-200 shadow-all">
+        <x-skeletons.training-history-table />
+    </div>
 
     {{-- No Data State --}}
     @if ($histories->isEmpty())
@@ -95,7 +97,8 @@
                                 </span>
                             @else
                                 <a href="{{ route('certificate.training.view', $history->assessment_id) }}"
-                                    class="text-blue-600 hover:text-blue-800 underline text-sm" target="_blank" rel="noopener">
+                                    class="text-blue-600 hover:text-blue-800 underline text-sm" target="_blank"
+                                    rel="noopener">
                                     View Certificate
                                 </a>
                             @endif

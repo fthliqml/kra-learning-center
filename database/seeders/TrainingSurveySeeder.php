@@ -31,7 +31,6 @@ class TrainingSurveySeeder extends Seeder
           $t = Training::create([
             'name' => 'Seeded Training #' . ($trainingIds->count() + $i),
             'type' => 'IN',
-            'group_comp' => 'BMC',
             'start_date' => now()->toDateString(),
             'end_date' => now()->toDateString(),
           ]);
