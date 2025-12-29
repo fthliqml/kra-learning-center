@@ -95,13 +95,11 @@ class SurveyEmployee extends Component
             // Compute badge label and class in controller (component) instead of Blade
             $status = $survey->badge_status; // complete | incomplete | null
             $isDraft = ($survey->status ?? '') === 'draft';
-            $trainingStatus = strtolower($survey->training?->status ?? '');
-            $trainingReady = in_array($trainingStatus, ['done', 'approved'], true);
 
             if ($status === 'complete') {
                 $survey->badge_label = 'Complete';
                 $survey->badge_class = 'badge-primary bg-primary/95';
-            } elseif ($isDraft || !$trainingReady) {
+            } elseif ($isDraft) {
                 $survey->badge_label = 'Not Ready';
                 $survey->badge_class = 'badge-warning';
             } elseif ($status === 'incomplete') {
@@ -112,7 +110,7 @@ class SurveyEmployee extends Component
                 $survey->badge_class = 'badge-ghost';
             }
             // Determine if Start Survey button should be disabled
-            $survey->start_disabled = $isDraft || !$trainingReady;
+            $survey->start_disabled = $isDraft;
             return $survey;
         });
     }
