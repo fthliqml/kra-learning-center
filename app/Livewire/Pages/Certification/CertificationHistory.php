@@ -40,7 +40,8 @@ class CertificationHistory extends Component
             ->with(['certification.certificationModule.competency', 'scores'])
             ->where('employee_id', $userId)
             ->whereHas('certification', function ($q) {
-                $q->where('status', 'approved');
+                // Show certifications that have been fully processed
+                $q->whereIn('status', ['approved', 'completed']);
             })
             ->when($this->search, function ($q) {
                 $q->whereHas('certification', function ($query) {
