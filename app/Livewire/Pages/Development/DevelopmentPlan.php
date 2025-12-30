@@ -510,10 +510,13 @@ class DevelopmentPlan extends Component
      *
      * Rules:
      * - If saving as draft  -> always 'draft'.
-     * - If employee is a supervisor -> skip SPV layer, go directly to Leader (pending_leader).
-     * - Otherwise, if there is any supervisor in the same section/department as the employee
-     *   -> first approval goes to SPV (pending_spv).
-     * - If there is no such supervisor -> skip SPV, send directly to Leader LID (pending_leader).
+     * - If employee is a first-level approver in their own area (SPV / Dept Head non-LID)
+     *   -> skip first layer and go directly to Leader LID (pending_leader).
+     * - Otherwise:
+     *   - If there is any SPV in the same section/department
+     *     OR (when no SPV) any Dept Head in the same area (non-LID)
+     *       -> first approval goes to that area approver (pending_spv).
+     *   - If there is no such SPV/Dept Head -> send directly to Leader LID (pending_leader).
      */
     private function determineInitialStatus(User $user, bool $isDraft = false): string
     {
@@ -521,8 +524,12 @@ class DevelopmentPlan extends Component
             return 'draft';
         }
 
-        // If the requester is a supervisor, never route to themselves as SPV
-        if (strtolower(trim($user->position ?? '')) === 'supervisor') {
+        $position = strtolower(trim($user->position ?? ''));
+        $section = $user->section ? strtolower(trim($user->section)) : null;
+
+        // If the requester is themselves a first-level approver in their area
+        // (supervisor or department head outside LID), skip the first layer.
+        if ($position === 'supervisor' || ($position === 'department_head' && $section !== 'lid')) {
             return 'pending_leader';
         }
 
@@ -538,7 +545,20 @@ class DevelopmentPlan extends Component
             })
             ->exists();
 
-        return $hasSpvInArea ? 'pending_spv' : 'pending_leader';
+        if ($hasSpvInArea) {
+            return 'pending_spv';
+        }
+
+        // If no SPV, check for Department Head in the same department (non-LID)
+        $hasDeptHeadInArea = User::query()
+            ->whereRaw('LOWER(TRIM(position)) = ?', ['department_head'])
+            ->when($user->department, function ($q) use ($user) {
+                $q->where('department', $user->department);
+            })
+            ->whereRaw('LOWER(TRIM(COALESCE(section, ""))) != ?', ['lid'])
+            ->exists();
+
+        return $hasDeptHeadInArea ? 'pending_spv' : 'pending_leader';
     }
 
     private function saveTrainingPlans($user, $isDraft = false)

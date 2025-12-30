@@ -63,8 +63,22 @@ class DevelopmentApproval extends Component
     {
         /** @var User|null $user */
         $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
 
-        return (bool) $user?->hasPosition('supervisor');
+        // SPV di area
+        if ($user->hasPosition('supervisor')) {
+            return true;
+        }
+
+        // Dept Head di area (non-LID) juga berperan sebagai approver level pertama
+        $section = strtolower(trim($user->section ?? ''));
+        if ($user->hasPosition('department_head') && $section !== 'lid') {
+            return true;
+        }
+
+        return false;
     }
 
     /**

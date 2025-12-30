@@ -29,8 +29,11 @@
                         </div>
                         <div>
                             <p class="text-sm font-semibold text-gray-800 dark:text-gray-200">{{ $item['title'] }}</p>
-                            <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">
-                                {{ str_replace('_', ' ', $item['type']) }}</p>
+                            @if ($item['type'] !== 'idp')
+                                <p class="text-xs text-gray-500 dark:text-gray-400 capitalize">
+                                    {{ str_replace('_', ' ', $item['type']) }}
+                                </p>
+                            @endif
                         </div>
                     </div>
 
