@@ -57,8 +57,8 @@ return [
                     'positions' => ['supervisor', 'section_head', 'department_head', 'division_head'],
                 ],
                 [
-                    'label' => 'Development Approved',
-                    'href' => '/development/approved',
+                    'label' => 'Development Recap',
+                    'href' => '/development/recap',
                     'roles' => ['admin'],
                 ],
             ],

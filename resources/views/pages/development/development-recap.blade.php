@@ -2,7 +2,7 @@
     {{-- Header --}}
     <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9 grid-cols-1 lg:grid-cols-2 items-center">
         <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
-            Development Approved
+            Development Recap
         </h1>
 
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">

@@ -104,7 +104,7 @@
             <div class="flex flex-col-reverse sm:flex-row justify-between items-stretch sm:items-center gap-3 mt-5">
                 <x-button wire:click="closeModal"
                     class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">Close</x-button>
-                @role('admin')
+                @role('admin', 'instructor')
                     @php
                         $trainingStatus = strtolower($selectedEvent['status'] ?? '');
                         $canCloseTraining = !in_array($trainingStatus, ['done', 'approved', 'rejected']);

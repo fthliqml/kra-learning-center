@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
 
-class DevelopmentApproved extends Component
+class DevelopmentRecap extends Component
 {
     use WithPagination;
 
@@ -119,7 +119,7 @@ class DevelopmentApproved extends Component
 
     public function render()
     {
-        return view('pages.development.development-approved', [
+        return view('pages.development.development-recap', [
             'headers' => $this->headers(),
             'rows' => $this->getRows(),
         ]);
