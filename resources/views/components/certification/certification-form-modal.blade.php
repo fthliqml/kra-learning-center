@@ -17,8 +17,8 @@
                     class="p-3 border border-amber-200 bg-amber-50 rounded-md text-amber-800 text-sm flex items-start gap-2">
                     <x-icon name="o-exclamation-triangle" class="w-4 h-4 mt-0.5" />
                     <div>
-                        <span class="font-semibold">Session config incomplete.</span>
-                        <div class="text-amber-700">Please set both Theory and Practical dates in the Session Config tab
+                        <span class="font-semibold">Time Planning incomplete.</span>
+                        <div class="text-amber-700">Please set both Theory and Practical dates in the Time Planning tab
                             before saving.</div>
                     </div>
                 </div>
@@ -54,7 +54,7 @@
                     </div>
                 </x-tab>
 
-                <x-tab name="session" label="Session Config" icon="o-cog-6-tooth">
+                <x-tab name="session" label="Time Planning" icon="o-cog-6-tooth">
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <!-- Theory session (always required) -->
                         <div class="p-4 border rounded-md space-y-4 mt-3">
