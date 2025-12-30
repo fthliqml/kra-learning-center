@@ -5,6 +5,10 @@ namespace App\Livewire\Components\Dashboard;
 use App\Models\Certification;
 use App\Models\Request;
 use App\Models\Training;
+use App\Models\TrainingPlan;
+use App\Models\SelfLearningPlan;
+use App\Models\MentoringPlan;
+use App\Models\ProjectPlan;
 use Livewire\Component;
 
 class PendingApprovals extends Component
@@ -73,6 +77,22 @@ class PendingApprovals extends Component
       ];
     }
 
+    // Get pending IDP (Individual Development Plan) approvals (status pending_leader)
+    $pendingIdpPlans = collect()
+      ->merge(TrainingPlan::with('user')->where('status', 'pending_leader')->latest()->take(5)->get())
+      ->merge(SelfLearningPlan::with('user')->where('status', 'pending_leader')->latest()->take(5)->get())
+      ->merge(MentoringPlan::with('user')->where('status', 'pending_leader')->latest()->take(5)->get())
+      ->merge(ProjectPlan::with('user')->where('status', 'pending_leader')->latest()->take(5)->get());
+
+    foreach ($pendingIdpPlans as $plan) {
+      $this->items[] = [
+        'title' => 'Development Plan',
+        'info' => $plan->user->name ?? 'Unknown',
+        'type' => 'idp',
+        'id' => $plan->id,
+      ];
+    }
+
     // Sort by most recent and limit total
     $this->items = array_slice($this->items, 0, 10);
   }
@@ -102,6 +122,7 @@ class PendingApprovals extends Component
   public function getUrl(string $type, int $id): string
   {
     return match ($type) {
+      'idp' => route('development-approval.index'),
       'training_request' => route('training-request.index'),
       'training' => route('training-approval.index'),
       'certification' => route('certification-approval.index'),

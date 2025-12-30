@@ -12,7 +12,7 @@
         ],
         'waiting' => [
             'class' => 'bg-amber-100 text-amber-700',
-            'label' => 'Waiting',
+            'label' => 'Waiting Scheduling',
         ],
     ];
 

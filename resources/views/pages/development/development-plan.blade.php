@@ -216,7 +216,7 @@
             {{-- Right Column - Plans by Category --}}
             <div class="lg:col-span-2 space-y-6">
                 {{-- Training Plans --}}
-                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                <div class="rounded-xl border border-gray-200 bg-white p-6 max-h-[60vh] overflow-y-auto">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                             <x-icon name="o-academic-cap" class="size-5 text-blue-600" />
@@ -290,7 +290,7 @@
                 </div>
 
                 {{-- Self Learning --}}
-                <div class="rounded-xl border border-gray-200 bg-white p-6">
+                <div class="rounded-xl border border-gray-200 bg-white p-6 max-h-[60vh] overflow-y-auto">
                     <div class="flex items-center justify-between mb-4">
                         <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                             <x-icon name="o-book-open" class="size-5 text-green-600" />
@@ -362,7 +362,7 @@
                 {{-- Mentoring & Projects (2 columns) --}}
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {{-- Mentoring --}}
-                    <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <div class="rounded-xl border border-gray-200 bg-white p-6 max-h-[60vh] overflow-y-auto">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                                 <x-icon name="o-user-group" class="size-5 text-purple-600" />
@@ -426,7 +426,7 @@
                     </div>
 
                     {{-- Projects --}}
-                    <div class="rounded-xl border border-gray-200 bg-white p-6">
+                    <div class="rounded-xl border border-gray-200 bg-white p-6 max-h-[60vh] overflow-y-auto">
                         <div class="flex items-center justify-between mb-4">
                             <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
                                 <x-icon name="o-briefcase" class="size-5 text-amber-600" />
@@ -494,194 +494,195 @@
 
     {{-- Add/Edit Modal --}}
     <x-modal wire:model="addModal" :title="$isEdit ? 'Edit Development Plan' : 'Add Development Plan'" separator box-class="max-w-3xl h-fit !overflow-visible">
-        <x-form wire:submit="save" no-separator>
-            {{-- Show category being added/edited --}}
-            <div class="mb-4">
-                <h4 class="text-sm font-medium text-gray-700">
-                    {{ $isEdit ? 'Editing' : 'Adding' }}:
-                    @if ($editingCategory === 'training')
-                        Training Plans
-                    @elseif($editingCategory === 'self_learning')
-                        Self Learning
-                    @elseif($editingCategory === 'mentoring')
-                        Mentoring
-                    @elseif($editingCategory === 'project')
-                        Project Assignment
-                    @endif
-                </h4>
-            </div>
+        <div class="max-h-[70vh] overflow-y-auto pr-1">
+            <x-form wire:submit="save" no-separator>
+                {{-- Show category being added/edited --}}
+                <div class="mb-4">
+                    <h4 class="text-sm font-medium text-gray-700">
+                        {{ $isEdit ? 'Editing' : 'Adding' }}:
+                        @if ($editingCategory === 'training')
+                            Training Plans
+                        @elseif($editingCategory === 'self_learning')
+                            Self Learning
+                        @elseif($editingCategory === 'mentoring')
+                            Mentoring
+                        @elseif($editingCategory === 'project')
+                            Project Assignment
+                        @endif
+                    </h4>
+                </div>
 
-            {{-- Training Tab --}}
-            @if ($activeTab === 'training')
-                <div class="space-y-4">
-                    @foreach ($trainingPlans as $index => $plan)
-                        <div class="grid grid-cols-12 gap-4 items-end relative">
-                            <div class="col-span-4 relative overflow-visible">
-                                <x-choices label="{{ $index === 0 ? 'Group Competency' : '' }}"
-                                    wire:model.live="trainingPlans.{{ $index }}.group" :options="$typeOptions"
-                                    option-value="value" option-label="label" placeholder="Select group"
-                                    class="focus-within:border-0 [&_.choices__list--dropdown]:absolute [&_.choices__list--dropdown]:z-[9999] [&_.choices__list--dropdown]:!max-h-60"
-                                    single />
+                {{-- Training Tab --}}
+                @if ($activeTab === 'training')
+                    <div class="space-y-4">
+                        @foreach ($trainingPlans as $index => $plan)
+                            <div class="grid grid-cols-12 gap-4 items-end relative">
+                                <div class="col-span-4 relative overflow-visible">
+                                    <x-choices label="{{ $index === 0 ? 'Group Competency' : '' }}"
+                                        wire:model.live="trainingPlans.{{ $index }}.group" :options="$typeOptions"
+                                        option-value="value" option-label="label" placeholder="Select group"
+                                        class="focus-within:border-0 [&_.choices__list--dropdown]:absolute [&_.choices__list--dropdown]:z-[9999] [&_.choices__list--dropdown]:!max-h-60"
+                                        single />
+                                </div>
+                                <div
+                                    class="{{ count($trainingPlans) > 1 ? 'col-span-7' : 'col-span-8' }} relative overflow-visible">
+                                    <x-choices label="{{ $index === 0 ? 'Competency' : '' }}"
+                                        wire:model="trainingPlans.{{ $index }}.competency_id" :options="$this->getCompetenciesByType($trainingPlans[$index]['group'] ?? '')"
+                                        option-value="value" option-label="label" placeholder="Select competency"
+                                        class="focus-within:border-0 [&_.choices__list--dropdown]:absolute [&_.choices__list--dropdown]:z-[9999] [&_.choices__list--dropdown]:!max-h-60"
+                                        single />
+                                </div>
+                                @if (count($trainingPlans) > 1)
+                                    <div class="col-span-1">
+                                        <button type="button" wire:click="removeTrainingRow({{ $index }})"
+                                            class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                                            <x-icon name="o-trash" class="size-4" />
+                                        </button>
+                                    </div>
+                                @endif
                             </div>
-                            <div
-                                class="{{ count($trainingPlans) > 1 ? 'col-span-7' : 'col-span-8' }} relative overflow-visible">
-                                <x-choices label="{{ $index === 0 ? 'Competency' : '' }}"
-                                    wire:model="trainingPlans.{{ $index }}.competency_id" :options="$this->getCompetenciesByType($trainingPlans[$index]['group'] ?? '')"
-                                    option-value="value" option-label="label" placeholder="Select competency"
-                                    class="focus-within:border-0 [&_.choices__list--dropdown]:absolute [&_.choices__list--dropdown]:z-[9999] [&_.choices__list--dropdown]:!max-h-60"
-                                    single />
-                            </div>
-                            @if (count($trainingPlans) > 1)
-                                <div class="col-span-1">
-                                    <button type="button" wire:click="removeTrainingRow({{ $index }})"
-                                        class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
+                        @endforeach
+                        <button type="button" wire:click="addTrainingRow"
+                            class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                            <x-icon name="o-plus" class="size-4" />
+                            Add Training
+                        </button>
+                    </div>
+                @endif
+
+                {{-- Self Learning Tab --}}
+                @if ($activeTab === 'self-learning')
+                    <div class="space-y-6">
+                        @foreach ($selfLearningPlans as $index => $plan)
+                            <div class="p-4 border border-gray-200 rounded-lg space-y-4 relative">
+                                @if (count($selfLearningPlans) > 1)
+                                    <button type="button" wire:click="removeSelfLearningRow({{ $index }})"
+                                        class="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
                                         <x-icon name="o-trash" class="size-4" />
                                     </button>
+                                @endif
+                                <x-input label="Title" wire:model="selfLearningPlans.{{ $index }}.title"
+                                    placeholder="Enter title" class="focus-within:border-0" />
+
+                                <x-textarea label="Objective"
+                                    wire:model="selfLearningPlans.{{ $index }}.objective"
+                                    placeholder="Enter objective" class="focus-within:border-0" rows="2" />
+
+                                {{-- Tidak perlu input mentor untuk Self Learning --}}
+
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <x-datepicker wire:model="selfLearningPlans.{{ $index }}.start_date"
+                                        label="Date In" icon="o-calendar" placeholder="Select date"
+                                        class="focus-within:border-0" :config="['altInput' => true, 'altFormat' => 'd M Y']" />
+                                    <x-datepicker wire:model="selfLearningPlans.{{ $index }}.end_date"
+                                        label="Date Out" icon="o-calendar" placeholder="Select date"
+                                        class="focus-within:border-0" :config="['altInput' => true, 'altFormat' => 'd M Y']" />
                                 </div>
-                            @endif
-                        </div>
-                    @endforeach
-                    <button type="button" wire:click="addTrainingRow"
-                        class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                        <x-icon name="o-plus" class="size-4" />
-                        Add Training
-                    </button>
-                </div>
-            @endif
-
-            {{-- Self Learning Tab --}}
-            @if ($activeTab === 'self-learning')
-                <div class="space-y-6">
-                    @foreach ($selfLearningPlans as $index => $plan)
-                        <div class="p-4 border border-gray-200 rounded-lg space-y-4 relative">
-                            @if (count($selfLearningPlans) > 1)
-                                <button type="button" wire:click="removeSelfLearningRow({{ $index }})"
-                                    class="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
-                                    <x-icon name="o-trash" class="size-4" />
-                                </button>
-                            @endif
-                            <x-input label="Title" wire:model="selfLearningPlans.{{ $index }}.title"
-                                placeholder="Enter title" class="focus-within:border-0" />
-
-                            <x-textarea label="Objective"
-                                wire:model="selfLearningPlans.{{ $index }}.objective"
-                                placeholder="Enter objective" class="focus-within:border-0" rows="2" />
-
-                            <x-choices label="Mentor/Superior"
-                                wire:model="selfLearningPlans.{{ $index }}.mentor_id" :options="$mentors"
-                                option-value="value" option-label="label" placeholder="Select mentor"
-                                class="focus-within:border-0" single />
-
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <x-datepicker wire:model="selfLearningPlans.{{ $index }}.start_date"
-                                    label="Date In" icon="o-calendar" placeholder="Select date"
-                                    class="focus-within:border-0" :config="['altInput' => true, 'altFormat' => 'd M Y']" />
-                                <x-datepicker wire:model="selfLearningPlans.{{ $index }}.end_date"
-                                    label="Date Out" icon="o-calendar" placeholder="Select date"
-                                    class="focus-within:border-0" :config="['altInput' => true, 'altFormat' => 'd M Y']" />
                             </div>
-                        </div>
-                    @endforeach
-                    <button type="button" wire:click="addSelfLearningRow"
-                        class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                        <x-icon name="o-plus" class="size-4" />
-                        Add Self Learning
-                    </button>
-                </div>
-            @endif
-
-            {{-- Mentoring Tab --}}
-            @if ($activeTab === 'mentoring')
-                <div class="space-y-6">
-                    @foreach ($mentoringPlans as $index => $plan)
-                        <div class="p-4 border border-gray-200 rounded-lg space-y-4 relative">
-                            @if (count($mentoringPlans) > 1)
-                                <button type="button" wire:click="removeMentoringRow({{ $index }})"
-                                    class="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
-                                    <x-icon name="o-trash" class="size-4" />
-                                </button>
-                            @endif
-                            <x-choices label="Mentor/Superior"
-                                wire:model="mentoringPlans.{{ $index }}.mentor_id" :options="$mentors"
-                                option-value="value" option-label="label" placeholder="Select mentor"
-                                class="focus-within:border-0" single />
-
-                            <x-textarea label="Objective" wire:model="mentoringPlans.{{ $index }}.objective"
-                                placeholder="Enter objective" class="focus-within:border-0" rows="2" />
-
-                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                <x-choices label="Method" wire:model="mentoringPlans.{{ $index }}.method"
-                                    :options="$methodOptions" option-value="value" option-label="label"
-                                    placeholder="Select method" class="focus-within:border-0" single />
-
-                                <x-input label="Frequency" wire:model="mentoringPlans.{{ $index }}.frequency"
-                                    type="number" placeholder="Enter frequency" class="focus-within:border-0" />
-
-                                <x-input label="Duration (minutes)"
-                                    wire:model="mentoringPlans.{{ $index }}.duration" type="number"
-                                    placeholder="Enter duration in minutes" class="focus-within:border-0"
-                                    helper="Duration should be entered in minutes" />
-                            </div>
-                        </div>
-                    @endforeach
-                    <button type="button" wire:click="addMentoringRow"
-                        class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                        <x-icon name="o-plus" class="size-4" />
-                        Add Mentoring
-                    </button>
-                </div>
-            @endif
-
-            {{-- Project Assignment Tab --}}
-            @if ($activeTab === 'project')
-                <div class="space-y-6">
-                    @foreach ($projectPlans as $index => $plan)
-                        <div class="p-4 border border-gray-200 rounded-lg space-y-4 relative">
-                            @if (count($projectPlans) > 1)
-                                <button type="button" wire:click="removeProjectRow({{ $index }})"
-                                    class="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
-                                    <x-icon name="o-trash" class="size-4" />
-                                </button>
-                            @endif
-                            <x-input label="Project Name" wire:model="projectPlans.{{ $index }}.name"
-                                placeholder="Enter project name" class="focus-within:border-0" />
-
-                            <x-textarea label="Objective" wire:model="projectPlans.{{ $index }}.objective"
-                                placeholder="Enter objective" class="focus-within:border-0" rows="2" />
-
-                            <x-choices label="Mentor/Superior"
-                                wire:model="projectPlans.{{ $index }}.mentor_id" :options="$mentors"
-                                option-value="value" option-label="label" placeholder="Select mentor"
-                                class="focus-within:border-0" single />
-                        </div>
-                    @endforeach
-                    <button type="button" wire:click="addProjectRow"
-                        class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                        <x-icon name="o-plus" class="size-4" />
-                        Add Project
-                    </button>
-                </div>
-            @endif
-
-            <x-slot:actions class="mt-5">
-                <div class="flex items-center justify-between w-full">
-                    <div>
-                        <x-ui.button @click="$wire.closeAddModal()" type="button">Cancel</x-ui.button>
+                        @endforeach
+                        <button type="button" wire:click="addSelfLearningRow"
+                            class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                            <x-icon name="o-plus" class="size-4" />
+                            Add Self Learning
+                        </button>
                     </div>
-                    <div class="flex gap-2">
-                        @if (!$isEdit)
-                            <x-ui.button type="button" wire:click="saveDraft" class="btn-outline"
-                                spinner="saveDraft">
-                                Save Draft
+                @endif
+
+                {{-- Mentoring Tab --}}
+                @if ($activeTab === 'mentoring')
+                    <div class="space-y-6">
+                        @foreach ($mentoringPlans as $index => $plan)
+                            <div class="p-4 border border-gray-200 rounded-lg space-y-4 relative">
+                                @if (count($mentoringPlans) > 1)
+                                    <button type="button" wire:click="removeMentoringRow({{ $index }})"
+                                        class="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                                        <x-icon name="o-trash" class="size-4" />
+                                    </button>
+                                @endif
+                                <x-choices label="Mentor/Superior"
+                                    wire:model="mentoringPlans.{{ $index }}.mentor_id" :options="$mentors"
+                                    option-value="value" option-label="label" placeholder="Select mentor"
+                                    class="focus-within:border-0" single />
+
+                                <x-textarea label="Objective"
+                                    wire:model="mentoringPlans.{{ $index }}.objective"
+                                    placeholder="Enter objective" class="focus-within:border-0" rows="2" />
+
+                                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    <x-choices label="Method" wire:model="mentoringPlans.{{ $index }}.method"
+                                        :options="$methodOptions" option-value="value" option-label="label"
+                                        placeholder="Select method" class="focus-within:border-0" single />
+
+                                    <x-input label="Frequency"
+                                        wire:model="mentoringPlans.{{ $index }}.frequency" type="number"
+                                        placeholder="Enter frequency" class="focus-within:border-0" />
+
+                                    <x-input label="Duration (minutes)"
+                                        wire:model="mentoringPlans.{{ $index }}.duration" type="number"
+                                        placeholder="Enter duration in minutes" class="focus-within:border-0"
+                                        helper="Duration should be entered in minutes" />
+                                </div>
+                            </div>
+                        @endforeach
+                        <button type="button" wire:click="addMentoringRow"
+                            class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                            <x-icon name="o-plus" class="size-4" />
+                            Add Mentoring
+                        </button>
+                    </div>
+                @endif
+
+                {{-- Project Assignment Tab --}}
+                @if ($activeTab === 'project')
+                    <div class="space-y-6">
+                        @foreach ($projectPlans as $index => $plan)
+                            <div class="p-4 border border-gray-200 rounded-lg space-y-4 relative">
+                                @if (count($projectPlans) > 1)
+                                    <button type="button" wire:click="removeProjectRow({{ $index }})"
+                                        class="absolute top-2 right-2 p-1.5 text-red-500 hover:bg-red-50 rounded-lg">
+                                        <x-icon name="o-trash" class="size-4" />
+                                    </button>
+                                @endif
+                                <x-input label="Project Name" wire:model="projectPlans.{{ $index }}.name"
+                                    placeholder="Enter project name" class="focus-within:border-0" />
+
+                                <x-textarea label="Objective" wire:model="projectPlans.{{ $index }}.objective"
+                                    placeholder="Enter objective" class="focus-within:border-0" rows="2" />
+
+                                <x-choices label="Mentor/Superior"
+                                    wire:model="projectPlans.{{ $index }}.mentor_id" :options="$mentors"
+                                    option-value="value" option-label="label" placeholder="Select mentor"
+                                    class="focus-within:border-0" single />
+                            </div>
+                        @endforeach
+                        <button type="button" wire:click="addProjectRow"
+                            class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                            <x-icon name="o-plus" class="size-4" />
+                            Add Project
+                        </button>
+                    </div>
+                @endif
+
+                <x-slot:actions class="mt-5">
+                    <div class="flex items-center justify-between w-full">
+                        <div>
+                            <x-ui.button @click="$wire.closeAddModal()" type="button">Cancel</x-ui.button>
+                        </div>
+                        <div class="flex gap-2">
+                            @if (!$isEdit)
+                                <x-ui.button type="button" wire:click="saveDraft" class="btn-outline"
+                                    spinner="saveDraft">
+                                    Save Draft
+                                </x-ui.button>
+                            @endif
+                            <x-ui.button type="submit" variant="primary" class="btn-primary !text-white"
+                                spinner="save">
+                                {{ $isEdit ? 'Update' : 'Save' }}
                             </x-ui.button>
-                        @endif
-                        <x-ui.button type="submit" variant="primary" class="btn-primary !text-white"
-                            spinner="save">
-                            {{ $isEdit ? 'Update' : 'Save' }}
-                        </x-ui.button>
+                        </div>
                     </div>
-                </div>
-            </x-slot:actions>
-        </x-form>
+                </x-slot:actions>
+            </x-form>
+        </div>
     </x-modal>
 </div>
