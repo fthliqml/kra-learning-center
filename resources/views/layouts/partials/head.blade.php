@@ -14,12 +14,16 @@
         display: none !important;
     }
 
-    /* Set initial sidebar wrapper width */
+    /* Set initial sidebar wrapper width - only on desktop */
     .sidebar-wrapper {
-        min-width: 5.75rem;
+        min-width: 0;
     }
 
     @media (min-width: 768px) {
+        .sidebar-wrapper {
+            min-width: 5.75rem;
+        }
+
         html[data-sidebar="open"] .sidebar-wrapper {
             min-width: 16rem;
         }
@@ -41,14 +45,13 @@
         }
     }
 
-    /* Set initial sidebar panel state - OPEN */
-    @media (min-width: 768px) {
-        html[data-sidebar="open"] .sidebar-panel {
-            width: 16rem;
-            height: 85vh;
-            border-bottom-right-radius: 0;
-            border-top-right-radius: 80px;
-        }
+    /* Set initial sidebar panel state - OPEN (all screens including mobile) */
+    html[data-sidebar="open"] .sidebar-panel {
+        width: 16rem;
+        height: 85vh;
+        border-bottom-right-radius: 0;
+        border-top-right-radius: 80px;
+        transform: translateX(0);
     }
 
     /* Hide LMS text initially if sidebar closed */

@@ -77,7 +77,7 @@ document.documentElement.setAttribute('data-sidebar', isOpen ? 'open' : 'closed'
     </div>
 
     <!-- Sidebar -->
-    <div class="sidebar-panel fixed left-0 z-40 transition-all duration-500 ease-in-out bg-gradient-to-b from-primary to-secondary"
+    <div class="sidebar-panel fixed left-0 z-50 transition-all duration-500 ease-in-out bg-gradient-to-b from-primary to-secondary"
         :class="isOpen
             ?
             'w-64 h-[85vh] top-[15vh] translate-x-0 rounded-tr-[80px]' :
