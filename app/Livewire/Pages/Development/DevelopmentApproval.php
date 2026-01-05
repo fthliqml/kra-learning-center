@@ -57,9 +57,9 @@ class DevelopmentApproval extends Component
     }
 
     /**
-     * Check if current user is SPV (supervisor)
+     * Check if current user is Supervisor in area (first-level approver type 1)
      */
-    public function isSpv(): bool
+    private function isSupervisorArea(): bool
     {
         /** @var User|null $user */
         $user = Auth::user();
@@ -67,18 +67,31 @@ class DevelopmentApproval extends Component
             return false;
         }
 
-        // SPV di area
-        if ($user->hasPosition('supervisor')) {
-            return true;
+        return $user->hasPosition('supervisor');
+    }
+
+    /**
+     * Check if current user is Dept Head in area (non-LID, first-level approver type 2)
+     */
+    private function isDeptHeadArea(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return false;
         }
 
-        // Dept Head di area (non-LID) juga berperan sebagai approver level pertama
         $section = strtolower(trim($user->section ?? ''));
-        if ($user->hasPosition('department_head') && $section !== 'lid') {
-            return true;
-        }
 
-        return false;
+        return $user->hasPosition('department_head') && $section !== 'lid';
+    }
+
+    /**
+     * Check if current user is first-level approver in area (SPV or Dept Head area)
+     */
+    public function isSpv(): bool
+    {
+        return $this->isSupervisorArea() || $this->isDeptHeadArea();
     }
 
     /**
@@ -126,14 +139,6 @@ class DevelopmentApproval extends Component
         $user = Auth::user();
         $approvalLevel = $this->getApprovalLevel();
 
-        // Determine which status to filter based on user's role
-        $pendingStatus = '';
-        if ($approvalLevel === 'spv') {
-            $pendingStatus = 'pending_spv';
-        } elseif ($approvalLevel === 'leader') {
-            $pendingStatus = 'pending_leader';
-        }
-
         // Get users who have development plans for the selected year
         $query = User::query()
             ->where(function ($q) use ($year) {
@@ -170,18 +175,31 @@ class DevelopmentApproval extends Component
 
             // Handle 'rejected' filter (both rejected_spv and rejected_leader)
             if ($status === 'rejected') {
-                $query->where(function ($q) use ($year) {
-                    $q->whereHas('trainingPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', ['rejected_spv', 'rejected_leader']))
-                        ->orWhereHas('selfLearningPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', ['rejected_spv', 'rejected_leader']))
-                        ->orWhereHas('mentoringPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', ['rejected_spv', 'rejected_leader']))
-                        ->orWhereHas('projectPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', ['rejected_spv', 'rejected_leader']));
+                // Rejected at any level (SPV, Dept Head, or Leader)
+                $rejectedStatuses = ['rejected_spv', 'rejected_dept_head', 'rejected_leader'];
+
+                $query->where(function ($q) use ($year, $rejectedStatuses) {
+                    $q->whereHas('trainingPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $rejectedStatuses))
+                        ->orWhereHas('selfLearningPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $rejectedStatuses))
+                        ->orWhereHas('mentoringPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $rejectedStatuses))
+                        ->orWhereHas('projectPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $rejectedStatuses));
                 });
             } else {
                 $query->where(function ($q) use ($year, $status) {
-                    $q->whereHas('trainingPlans', fn($sq) => $sq->where('year', $year)->where('status', $status))
-                        ->orWhereHas('selfLearningPlans', fn($sq) => $sq->where('year', $year)->where('status', $status))
-                        ->orWhereHas('mentoringPlans', fn($sq) => $sq->where('year', $year)->where('status', $status))
-                        ->orWhereHas('projectPlans', fn($sq) => $sq->where('year', $year)->where('status', $status));
+                    // For 'pending_spv' filter, include both supervisor and dept head pending
+                    if ($status === 'pending_spv') {
+                        $statuses = ['pending_spv', 'pending_dept_head'];
+
+                        $q->whereHas('trainingPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $statuses))
+                            ->orWhereHas('selfLearningPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $statuses))
+                            ->orWhereHas('mentoringPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $statuses))
+                            ->orWhereHas('projectPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $statuses));
+                    } else {
+                        $q->whereHas('trainingPlans', fn($sq) => $sq->where('year', $year)->where('status', $status))
+                            ->orWhereHas('selfLearningPlans', fn($sq) => $sq->where('year', $year)->where('status', $status))
+                            ->orWhereHas('mentoringPlans', fn($sq) => $sq->where('year', $year)->where('status', $status))
+                            ->orWhereHas('projectPlans', fn($sq) => $sq->where('year', $year)->where('status', $status));
+                    }
                 });
             }
         }
@@ -210,12 +228,22 @@ class DevelopmentApproval extends Component
         );
 
         // Determine overall status with priority
-        if ($statuses->contains('rejected_spv') || $statuses->contains('rejected_leader')) {
-            return $statuses->contains('rejected_leader') ? 'rejected_leader' : 'rejected_spv';
-        } elseif ($statuses->contains('pending_spv')) {
-            return 'pending_spv';
+        if ($statuses->contains('rejected_leader') || $statuses->contains('rejected_dept_head') || $statuses->contains('rejected_spv')) {
+            if ($statuses->contains('rejected_leader')) {
+                return 'rejected_leader';
+            }
+
+            if ($statuses->contains('rejected_dept_head')) {
+                return 'rejected_dept_head';
+            }
+
+            return 'rejected_spv';
         } elseif ($statuses->contains('pending_leader')) {
             return 'pending_leader';
+        } elseif ($statuses->contains('pending_dept_head')) {
+            return 'pending_dept_head';
+        } elseif ($statuses->contains('pending_spv')) {
+            return 'pending_spv';
         } elseif ($statuses->every(fn($s) => $s === 'approved')) {
             return 'approved';
         }
@@ -286,9 +314,16 @@ class DevelopmentApproval extends Component
     {
         if ($this->isLeaderLid()) {
             return 'pending_leader';
-        } elseif ($this->isSpv()) {
+        }
+
+        if ($this->isSupervisorArea()) {
             return 'pending_spv';
         }
+
+        if ($this->isDeptHeadArea()) {
+            return 'pending_dept_head';
+        }
+
         return '';
     }
 
@@ -310,9 +345,15 @@ class DevelopmentApproval extends Component
      */
     private function getRejectionStatus(): string
     {
-        if ($this->isSpv()) {
+        if ($this->isSupervisorArea()) {
             return 'rejected_spv';
-        } elseif ($this->isLeaderLid()) {
+        }
+
+        if ($this->isDeptHeadArea()) {
+            return 'rejected_dept_head';
+        }
+
+        if ($this->isLeaderLid()) {
             return 'rejected_leader';
         }
         return '';
@@ -334,7 +375,7 @@ class DevelopmentApproval extends Component
         }
 
         $approvalFields = $this->isSpv()
-            ? ['status' => $nextStatus, 'spv_approved_by' => $approverId, 'spv_approved_at' => $now]
+            ? $this->buildFirstLevelApprovalFields($nextStatus, $approverId, $now)
             : ['status' => $nextStatus, 'leader_approved_by' => $approverId, 'leader_approved_at' => $now];
 
         TrainingPlan::where('user_id', $this->selectedUserId)
@@ -422,8 +463,9 @@ class DevelopmentApproval extends Component
         ];
 
         if ($this->isSpv()) {
-            $rejectionFields['spv_approved_by'] = $approverId;
-            $rejectionFields['spv_approved_at'] = $now;
+            $firstLevelFields = $this->buildFirstLevelApprovalFields($rejectionStatus, $approverId, $now);
+            unset($firstLevelFields['status']);
+            $rejectionFields = array_merge($rejectionFields, $firstLevelFields);
         } else {
             $rejectionFields['leader_approved_by'] = $approverId;
             $rejectionFields['leader_approved_at'] = $now;
@@ -470,8 +512,9 @@ class DevelopmentApproval extends Component
         $updateData = ['status' => $nextStatus];
 
         if ($this->isSpv()) {
-            $updateData['spv_approved_by'] = Auth::id();
-            $updateData['spv_approved_at'] = now();
+            $firstLevelFields = $this->buildFirstLevelApprovalFields($nextStatus, Auth::id(), now());
+            unset($firstLevelFields['status']);
+            $updateData = array_merge($updateData, $firstLevelFields);
         } else {
             $updateData['leader_approved_by'] = Auth::id();
             $updateData['leader_approved_at'] = now();
@@ -514,8 +557,9 @@ class DevelopmentApproval extends Component
         ];
 
         if ($this->isSpv()) {
-            $updateData['spv_approved_by'] = Auth::id();
-            $updateData['spv_approved_at'] = now();
+            $firstLevelFields = $this->buildFirstLevelApprovalFields($rejectionStatus, Auth::id(), now());
+            unset($firstLevelFields['status']);
+            $updateData = array_merge($updateData, $firstLevelFields);
         } else {
             $updateData['leader_approved_by'] = Auth::id();
             $updateData['leader_approved_at'] = now();
@@ -546,6 +590,25 @@ class DevelopmentApproval extends Component
             'project' => ProjectPlan::class,
             default => null,
         };
+    }
+
+    /**
+     * Build first-level (area) approval fields depending on whether
+     * the current user is Supervisor area or Dept Head area.
+     */
+    private function buildFirstLevelApprovalFields(string $status, int $approverId, $timestamp): array
+    {
+        $fields = ['status' => $status];
+
+        if ($this->isSupervisorArea()) {
+            $fields['spv_approved_by'] = $approverId;
+            $fields['spv_approved_at'] = $timestamp;
+        } elseif ($this->isDeptHeadArea()) {
+            $fields['dept_head_approved_by'] = $approverId;
+            $fields['dept_head_approved_at'] = $timestamp;
+        }
+
+        return $fields;
     }
 
     /**

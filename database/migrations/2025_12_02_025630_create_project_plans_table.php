@@ -26,9 +26,13 @@ return new class extends Migration
             $table->string('status')->default('draft');
             $table->unsignedSmallInteger('year');
 
-            // SPV Approval (Level 1)
+            // Area Approval (Level 1)
             $table->foreignId('spv_approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('spv_approved_at')->nullable();
+
+            // Dept Head Approval (Level 1 - no SPV in area)
+            $table->foreignId('dept_head_approved_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('dept_head_approved_at')->nullable();
 
             // Leader LID Approval (Level 2)
             $table->foreignId('leader_approved_by')->nullable()->constrained('users')->nullOnDelete();
