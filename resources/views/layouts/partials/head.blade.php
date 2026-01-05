@@ -55,6 +55,60 @@
     html[data-sidebar="closed"] .lms-logo {
         display: none !important;
     }
+
+    /* Hide menu labels when sidebar closed */
+    html[data-sidebar="closed"] .sidebar-menu-label {
+        display: none !important;
+    }
+
+    /* Hide logout section when sidebar closed */
+    html[data-sidebar="closed"] .sidebar-logout {
+        display: none !important;
+    }
+
+    /* Hide submenu chevron when sidebar closed */
+    html[data-sidebar="closed"] .sidebar-chevron {
+        display: none !important;
+    }
+
+    /* Menu button alignment based on sidebar state */
+    html[data-sidebar="closed"] .sidebar-menu-btn {
+        justify-content: center;
+        border-radius: 9999px;
+    }
+
+    html[data-sidebar="open"] .sidebar-menu-btn {
+        justify-content: space-between;
+    }
+
+    /* Nav spacing based on sidebar state */
+    html[data-sidebar="closed"] .sidebar-nav {
+        margin-top: 0;
+    }
+
+    html[data-sidebar="closed"] .sidebar-nav>div {
+        margin-bottom: 0.75rem;
+    }
+
+    html[data-sidebar="open"] .sidebar-nav {
+        margin-top: 15px;
+    }
+
+    /* Inner padding adjustment */
+    html[data-sidebar="closed"] .sidebar-inner {
+        padding-left: 10px;
+        padding-right: 30px;
+    }
+
+    /* Hide submenus initially - Alpine will take over after init */
+    .sidebar-submenu:not([data-alpine-ready]) {
+        display: none;
+    }
+
+    /* Show active submenu before Alpine ready (only when sidebar open) */
+    html[data-sidebar="open"] .sidebar-submenu[data-active="true"]:not([data-alpine-ready]) {
+        display: block;
+    }
 </style>
 <script>
     // Sync sidebar state BEFORE DOM renders to prevent flash
