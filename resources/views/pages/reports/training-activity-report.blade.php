@@ -135,6 +135,14 @@
                     <div class="text-center text-xs">{{ $report->section }}</div>
                 @endscope
 
+                {{-- Attendance --}}
+                @scope('cell_attendance', $report)
+                    <div
+                        class="text-center text-xs font-semibold {{ $report->attendance_raw >= 75 ? 'text-emerald-600' : ($report->attendance_raw !== null ? 'text-rose-600' : 'text-gray-400') }}">
+                        {{ $report->attendance }}
+                    </div>
+                @endscope
+
                 {{-- Period --}}
                 @scope('cell_period', $report)
                     <div class="text-center text-xs whitespace-nowrap">{{ $report->period }}</div>
