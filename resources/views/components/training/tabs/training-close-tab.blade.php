@@ -57,7 +57,7 @@
                                     ? 'text-green-600 font-semibold'
                                     : 'text-red-600 font-semibold';
                         @endphp
-                        <span class="text-sm {{ $colorClass }}">{{ number_format($attendancePercentage, 1) }}%</span>
+                        <span class="text-sm {{ $colorClass }}">{{ round($attendancePercentage) }}%</span>
                     </div>
                 @endscope
 
