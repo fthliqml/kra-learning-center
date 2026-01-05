@@ -558,7 +558,9 @@ class DevelopmentPlan extends Component
             ->whereRaw('LOWER(TRIM(COALESCE(section, ""))) != ?', ['lid'])
             ->exists();
 
-        return $hasDeptHeadInArea ? 'pending_spv' : 'pending_leader';
+        // If there is a Dept Head in the same department (non-LID),
+        // mark as pending_dept_head so it's clear who should approve first.
+        return $hasDeptHeadInArea ? 'pending_dept_head' : 'pending_leader';
     }
 
     private function saveTrainingPlans($user, $isDraft = false)
