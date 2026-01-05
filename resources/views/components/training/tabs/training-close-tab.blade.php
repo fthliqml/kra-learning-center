@@ -3,16 +3,20 @@
         @php
             $isLms = strtoupper($training->type ?? '') === 'LMS';
             $isDone = in_array(strtolower($training->status ?? ''), ['done', 'approved', 'rejected']);
+            $attendanceMin = 75;
             $theoryMin = $training->module->theory_passing_score ?? null;
             $practicalMin = $training->module->practical_passing_score ?? null;
         @endphp
 
         @if (!$isDone)
-            @if(!$isLms && ($theoryMin !== null || $practicalMin !== null))
+            @if (!$isLms && ($theoryMin !== null || $practicalMin !== null))
                 <div
                     class="p-3 md:p-4 rounded-lg border border-blue-200 bg-blue-50 text-xs md:text-sm text-blue-700 flex flex-col md:flex-row md:items-center gap-2 md:gap-4">
                     <div class="font-medium">Minimum Passing Scores:</div>
                     <div class="flex flex-wrap items-center gap-3">
+                        <span class="inline-flex items-center gap-1"><span
+                                class="font-semibold">Attendance</span><span>&ge;
+                                {{ $attendanceMin }}%</span></span>
                         @if ($theoryMin !== null)
                             <span class="inline-flex items-center gap-1"><span class="font-semibold">Theory
                                     (Posttest)</span><span>&ge;
@@ -41,6 +45,20 @@
                 {{-- Custom cell untuk kolom Nomor --}}
                 @scope('cell_no', $assessment)
                     {{ $assessment->no ?? $loop->iteration }}
+                @endscope
+
+                {{-- Custom cell untuk Attendance Percentage --}}
+                @scope('cell_attendance_percentage', $assessment)
+                    <div class="flex justify-center">
+                        @php
+                            $attendancePercentage = $assessment->attendance_percentage ?? 0;
+                            $colorClass =
+                                $attendancePercentage >= 75
+                                    ? 'text-green-600 font-semibold'
+                                    : 'text-red-600 font-semibold';
+                        @endphp
+                        <span class="text-sm {{ $colorClass }}">{{ number_format($attendancePercentage, 1) }}%</span>
+                    </div>
                 @endscope
 
                 {{-- Custom cell untuk Posttest Score --}}

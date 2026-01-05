@@ -155,6 +155,7 @@ class TrainingCloseTab extends Component
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
             ['key' => 'employee_name', 'label' => 'Employee Name', 'class' => 'min-w-[150px]'],
+            ['key' => 'attendance_percentage', 'label' => 'Attendance', 'class' => '!text-center min-w-[110px]'],
             ['key' => 'posttest_score', 'label' => 'Post-test Score', 'class' => '!text-center min-w-[120px]'],
             ['key' => 'practical_score', 'label' => 'Practical Score', 'class' => '!text-center min-w-[120px]'],
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
@@ -213,6 +214,19 @@ class TrainingCloseTab extends Component
             $assessment->temp_posttest = $posttestScore;
             $assessment->temp_practical = $practicalScore;
 
+            // Calculate attendance percentage
+            $totalSessions = $this->training->sessions()->count();
+            if ($totalSessions > 0) {
+                $sessionIds = $this->training->sessions()->pluck('id')->toArray();
+                $presentCount = TrainingAttendance::whereIn('session_id', $sessionIds)
+                    ->where('employee_id', $assessment->employee_id)
+                    ->where('status', 'present')
+                    ->count();
+                $assessment->attendance_percentage = round(($presentCount / $totalSessions) * 100, 1);
+            } else {
+                $assessment->attendance_percentage = 0;
+            }
+
             // Calculate average score (for non-LMS only)
             if (!$isLms) {
                 $scores = [];
@@ -227,25 +241,37 @@ class TrainingCloseTab extends Component
 
             // Calculate temp status
             $hasPosttest = is_numeric($posttestScore) && $posttestScore !== '';
+            $attendancePassed = $assessment->attendance_percentage >= 75;
+
             if ($isLms) {
                 if (!$hasPosttest) {
                     $assessment->temp_status = 'pending';
                 } else {
-                    $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
-                        ->where('type', 'posttest')
-                        ->value('passing_score') ?? 0);
-                    $assessment->temp_status = ($passing > 0 && (float) $posttestScore >= $passing) ? 'passed' : (($passing > 0) ? 'failed' : 'passed');
+                    // Check attendance first
+                    if (!$attendancePassed) {
+                        $assessment->temp_status = 'failed';
+                    } else {
+                        $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
+                            ->where('type', 'posttest')
+                            ->value('passing_score') ?? 0);
+                        $assessment->temp_status = ($passing > 0 && (float) $posttestScore >= $passing) ? 'passed' : (($passing > 0) ? 'failed' : 'passed');
+                    }
                 }
             } else {
                 $hasPractical = is_numeric($practicalScore) && $practicalScore !== '';
                 if (!$hasPosttest || !$hasPractical) {
                     $assessment->temp_status = 'pending';
                 } else {
-                    $theoryPassingScore = $this->training->module->theory_passing_score ?? 60;
-                    $practicalPassingScore = $this->training->module->practical_passing_score ?? 60;
-                    $theoryPassed = (float) $posttestScore >= $theoryPassingScore;
-                    $practicalPassed = (float) $practicalScore >= $practicalPassingScore;
-                    $assessment->temp_status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
+                    // Check attendance first
+                    if (!$attendancePassed) {
+                        $assessment->temp_status = 'failed';
+                    } else {
+                        $theoryPassingScore = $this->training->module->theory_passing_score ?? 60;
+                        $practicalPassingScore = $this->training->module->practical_passing_score ?? 60;
+                        $theoryPassed = (float) $posttestScore >= $theoryPassingScore;
+                        $practicalPassed = (float) $practicalScore >= $practicalPassingScore;
+                        $assessment->temp_status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
+                    }
                 }
             }
 
@@ -275,25 +301,48 @@ class TrainingCloseTab extends Component
                     $assessment->posttest_score = $scores['posttest_score'];
                     $assessment->practical_score = $isLms ? null : $scores['practical_score'];
 
+                    // Calculate attendance percentage
+                    $totalSessions = $this->training->sessions()->count();
+                    $attendancePassed = false;
+                    if ($totalSessions > 0) {
+                        $sessionIds = $this->training->sessions()->pluck('id')->toArray();
+                        $presentCount = TrainingAttendance::whereIn('session_id', $sessionIds)
+                            ->where('employee_id', $assessment->employee_id)
+                            ->where('status', 'present')
+                            ->count();
+                        $attendancePercentage = ($presentCount / $totalSessions) * 100;
+                        $attendancePassed = $attendancePercentage >= 75;
+                    }
+
                     // Calculate status
                     $posttest = $scores['posttest_score'];
                     if ($isLms) {
                         if (is_numeric($posttest)) {
-                            $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
-                                ->where('type', 'posttest')
-                                ->value('passing_score') ?? 0);
-                            $assessment->status = ($passing > 0 && (float) $posttest >= $passing) ? 'passed' : (($passing > 0) ? 'failed' : 'passed');
+                            // Check attendance first
+                            if (!$attendancePassed) {
+                                $assessment->status = 'failed';
+                            } else {
+                                $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
+                                    ->where('type', 'posttest')
+                                    ->value('passing_score') ?? 0);
+                                $assessment->status = ($passing > 0 && (float) $posttest >= $passing) ? 'passed' : (($passing > 0) ? 'failed' : 'passed');
+                            }
                         } else {
                             $assessment->status = 'pending';
                         }
                     } else {
                         $practical = $scores['practical_score'];
                         if (is_numeric($posttest) && is_numeric($practical)) {
-                            $theoryPassingScore = $this->training->module->theory_passing_score ?? 60;
-                            $practicalPassingScore = $this->training->module->practical_passing_score ?? 60;
-                            $theoryPassed = (float) $posttest >= $theoryPassingScore;
-                            $practicalPassed = (float) $practical >= $practicalPassingScore;
-                            $assessment->status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
+                            // Check attendance first
+                            if (!$attendancePassed) {
+                                $assessment->status = 'failed';
+                            } else {
+                                $theoryPassingScore = $this->training->module->theory_passing_score ?? 60;
+                                $practicalPassingScore = $this->training->module->practical_passing_score ?? 60;
+                                $theoryPassed = (float) $posttest >= $theoryPassingScore;
+                                $practicalPassed = (float) $practical >= $practicalPassingScore;
+                                $assessment->status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
+                            }
                         } else {
                             $assessment->status = 'pending';
                         }
@@ -405,26 +454,49 @@ class TrainingCloseTab extends Component
                     $assessment->posttest_score = $scores['posttest_score'];
                     $assessment->practical_score = $isLms ? null : $scores['practical_score'];
 
+                    // Calculate attendance percentage
+                    $totalSessions = $this->training->sessions()->count();
+                    $attendancePassed = false;
+                    if ($totalSessions > 0) {
+                        $sessionIds = $this->training->sessions()->pluck('id')->toArray();
+                        $presentCount = TrainingAttendance::whereIn('session_id', $sessionIds)
+                            ->where('employee_id', $assessment->employee_id)
+                            ->where('status', 'present')
+                            ->count();
+                        $attendancePercentage = ($presentCount / $totalSessions) * 100;
+                        $attendancePassed = $attendancePercentage >= 75;
+                    }
+
                     // Calculate status
                     $posttest = $assessment->posttest_score;
                     if ($isLms) {
                         if ($posttest === null || $posttest === '') {
                             $assessment->status = 'pending';
                         } else {
-                            $assessment->status = ($lmsPassingScore > 0 && (float) $posttest >= $lmsPassingScore)
-                                ? 'passed'
-                                : (($lmsPassingScore > 0) ? 'failed' : 'passed');
+                            // Check attendance first
+                            if (!$attendancePassed) {
+                                $assessment->status = 'failed';
+                            } else {
+                                $assessment->status = ($lmsPassingScore > 0 && (float) $posttest >= $lmsPassingScore)
+                                    ? 'passed'
+                                    : (($lmsPassingScore > 0) ? 'failed' : 'passed');
+                            }
                         }
                     } else {
                         $practical = $assessment->practical_score;
                         if ($posttest === null || $posttest === '' || $practical === null || $practical === '') {
                             $assessment->status = 'pending';
                         } else {
-                            $theoryPassingScore = $this->training->module->theory_passing_score ?? 60;
-                            $practicalPassingScore = $this->training->module->practical_passing_score ?? 60;
-                            $theoryPassed = (float) $posttest >= $theoryPassingScore;
-                            $practicalPassed = (float) $practical >= $practicalPassingScore;
-                            $assessment->status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
+                            // Check attendance first
+                            if (!$attendancePassed) {
+                                $assessment->status = 'failed';
+                            } else {
+                                $theoryPassingScore = $this->training->module->theory_passing_score ?? 60;
+                                $practicalPassingScore = $this->training->module->practical_passing_score ?? 60;
+                                $theoryPassed = (float) $posttest >= $theoryPassingScore;
+                                $practicalPassed = (float) $practical >= $practicalPassingScore;
+                                $assessment->status = ($theoryPassed && $practicalPassed) ? 'passed' : 'failed';
+                            }
                         }
                     }
 
