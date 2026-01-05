@@ -4,16 +4,23 @@ namespace App\Livewire\Components\EditCourse;
 
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Test;
 use App\Models\TestQuestion;
 use App\Models\TestQuestionOption;
+use App\Exports\TestQuestionsTemplateExport;
+use App\Imports\TestQuestionsImport;
+use Illuminate\Validation\ValidationException;
 
 class PostTestQuestions extends Component
 {
-  use Toast;
+  use Toast, WithFileUploads;
+
   public array $questions = [];
+  public $file; // For file upload
   public ?int $courseId = null;
   public bool $hasEverSaved = false;
   public bool $persisted = false;
@@ -319,6 +326,74 @@ class PostTestQuestions extends Component
     $this->errorQuestionIndexes = [];
     $this->snapshot(); // Take snapshot after successful save
     $this->success('Post test questions saved successfully', timeout: 4000, position: 'toast-top toast-center');
+  }
+
+  /**
+   * Download template Excel file for importing questions.
+   */
+  public function downloadTemplate()
+  {
+    return response()->streamDownload(function () {
+      echo Excel::raw(new TestQuestionsTemplateExport('posttest'), \Maatwebsite\Excel\Excel::XLSX);
+    }, 'posttest_questions_template.xlsx');
+  }
+
+  /**
+   * Handle file upload and import questions from Excel.
+   */
+  public function updatedFile()
+  {
+    if (!$this->file) {
+      return;
+    }
+
+    try {
+      $import = new TestQuestionsImport('posttest');
+      Excel::import($import, $this->file->getRealPath());
+
+      $importedQuestions = $import->getQuestions();
+
+      if (empty($importedQuestions)) {
+        $this->error(
+          'No valid questions found in the uploaded file.',
+          timeout: 6000,
+          position: 'toast-top toast-center'
+        );
+        $this->reset('file');
+        return;
+      }
+
+      // Merge imported questions with existing ones
+      $this->questions = array_merge($this->questions, $importedQuestions);
+      $this->computeDirty();
+
+      $this->success(
+        count($importedQuestions) . ' question(s) imported successfully.',
+        timeout: 4000,
+        position: 'toast-top toast-center'
+      );
+    } catch (ValidationException $e) {
+      $errors = $e->errors()['import'] ?? [];
+      $bulletLines = collect($errors)->take(6)->map(fn($err) => '• ' . $err);
+      $display = $bulletLines->implode("\n");
+      if (count($errors) > 6) {
+        $display .= "\n..." . (count($errors) - 6) . " more errors";
+      }
+      $htmlMessage = "<div style=\"white-space:pre-line; text-align:left\"><strong>Import failed:</strong>\n" . e($display) . '</div>';
+      $this->error(
+        $htmlMessage,
+        timeout: 10000,
+        position: 'toast-top toast-center'
+      );
+    } catch (\Exception $e) {
+      $this->error(
+        'Failed to import file: ' . $e->getMessage(),
+        timeout: 6000,
+        position: 'toast-top toast-center'
+      );
+    }
+
+    $this->reset('file');
   }
 
   public function placeholder()
