@@ -60,6 +60,9 @@ class TrainingActivityReportExport implements FromCollection, WithHeadings, With
                 })
                 : ($days * 8);
 
+            // Format totalHours to max 1 decimal
+            $totalHours = round($totalHours, 1);
+
             // For LMS trainings, only show days; others show hours and days
             if (strtoupper($training->type ?? '') === 'LMS') {
                 $durationText = $days . ' Days';
@@ -110,6 +113,7 @@ class TrainingActivityReportExport implements FromCollection, WithHeadings, With
             $row->period,
             $row->duration,
             $assessment->pretest_score !== null ? number_format($assessment->pretest_score, 1) : '-',
+            $assessment->attendance_percentage !== null ? round($assessment->attendance_percentage) . '%' : '-',
             $assessment->posttest_score !== null ? number_format($assessment->posttest_score, 1) : '-',
             $assessment->practical_score !== null ? number_format($assessment->practical_score, 1) : '-',
             ucfirst($assessment->status ?? 'failed'),
@@ -135,6 +139,7 @@ class TrainingActivityReportExport implements FromCollection, WithHeadings, With
             'Period',
             'Duration',
             'Pre Test Score',
+            'Attendance',
             'Theory Score',
             'Practical Score',
             'Remarks',
@@ -147,7 +152,7 @@ class TrainingActivityReportExport implements FromCollection, WithHeadings, With
     public function styles(Worksheet $sheet)
     {
         // Style header (row 1)
-        $sheet->getStyle('A1:S1')->applyFromArray([
+        $sheet->getStyle('A1:T1')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -169,15 +174,16 @@ class TrainingActivityReportExport implements FromCollection, WithHeadings, With
         $sheet->getColumnDimension('H')->setWidth(12);  // NRP
         $sheet->getColumnDimension('I')->setWidth(20);  // Name
         $sheet->getColumnDimension('J')->setWidth(10);  // Section
-        $sheet->getColumnDimension('K')->setWidth(25);  // Period
-        $sheet->getColumnDimension('L')->setWidth(18);  // Duration
-        $sheet->getColumnDimension('M')->setWidth(12);  // Pre Test Score
-        $sheet->getColumnDimension('N')->setWidth(12);  // Theory Score
-        $sheet->getColumnDimension('O')->setWidth(12);  // Practical Score
-        $sheet->getColumnDimension('P')->setWidth(10);  // Remarks
-        $sheet->getColumnDimension('Q')->setWidth(12);  // Date Report
-        $sheet->getColumnDimension('R')->setWidth(12);  // Certificate
-        $sheet->getColumnDimension('S')->setWidth(20);  // Note
+        $sheet->getColumnDimension('K')->setWidth(12);  // Attendance
+        $sheet->getColumnDimension('L')->setWidth(25);  // Period
+        $sheet->getColumnDimension('M')->setWidth(18);  // Duration
+        $sheet->getColumnDimension('N')->setWidth(12);  // Pre Test Score
+        $sheet->getColumnDimension('O')->setWidth(12);  // Theory Score
+        $sheet->getColumnDimension('P')->setWidth(12);  // Practical Score
+        $sheet->getColumnDimension('Q')->setWidth(10);  // Remarks
+        $sheet->getColumnDimension('R')->setWidth(12);  // Date Report
+        $sheet->getColumnDimension('S')->setWidth(12);  // Certificate
+        $sheet->getColumnDimension('T')->setWidth(20);  // Note
 
         // Style all cells
         $sheet->getStyle($sheet->calculateWorksheetDimension())->applyFromArray([
@@ -200,6 +206,6 @@ class TrainingActivityReportExport implements FromCollection, WithHeadings, With
         $sheet->getStyle('F2:F' . $lastRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
         $sheet->getStyle('G2:G' . $lastRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
         $sheet->getStyle('I2:I' . $lastRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle('S2:S' . $lastRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('T2:T' . $lastRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
     }
 }
