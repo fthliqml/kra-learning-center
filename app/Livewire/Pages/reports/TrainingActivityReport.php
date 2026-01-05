@@ -72,6 +72,7 @@ class TrainingActivityReport extends Component
             ['key' => 'period', 'label' => 'Period', 'class' => '!text-center w-[220px]'],
             ['key' => 'duration', 'label' => 'Duration', 'class' => '!text-center w-[140px]'],
             ['key' => 'pretest_score', 'label' => 'Pre Test', 'class' => '!text-center w-[90px]'],
+            ['key' => 'attendance', 'label' => 'Attendance', 'class' => '!text-center w-[100px]'],
             ['key' => 'theory_score', 'label' => 'Theory', 'class' => '!text-center w-[90px]'],
             ['key' => 'practical_score', 'label' => 'Practical', 'class' => '!text-center w-[90px]'],
             ['key' => 'remarks', 'label' => 'Remarks', 'class' => '!text-center w-[110px]'],
@@ -123,6 +124,9 @@ class TrainingActivityReport extends Component
                 })
                 : ($days * 8); // Default 8 hours per day
 
+            // Format totalHours to max 1 decimal
+            $totalHours = round($totalHours, 1);
+
             // For LMS type, show only days; for others, show hours and days
             if (strtoupper($training->type ?? '') === 'LMS') {
                 $durationText = $days . ' Days';
@@ -151,6 +155,8 @@ class TrainingActivityReport extends Component
                     'nrp' => $employee->nrp ?? '-',
                     'employee_name' => $employee->name ?? '-',
                     'section' => $employee->section ?? '-',
+                    'attendance' => $assessment->attendance_percentage !== null ? round($assessment->attendance_percentage) . '%' : '-',
+                    'attendance_raw' => $assessment->attendance_percentage,
                     'period' => $period,
                     'duration' => $durationText,
                     'pretest_score' => $assessment->pretest_score !== null ? number_format($assessment->pretest_score, 1) : '-',
