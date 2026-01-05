@@ -222,7 +222,7 @@ class TrainingCloseTab extends Component
                     ->where('employee_id', $assessment->employee_id)
                     ->where('status', 'present')
                     ->count();
-                $assessment->attendance_percentage = round(($presentCount / $totalSessions) * 100, 1);
+                $assessment->attendance_percentage = round(($presentCount / $totalSessions) * 100);
             } else {
                 $assessment->attendance_percentage = 0;
             }
@@ -303,6 +303,7 @@ class TrainingCloseTab extends Component
 
                     // Calculate attendance percentage
                     $totalSessions = $this->training->sessions()->count();
+                    $attendancePercentage = 0;
                     $attendancePassed = false;
                     if ($totalSessions > 0) {
                         $sessionIds = $this->training->sessions()->pluck('id')->toArray();
@@ -310,9 +311,12 @@ class TrainingCloseTab extends Component
                             ->where('employee_id', $assessment->employee_id)
                             ->where('status', 'present')
                             ->count();
-                        $attendancePercentage = ($presentCount / $totalSessions) * 100;
+                        $attendancePercentage = round(($presentCount / $totalSessions) * 100, 2);
                         $attendancePassed = $attendancePercentage >= 75;
                     }
+
+                    // Save attendance percentage
+                    $assessment->attendance_percentage = $attendancePercentage;
 
                     // Calculate status
                     $posttest = $scores['posttest_score'];
@@ -456,6 +460,7 @@ class TrainingCloseTab extends Component
 
                     // Calculate attendance percentage
                     $totalSessions = $this->training->sessions()->count();
+                    $attendancePercentage = 0;
                     $attendancePassed = false;
                     if ($totalSessions > 0) {
                         $sessionIds = $this->training->sessions()->pluck('id')->toArray();
@@ -463,9 +468,12 @@ class TrainingCloseTab extends Component
                             ->where('employee_id', $assessment->employee_id)
                             ->where('status', 'present')
                             ->count();
-                        $attendancePercentage = ($presentCount / $totalSessions) * 100;
+                        $attendancePercentage = round(($presentCount / $totalSessions) * 100, 2);
                         $attendancePassed = $attendancePercentage >= 75;
                     }
+
+                    // Save attendance percentage
+                    $assessment->attendance_percentage = $attendancePercentage;
 
                     // Calculate status
                     $posttest = $assessment->posttest_score;
