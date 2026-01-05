@@ -16,42 +16,61 @@
 @endphp
 
 <div x-data="{
-    isOpen: false,
-    expandedMenu: null,
+    isOpen: JSON.parse(localStorage.getItem('sidebarOpen') || 'false'),
+    expandedMenu: localStorage.getItem('sidebarExpandedMenu') || null,
     toggle(id) {
         if (!this.isOpen) {
-            this.isOpen = true
+            this.isOpen = true;
+            localStorage.setItem('sidebarOpen', 'true');
             this.expandedMenu = this.expandedMenu === id ? null : id;
         } else {
             this.expandedMenu = this.expandedMenu === id ? null : id;
         }
+        localStorage.setItem('sidebarExpandedMenu', this.expandedMenu || '');
     },
     has(id) { return this.expandedMenu === id; },
-}" class="relative flex transition-all duration-500 ease-in-out"
-    :class="isOpen ? 'md:min-w-64' : 'md:min-w-23'">
+    toggleSidebar() {
+        this.isOpen = !this.isOpen;
+        localStorage.setItem('sidebarOpen', JSON.stringify(this.isOpen));
+        document.documentElement.setAttribute('data-sidebar', this.isOpen ? 'open' : 'closed');
+        if (!this.isOpen) {
+            this.expandedMenu = null;
+            localStorage.setItem('sidebarExpandedMenu', '');
+        }
+        // Dispatch custom event for charts to resize smoothly
+        window.dispatchEvent(new CustomEvent('sidebar-toggled'));
+    }
+}" x-init="$el.classList.remove('sidebar-open', 'sidebar-closed');
+document.documentElement.setAttribute('data-sidebar', isOpen ? 'open' : 'closed');"
+    class="sidebar-wrapper relative flex md:transition-all duration-500 ease-in-out"
+    :class="{
+        'md:min-w-64 sidebar-open': isOpen,
+        'md:min-w-23 sidebar-closed': !isOpen
+    }">
     <!-- Toggle -->
     <div class="fixed top-10 left-[18px] z-50 flex items-center gap-4">
-        <button @click="isOpen = !isOpen"
+        <button @click="toggleSidebar()"
             class="p-2 rounded-lg bg-white shadow-lg hover:shadow-xl transition-all duration-300 border border-gray-200 cursor-pointer opacity-60 hover:opacity-100 md:opacity-100"
             :class="isOpen && 'opacity-100'">
             <x-icon name="o-bars-3" class="w-5 h-5 text-primary" />
         </button>
 
         <!-- Logo: only rendered (display:block) when sidebar open to avoid overlaying tab headers -->
-        <h1 x-cloak x-show="isOpen" x-transition:enter="transition ease-out duration-400"
+        <h1 x-show="isOpen" x-transition:enter="transition ease-out duration-400"
             x-transition:enter-start="opacity-0 -translate-x-6" x-transition:enter-end="opacity-100 translate-x-0"
             x-transition:leave="transition ease-in duration-300" x-transition:leave-start="opacity-100 translate-x-0"
-            x-transition:leave-end="opacity-0 -translate-x-6" class="text-4xl font-bold hidden md:block select-none">
+            x-transition:leave-end="opacity-0 -translate-x-6"
+            class="lms-logo text-4xl font-bold hidden md:block select-none">
             <span class="bg-gradient-to-r from-primary to-tetriary text-transparent bg-clip-text">LMS</span>
         </h1>
     </div>
 
     <!-- Sidebar -->
-    <div class="fixed left-0 z-50 rounded-tr-[80px] transition-all duration-500 ease-in-out bg-gradient-to-b from-primary to-secondary"
+    <div class="sidebar-panel fixed left-0 z-40 transition-all duration-500 ease-in-out bg-gradient-to-b from-primary to-secondary"
         :class="isOpen
             ?
-            'w-64 h-[85vh] top-[15vh] translate-x-0' :
-            'w-23 h-fit top-[15vh] rounded-br-[60px] !rounded-tr-[60px] -translate-x-full md:translate-x-0'">
+            'w-64 h-[85vh] top-[15vh] translate-x-0 rounded-tr-[80px]' :
+            'w-23 h-fit top-[15vh] rounded-br-[60px] rounded-tr-[60px] -translate-x-full md:translate-x-0'">
         <div class="flex flex-col h-full p-4 pr-[24px] overflow-hidden" :class="!isOpen && 'pl-[10px] pr-[30px]'">
 
             <!-- Nav -->
@@ -145,5 +164,5 @@
 
     <!-- Overlay (mobile) -->
     <div class="fixed inset-0 bg-black/50 z-40 transition-opacity duration-300 md:hidden" x-show="isOpen"
-        @click="isOpen = false" x-transition.opacity></div>
+        @click="toggleSidebar()" x-transition.opacity></div>
 </div>
