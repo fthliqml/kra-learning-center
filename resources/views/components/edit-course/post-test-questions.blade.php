@@ -89,8 +89,38 @@
         @endforelse
     </div>
 
-    <x-button type="button" variant="primary" outline icon="o-plus" wire:click="addQuestion"
-        class="border-gray-400">Add Question</x-button>
+    {{-- Action buttons: Add Question and Excel Import/Export --}}
+    <div class="flex items-center gap-2">
+        <x-button type="button" variant="primary" outline icon="o-plus" wire:click="addQuestion"
+            class="border-gray-400">Add Question</x-button>
+
+        {{-- Excel Dropdown --}}
+        <x-dropdown no-x-anchor right>
+            <x-slot:trigger>
+                <x-button type="button" class="btn-success h-10" wire:target="file" wire:loading.attr="disabled">
+                    <span class="flex items-center gap-2" wire:loading.remove wire:target="file">
+                        <x-icon name="o-clipboard-document-list" class="size-4" />
+                        Excel
+                    </span>
+                    <span class="flex items-center gap-2" wire:loading wire:target="file">
+                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                    </span>
+                </x-button>
+            </x-slot:trigger>
+
+            <label class="w-full cursor-pointer relative" wire:loading.class="opacity-60 pointer-events-none"
+                wire:target="file">
+                <x-menu-item title="Import Questions" icon="o-arrow-up-on-square" />
+                <div class="absolute right-2 top-2" wire:loading wire:target="file">
+                    <x-icon name="o-arrow-path" class="size-4 animate-spin text-gray-500" />
+                </div>
+                <input type="file" wire:model="file" accept=".xlsx,.xls" class="hidden" />
+            </label>
+
+            <x-menu-item title="Download Template" icon="o-document-arrow-down" wire:click.stop="downloadTemplate"
+                spinner="downloadTemplate" />
+        </x-dropdown>
+    </div>
 
     <div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-base-300/50 mt-4">
         <div class="flex items-center gap-3 mt-5">
