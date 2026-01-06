@@ -26,6 +26,14 @@ class Module extends Component
 
     public array $competencyOptions = [];
 
+    public array $practicalGradeOptions = [
+        ['value' => 'A', 'label' => 'A'],
+        ['value' => 'B', 'label' => 'B'],
+        ['value' => 'C', 'label' => 'C'],
+        ['value' => 'D', 'label' => 'D'],
+        ['value' => 'E', 'label' => 'E'],
+    ];
+
     public $formData = [
         'title' => '',
         'competency_id' => '',
@@ -47,7 +55,8 @@ class Module extends Component
         'formData.duration' => 'required|numeric|min:1',
         'formData.frequency' => 'required|integer|min:1',
         'formData.theory_passing_score' => 'required|numeric|min:0|max:100',
-        'formData.practical_passing_score' => 'required|numeric|min:0|max:100',
+        // Practical passing score now uses letter grade (A-E)
+        'formData.practical_passing_score' => 'required|string|in:A,B,C,D,E',
     ];
 
     public function updated($property): void

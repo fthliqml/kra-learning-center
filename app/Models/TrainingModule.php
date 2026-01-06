@@ -25,7 +25,7 @@ class TrainingModule extends Model
         'duration' => 'integer',
         'frequency' => 'integer',
         'theory_passing_score' => 'double',
-        'practical_passing_score' => 'double',
+        'practical_passing_score' => 'string',
     ];
 
     /**

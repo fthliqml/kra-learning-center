@@ -5,6 +5,7 @@
             $isDone = in_array(strtolower($training->status ?? ''), ['done', 'approved', 'rejected']);
             $attendanceMin = 75;
             $theoryMin = $training->module->theory_passing_score ?? null;
+            // Practical minimum is now stored as letter grade (A-E)
             $practicalMin = $training->module->practical_passing_score ?? null;
         @endphp
 
@@ -25,7 +26,7 @@
                         @if ($practicalMin !== null)
                             <span class="inline-flex items-center gap-1"><span
                                     class="font-semibold">Practical</span><span>&ge;
-                                    {{ rtrim(rtrim(number_format((float) $practicalMin, 2, '.', ''), '0'), '.') }}</span></span>
+                                    {{ strtoupper($practicalMin) }}</span></span>
                         @endif
                     </div>
                 </div>
@@ -88,14 +89,36 @@
                         <div class="flex justify-center">
                             @php $trainingDone = $assessment->training_done ?? false; @endphp
                             @if ($trainingDone)
+                                @php
+                                    $score = $assessment->practical_score;
+                                    $grade = null;
+                                    if ($score !== null) {
+                                        if ($score >= 90) {
+                                            $grade = 'A';
+                                        } elseif ($score >= 81) {
+                                            $grade = 'B';
+                                        } elseif ($score >= 71) {
+                                            $grade = 'C';
+                                        } elseif ($score >= 61) {
+                                            $grade = 'D';
+                                        } else {
+                                            $grade = 'E';
+                                        }
+                                    }
+                                @endphp
                                 <div tabindex="-1"
                                     class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
-                                    {{ $assessment->practical_score ?? '-' }}</div>
+                                    {{ $grade ?? '-' }}</div>
                             @else
-                                <input type="number" min="0" max="100" step="0.1"
-                                    wire:model.live="tempScores.{{ $assessment->id }}.practical_score"
-                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-                                    placeholder="0-100">
+                                <select wire:model.live="tempScores.{{ $assessment->id }}.practical_grade"
+                                    class="w-24 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary bg-white">
+                                    <option value="">-</option>
+                                    <option value="A">A</option>
+                                    <option value="B">B</option>
+                                    <option value="C">C</option>
+                                    <option value="D">D</option>
+                                    <option value="E">E</option>
+                                </select>
                             @endif
                         </div>
                     @endscope
