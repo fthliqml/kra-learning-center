@@ -36,6 +36,8 @@ use App\Livewire\Pages\Training\Module;
 use App\Livewire\Pages\Training\ModuleEdit;
 use App\Livewire\Pages\Training\Request;
 use App\Livewire\Pages\Training\Schedule;
+use App\Livewire\Pages\TrainingTest\TrainingTestList;
+use App\Livewire\Pages\TrainingTest\TakeTrainingTest;
 use App\Livewire\Pages\Reports\TrainingActivityReport;
 use App\Livewire\Pages\Reports\CertificationActivityReport;
 use App\Livewire\Pages\Reports\InstructorDailyRecordReport;
@@ -67,7 +69,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/training/history', History::class)->name('training-history.index');
     Route::get('/training/{assessment}/certificate', [CertificateController::class, 'viewTrainingCertificate'])
         ->name('certificate.training.view');
-
+    // Training Test (Employee)
+    Route::get('/training-test', TrainingTestList::class)->name('training-test.index');
+    Route::get('/training-test/{training}/{type}', TakeTrainingTest::class)
+        ->where('type', 'pretest|posttest')
+        ->name('training-test.take');
     // Courses
     Route::get('/courses', Courses::class)->name('courses.index');
     Route::get('/courses/{course}/overview', Overview::class)->name('courses-overview.show');
