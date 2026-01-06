@@ -91,7 +91,7 @@ Route::middleware('auth')->group(function () {
   // Certification
   Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
   Route::get('/certification/schedule', CertificationSchedule::class)->name('certification-schedule.index');
-  Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
+//   Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
   Route::get('/certification/approval', CertificationApproval::class)->name('certification-approval.index');
   Route::get('/certification/history', CertificationHistory::class)->name('certification-history.index');
 

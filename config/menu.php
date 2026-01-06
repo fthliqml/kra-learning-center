@@ -194,12 +194,12 @@ return [
                     'positions' => ['section_head'],
                     'roles' => ['certificator', 'admin'],
                 ],
-                [
-                    'label' => 'Certification Point',
-                    'href' => '/certification/point',
-                    'positions' => ['section_head'],
-                    'roles' => ['certificator', 'admin'],
-                ],
+                // [
+                //     'label' => 'Certification Point',
+                //     'href' => '/certification/point',
+                //     'positions' => ['section_head'],
+                //     'roles' => ['certificator', 'admin'],
+                // ],
                 [
                     'label' => 'Certification Approval',
                     'href' => '/certification/approval',
