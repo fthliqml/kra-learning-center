@@ -39,7 +39,7 @@ class DevelopmentApproval extends Component
     public $filterOptions = [
         ['value' => 'all', 'label' => 'All'],
         ['value' => 'pending_spv', 'label' => 'Pending SPV'],
-        ['value' => 'pending_leader', 'label' => 'Pending Leader'],
+        ['value' => 'pending_lid', 'label' => 'Pending LID'],
         ['value' => 'approved', 'label' => 'Approved'],
         ['value' => 'rejected', 'label' => 'Rejected'],
     ];
@@ -154,10 +154,19 @@ class DevelopmentApproval extends Component
                 'projectPlans as project_count' => fn($q) => $q->where('year', $year)->where('status', '!=', 'draft'),
             ]);
 
-        // SPV can only see employees in their section
+        // First-level approvers can only see employees in their area
         if ($approvalLevel === 'spv' && $user) {
-            $query->where('section', $user->section)
-                ->where('id', '!=', $user->id); // Exclude self
+            // Supervisors: limit by same section
+            if ($this->isSupervisorArea()) {
+                $query->where('section', $user->section)
+                    ->where('id', '!=', $user->id); // Exclude self
+            }
+
+            // Dept Heads (non-LID): limit by same department
+            if ($this->isDeptHeadArea()) {
+                $query->where('department', $user->department)
+                    ->where('id', '!=', $user->id); // Exclude self
+            }
         }
 
         // Search filter
@@ -173,10 +182,10 @@ class DevelopmentApproval extends Component
         if ($this->filter && $this->filter !== 'all') {
             $status = $this->filter;
 
-            // Handle 'rejected' filter (both rejected_spv and rejected_leader)
+            // Handle 'rejected' filter (both rejected_spv/rejected_dept_head/rejected_lid)
             if ($status === 'rejected') {
-                // Rejected at any level (SPV, Dept Head, or Leader)
-                $rejectedStatuses = ['rejected_spv', 'rejected_dept_head', 'rejected_leader'];
+                // Rejected at any level (SPV, Dept Head, or LID)
+                $rejectedStatuses = ['rejected_spv', 'rejected_dept_head', 'rejected_lid'];
 
                 $query->where(function ($q) use ($year, $rejectedStatuses) {
                     $q->whereHas('trainingPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $rejectedStatuses))
@@ -228,9 +237,9 @@ class DevelopmentApproval extends Component
         );
 
         // Determine overall status with priority
-        if ($statuses->contains('rejected_leader') || $statuses->contains('rejected_dept_head') || $statuses->contains('rejected_spv')) {
-            if ($statuses->contains('rejected_leader')) {
-                return 'rejected_leader';
+        if ($statuses->contains('rejected_lid') || $statuses->contains('rejected_dept_head') || $statuses->contains('rejected_spv')) {
+            if ($statuses->contains('rejected_lid')) {
+                return 'rejected_lid';
             }
 
             if ($statuses->contains('rejected_dept_head')) {
@@ -238,8 +247,8 @@ class DevelopmentApproval extends Component
             }
 
             return 'rejected_spv';
-        } elseif ($statuses->contains('pending_leader')) {
-            return 'pending_leader';
+        } elseif ($statuses->contains('pending_lid')) {
+            return 'pending_lid';
         } elseif ($statuses->contains('pending_dept_head')) {
             return 'pending_dept_head';
         } elseif ($statuses->contains('pending_spv')) {
@@ -272,7 +281,7 @@ class DevelopmentApproval extends Component
             ->get()
             ->toArray();
 
-        $this->userSelfLearningPlans = SelfLearningPlan::with(['mentor', 'spvApprover', 'leaderApprover'])
+        $this->userSelfLearningPlans = SelfLearningPlan::with(['spvApprover', 'leaderApprover'])
             ->where('user_id', $userId)
             ->where('year', $year)
             ->where('status', '!=', 'draft')
@@ -313,7 +322,7 @@ class DevelopmentApproval extends Component
     private function getExpectedPendingStatus(): string
     {
         if ($this->isLeaderLid()) {
-            return 'pending_leader';
+            return 'pending_lid';
         }
 
         if ($this->isSupervisorArea()) {
@@ -333,7 +342,7 @@ class DevelopmentApproval extends Component
     private function getNextApprovedStatus(): string
     {
         if ($this->isSpv()) {
-            return 'pending_leader'; // After SPV approves, goes to Leader
+            return 'pending_lid'; // After SPV/Dept Head approves, goes to Leader
         } elseif ($this->isLeaderLid()) {
             return 'approved'; // After Leader approves, fully approved
         }
@@ -354,7 +363,7 @@ class DevelopmentApproval extends Component
         }
 
         if ($this->isLeaderLid()) {
-            return 'rejected_leader';
+            return 'rejected_lid';
         }
         return '';
     }

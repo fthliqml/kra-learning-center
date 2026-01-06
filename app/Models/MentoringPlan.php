@@ -19,8 +19,8 @@ class MentoringPlan extends Model
      * - rejected_spv: Rejected by Supervisor, needs revision
      * - pending_dept_head: Submitted, waiting for Dept Head approval (no SPV in area)
      * - rejected_dept_head: Rejected by Dept Head, needs revision
-     * - pending_leader: Approved by area approver, waiting for Leader LID approval
-     * - rejected_leader: Rejected by Leader LID, needs revision
+     * - pending_lid: Approved by area approver, waiting for Leader LID approval
+     * - rejected_lid: Rejected by Leader LID, needs revision
      * - approved: Fully approved by both area approver and Leader LID
      */
     const STATUS_DRAFT = 'draft';
@@ -28,8 +28,8 @@ class MentoringPlan extends Model
     const STATUS_REJECTED_SPV = 'rejected_spv';
     const STATUS_PENDING_DEPT_HEAD = 'pending_dept_head';
     const STATUS_REJECTED_DEPT_HEAD = 'rejected_dept_head';
-    const STATUS_PENDING_LEADER = 'pending_leader';
-    const STATUS_REJECTED_LEADER = 'rejected_leader';
+    const STATUS_PENDING_LID = 'pending_lid';
+    const STATUS_REJECTED_LID = 'rejected_lid';
     const STATUS_APPROVED = 'approved';
 
     protected $fillable = [
@@ -66,7 +66,7 @@ class MentoringPlan extends Model
 
     /**
      * Check if this plan can be edited by the employee.
-     * Editable when: draft, pending_spv, rejected_spv, or rejected_leader
+     * Editable when: draft, pending_spv, rejected_spv, or rejected_lid
      */
     public function canEdit(): bool
     {
@@ -76,7 +76,7 @@ class MentoringPlan extends Model
             self::STATUS_REJECTED_SPV,
             self::STATUS_PENDING_DEPT_HEAD,
             self::STATUS_REJECTED_DEPT_HEAD,
-            self::STATUS_REJECTED_LEADER,
+            self::STATUS_REJECTED_LID,
         ]);
     }
 
@@ -96,7 +96,7 @@ class MentoringPlan extends Model
      */
     public function canApproveByLeader(): bool
     {
-        return $this->status === self::STATUS_PENDING_LEADER;
+        return $this->status === self::STATUS_PENDING_LID;
     }
 
     /**
@@ -107,7 +107,7 @@ class MentoringPlan extends Model
         return in_array($this->status, [
             self::STATUS_PENDING_SPV,
             self::STATUS_PENDING_DEPT_HEAD,
-            self::STATUS_PENDING_LEADER,
+            self::STATUS_PENDING_LID,
         ]);
     }
 
@@ -119,7 +119,7 @@ class MentoringPlan extends Model
         return in_array($this->status, [
             self::STATUS_REJECTED_SPV,
             self::STATUS_REJECTED_DEPT_HEAD,
-            self::STATUS_REJECTED_LEADER,
+            self::STATUS_REJECTED_LID,
         ]);
     }
 

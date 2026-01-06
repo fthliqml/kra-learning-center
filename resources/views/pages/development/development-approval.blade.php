@@ -80,18 +80,21 @@
                     @php
                         $status = $this->getUserStatus($user);
                         $classes = match ($status) {
-                            'pending_spv' => 'bg-amber-100 text-amber-700',
-                            'pending_leader' => 'bg-blue-100 text-blue-700',
+                            'pending_spv', 'pending_dept_head' => 'bg-amber-100 text-amber-700',
+                            'pending_lid' => 'bg-blue-100 text-blue-700',
                             'approved' => 'bg-emerald-100 text-emerald-700',
-                            'rejected_spv', 'rejected_leader' => 'bg-rose-100 text-rose-700',
+                            'rejected_spv', 'rejected_dept_head', 'rejected_lid' => 'bg-rose-100 text-rose-700',
                             default => 'bg-gray-100 text-gray-700',
                         };
                         $label = match ($status) {
-                            'pending_spv' => 'Pending SPV',
-                            'pending_leader' => 'Pending LID',
-                            'rejected_spv' => 'Rejected by SPV',
-                            'rejected_leader' => 'Rejected by LID',
-                            default => ucfirst($status),
+                            'pending_spv' => 'Pending Supervisor Approval',
+                            'pending_dept_head' => 'Pending Dept Head Approval',
+                            'pending_lid' => 'Pending LID Approval',
+                            'rejected_spv' => 'Rejected by Supervisor',
+                            'rejected_dept_head' => 'Rejected by Dept Head',
+                            'rejected_lid' => 'Rejected by LID',
+                            'approved' => 'Approved',
+                            default => 'Pending',
                         };
                     @endphp
                     <div class="flex justify-center">
@@ -151,28 +154,27 @@
                             @foreach ($userTrainingPlans as $plan)
                                 <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
                                     <div class="flex items-start justify-between gap-4">
-                                        <div class="flex-1 space-y-2">
-                                            <div class="flex items-center gap-2">
-                                                <p class="font-semibold text-gray-800">
-                                                    {{ $plan['competency']['name'] ?? 'N/A' }}</p>
+                                        <div class="flex-1 space-y-3">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="font-semibold text-gray-900 text-sm md:text-base">
+                                                    {{ $plan['competency']['name'] ?? 'N/A' }}
+                                                </p>
                                                 @include('pages.development.partials.status-badge', [
                                                     'status' => $plan['status'],
                                                 ])
                                             </div>
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                                <div>
-                                                    <span class="text-gray-500">Group:</span>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                                <div class="space-y-0.5">
                                                     <span
-                                                        class="font-medium text-gray-700">{{ $plan['competency']['type'] ?? '-' }}</span>
-                                                </div>
-                                                <div>
-                                                    <span class="text-gray-500">Year:</span>
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Group</span>
                                                     <span
-                                                        class="font-medium text-gray-700">{{ $plan['year'] ?? '-' }}</span>
+                                                        class="block text-gray-800">{{ $plan['competency']['type'] ?? '-' }}</span>
                                                 </div>
                                             </div>
                                             {{-- Show rejection reason if rejected --}}
-                                            @if (!empty($plan['rejection_reason']) && in_array($plan['status'], ['rejected_spv', 'rejected_leader']))
+                                            @if (
+                                                !empty($plan['rejection_reason']) &&
+                                                    in_array($plan['status'], ['rejected_spv', 'rejected_dept_head', 'rejected_lid']))
                                                 <div class="text-sm bg-red-50 p-2 rounded border border-red-200">
                                                     <span class="text-red-600 font-medium">Rejection Reason:</span>
                                                     <p class="text-red-700 mt-1">{{ $plan['rejection_reason'] }}</p>
@@ -218,41 +220,46 @@
                             @foreach ($userSelfLearningPlans as $plan)
                                 <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
                                     <div class="flex items-start justify-between gap-4">
-                                        <div class="flex-1 space-y-2">
-                                            <div class="flex items-center gap-2">
-                                                <p class="font-semibold text-gray-800">{{ $plan['title'] ?? 'N/A' }}
+                                        <div class="flex-1 space-y-3">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="font-semibold text-gray-900 text-sm md:text-base">
+                                                    {{ $plan['title'] ?? 'N/A' }}
                                                 </p>
                                                 @include('pages.development.partials.status-badge', [
                                                     'status' => $plan['status'],
                                                 ])
                                             </div>
                                             @if (!empty($plan['objective']))
-                                                <div class="text-sm">
-                                                    <span class="text-gray-500">Objective:</span>
-                                                    <p class="text-gray-700 mt-1">{{ $plan['objective'] }}</p>
+                                                <div class="space-y-1">
+                                                    <span
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Objective</span>
+                                                    <p class="text-sm text-gray-800 leading-snug">
+                                                        {{ $plan['objective'] }}
+                                                    </p>
                                                 </div>
                                             @endif
-                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm">
-                                                <div>
-                                                    <span class="text-gray-500">Mentor:</span>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                                <div class="space-y-0.5">
                                                     <span
-                                                        class="font-medium text-gray-700">{{ $plan['mentor']['name'] ?? '-' }}</span>
-                                                </div>
-                                                <div>
-                                                    <span class="text-gray-500">Start Date:</span>
-                                                    <span class="font-medium text-gray-700">
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Start
+                                                        Date</span>
+                                                    <span class="block text-gray-800">
                                                         {{ $plan['start_date'] ? \Carbon\Carbon::parse($plan['start_date'])->format('d M Y') : '-' }}
                                                     </span>
                                                 </div>
-                                                <div>
-                                                    <span class="text-gray-500">End Date:</span>
-                                                    <span class="font-medium text-gray-700">
+                                                <div class="space-y-0.5">
+                                                    <span
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">End
+                                                        Date</span>
+                                                    <span class="block text-gray-800">
                                                         {{ $plan['end_date'] ? \Carbon\Carbon::parse($plan['end_date'])->format('d M Y') : '-' }}
                                                     </span>
                                                 </div>
                                             </div>
                                             {{-- Show rejection reason if rejected --}}
-                                            @if (!empty($plan['rejection_reason']) && in_array($plan['status'], ['rejected_spv', 'rejected_leader']))
+                                            @if (
+                                                !empty($plan['rejection_reason']) &&
+                                                    in_array($plan['status'], ['rejected_spv', 'rejected_dept_head', 'rejected_lid']))
                                                 <div class="text-sm bg-red-50 p-2 rounded border border-red-200">
                                                     <span class="text-red-600 font-medium">Rejection Reason:</span>
                                                     <p class="text-red-700 mt-1">{{ $plan['rejection_reason'] }}</p>
@@ -298,44 +305,78 @@
                             @foreach ($userMentoringPlans as $plan)
                                 <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
                                     <div class="flex items-start justify-between gap-4">
-                                        <div class="flex-1 space-y-2">
-                                            <div class="flex items-center gap-2">
-                                                <p class="font-semibold text-gray-800">Mentoring Session</p>
+                                        <div class="flex-1 space-y-3">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="font-semibold text-gray-900 text-sm md:text-base">Mentoring
+                                                    Session</p>
                                                 @include('pages.development.partials.status-badge', [
                                                     'status' => $plan['status'],
                                                 ])
                                             </div>
                                             @if (!empty($plan['objective']))
-                                                <div class="text-sm">
-                                                    <span class="text-gray-500">Objective:</span>
-                                                    <p class="text-gray-700 mt-1">{{ $plan['objective'] }}</p>
+                                                <div class="space-y-1">
+                                                    <span
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Objective</span>
+                                                    <p class="text-sm text-gray-800 leading-snug">
+                                                        {{ $plan['objective'] }}
+                                                    </p>
                                                 </div>
                                             @endif
-                                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-sm">
-                                                <div>
-                                                    <span class="text-gray-500">Mentor:</span>
+                                            @if (!empty($plan['plan_months']) && is_array($plan['plan_months']))
+                                                <div class="space-y-1">
                                                     <span
-                                                        class="font-medium text-gray-700">{{ $plan['mentor']['name'] ?? '-' }}</span>
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Plan
+                                                        Months</span>
+                                                    <div class="mt-1 flex flex-wrap gap-1">
+                                                        @foreach ($plan['plan_months'] as $month)
+                                                            @php
+                                                                try {
+                                                                    $label = \Carbon\Carbon::createFromFormat(
+                                                                        'Y-m-d',
+                                                                        $month . '-01',
+                                                                    )->format('M Y');
+                                                                } catch (\Exception $e) {
+                                                                    $label = $month;
+                                                                }
+                                                            @endphp
+                                                            <span
+                                                                class="px-2 py-0.5 bg-purple-100 text-purple-800 rounded-full text-xs">
+                                                                {{ $label }}
+                                                            </span>
+                                                        @endforeach
+                                                    </div>
                                                 </div>
-                                                <div>
-                                                    <span class="text-gray-500">Method:</span>
+                                            @endif
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                                <div class="space-y-0.5">
                                                     <span
-                                                        class="font-medium text-gray-700">{{ ucfirst($plan['method'] ?? '-') }}</span>
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Mentor</span>
+                                                    <span
+                                                        class="block text-gray-800">{{ $plan['mentor']['name'] ?? '-' }}</span>
                                                 </div>
-                                                <div>
-                                                    <span class="text-gray-500">Frequency:</span>
+                                                <div class="space-y-0.5">
                                                     <span
-                                                        class="font-medium text-gray-700">{{ $plan['frequency'] ?? '-' }}x</span>
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Method</span>
+                                                    <span
+                                                        class="block text-gray-800">{{ ucfirst($plan['method'] ?? '-') }}</span>
                                                 </div>
-                                                <div>
-                                                    <span class="text-gray-500">Duration:</span>
+                                                <div class="space-y-0.5">
                                                     <span
-                                                        class="font-medium text-gray-700">{{ $plan['duration'] ?? '-' }}
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Frequency</span>
+                                                    <span
+                                                        class="block text-gray-800">{{ $plan['frequency'] ?? '-' }}x</span>
+                                                </div>
+                                                <div class="space-y-0.5">
+                                                    <span
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Duration</span>
+                                                    <span class="block text-gray-800">{{ $plan['duration'] ?? '-' }}
                                                         mins</span>
                                                 </div>
                                             </div>
                                             {{-- Show rejection reason if rejected --}}
-                                            @if (!empty($plan['rejection_reason']) && in_array($plan['status'], ['rejected_spv', 'rejected_leader']))
+                                            @if (
+                                                !empty($plan['rejection_reason']) &&
+                                                    in_array($plan['status'], ['rejected_spv', 'rejected_dept_head', 'rejected_lid']))
                                                 <div class="text-sm bg-red-50 p-2 rounded border border-red-200">
                                                     <span class="text-red-600 font-medium">Rejection Reason:</span>
                                                     <p class="text-red-700 mt-1">{{ $plan['rejection_reason'] }}</p>
@@ -381,34 +422,36 @@
                             @foreach ($userProjectPlans as $plan)
                                 <div class="p-4 bg-gray-50 rounded-lg border border-gray-100">
                                     <div class="flex items-start justify-between gap-4">
-                                        <div class="flex-1 space-y-2">
-                                            <div class="flex items-center gap-2">
-                                                <p class="font-semibold text-gray-800">{{ $plan['name'] ?? 'N/A' }}
+                                        <div class="flex-1 space-y-3">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <p class="font-semibold text-gray-900 text-sm md:text-base">
+                                                    {{ $plan['name'] ?? 'N/A' }}
                                                 </p>
                                                 @include('pages.development.partials.status-badge', [
                                                     'status' => $plan['status'],
                                                 ])
                                             </div>
                                             @if (!empty($plan['objective']))
-                                                <div class="text-sm">
-                                                    <span class="text-gray-500">Objective:</span>
-                                                    <p class="text-gray-700 mt-1">{{ $plan['objective'] }}</p>
+                                                <div class="space-y-1">
+                                                    <span
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Objective</span>
+                                                    <p class="text-sm text-gray-800 leading-snug">
+                                                        {{ $plan['objective'] }}
+                                                    </p>
                                                 </div>
                                             @endif
-                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                                <div>
-                                                    <span class="text-gray-500">Mentor:</span>
+                                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                                                <div class="space-y-0.5">
                                                     <span
-                                                        class="font-medium text-gray-700">{{ $plan['mentor']['name'] ?? '-' }}</span>
-                                                </div>
-                                                <div>
-                                                    <span class="text-gray-500">Year:</span>
+                                                        class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Mentor</span>
                                                     <span
-                                                        class="font-medium text-gray-700">{{ $plan['year'] ?? '-' }}</span>
+                                                        class="block text-gray-800">{{ $plan['mentor']['name'] ?? '-' }}</span>
                                                 </div>
                                             </div>
                                             {{-- Show rejection reason if rejected --}}
-                                            @if (!empty($plan['rejection_reason']) && in_array($plan['status'], ['rejected_spv', 'rejected_leader']))
+                                            @if (
+                                                !empty($plan['rejection_reason']) &&
+                                                    in_array($plan['status'], ['rejected_spv', 'rejected_dept_head', 'rejected_lid']))
                                                 <div class="text-sm bg-red-50 p-2 rounded border border-red-200">
                                                     <span class="text-red-600 font-medium">Rejection Reason:</span>
                                                     <p class="text-red-700 mt-1">{{ $plan['rejection_reason'] }}</p>

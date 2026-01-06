@@ -255,15 +255,13 @@
                         <div class="space-y-3">
                             @foreach ($trainingPlansData as $plan)
                                 <div class="p-3 bg-gray-50 rounded-lg">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex-1">
-                                            <p class="font-medium text-gray-800">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-base font-semibold text-gray-800 truncate">
                                                 {{ $plan->competency->name ?? 'N/A' }}
                                             </p>
-                                            <p class="text-xs text-gray-500">{{ $plan->competency->type ?? '-' }}</p>
                                         </div>
-                                        <div class="flex items-center gap-5">
-                                            {{-- Realization Status - Only show if approved --}}
+                                        <div class="flex flex-col items-end gap-1 shrink-0">
                                             @if ($plan->status === 'approved')
                                                 @include('pages.development.partials.realization-badge', [
                                                     'status' => $plan->getRealizationStatus(),
@@ -275,9 +273,19 @@
                                             ])
                                         </div>
                                     </div>
+
+                                    <div
+                                        class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs text-gray-700">
+                                        <div>
+                                            <p class="text-[11px] uppercase tracking-wide text-gray-500">Group</p>
+                                            <p class="font-medium text-gray-800">{{ $plan->competency->type ?? '-' }}
+                                            </p>
+                                        </div>
+                                    </div>
+
                                     @if ($plan->rejection_reason && $plan->isRejected())
-                                        <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm">
-                                            <span class="text-red-600 font-medium">Rejection Reason:</span>
+                                        <div class="mt-3 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                                            <span class="text-red-600 font-medium">Rejection:</span>
                                             <p class="text-red-700 mt-1">{{ $plan->rejection_reason }}</p>
                                         </div>
                                     @endif
@@ -331,23 +339,40 @@
                         <div class="space-y-3">
                             @foreach ($selfLearningData as $plan)
                                 <div class="p-3 bg-gray-50 rounded-lg">
-                                    <div class="flex items-center justify-between">
-                                        <div class="flex-1">
-                                            <p class="font-medium text-gray-800">{{ $plan->title }}</p>
-                                            <p class="text-xs text-gray-500">Mentor: {{ $plan->mentor->name ?? '-' }}
-                                                |
-                                                {{ $plan->start_date?->format('d M Y') }} -
-                                                {{ $plan->end_date?->format('d M Y') }}</p>
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-base font-semibold text-gray-800 truncate">
+                                                {{ $plan->title }}
+                                            </p>
                                         </div>
-                                        <div class="flex items-center gap-3">
+                                        <div class="flex items-center gap-2 shrink-0">
                                             @include('pages.development.partials.status-badge', [
                                                 'status' => $plan->status,
                                             ])
                                         </div>
                                     </div>
+
+                                    <div class="mt-3 space-y-2 text-xs text-gray-700">
+                                        @if (!empty($plan->objective))
+                                            <div>
+                                                <p class="text-[11px] uppercase tracking-wide text-gray-500">Objective
+                                                </p>
+                                                <p class="font-medium text-gray-800 break-words">
+                                                    {{ $plan->objective }}</p>
+                                            </div>
+                                        @endif
+                                        <div>
+                                            <p class="text-[11px] uppercase tracking-wide text-gray-500">Period</p>
+                                            <p class="font-medium text-gray-800">
+                                                {{ $plan->start_date?->format('d M Y') }} -
+                                                {{ $plan->end_date?->format('d M Y') }}
+                                            </p>
+                                        </div>
+                                    </div>
+
                                     @if ($plan->rejection_reason && $plan->isRejected())
-                                        <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm">
-                                            <span class="text-red-600 font-medium">Rejection Reason:</span>
+                                        <div class="mt-3 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                                            <span class="text-red-600 font-medium">Rejection:</span>
                                             <p class="text-red-700 mt-1">{{ $plan->rejection_reason }}</p>
                                         </div>
                                     @endif
@@ -359,134 +384,214 @@
                     @endif
                 </div>
 
-                {{-- Mentoring & Projects (2 columns) --}}
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {{-- Mentoring --}}
-                    <div class="rounded-xl border border-gray-200 bg-white p-6 max-h-[60vh] overflow-y-auto">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                                <x-icon name="o-user-group" class="size-5 text-purple-600" />
-                                Mentoring
-                            </h3>
-                            <div class="flex items-center gap-2">
-                                @if ($isCurrentYear && $mentoringData->count() == 0)
-                                    <x-ui.button variant="primary" size="sm"
-                                        wire:click="openAddModal('mentoring')" wire:loading.attr="disabled"
-                                        class="h-8">
-                                        <span wire:loading.remove wire:target="openAddModal('mentoring')"
-                                            class="flex items-center gap-1.5">
-                                            <x-icon name="o-plus" class="size-4" />
-                                            Add
-                                        </span>
-                                        <span wire:loading wire:target="openAddModal('mentoring')">
-                                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                                        </span>
-                                    </x-ui.button>
-                                @endif
-                                @if ($canEditMentoring && $mentoringData->count() > 0)
-                                    <x-ui.button variant="ghost" size="sm"
-                                        wire:click="openEditModal('mentoring')" wire:loading.attr="disabled"
-                                        class="h-8">
-                                        <span wire:loading.remove wire:target="openEditModal('mentoring')"
-                                            class="flex items-center gap-1.5">
-                                            <x-icon name="o-pencil" class="size-4" />
-                                            Edit
-                                        </span>
-                                        <span wire:loading wire:target="openEditModal('mentoring')">
-                                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                                        </span>
-                                    </x-ui.button>
-                                @endif
-                            </div>
+                {{-- Mentoring --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-6 max-h-[60vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <x-icon name="o-user-group" class="size-5 text-purple-600" />
+                            Mentoring
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            @if ($isCurrentYear && $mentoringData->count() == 0)
+                                <x-ui.button variant="primary" size="sm" wire:click="openAddModal('mentoring')"
+                                    wire:loading.attr="disabled" class="h-8">
+                                    <span wire:loading.remove wire:target="openAddModal('mentoring')"
+                                        class="flex items-center gap-1.5">
+                                        <x-icon name="o-plus" class="size-4" />
+                                        Add
+                                    </span>
+                                    <span wire:loading wire:target="openAddModal('mentoring')">
+                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                    </span>
+                                </x-ui.button>
+                            @endif
+                            @if ($canEditMentoring && $mentoringData->count() > 0)
+                                <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('mentoring')"
+                                    wire:loading.attr="disabled" class="h-8">
+                                    <span wire:loading.remove wire:target="openEditModal('mentoring')"
+                                        class="flex items-center gap-1.5">
+                                        <x-icon name="o-pencil" class="size-4" />
+                                        Edit
+                                    </span>
+                                    <span wire:loading wire:target="openEditModal('mentoring')">
+                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                    </span>
+                                </x-ui.button>
+                            @endif
                         </div>
-                        @if ($mentoringData->count() > 0)
-                            <div class="space-y-3">
-                                @foreach ($mentoringData as $plan)
-                                    <div class="p-3 bg-gray-50 rounded-lg">
-                                        <div class="flex items-start justify-between mb-2">
-                                            <p class="font-medium text-gray-800 text-sm truncate flex-1">
-                                                {{ $plan->mentor->name ?? '-' }}</p>
-                                            @include('pages.development.partials.status-badge', [
-                                                'status' => $plan->status,
-                                            ])
-                                        </div>
-                                        <p class="text-xs text-gray-500">{{ $plan->objective }}</p>
-                                        @if ($plan->rejection_reason && $plan->isRejected())
-                                            <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
-                                                <span class="text-red-600 font-medium">Rejection:</span>
-                                                <p class="text-red-700 mt-1">{{ $plan->rejection_reason }}</p>
-                                            </div>
-                                        @endif
-                                    </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="text-sm text-gray-500 text-center py-4">No mentoring plans for this year</p>
-                        @endif
                     </div>
+                    @if ($mentoringData->count() > 0)
+                        <div class="space-y-3">
+                            @foreach ($mentoringData as $plan)
+                                <div class="p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-base font-semibold text-gray-800 truncate">
+                                                {{ $plan->mentor->name ?? '-' }}
+                                            </p>
+                                        </div>
+                                        @include('pages.development.partials.status-badge', [
+                                            'status' => $plan->status,
+                                        ])
+                                    </div>
 
-                    {{-- Projects --}}
-                    <div class="rounded-xl border border-gray-200 bg-white p-6 max-h-[60vh] overflow-y-auto">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
-                                <x-icon name="o-briefcase" class="size-5 text-amber-600" />
-                                Projects
-                            </h3>
-                            <div class="flex items-center gap-2">
-                                @if ($isCurrentYear && $projectData->count() == 0)
-                                    <x-ui.button variant="primary" size="sm"
-                                        wire:click="openAddModal('project')" wire:loading.attr="disabled"
-                                        class="h-8">
-                                        <span wire:loading.remove wire:target="openAddModal('project')"
-                                            class="flex items-center gap-1.5">
-                                            <x-icon name="o-plus" class="size-4" />
-                                            Add
-                                        </span>
-                                        <span wire:loading wire:target="openAddModal('project')">
-                                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                                        </span>
-                                    </x-ui.button>
-                                @endif
-                                @if ($canEditProject && $projectData->count() > 0)
-                                    <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('project')"
-                                        wire:loading.attr="disabled" class="h-8">
-                                        <span wire:loading.remove wire:target="openEditModal('project')"
-                                            class="flex items-center gap-1.5">
-                                            <x-icon name="o-pencil" class="size-4" />
-                                            Edit
-                                        </span>
-                                        <span wire:loading wire:target="openEditModal('project')">
-                                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                                        </span>
-                                    </x-ui.button>
-                                @endif
-                            </div>
-                        </div>
-                        @if ($projectData->count() > 0)
-                            <div class="space-y-3">
-                                @foreach ($projectData as $plan)
-                                    <div class="p-3 bg-gray-50 rounded-lg">
-                                        <div class="flex items-start justify-between mb-2">
-                                            <p class="font-medium text-gray-800 text-sm truncate flex-1">
-                                                {{ $plan->name }}</p>
-                                            @include('pages.development.partials.status-badge', [
-                                                'status' => $plan->status,
-                                            ])
+                                    <div class="mt-3 space-y-2 text-xs text-gray-700">
+                                        @if (!empty($plan->objective))
+                                            <div>
+                                                <p class="text-[11px] uppercase tracking-wide text-gray-500">Objective
+                                                </p>
+                                                <p class="font-medium text-gray-800 break-words">
+                                                    {{ $plan->objective }}</p>
+                                            </div>
+                                        @endif
+
+                                        <div>
+                                            <p class="text-[11px] uppercase tracking-wide text-gray-500">Method</p>
+                                            <p class="font-medium text-gray-800">
+                                                {{ $plan->method ? ucfirst($plan->method) : '-' }}
+                                            </p>
                                         </div>
-                                        <p class="text-xs text-gray-500">{{ $plan->objective ?? '-' }}</p>
-                                        @if ($plan->rejection_reason && $plan->isRejected())
-                                            <div class="mt-2 p-2 bg-red-50 border border-red-200 rounded text-xs">
-                                                <span class="text-red-600 font-medium">Rejection:</span>
-                                                <p class="text-red-700 mt-1">{{ $plan->rejection_reason }}</p>
+
+                                        <div>
+                                            <p class="text-[11px] uppercase tracking-wide text-gray-500">Duration
+                                            </p>
+                                            <p class="font-medium text-gray-800">
+                                                {{ $plan->duration ?? '-' }} mins
+                                            </p>
+                                        </div>
+
+                                        <div>
+                                            <p class="text-[11px] uppercase tracking-wide text-gray-500">Frequency
+                                            </p>
+                                            <p class="font-medium text-gray-800">
+                                                {{ $plan->frequency ?? '-' }}x
+                                            </p>
+                                        </div>
+
+                                        @php
+                                            $planMonths = $plan->plan_months ?? [];
+                                        @endphp
+                                        @if (!empty($planMonths))
+                                            <div>
+                                                <p class="text-[11px] uppercase tracking-wide text-gray-500">Plan
+                                                    Months</p>
+                                                <p class="font-medium text-gray-800">
+                                                    @foreach ($planMonths as $index => $month)
+                                                        @php
+                                                            try {
+                                                                $label = \Carbon\Carbon::createFromFormat(
+                                                                    'Y-m-d',
+                                                                    $month . '-01',
+                                                                )->format('M Y');
+                                                            } catch (\Exception $e) {
+                                                                $label = $month;
+                                                            }
+                                                        @endphp
+                                                        {{ $label }}@if ($index < count($planMonths) - 1)
+                                                            ,
+                                                        @endif
+                                                    @endforeach
+                                                </p>
                                             </div>
                                         @endif
                                     </div>
-                                @endforeach
-                            </div>
-                        @else
-                            <p class="text-sm text-gray-500 text-center py-4">No project assignments for this year</p>
-                        @endif
+
+                                    @if ($plan->rejection_reason && $plan->isRejected())
+                                        <div class="mt-3 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                                            <span class="text-red-600 font-medium">Rejection:</span>
+                                            <p class="text-red-700 mt-1">{{ $plan->rejection_reason }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-500 text-center py-4">No mentoring plans for this year</p>
+                    @endif
+                </div>
+
+                {{-- Projects --}}
+                <div class="rounded-xl border border-gray-200 bg-white p-6 max-h-[60vh] overflow-y-auto">
+                    <div class="flex items-center justify-between mb-4">
+                        <h3 class="text-lg font-semibold text-gray-800 flex items-center gap-2">
+                            <x-icon name="o-briefcase" class="size-5 text-amber-600" />
+                            Projects
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            @if ($isCurrentYear && $projectData->count() == 0)
+                                <x-ui.button variant="primary" size="sm" wire:click="openAddModal('project')"
+                                    wire:loading.attr="disabled" class="h-8">
+                                    <span wire:loading.remove wire:target="openAddModal('project')"
+                                        class="flex items-center gap-1.5">
+                                        <x-icon name="o-plus" class="size-4" />
+                                        Add
+                                    </span>
+                                    <span wire:loading wire:target="openAddModal('project')">
+                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                    </span>
+                                </x-ui.button>
+                            @endif
+                            @if ($canEditProject && $projectData->count() > 0)
+                                <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('project')"
+                                    wire:loading.attr="disabled" class="h-8">
+                                    <span wire:loading.remove wire:target="openEditModal('project')"
+                                        class="flex items-center gap-1.5">
+                                        <x-icon name="o-pencil" class="size-4" />
+                                        Edit
+                                    </span>
+                                    <span wire:loading wire:target="openEditModal('project')">
+                                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                                    </span>
+                                </x-ui.button>
+                            @endif
+                        </div>
                     </div>
+                    @if ($projectData->count() > 0)
+                        <div class="space-y-3">
+                            @foreach ($projectData as $plan)
+                                <div class="p-3 bg-gray-50 rounded-lg">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="text-base font-semibold text-gray-800 truncate">
+                                                {{ $plan->name }}
+                                            </p>
+                                        </div>
+                                        @include('pages.development.partials.status-badge', [
+                                            'status' => $plan->status,
+                                        ])
+                                    </div>
+
+                                    <div class="mt-3 space-y-2 text-xs text-gray-700">
+                                        @if (!empty($plan->objective))
+                                            <div>
+                                                <p class="text-[11px] uppercase tracking-wide text-gray-500">Objective
+                                                </p>
+                                                <p class="font-medium text-gray-800 break-words">
+                                                    {{ $plan->objective }}</p>
+                                            </div>
+                                        @endif
+
+                                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                                            <div>
+                                                <p class="text-[11px] uppercase tracking-wide text-gray-500">Mentor</p>
+                                                <p class="font-medium text-gray-800">{{ $plan->mentor->name ?? '-' }}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    @if ($plan->rejection_reason && $plan->isRejected())
+                                        <div class="mt-3 p-2 bg-red-50 border border-red-200 rounded text-xs">
+                                            <span class="text-red-600 font-medium">Rejection:</span>
+                                            <p class="text-red-700 mt-1">{{ $plan->rejection_reason }}</p>
+                                        </div>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-sm text-gray-500 text-center py-4">No project assignments for this year</p>
+                    @endif
                 </div>
             </div>
         </div>

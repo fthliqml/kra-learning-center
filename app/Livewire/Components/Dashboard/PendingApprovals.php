@@ -77,12 +77,12 @@ class PendingApprovals extends Component
       ];
     }
 
-    // Get pending IDP (Individual Development Plan) approvals (status pending_leader)
+    // Get pending IDP (Individual Development Plan) approvals (status pending_lid)
     $pendingIdpPlans = collect()
-      ->merge(TrainingPlan::with('user')->where('status', 'pending_leader')->latest()->take(5)->get())
-      ->merge(SelfLearningPlan::with('user')->where('status', 'pending_leader')->latest()->take(5)->get())
-      ->merge(MentoringPlan::with('user')->where('status', 'pending_leader')->latest()->take(5)->get())
-      ->merge(ProjectPlan::with('user')->where('status', 'pending_leader')->latest()->take(5)->get());
+      ->merge(TrainingPlan::with('user')->where('status', 'pending_lid')->latest()->take(5)->get())
+      ->merge(SelfLearningPlan::with('user')->where('status', 'pending_lid')->latest()->take(5)->get())
+      ->merge(MentoringPlan::with('user')->where('status', 'pending_lid')->latest()->take(5)->get())
+      ->merge(ProjectPlan::with('user')->where('status', 'pending_lid')->latest()->take(5)->get());
 
     foreach ($pendingIdpPlans as $plan) {
       $this->items[] = [

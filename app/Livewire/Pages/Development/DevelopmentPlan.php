@@ -38,7 +38,7 @@ class DevelopmentPlan extends Component
 
     // Self Learning Plans (multiple)
     public $selfLearningPlans = [
-        ['id' => null, 'title' => '', 'objective' => '', 'mentor_id' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
+        ['id' => null, 'title' => '', 'objective' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
     ];
 
     // Mentoring Plans (multiple)
@@ -64,7 +64,6 @@ class DevelopmentPlan extends Component
     public $selfLearning = [
         'title' => '',
         'objective' => '',
-        'mentor_id' => '',
         'start_date' => '',
         'end_date' => '',
     ];
@@ -179,7 +178,6 @@ class DevelopmentPlan extends Component
                 'id' => $plan->id,
                 'title' => $plan->title,
                 'objective' => $plan->objective,
-                'mentor_id' => $plan->mentor_id,
                 'start_date' => $plan->start_date?->format('Y-m-d'),
                 'end_date' => $plan->end_date?->format('Y-m-d'),
                 'status' => $plan->status,
@@ -191,7 +189,6 @@ class DevelopmentPlan extends Component
                 'id' => null,
                 'title' => '',
                 'objective' => '',
-                'mentor_id' => '',
                 'start_date' => '',
                 'end_date' => '',
                 'status' => null
@@ -275,7 +272,7 @@ class DevelopmentPlan extends Component
 
     public function addSelfLearningRow()
     {
-        $this->selfLearningPlans[] = ['id' => null, 'title' => '', 'objective' => '', 'mentor_id' => '', 'start_date' => '', 'end_date' => '', 'status' => null];
+        $this->selfLearningPlans[] = ['id' => null, 'title' => '', 'objective' => '', 'start_date' => '', 'end_date' => '', 'status' => null];
     }
 
     public function addMentoringRow()
@@ -430,7 +427,7 @@ class DevelopmentPlan extends Component
             ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
         ];
         $this->selfLearningPlans = [
-            ['id' => null, 'title' => '', 'objective' => '', 'mentor_id' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
+            ['id' => null, 'title' => '', 'objective' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
         ];
         $this->mentoringPlans = [
             [
@@ -451,7 +448,6 @@ class DevelopmentPlan extends Component
         $this->selfLearning = [
             'title' => '',
             'objective' => '',
-            'mentor_id' => '',
             'start_date' => '',
             'end_date' => '',
         ];
@@ -586,12 +582,12 @@ class DevelopmentPlan extends Component
      * Rules:
      * - If saving as draft  -> always 'draft'.
      * - If employee is a first-level approver in their own area (SPV / Dept Head non-LID)
-     *   -> skip first layer and go directly to Leader LID (pending_leader).
+     *   -> skip first layer and go directly to Leader LID (pending_lid).
      * - Otherwise:
      *   - If there is any SPV in the same section/department
      *     OR (when no SPV) any Dept Head in the same area (non-LID)
      *       -> first approval goes to that area approver (pending_spv).
-     *   - If there is no such SPV/Dept Head -> send directly to Leader LID (pending_leader).
+     *   - If there is no such SPV/Dept Head -> send directly to Leader LID (pending_lid).
      */
     private function determineInitialStatus(User $user, bool $isDraft = false): string
     {
@@ -605,7 +601,7 @@ class DevelopmentPlan extends Component
         // If the requester is themselves a first-level approver in their area
         // (supervisor or department head outside LID), skip the first layer.
         if ($position === 'supervisor' || ($position === 'department_head' && $section !== 'lid')) {
-            return 'pending_leader';
+            return 'pending_lid';
         }
 
         // Check if there is any supervisor in the same section or department
@@ -635,7 +631,7 @@ class DevelopmentPlan extends Component
 
         // If there is a Dept Head in the same department (non-LID),
         // mark as pending_dept_head so it's clear who should approve first.
-        return $hasDeptHeadInArea ? 'pending_dept_head' : 'pending_leader';
+        return $hasDeptHeadInArea ? 'pending_dept_head' : 'pending_lid';
     }
 
     private function saveTrainingPlans($user, $isDraft = false)
@@ -678,7 +674,6 @@ class DevelopmentPlan extends Component
             }
 
             $data = [
-                'mentor_id' => $plan['mentor_id'] ?: null,
                 'title' => $plan['title'] ?: 'Draft',
                 'objective' => $plan['objective'] ?: '',
                 'start_date' => $plan['start_date'] ?: now(),
@@ -967,7 +962,7 @@ class DevelopmentPlan extends Component
             ->where('year', $selectedYearInt)
             ->get();
 
-        $selfLearningData = SelfLearningPlan::with(['mentor', 'approver'])
+        $selfLearningData = SelfLearningPlan::with(['approver'])
             ->where('user_id', $user->id)
             ->where('year', $selectedYearInt)
             ->get();

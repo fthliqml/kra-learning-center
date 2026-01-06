@@ -16,7 +16,6 @@ return new class extends Migration
 
             // Foreign keys
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-            $table->foreignId('mentor_id')->nullable()->constrained('users')->nullOnDelete();
 
             // Plan Details
             $table->string('title');
