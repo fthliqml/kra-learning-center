@@ -99,9 +99,11 @@
                         <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
                             wire:click="openDetailModal({{ $module->id }})" />
 
-                        <!-- Edit -->
-                        <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
-                            wire:click="openEditModal({{ $module->id }})" />
+                        <!-- Edit (link to new edit page) -->
+                        <a href="{{ route('training-module.edit', $module) }}" wire:navigate
+                            class="btn btn-circle btn-ghost p-2 bg-tetriary">
+                            <x-icon name="o-pencil-square" class="size-4" />
+                        </a>
 
                         <!-- Delete -->
                         <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85"
@@ -131,8 +133,8 @@
                     class="focus-within:border-0" readonly />
             @else
                 <x-choices label="Competency" wire:model.defer="formData.competency_id" :options="$competencyOptions"
-                    option-value="value" option-label="label" placeholder="Select Competency" :error="$errors->first('formData.competency_id')" single
-                    searchable search-function="competencySearch" class="focus-within:border-0" />
+                    option-value="value" option-label="label" placeholder="Select Competency" :error="$errors->first('formData.competency_id')"
+                    single searchable search-function="competencySearch" class="focus-within:border-0" />
             @endif
 
             <x-textarea label="Objective" placeholder="Describe the training objectives..."
