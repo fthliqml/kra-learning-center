@@ -34,7 +34,6 @@ class ModulePosttest extends Component
   public int $passingScore = 75;
   public ?int $maxAttempts = null;
   public bool $randomizeQuestion = false;
-  public bool $showResultImmediately = true;
 
   protected $listeners = [
     'moduleCreated' => 'onModuleCreated',
@@ -76,7 +75,6 @@ class ModulePosttest extends Component
     $this->passingScore = $existingTest->passing_score ?? 75;
     $this->maxAttempts = $existingTest->max_attempts;
     $this->randomizeQuestion = $existingTest->randomize_question ?? false;
-    $this->showResultImmediately = $existingTest->show_result_immediately ?? true;
 
     $this->hasEverSaved = true;
     $this->persisted = true;
@@ -117,7 +115,6 @@ class ModulePosttest extends Component
       'passingScore' => $this->passingScore,
       'maxAttempts' => $this->maxAttempts,
       'randomizeQuestion' => $this->randomizeQuestion,
-      'showResultImmediately' => $this->showResultImmediately,
     ]));
     $this->isDirty = false;
   }
@@ -129,7 +126,6 @@ class ModulePosttest extends Component
       'passingScore' => $this->passingScore,
       'maxAttempts' => $this->maxAttempts,
       'randomizeQuestion' => $this->randomizeQuestion,
-      'showResultImmediately' => $this->showResultImmediately,
     ]));
     $this->isDirty = $currentHash !== $this->originalHash;
     if ($this->isDirty) {
@@ -210,7 +206,7 @@ class ModulePosttest extends Component
       }
     }
 
-    if (str_starts_with($prop, 'questions') || in_array($prop, ['passingScore', 'maxAttempts', 'randomizeQuestion', 'showResultImmediately'])) {
+    if (str_starts_with($prop, 'questions') || in_array($prop, ['passingScore', 'maxAttempts', 'randomizeQuestion'])) {
       $this->computeDirty();
     }
   }
@@ -343,7 +339,6 @@ class ModulePosttest extends Component
           'passing_score' => $this->passingScore,
           'max_attempts' => $this->maxAttempts,
           'randomize_question' => $this->randomizeQuestion,
-          'show_result_immediately' => $this->showResultImmediately,
         ]
       );
 

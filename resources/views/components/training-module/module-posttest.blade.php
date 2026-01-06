@@ -19,11 +19,6 @@
                         class="checkbox checkbox-sm checkbox-primary" />
                     <span class="text-sm">Randomize Questions</span>
                 </label>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" wire:model.live="showResultImmediately"
-                        class="checkbox checkbox-sm checkbox-primary" />
-                    <span class="text-sm">Show Result Immediately</span>
-                </label>
             </div>
         </div>
     </div>

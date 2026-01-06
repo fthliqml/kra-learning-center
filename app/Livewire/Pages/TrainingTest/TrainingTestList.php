@@ -86,7 +86,7 @@ class TrainingTestList extends Component
     // Get IN-type trainings where user is assigned
     $trainings = Training::with(['module.pretest', 'module.posttest', 'competency'])
       ->where('type', 'IN')
-      ->whereIn('status', ['pending', 'ongoing'])
+      ->whereIn('status', ['pending', 'in_progress', 'ongoing'])
       ->whereHas('assessments', fn($q) => $q->where('employee_id', $userId))
       ->when($this->search, function ($q) {
         $q->where(function ($sub) {

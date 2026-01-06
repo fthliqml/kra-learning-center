@@ -57,6 +57,9 @@ class ModuleInformation extends Component
 
   public function mount(): void
   {
+    // Load competency options
+    $this->loadCompetencyOptions();
+
     if ($this->moduleId) {
       $module = TrainingModule::with('competency')->find($this->moduleId);
       if ($module) {
@@ -73,18 +76,40 @@ class ModuleInformation extends Component
         ];
         $this->hasEverSaved = true;
         $this->persisted = true;
+
+        // Ensure selected competency is in options
+        if ($module->competency && !collect($this->competencyOptions)->contains('value', $module->competency_id)) {
+          array_unshift($this->competencyOptions, [
+            'value' => $module->competency->id,
+            'label' => "[{$module->competency->code}] {$module->competency->name}",
+          ]);
+        }
       }
     }
     $this->snapshot();
   }
 
+  /**
+   * Load initial competency options
+   */
+  public function loadCompetencyOptions(): void
+  {
+    $this->competencyOptions = Competency::orderBy('code')
+      ->limit(50)
+      ->get()
+      ->map(fn($c) => ['value' => $c->id, 'label' => "[{$c->code}] {$c->name}"])
+      ->toArray();
+  }
+
   public function competencySearch(string $value = ''): void
   {
     $this->competencyOptions = Competency::query()
-      ->when($value, fn($q) => $q->where('name', 'like', "%{$value}%"))
-      ->limit(30)
+      ->when($value, fn($q) => $q->where('name', 'like', "%{$value}%")
+        ->orWhere('code', 'like', "%{$value}%"))
+      ->orderBy('code')
+      ->limit(50)
       ->get()
-      ->map(fn($c) => ['value' => $c->id, 'label' => $c->name])
+      ->map(fn($c) => ['value' => $c->id, 'label' => "[{$c->code}] {$c->name}"])
       ->toArray();
   }
 
