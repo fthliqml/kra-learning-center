@@ -42,8 +42,8 @@ class Module extends Component
         'method' => '',
         'duration' => '',
         'frequency' => '',
-        'theory_passing_score' => '',
-        'practical_passing_score' => '',
+        'theory_passing_score' => 75,
+        'practical_passing_score' => 'B',
     ];
 
     protected $rules = [
