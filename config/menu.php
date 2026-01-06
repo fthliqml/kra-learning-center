@@ -10,32 +10,28 @@ return [
             'href' => '/',
         ],
 
-        // Competency - Admin Role + Leadership Positions
+        // Competency - Admin, Instructor, Certificator Role
         [
             'id' => 'competency',
             'label' => 'Competency',
             'icon' => 'archive-box',
             'href' => '/competency',
-            'positions' => ['section_head', 'department_head', 'division_head'],
-            'roles' => ['admin'],
+            'roles' => ['admin', 'instructor', 'certificator'],
             'submenu' => [
                 [
                     'label' => 'Competency Book',
                     'href' => '/competency/book',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
-                    'roles' => ['admin'],
+                    'roles' => ['admin', 'instructor', 'certificator'],
                 ],
                 [
                     'label' => 'Competency Value',
                     'href' => '/competency/value',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
-                    'roles' => ['admin'],
+                    'roles' => ['admin', 'instructor', 'certificator'],
                 ],
                 [
                     'label' => 'Competency Matrix',
                     'href' => '/competency/matrix',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
-                    'roles' => ['admin'],
+                    'roles' => ['admin', 'instructor', 'certificator'],
                 ],
             ],
         ],
@@ -70,7 +66,7 @@ return [
             'label' => 'Courses',
             'icon' => 'book-open',
             'href' => '/courses',
-            'positions' => ['employee', 'supervisor'],
+            'positions' => ['employee', 'supervisor', 'department_head', 'division_head'],
             'exclude_roles' => ['admin', 'instructor', 'certificator', 'multimedia'],
         ],
 
@@ -80,19 +76,25 @@ return [
             'label' => 'Training',
             'icon' => 'academic-cap',
             'href' => '#',
-            'positions' => ['employee', 'supervisor'],
+            'positions' => ['employee', 'supervisor', 'department_head', 'division_head'],
             'exclude_roles' => ['admin', 'instructor', 'certificator'],
             'submenu' => [
                 [
                     'label' => 'Training Schedule',
                     'href' => '/training/schedule',
-                    'positions' => ['employee', 'supervisor'],
+                    'positions' => ['employee', 'supervisor', 'department_head', 'division_head'],
+                    'exclude_roles' => ['admin', 'instructor', 'certificator'],
+                ],
+                [
+                    'label' => 'Training Approval',
+                    'href' => '/training/approval',
+                    'positions' => ['department_head'],
                     'exclude_roles' => ['admin', 'instructor', 'certificator'],
                 ],
                 [
                     'label' => 'Training Request',
                     'href' => '/training/request',
-                    'positions' => ['supervisor'],
+                    'positions' => ['supervisor', 'department_head', 'division_head'],
                 ],
             ],
         ],
@@ -103,19 +105,19 @@ return [
             'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
-            'positions' => ['employee', 'supervisor'],
+            'positions' => ['employee', 'supervisor', 'department_head', 'division_head'],
             'exclude_roles' => ['admin', 'instructor', 'certificator'],
             'submenu' => [
                 [
                     'label' => 'Survey 1',
                     'href' => '/survey/1',
-                    'positions' => ['employee', 'supervisor'],
+                    'positions' => ['employee', 'supervisor', 'department_head', 'division_head'],
                     'exclude_roles' => ['admin', 'instructor', 'certificator'],
                 ],
                 [
                     'label' => 'Survey 3',
                     'href' => '/survey/3',
-                    'positions' => ['supervisor'],
+                    'positions' => ['supervisor', 'department_head', 'division_head'],
                 ],
             ],
         ],
@@ -126,37 +128,37 @@ return [
             'label' => 'Training',
             'icon' => 'academic-cap',
             'href' => '#',
-            'positions' => ['section_head', 'department_head', 'division_head'],
+            'positions' => ['section_head'],
             'roles' => ['admin', 'instructor', 'certificator'],
             'submenu' => [
                 [
                     'label' => 'Trainer',
                     'href' => '/training/trainer',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Training Module',
                     'href' => '/training/module',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Training Schedule',
                     'href' => '/training/schedule',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Training Request',
                     'href' => '/training/request',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Training Approval',
                     'href' => '/training/approval',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                 ],
             ],
         ],
@@ -167,7 +169,7 @@ return [
             'label' => 'Course',
             'icon' => 'folder-open',
             'href' => '/courses/management',
-            'positions' => ['section_head', 'department_head', 'division_head'],
+            'positions' => ['section_head'],
             'roles' => ['multimedia', 'instructor', 'certificator', 'admin'],
         ],
 
@@ -183,19 +185,19 @@ return [
                 [
                     'label' => 'Certification Module',
                     'href' => '/certification/module',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['certificator', 'admin'],
                 ],
                 [
                     'label' => 'Certification Schedule',
                     'href' => '/certification/schedule',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['certificator', 'admin'],
                 ],
                 [
                     'label' => 'Certification Point',
                     'href' => '/certification/point',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['certificator', 'admin'],
                 ],
                 [
@@ -212,7 +214,7 @@ return [
             'label' => 'Survey',
             'icon' => 'document-text',
             'href' => '#',
-            'positions' => ['section_head', 'department_head', 'division_head'],
+            'positions' => ['section_head'],
             'roles' => ['instructor', 'certificator', 'admin'],
             'submenu' => [
                 [
@@ -223,13 +225,13 @@ return [
                 [
                     'label' => 'Survey 1',
                     'href' => '/survey/1/management',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
                 [
                     'label' => 'Survey 3',
                     'href' => '/survey/3/management',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['instructor', 'certificator', 'admin'],
                 ],
             ],
@@ -259,19 +261,19 @@ return [
             'label' => 'Reports',
             'icon' => 'chart-bar',
             'href' => '#',
-            'positions' => ['section_head', 'department_head', 'division_head'],
+            'positions' => ['section_head'],
             'roles' => ['instructor', 'certificator', 'admin', 'multimedia'],
             'submenu' => [
                 [
                     'label' => 'Training Activity',
                     'href' => '/reports/training-activity',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['instructor', 'certificator', 'admin', 'multimedia'],
                 ],
                 [
                     'label' => 'Certification Activity',
                     'href' => '/reports/certification-activity',
-                    'positions' => ['section_head', 'department_head', 'division_head'],
+                    'positions' => ['section_head'],
                     'roles' => ['instructor', 'certificator', 'admin', 'multimedia'],
                 ],
                 [
