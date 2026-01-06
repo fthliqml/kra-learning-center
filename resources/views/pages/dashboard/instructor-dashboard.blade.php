@@ -22,7 +22,7 @@
         </a>
 
         {{-- Instructor Daily Record Card --}}
-        <a href="{{ route('reports.training-activity') }}" wire:navigate
+        <a href="{{ route('reports.instructor-daily-record') }}" wire:navigate
             class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 hover:shadow-md hover:border-primary/30 transition-all duration-200">
             <div class="flex items-center gap-4">
                 <div

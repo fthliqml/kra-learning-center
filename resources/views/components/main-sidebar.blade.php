@@ -50,9 +50,18 @@
         }
         // Dispatch custom event for charts to resize smoothly
         window.dispatchEvent(new CustomEvent('sidebar-toggled'));
+    },
+    syncState() {
+        // Sync state from localStorage on Livewire navigate
+        this.isOpen = JSON.parse(localStorage.getItem('sidebarOpen') || 'false');
+        document.documentElement.setAttribute('data-sidebar', this.isOpen ? 'open' : 'closed');
+        // Reset expanded menu when sidebar is closed
+        if (!this.isOpen) {
+            this.expandedMenu = null;
+        }
     }
 }" x-init="$el.classList.remove('sidebar-open', 'sidebar-closed');
-document.documentElement.setAttribute('data-sidebar', isOpen ? 'open' : 'closed');"
+document.documentElement.setAttribute('data-sidebar', isOpen ? 'open' : 'closed');" x-on:livewire:navigated.window="syncState()"
     class="sidebar-wrapper relative flex md:transition-all duration-500 ease-in-out"
     :class="{
         'md:min-w-64 sidebar-open': isOpen,
