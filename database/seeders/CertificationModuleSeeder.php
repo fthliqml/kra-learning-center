@@ -3,7 +3,6 @@
 namespace Database\Seeders;
 
 use App\Models\CertificationModule;
-use App\Models\Competency;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -14,20 +13,11 @@ class CertificationModuleSeeder extends Seeder
      */
     public function run(): void
     {
-        // Map competency names to actual competency IDs
-        $competencyMap = [
-            'Safety' => Competency::where('name', 'like', '%Safety%')->first()?->id ?? Competency::first()?->id,
-            'Quality' => Competency::where('name', 'like', '%Quality%')->first()?->id ?? Competency::first()?->id,
-            'Operations' => Competency::where('name', 'like', '%5S%')->orWhere('name', 'like', '%Operation%')->first()?->id ?? Competency::first()?->id,
-            'Maintenance' => Competency::where('name', 'like', '%Maintenance%')->orWhere('name', 'like', '%Problem%')->first()?->id ?? Competency::first()?->id,
-        ];
-
         $rows = [
             [
                 'code' => 'CM001',
                 'module_title' => 'Foundation Safety',
                 'level' => 'Basic',
-                'competency_id' => $competencyMap['Safety'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 5,
                 'new_gex' => 0.50,
@@ -42,7 +32,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM002',
                 'module_title' => 'Quality Essentials',
                 'level' => 'Basic',
-                'competency_id' => $competencyMap['Quality'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 6,
                 'new_gex' => 0.55,
@@ -57,7 +46,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM003',
                 'module_title' => 'Tools Handling',
                 'level' => 'Basic',
-                'competency_id' => $competencyMap['Operations'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 6,
                 'new_gex' => 0.60,
@@ -72,7 +60,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM004',
                 'module_title' => 'Maintenance 101',
                 'level' => 'Basic',
-                'competency_id' => $competencyMap['Maintenance'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 7,
                 'new_gex' => 0.65,
@@ -87,7 +74,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM005',
                 'module_title' => 'Operational Basics',
                 'level' => 'Basic',
-                'competency_id' => $competencyMap['Operations'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 7,
                 'new_gex' => 0.70,
@@ -102,7 +88,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM006',
                 'module_title' => 'Advanced Safety',
                 'level' => 'Intermediate',
-                'competency_id' => $competencyMap['Safety'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 8,
                 'new_gex' => 0.80,
@@ -117,7 +102,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM007',
                 'module_title' => 'Quality Control',
                 'level' => 'Intermediate',
-                'competency_id' => $competencyMap['Quality'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 8,
                 'new_gex' => 0.85,
@@ -132,7 +116,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM008',
                 'module_title' => 'Diagnostics',
                 'level' => 'Intermediate',
-                'competency_id' => $competencyMap['Maintenance'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 9,
                 'new_gex' => 0.90,
@@ -147,7 +130,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM009',
                 'module_title' => 'Process Optimization',
                 'level' => 'Intermediate',
-                'competency_id' => $competencyMap['Operations'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 9,
                 'new_gex' => 0.95,
@@ -162,7 +144,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM010',
                 'module_title' => 'Advanced Tools',
                 'level' => 'Intermediate',
-                'competency_id' => $competencyMap['Operations'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 10,
                 'new_gex' => 1.00,
@@ -177,7 +158,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM011',
                 'module_title' => 'Safety Leadership',
                 'level' => 'Advanced',
-                'competency_id' => $competencyMap['Safety'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 10,
                 'new_gex' => 1.10,
@@ -192,7 +172,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM012',
                 'module_title' => 'Quality Assurance',
                 'level' => 'Advanced',
-                'competency_id' => $competencyMap['Quality'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 11,
                 'new_gex' => 1.15,
@@ -207,7 +186,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM013',
                 'module_title' => 'Predictive Maintenance',
                 'level' => 'Advanced',
-                'competency_id' => $competencyMap['Maintenance'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 12,
                 'new_gex' => 1.20,
@@ -222,7 +200,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM014',
                 'module_title' => 'Lean Operations',
                 'level' => 'Advanced',
-                'competency_id' => $competencyMap['Operations'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 12,
                 'new_gex' => 1.25,
@@ -237,7 +214,6 @@ class CertificationModuleSeeder extends Seeder
                 'code' => 'CM015',
                 'module_title' => 'Expert Review',
                 'level' => 'Advanced',
-                'competency_id' => $competencyMap['Quality'],
                 'group_certification' => 'PPT AND PPM',
                 'points_per_module' => 13,
                 'new_gex' => 1.30,
