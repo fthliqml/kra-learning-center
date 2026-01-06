@@ -20,7 +20,7 @@
                             <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
                         @endif
                     </button>
-                    @role('admin')
+                    @anyrole('admin', 'certificator')
                         <button type="button" wire:click="setActiveTab('close-certification')"
                             class="pb-3 relative cursor-pointer focus:outline-none transition {{ $activeTab === 'close-certification' ? 'text-primary' : 'text-gray-500 hover:text-gray-700' }}">
                             Close Certification
@@ -28,7 +28,7 @@
                                 <span class="absolute left-0 -bottom-[1px] h-[2px] w-full bg-primary rounded"></span>
                             @endif
                         </button>
-                    @endrole
+                    @endanyrole
                 </div>
                 <div class="flex items-center gap-3 pb-1">
                     @php
@@ -152,7 +152,7 @@
                     class="btn bg-white hover:bg-gray-100 hover:opacity-80 w-full sm:w-auto">
                     Close
                 </x-button>
-                @role('admin')
+                @anyrole('admin', 'certificator')
                     @if (!$isClosed && $activeTab === 'close-certification')
                         <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
                             <x-button wire:click="triggerSaveDraft" spinner="triggerSaveDraft"
@@ -167,7 +167,7 @@
                             </x-button>
                         </div>
                     @endif
-                @endrole
+                @endanyrole
             </div>
         </x-modal>
     @endif
