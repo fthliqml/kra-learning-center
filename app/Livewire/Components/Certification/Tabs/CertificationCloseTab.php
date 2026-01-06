@@ -60,10 +60,13 @@ class CertificationCloseTab extends Component
         $theoryId = $theorySession?->id;
         $practicalId = $practicalSession?->id;
 
-        $participants = CertificationParticipant::with(['employee', 'scores' => function ($q) use ($theoryId, $practicalId) {
-            $q->when($theoryId, fn($qq) => $qq->orWhere('session_id', $theoryId))
-                ->when($practicalId, fn($qq) => $qq->orWhere('session_id', $practicalId));
-        }])->where('certification_id', $this->certificationId)->get();
+        $participants = CertificationParticipant::with([
+            'employee',
+            'scores' => function ($q) use ($theoryId, $practicalId) {
+                $q->when($theoryId, fn($qq) => $qq->orWhere('session_id', $theoryId))
+                    ->when($practicalId, fn($qq) => $qq->orWhere('session_id', $practicalId));
+            }
+        ])->where('certification_id', $this->certificationId)->get();
 
         $this->participantsData = [];
         $this->tempScores = [];
@@ -110,7 +113,8 @@ class CertificationCloseTab extends Component
 
     public function saveDraft(): void
     {
-        if ($this->isClosed) return;
+        if ($this->isClosed)
+            return;
 
         $this->validateTemp();
 
@@ -163,13 +167,15 @@ class CertificationCloseTab extends Component
 
     private function getNumericScore($value): ?float
     {
-        if ($value === null || $value === '') return null;
-        return is_numeric($value) ? (float)$value : null;
+        if ($value === null || $value === '')
+            return null;
+        return is_numeric($value) ? (float) $value : null;
     }
 
     private function saveSessionScore(int $participantId, ?int $sessionId, ?float $score, float $passingScore): ?string
     {
-        if (!$sessionId || $score === null) return null;
+        if (!$sessionId || $score === null)
+            return null;
 
         $status = $score >= $passingScore ? 'passed' : 'failed';
 
@@ -267,17 +273,20 @@ class CertificationCloseTab extends Component
     {
         $incomplete = [];
 
-        foreach ($this->rows as $row) {
-            $scores = $this->tempScores[$row['participant_id']] ?? [];
-            $hasTheorySession = !empty($row['theory_session_id']);
-            $hasPracticalSession = !empty($row['practical_session_id']);
+        // Use participantsData instead of rows to ensure we have session IDs
+        foreach ($this->participantsData as $participant) {
+            $participantId = $participant['participant_id'];
+            $scores = $this->tempScores[$participantId] ?? [];
+            $hasTheorySession = !empty($participant['theory_session_id']);
+            $hasPracticalSession = !empty($participant['practical_session_id']);
+            $participantName = $participant['name'] ?? 'Unknown';
 
             if ($hasTheorySession && !is_numeric($scores['theory'] ?? null)) {
-                $incomplete[] = $row['name'] . ' (theory)';
+                $incomplete[] = $participantName . ' (theory)';
             }
 
             if ($hasPracticalSession && !is_numeric($scores['practical'] ?? null)) {
-                $incomplete[] = $row['name'] . ' (practical)';
+                $incomplete[] = $participantName . ' (practical)';
             }
         }
 
@@ -393,8 +402,8 @@ class CertificationCloseTab extends Component
             return 'pending';
         }
 
-        $theoryValue = (float)$theoryScore;
-        $practicalValue = (float)$practicalScore;
+        $theoryValue = (float) $theoryScore;
+        $practicalValue = (float) $practicalScore;
         $theoryPassed = $hasTheorySession ? ($theoryValue >= $theoryPassingScore) : true;
         $practicalPassed = $hasPracticalSession ? ($practicalValue >= $practicalPassingScore) : true;
 
