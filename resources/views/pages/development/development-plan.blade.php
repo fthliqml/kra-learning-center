@@ -615,12 +615,57 @@
 
                                     <x-input label="Frequency"
                                         wire:model="mentoringPlans.{{ $index }}.frequency" type="number"
-                                        placeholder="Enter frequency" class="focus-within:border-0" />
+                                        placeholder="Enter frequency" class="focus-within:border-0" readonly />
 
                                     <x-input label="Duration (minutes)"
                                         wire:model="mentoringPlans.{{ $index }}.duration" type="number"
                                         placeholder="Enter duration in minutes" class="focus-within:border-0"
                                         helper="Duration should be entered in minutes" />
+                                </div>
+
+                                <div class="space-y-3">
+                                    <label class="label p-0">
+                                        <span class="label-text text-xs leading-[18px] font-semibold text-[#123456]">
+                                            Month
+                                        </span>
+                                    </label>
+
+                                    <div class="space-y-2">
+                                        @php
+                                            $planMonths = $plan['plan_months'] ?? [];
+                                        @endphp
+                                        @foreach ($planMonths as $mIndex => $month)
+                                            <div class="w-full relative">
+                                                <x-datepicker
+                                                    wire:model="mentoringPlans.{{ $index }}.plan_months.{{ $mIndex }}"
+                                                    icon="o-calendar" class="w-full focus-within:border-0 pr-9"
+                                                    :config="[
+                                                        'altInput' => true,
+                                                        'plugins' => [
+                                                            [
+                                                                'monthSelectPlugin' => [
+                                                                    'dateFormat' => 'Y-m',
+                                                                    'altFormat' => 'F Y',
+                                                                ],
+                                                            ],
+                                                        ],
+                                                    ]" />
+                                                @if (count($planMonths) > 2)
+                                                    <button type="button"
+                                                        wire:click="removeMentoringMonth({{ $index }}, {{ $mIndex }})"
+                                                        class="absolute inset-y-0 right-0 my-auto p-1 px-2 text-red-500 hover:bg-red-50 rounded-md flex items-center justify-center">
+                                                        <x-icon name="o-trash" class="size-4" />
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+
+                                        <button type="button" wire:click="addMentoringMonth({{ $index }})"
+                                            class="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                                            <x-icon name="o-plus" class="size-3" />
+                                            Add Month Plan
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         @endforeach

@@ -24,6 +24,9 @@ return new class extends Migration
             $table->integer('frequency')->default(0);
             $table->integer('duration')->default(0);
 
+            // Planned mentoring months (at least 2, flexible via UI)
+            $table->json('plan_months')->nullable();
+
             // Status & Period
             $table->string('status')->default('draft');
             $table->unsignedSmallInteger('year');
