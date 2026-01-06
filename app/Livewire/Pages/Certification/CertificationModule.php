@@ -31,13 +31,13 @@ class CertificationModule extends Component
         'module_title' => '',
         'level' => '',
         'group_certification' => '',
-        'points_per_module' => null,
-        'new_gex' => null,
-        'duration' => null,
+        'points_per_module' => 0,
+        'new_gex' => 0,
+        'duration' => 120,
         'major_component' => null,
         'mach_model' => null,
-        'theory_passing_score' => null,
-        'practical_passing_score' => null,
+        'theory_passing_score' => 80,
+        'practical_passing_score' => 90,
     ];
 
     public $groupOptions = [
@@ -155,13 +155,13 @@ class CertificationModule extends Component
             'module_title' => '',
             'level' => '',
             'group_certification' => '',
-            'points_per_module' => null,
-            'new_gex' => null,
-            'duration' => null,
+            'points_per_module' => 0,
+            'new_gex' => 0,
+            'duration' => 120,
             'major_component' => null,
             'mach_model' => null,
-            'theory_passing_score' => null,
-            'practical_passing_score' => null,
+            'theory_passing_score' => 80,
+            'practical_passing_score' => 90,
         ];
         $this->editingId = null;
     }
