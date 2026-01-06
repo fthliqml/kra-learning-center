@@ -1,51 +1,78 @@
 <div>
     {{-- Header --}}
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9 grid-cols-1 lg:grid-cols-2 items-center">
-        <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
-            Training Activity Report
-        </h1>
+    <div class="flex flex-col gap-6 mb-8">
+        {{-- Title & Actions --}}
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+            <h1 class="text-primary text-3xl lg:text-4xl font-bold">
+                Training Activity Report
+            </h1>
 
-        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
-            <div class="flex items-center justify-center gap-2">
-                {{-- Export Button --}}
-                <x-button class="btn-success h-10" wire:click="export" wire:loading.attr="disabled" spinner="export">
-                    <span class="flex items-center gap-2">
-                        <x-icon name="o-arrow-down-on-square" class="size-4" />
-                        Export
-                    </span>
+            <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+                <x-search-input placeholder="Search training..." wire:model.live.debounce.300ms="search"
+                    class="w-full sm:w-72" />
+
+                <x-button class="btn-success h-10 w-full sm:w-auto text-white shadow-sm" wire:click="export"
+                    wire:loading.attr="disabled" spinner="export">
+                    <x-icon name="o-arrow-down-on-square" class="size-4 mr-2" />
+                    Export
                 </x-button>
+            </div>
+        </div>
 
-                {{-- Date Range Filter --}}
-                <div class="relative" x-data="{ hasValue: @js(!empty($dateRange)) }" x-init="$watch('$wire.dateRange', value => hasValue = !!value);
-                $nextTick(() => {
-                    const input = $el.querySelector('input[type=hidden], input.flatpickr-input');
-                    if (input && input._flatpickr) {
-                        input._flatpickr.config.onChange.push(() => hasValue = true);
-                        input._flatpickr.config.onClose.push(() => hasValue = !!input.value);
-                    }
-                });">
-                    <x-datepicker wire:model.live="dateRange" icon="o-calendar"
-                        class="!w-52 !h-10 focus-within:border-0" :config="[
-                            'mode' => 'range',
-                            'altInput' => true,
-                            'altFormat' => 'd-m-Y',
-                            'dateFormat' => 'Y-m-d',
-                        ]" />
-                    <span x-show="!hasValue" x-cloak
-                        class="absolute left-9 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
-                        Filter by date...
-                    </span>
+        {{-- Filters Toolbar --}}
+        <div class="p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+            <div class="flex flex-col lg:flex-row gap-4 items-center justify-between">
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 w-full items-center">
+                    @if ($hasFullAccess)
+                        {{-- Department Filter --}}
+                        <div class="w-full lg:w-56">
+                            <x-select wire:model.live="filterDepartment" :options="$departments" placeholder="All Departments"
+                                placeholder-value="" class="select-sm w-full h-10" />
+                        </div>
+
+                        {{-- Section Filter --}}
+                        <div class="w-full lg:w-48">
+                            <x-select wire:model.live="filterSection" :options="$sections" placeholder="All Sections"
+                                placeholder-value="" class="select-sm w-full h-10" />
+                        </div>
+                    @endif
+
+                    {{-- Date Range Filter --}}
+                    <div class="w-full lg:w-64 relative" x-data="{ hasValue: @js(!empty($dateRange)) }" x-init="$watch('$wire.dateRange', value => hasValue = !!value);
+                    $nextTick(() => {
+                        const input = $el.querySelector('input[type=hidden], input.flatpickr-input');
+                        if (input && input._flatpickr) {
+                            input._flatpickr.config.onChange.push(() => hasValue = true);
+                            input._flatpickr.config.onClose.push(() => hasValue = !!input.value);
+                        }
+                    });">
+                        <div class="relative w-full">
+                            <x-datepicker wire:model.live="dateRange" icon="o-calendar" class="input-sm w-full h-10"
+                                :config="[
+                                    'mode' => 'range',
+                                    'altInput' => true,
+                                    'altFormat' => 'd-m-Y',
+                                    'dateFormat' => 'Y-m-d',
+                                ]" />
+                            <span x-show="!hasValue" x-cloak
+                                class="absolute left-11 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none">
+                                Filter by date...
+                            </span>
+                        </div>
+                    </div>
                 </div>
 
-                {{-- Clear Filter Button --}}
-                @if ($dateRange || $search)
-                    <x-button class="btn-ghost btn-sm h-10 px-2" wire:click="clearFilters" title="Clear all filters">
-                        <x-icon name="o-x-mark" class="size-5 text-gray-500" />
-                    </x-button>
+                {{-- Clear Filter --}}
+                @if ($dateRange || $search || $filterDepartment || $filterSection)
+                    <div
+                        class="w-full lg:w-auto flex justify-end lg:justify-start pt-2 lg:pt-0 border-t lg:border-t-0 border-gray-100 lg:border-0 mt-2 lg:mt-0">
+                        <x-button class="btn-ghost btn-sm text-error hover:bg-red-50" wire:click="clearFilters">
+                            <x-icon name="o-trash" class="size-4 mr-1" />
+                            Clear Filters
+                        </x-button>
+                    </div>
                 @endif
             </div>
-
-            <x-search-input placeholder="Search training..." class="max-w-72" wire:model.live.debounce.300ms="search" />
         </div>
     </div>
 

@@ -13,9 +13,15 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 
 /**
  * @property string|null $role
+ * @property string|null $position
+ * @property string|null $section
+ * @property string|null $department
+ * @property string|null $division
  * @method bool hasRole(string $role)
  * @method bool hasAnyRole(array|string $roles)
  * @method bool hasAllRoles(array|string $roles)
+ * @method bool hasPosition(string $position)
+ * @method bool hasAnyPosition(array|string $positions)
  */
 class User extends Authenticatable
 {
