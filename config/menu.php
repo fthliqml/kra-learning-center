@@ -166,6 +166,12 @@ return [
           'href' => '/training/approval',
           'positions' => ['section_head'],
         ],
+        [
+          'label' => 'Test Review',
+          'href' => '/test-review',
+          'positions' => ['section_head'],
+          'roles' => ['instructor', 'admin'],
+        ],
       ],
     ],
 
