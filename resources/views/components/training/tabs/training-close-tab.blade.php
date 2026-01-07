@@ -61,6 +61,25 @@
                     </div>
                 @endscope
 
+                @if (!$isLms)
+                    {{-- Custom cell untuk Pretest Score --}}
+                    @scope('cell_pretest_score', $assessment)
+                        <div class="flex justify-center">
+                            @php $trainingDone = $assessment->training_done ?? false; @endphp
+                            @if ($trainingDone)
+                                <div tabindex="-1"
+                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
+                                    {{ $assessment->pretest_score ?? '-' }}</div>
+                            @else
+                                <input type="number" min="0" max="100" step="0.1"
+                                    wire:model.live="tempScores.{{ $assessment->id }}.pretest_score"
+                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                                    placeholder="0-100">
+                            @endif
+                        </div>
+                    @endscope
+                @endif
+
                 {{-- Custom cell untuk Posttest Score --}}
                 @scope('cell_posttest_score', $assessment)
                     <div class="flex justify-center">

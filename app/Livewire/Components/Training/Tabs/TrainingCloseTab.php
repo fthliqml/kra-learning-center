@@ -54,6 +54,9 @@ class TrainingCloseTab extends Component
 
     // LMS: override theory score from course posttest and remove practical
     $this->syncLmsScoresFromPosttest();
+
+    // Internal Training: sync pretest and posttest scores from web-based tests
+    $this->syncInternalTrainingScores();
   }
 
   public function loadTempScores()
@@ -151,6 +154,94 @@ class TrainingCloseTab extends Component
     }
   }
 
+  /**
+   * For Internal Training (IN type), sync pretest and posttest scores from web-based test attempts.
+   * Only updates if the employee has completed and reviewed test attempts.
+   */
+  protected function syncInternalTrainingScores(): void
+  {
+    if ($this->isLms()) {
+      return;
+    }
+
+    $trainingType = strtoupper((string) ($this->training?->type ?? ''));
+    if ($trainingType !== 'IN') {
+      return;
+    }
+
+    $moduleId = (int) ($this->training?->training_module_id ?? 0);
+    if ($moduleId <= 0) {
+      return;
+    }
+
+    // Get pretest and posttest for this module
+    $pretest = Test::where('training_module_id', $moduleId)->where('type', 'pretest')->first();
+    $posttest = Test::where('training_module_id', $moduleId)->where('type', 'posttest')->first();
+
+    if (!$pretest && !$posttest) {
+      return;
+    }
+
+    $assessments = TrainingAssessment::where('training_id', $this->trainingId)->select(['id', 'employee_id'])->get();
+    if ($assessments->isEmpty()) {
+      return;
+    }
+
+    $userIds = $assessments->pluck('employee_id')->filter()->unique()->values()->all();
+    if (empty($userIds)) {
+      return;
+    }
+
+    // Get latest submitted attempts for pretest
+    $pretestAttemptsByUser = collect();
+    if ($pretest) {
+      $pretestAttempts = TestAttempt::where('test_id', $pretest->id)
+        ->whereIn('user_id', $userIds)
+        ->where('status', TestAttempt::STATUS_SUBMITTED) // Only fully reviewed attempts
+        ->orderByDesc('submitted_at')
+        ->orderByDesc('id')
+        ->get(['id', 'user_id', 'total_score', 'is_passed', 'submitted_at']);
+
+      $pretestAttemptsByUser = $pretestAttempts->groupBy('user_id')->map(fn($rows) => $rows->first());
+    }
+
+    // Get latest submitted attempts for posttest
+    $posttestAttemptsByUser = collect();
+    if ($posttest) {
+      $posttestAttempts = TestAttempt::where('test_id', $posttest->id)
+        ->whereIn('user_id', $userIds)
+        ->where('status', TestAttempt::STATUS_SUBMITTED) // Only fully reviewed attempts
+        ->orderByDesc('submitted_at')
+        ->orderByDesc('id')
+        ->get(['id', 'user_id', 'total_score', 'is_passed', 'submitted_at']);
+
+      $posttestAttemptsByUser = $posttestAttempts->groupBy('user_id')->map(fn($rows) => $rows->first());
+    }
+
+    foreach ($assessments as $assessment) {
+      $aid = (int) $assessment->id;
+      if (!isset($this->tempScores[$aid])) {
+        $this->tempScores[$aid] = ['pretest_score' => null, 'posttest_score' => null, 'practical_score' => null];
+      }
+
+      // Sync pretest score (only if not already manually set)
+      if ($pretest) {
+        $pretestAttempt = $pretestAttemptsByUser->get($assessment->employee_id);
+        if ($pretestAttempt && ($this->tempScores[$aid]['pretest_score'] === null || $this->tempScores[$aid]['pretest_score'] === '')) {
+          $this->tempScores[$aid]['pretest_score'] = (int) ($pretestAttempt->total_score ?? 0);
+        }
+      }
+
+      // Sync posttest score (only if not already manually set)
+      if ($posttest) {
+        $posttestAttempt = $posttestAttemptsByUser->get($assessment->employee_id);
+        if ($posttestAttempt && ($this->tempScores[$aid]['posttest_score'] === null || $this->tempScores[$aid]['posttest_score'] === '')) {
+          $this->tempScores[$aid]['posttest_score'] = (int) ($posttestAttempt->total_score ?? 0);
+        }
+      }
+    }
+  }
+
   public function updated($property): void
   {
     if ($property === 'search') {
@@ -173,6 +264,7 @@ class TrainingCloseTab extends Component
       ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
       ['key' => 'employee_name', 'label' => 'Employee Name', 'class' => 'min-w-[150px]'],
       ['key' => 'attendance_percentage', 'label' => 'Attendance', 'class' => '!text-center min-w-[110px]'],
+      ['key' => 'pretest_score', 'label' => 'Pre-test Score', 'class' => '!text-center min-w-[120px]'],
       ['key' => 'posttest_score', 'label' => 'Post-test Score', 'class' => '!text-center min-w-[120px]'],
       ['key' => 'practical_score', 'label' => 'Practical Score', 'class' => '!text-center min-w-[120px]'],
       ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
@@ -187,6 +279,9 @@ class TrainingCloseTab extends Component
 
     // Ensure LMS-derived theory score is always up-to-date when rendering
     $this->syncLmsScoresFromPosttest();
+
+    // Ensure Internal Training scores are synced
+    $this->syncInternalTrainingScores();
 
     $query = TrainingAssessment::query()
       ->with('employee')
@@ -215,6 +310,7 @@ class TrainingCloseTab extends Component
       }
 
       // Use temp scores
+      $pretestScore = $this->tempScores[$assessment->id]['pretest_score'];
       $posttestScore = $this->tempScores[$assessment->id]['posttest_score'];
       $practicalScore = $this->tempScores[$assessment->id]['practical_score'];
 
@@ -226,6 +322,7 @@ class TrainingCloseTab extends Component
         : null;
 
       // Attach temp scores to assessment for display
+      $assessment->temp_pretest = $pretestScore;
       $assessment->temp_posttest = $posttestScore;
       $assessment->temp_practical = $practicalScore;
 
