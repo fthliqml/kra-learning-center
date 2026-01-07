@@ -47,7 +47,7 @@
                 </div>
             </div>
         @else
-            <div class="overflow-x-auto rounded-xl border border-base-200">
+            <div class="overflow-x-auto rounded-xl border border-base-300">
                 <table class="table table-zebra">
                     <thead class="bg-base-200/50">
                         <tr>
