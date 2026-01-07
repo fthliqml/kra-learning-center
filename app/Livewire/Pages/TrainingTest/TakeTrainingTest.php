@@ -245,12 +245,12 @@ class TakeTrainingTest extends Component
         'is_passed' => $totalScore >= ($this->test->passing_score ?? 75),
       ]);
 
-      // Update TrainingAssessment with test score
+      // Update TrainingAssessment with test score (only for auto-scored tests)
       $assessment = TrainingAssessment::where('training_id', $this->training->id)
         ->where('employee_id', $userId)
         ->first();
 
-      if ($assessment) {
+      if ($assessment && !$hasEssay) {
         $scoreField = $this->testType . '_score';
         $assessment->update([
           $scoreField => $totalScore,
@@ -258,11 +258,19 @@ class TakeTrainingTest extends Component
       }
     });
 
-    $this->success(
-      'Test submitted successfully! Your score: ' . $totalScore . '%',
-      timeout: 5000,
-      position: 'toast-top toast-center'
-    );
+    if ($hasEssay) {
+      $this->success(
+        'Test submitted successfully! Your answers will be reviewed by an instructor.',
+        timeout: 5000,
+        position: 'toast-top toast-center'
+      );
+    } else {
+      $this->success(
+        'Test submitted successfully! Your score: ' . $totalScore . '%',
+        timeout: 5000,
+        position: 'toast-top toast-center'
+      );
+    }
 
     return redirect()->route('training-test.index');
   }

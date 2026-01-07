@@ -48,8 +48,13 @@ class TrainingTestList extends Component
         ->first();
 
       if ($attempt) {
-        $pretestStatus = 'completed';
-        $pretestScore = $attempt->total_score;
+        if ($attempt->status === TestAttempt::STATUS_UNDER_REVIEW) {
+          $pretestStatus = 'under_review';
+          $pretestScore = null; // Don't show score until reviewed
+        } else {
+          $pretestStatus = 'completed';
+          $pretestScore = $attempt->total_score;
+        }
       } else {
         $pretestStatus = 'available';
       }
@@ -63,11 +68,16 @@ class TrainingTestList extends Component
         ->first();
 
       if ($attempt) {
-        $posttestStatus = 'completed';
-        $posttestScore = $attempt->total_score;
+        if ($attempt->status === TestAttempt::STATUS_UNDER_REVIEW) {
+          $posttestStatus = 'under_review';
+          $posttestScore = null; // Don't show score until reviewed
+        } else {
+          $posttestStatus = 'completed';
+          $posttestScore = $attempt->total_score;
+        }
       } else {
-        // Posttest available only after pretest completed
-        $posttestStatus = ($pretestStatus === 'completed') ? 'available' : 'locked';
+        // Posttest available only after pretest completed or under review
+        $posttestStatus = in_array($pretestStatus, ['completed', 'under_review']) ? 'available' : 'locked';
       }
     }
 

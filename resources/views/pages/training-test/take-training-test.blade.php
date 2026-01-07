@@ -25,7 +25,7 @@
     </div>
 
     {{-- Divider --}}
-    <div class="border-b border-base-200 mb-4"></div>
+    <div class="border-b-2 border-base-300 mb-4"></div>
 
     {{-- Test Info Card --}}
     <div class="bg-gradient-to-r from-primary/5 to-primary/10 rounded-lg p-3 mb-4 border border-primary/20">
