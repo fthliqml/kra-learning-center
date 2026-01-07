@@ -33,10 +33,14 @@
     expandedMenu: '{{ $activeExpandedMenu }}' || null,
     toggle(id) {
         if (!this.isOpen) {
+            // Sidebar tertutup, buka sidebar dan expand menu
             this.isOpen = true;
-            localStorage.setItem('sidebarOpen', 'true');
-            this.expandedMenu = this.expandedMenu === id ? null : id;
+            localStorage.setItem('sidebarOpen', JSON.stringify(this.isOpen));
+            document.documentElement.setAttribute('data-sidebar', 'open');
+            this.expandedMenu = id; // Langsung set ke id yang diklik
+            window.dispatchEvent(new CustomEvent('sidebar-toggled'));
         } else {
+            // Sidebar sudah terbuka, toggle expanded menu
             this.expandedMenu = this.expandedMenu === id ? null : id;
         }
     },
