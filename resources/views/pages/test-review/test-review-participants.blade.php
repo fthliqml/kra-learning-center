@@ -16,10 +16,10 @@
                         class="badge badge-sm {{ $training->type === 'IN' ? 'badge-success' : 'badge-info' }}">{{ $training->type }}</span>
                     <span class="mx-2">•</span>
                     @if ($hasPretest)
-                        <span class="badge badge-xs badge-outline badge-primary">Pretest</span>
+                        <span class="badge badge-xs badge-outline badge-primary">Pre-Test</span>
                     @endif
                     @if ($hasPosttest)
-                        <span class="badge badge-xs badge-outline badge-secondary">Posttest</span>
+                        <span class="badge badge-xs badge-outline badge-secondary">Post-Test</span>
                     @endif
                 </p>
             </div>
@@ -63,10 +63,10 @@
                         <tr>
                             <th class="text-sm font-semibold">Participant</th>
                             @if ($hasPretest)
-                                <th class="text-sm font-semibold text-center">Pretest Status</th>
+                                <th class="text-sm font-semibold text-center">Pre-Test Status</th>
                             @endif
                             @if ($hasPosttest)
-                                <th class="text-sm font-semibold text-center">Posttest Status</th>
+                                <th class="text-sm font-semibold text-center">Post-Test Status</th>
                             @endif
                             <th class="text-sm font-semibold text-center">Action</th>
                         </tr>

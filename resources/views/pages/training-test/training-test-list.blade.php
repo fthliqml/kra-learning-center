@@ -6,7 +6,7 @@
                 Training Test
             </h1>
             <p class="text-base-content/60 text-xs mt-0.5">
-                Complete your pretest and posttest for assigned in-house trainings
+                Complete your pretest and post-test for assigned in-house trainings
             </p>
         </div>
 
@@ -64,7 +64,7 @@
 
                             {{-- Test Status --}}
                             <div class="space-y-3">
-                                {{-- Pretest --}}
+                                {{-- Pre-Test --}}
                                 <div class="flex items-center justify-between p-3 rounded-lg bg-base-200/80">
                                     <div class="flex items-center gap-3">
                                         <div
@@ -84,7 +84,7 @@
                                             @endif
                                         </div>
                                         <div>
-                                            <p class="text-sm font-medium">Pretest</p>
+                                            <p class="text-sm font-medium">Pre-Test</p>
                                             @if ($training->testStatus['pretest'] === 'completed')
                                                 <p class="text-xs text-success">Score:
                                                     {{ $training->testStatus['pretestScore'] ?? 0 }}%</p>
@@ -109,7 +109,7 @@
                                     @endif
                                 </div>
 
-                                {{-- Posttest --}}
+                                {{-- Post-Test --}}
                                 <div class="flex items-center justify-between p-3 rounded-lg bg-base-200/80">
                                     <div class="flex items-center gap-3">
                                         <div
@@ -138,7 +138,7 @@
                                             @endif
                                         </div>
                                         <div>
-                                            <p class="text-sm font-medium">Posttest</p>
+                                            <p class="text-sm font-medium">Post-Test</p>
                                             @if ($training->testStatus['posttest'] === 'completed')
                                                 <p class="text-xs text-success">
                                                     Passed: {{ $training->testStatus['posttestScore'] ?? 0 }}%
@@ -171,7 +171,7 @@
                                                     <span class="opacity-70">(Max attempts reached)</span>
                                                 </p>
                                             @elseif($training->testStatus['posttest'] === 'locked')
-                                                <p class="text-xs text-base-content/50">Complete pretest first</p>
+                                                <p class="text-xs text-base-content/50">Complete pre-test first</p>
                                             @else
                                                 <p class="text-xs text-base-content/40">Not available</p>
                                             @endif

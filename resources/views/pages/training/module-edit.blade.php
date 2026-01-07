@@ -10,7 +10,7 @@
                     {{ $isCreating ? 'Create Training Module' : 'Edit Training Module' }}
                 </h1>
                 <p class="text-sm text-base-content/60">
-                    {{ $isCreating ? 'Setup new training module with pretest and posttest' : $module->title ?? 'Untitled Module' }}
+                    {{ $isCreating ? 'Setup new training module with pretest and post-test' : $module->title ?? 'Untitled Module' }}
                 </p>
             </div>
         </div>
@@ -22,13 +22,13 @@
             <livewire:components.training-module.module-information :moduleId="$module->id ?? null" lazy />
         </x-tab>
 
-        {{-- TAB: Pre Test --}}
-        <x-tab name="pretest" label="Pre Test" icon="m-clipboard-document-list" :disabled="!$moduleId">
+        {{-- TAB: Pre-Test --}}
+        <x-tab name="pretest" label="Pre-Test" icon="m-clipboard-document-list" :disabled="!$moduleId">
             <livewire:components.training-module.module-pretest :moduleId="$module->id ?? null" lazy />
         </x-tab>
 
-        {{-- TAB: Post Test --}}
-        <x-tab name="posttest" label="Post Test" icon="m-check-badge" :disabled="!$moduleId">
+        {{-- TAB: Post-Test --}}
+        <x-tab name="posttest" label="Post-Test" icon="m-check-badge" :disabled="!$moduleId">
             <livewire:components.training-module.module-posttest :moduleId="$module->id ?? null" lazy />
         </x-tab>
     </x-tabs>

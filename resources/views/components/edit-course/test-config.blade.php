@@ -2,11 +2,11 @@
     <h2 class="text-xl font-semibold">Test Configuration</h2>
 
     <div class="grid md:grid-cols-2 gap-8">
-        <!-- Pre Test Settings -->
+        <!-- Pre-Test Settings -->
         <div class="card bg-base-100 shadow-sm border border-base-400">
             <div class="card-body space-y-4">
                 <h3 class="font-medium flex items-center gap-2"><x-icon name="o-clipboard-document-list" class="size-5" />
-                    Pre Test</h3>
+                    Pre-Test</h3>
                 <div class="space-y-4">
                     <div class="flex flex-wrap items-center gap-4">
                         <x-input label="Max Attempts" placeholder="∞" type="number" min="1"
@@ -19,16 +19,16 @@
                         </div>
                     </div>
                     <p class="text-xs text-base-content/60 leading-snug">
-                        Pre Test has no passing score. Set Max Attempts or leave empty for unlimited.
+                        Pre-test has no passing score. Set Max Attempts or leave empty for unlimited.
                     </p>
                 </div>
             </div>
         </div>
 
-        <!-- Post Test Settings -->
+        <!-- Post-Test Settings -->
         <div class="card bg-base-100 shadow-sm border border-base-400">
             <div class="card-body space-y-4">
-                <h3 class="font-medium flex items-center gap-2"><x-icon name="o-check-badge" class="size-5" /> Post Test
+                <h3 class="font-medium flex items-center gap-2"><x-icon name="o-check-badge" class="size-5" /> Post-Test
                 </h3>
                 <div class="space-y-4">
                     <div class="flex flex-wrap items-center gap-4">

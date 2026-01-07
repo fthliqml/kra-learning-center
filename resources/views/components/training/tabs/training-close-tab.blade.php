@@ -19,7 +19,7 @@
                                 {{ $attendanceMin }}%</span></span>
                         @if ($theoryMin !== null)
                             <span class="inline-flex items-center gap-1"><span class="font-semibold">Theory
-                                    (Posttest)</span><span>&ge;
+                                    (Post-Test)</span><span>&ge;
                                     {{ rtrim(rtrim(number_format((float) $theoryMin, 2, '.', ''), '0'), '.') }}</span></span>
                         @endif
                         @if ($practicalMin !== null)
@@ -91,7 +91,7 @@
                     @endscope
                 @endif
 
-                {{-- Custom cell untuk Posttest Score --}}
+                {{-- Custom cell untuk Post-Test Score --}}
                 @scope('cell_posttest_score', $assessment, $testReviewStatus, $training)
                     <div class="flex flex-col items-center gap-1">
                         @php

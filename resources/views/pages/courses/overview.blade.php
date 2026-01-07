@@ -161,13 +161,13 @@
                     <h2 class="text-base font-semibold mb-4">Course Content</h2>
                     <ol class="text-sm divide-y divide-gray-200 mb-5">
                         <li class="py-2 flex items-center gap-2">
-                            <span class="w-6 text-xs font-medium text-gray-500">1.</span><span>Pre Test</span>
+                            <span class="w-6 text-xs font-medium text-gray-500">1.</span><span>Pre-Test</span>
                         </li>
                         <li class="py-2 flex items-center gap-2">
                             <span class="w-6 text-xs font-medium text-gray-500">2.</span><span>Learning Module</span>
                         </li>
                         <li class="py-2 flex items-center gap-2">
-                            <span class="w-6 text-xs font-medium text-gray-500">3.</span><span>Post Test</span>
+                            <span class="w-6 text-xs font-medium text-gray-500">3.</span><span>Post-Test</span>
                         </li>
                         <li class="py-2 flex items-center gap-2">
                             <span class="w-6 text-xs font-medium text-gray-500">4.</span><span>Result</span>

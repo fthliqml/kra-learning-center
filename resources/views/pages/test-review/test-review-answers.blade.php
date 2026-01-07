@@ -44,7 +44,7 @@
                     class="tab {{ $selectedTest === 'pretest' ? 'tab-active [--tab-bg:white] [--tab-border-color:oklch(var(--p))]' : '' }}"
                     wire:click="$set('selectedTest', 'pretest')">
                     <x-icon name="o-clipboard-document-check" class="size-4 mr-2" />
-                    Pretest
+                    Pre-Test
                     @if ($pretestNeedReview > 0)
                         <span class="badge badge-warning badge-xs ml-2">{{ $pretestNeedReview }}</span>
                     @endif
@@ -58,7 +58,7 @@
                     class="tab {{ $selectedTest === 'posttest' ? 'tab-active [--tab-bg:white] [--tab-border-color:oklch(var(--p))]' : '' }}"
                     wire:click="$set('selectedTest', 'posttest')">
                     <x-icon name="o-clipboard-document-list" class="size-4 mr-2" />
-                    Posttest
+                    Post-Test
                     @if ($posttestNeedReview > 0)
                         <span class="badge badge-warning badge-xs ml-2">{{ $posttestNeedReview }}</span>
                     @endif

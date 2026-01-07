@@ -101,11 +101,11 @@
                                     <div class="flex items-center justify-center gap-1">
                                         @if ($training->reviewStats['hasPretest'])
                                             <span class="badge badge-xs badge-outline badge-primary"
-                                                title="Has Pretest">Pre</span>
+                                                title="Has Pre-Test">Pre</span>
                                         @endif
                                         @if ($training->reviewStats['hasPosttest'])
                                             <span class="badge badge-xs badge-outline badge-secondary"
-                                                title="Has Posttest">Post</span>
+                                                title="Has Post-Test">Post</span>
                                         @endif
                                     </div>
                                 </td>
