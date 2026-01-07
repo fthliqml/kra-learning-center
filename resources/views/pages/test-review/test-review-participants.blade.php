@@ -119,10 +119,18 @@
                                     @if ($hasPosttest)
                                         <td class="text-center">
                                             @if ($assessment->posttestStatus['status'] === 'under_review')
-                                                <span class="badge badge-warning badge-sm">
-                                                    <x-icon name="o-clock" class="size-3 mr-1" />
-                                                    Need Review
-                                                </span>
+                                                <div class="flex flex-col items-center">
+                                                    <span class="badge badge-warning badge-sm">
+                                                        <x-icon name="o-clock" class="size-3 mr-1" />
+                                                        {{ $assessment->posttestStatus['needReviewCount'] }} Need
+                                                        Review
+                                                    </span>
+                                                    @if ($assessment->posttestStatus['totalAttempts'] > 1)
+                                                        <span class="text-xs text-base-content/50 mt-0.5">
+                                                            {{ $assessment->posttestStatus['totalAttempts'] }} attempts
+                                                        </span>
+                                                    @endif
+                                                </div>
                                             @elseif ($assessment->posttestStatus['status'] === 'submitted')
                                                 <div class="flex flex-col items-center">
                                                     <span
@@ -130,7 +138,12 @@
                                                         {{ $assessment->posttestStatus['score'] ?? 0 }}%
                                                     </span>
                                                     <span class="text-xs text-base-content/50 mt-0.5">
-                                                        {{ $assessment->posttestStatus['isPassed'] ? 'Passed' : 'Failed' }}
+                                                        @if ($assessment->posttestStatus['totalAttempts'] > 1)
+                                                            Best: {{ $assessment->posttestStatus['bestScore'] ?? 0 }}%
+                                                            ({{ $assessment->posttestStatus['totalAttempts'] }}x)
+                                                        @else
+                                                            {{ $assessment->posttestStatus['isPassed'] ? 'Passed' : 'Failed' }}
+                                                        @endif
                                                     </span>
                                                 </div>
                                             @else

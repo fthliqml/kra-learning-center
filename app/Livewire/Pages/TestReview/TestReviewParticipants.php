@@ -125,29 +125,43 @@ class TestReviewParticipants extends Component
   }
 
   /**
-   * Get test attempt status for a user
+   * Get test attempt status for a user - supports multiple attempts
    */
   private function getTestAttemptStatus(?int $testId, int $userId): array
   {
     if (!$testId) {
-      return ['status' => null, 'score' => null, 'attemptId' => null];
+      return ['status' => null, 'score' => null, 'attemptId' => null, 'totalAttempts' => 0, 'needReviewCount' => 0];
     }
 
-    $attempt = TestAttempt::where('test_id', $testId)
+    // Get all completed attempts (submitted or under_review)
+    $attempts = TestAttempt::where('test_id', $testId)
       ->where('user_id', $userId)
       ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-      ->latest()
-      ->first();
+      ->orderBy('attempt_number', 'desc')
+      ->get();
 
-    if (!$attempt) {
-      return ['status' => null, 'score' => null, 'attemptId' => null];
+    if ($attempts->isEmpty()) {
+      return ['status' => null, 'score' => null, 'attemptId' => null, 'totalAttempts' => 0, 'needReviewCount' => 0];
     }
 
+    // Count attempts needing review
+    $needReviewCount = $attempts->where('status', TestAttempt::STATUS_UNDER_REVIEW)->count();
+
+    // Get the latest attempt for display
+    $latestAttempt = $attempts->first();
+
+    // Get best score from all submitted attempts
+    $bestScore = $attempts->where('status', TestAttempt::STATUS_SUBMITTED)->max('total_score');
+
     return [
-      'status' => $attempt->status,
-      'score' => $attempt->total_score,
-      'attemptId' => $attempt->id,
-      'isPassed' => $attempt->is_passed,
+      'status' => $latestAttempt->status,
+      'score' => $latestAttempt->total_score,
+      'bestScore' => $bestScore,
+      'attemptId' => $latestAttempt->id,
+      'attemptNumber' => $latestAttempt->attempt_number,
+      'totalAttempts' => $attempts->count(),
+      'needReviewCount' => $needReviewCount,
+      'isPassed' => $latestAttempt->is_passed,
     ];
   }
 }

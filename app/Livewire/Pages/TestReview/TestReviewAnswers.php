@@ -24,6 +24,10 @@ class TestReviewAnswers extends Component
   // Selected test (pretest or posttest)
   public string $selectedTest = 'pretest';
 
+  // Selected attempt ID for current test
+  public ?int $selectedPretestAttemptId = null;
+  public ?int $selectedPosttestAttemptId = null;
+
   // Essay scores for grading (question_id => score)
   public array $essayScores = [];
 
@@ -34,6 +38,9 @@ class TestReviewAnswers extends Component
 
     // Verify trainer has access
     $this->authorizeAccess();
+
+    // Auto-select first available attempt for each test
+    $this->initializeSelectedAttempts();
 
     // Initialize essay scores
     $this->initializeEssayScores();
@@ -55,11 +62,26 @@ class TestReviewAnswers extends Component
     }
   }
 
+  private function initializeSelectedAttempts(): void
+  {
+    // Select the first under_review attempt, or latest if none need review
+    $pretestAttempts = $this->getPretestAttempts();
+    $posttestAttempts = $this->getPosttestAttempts();
+
+    // For pretest: prefer under_review, then latest
+    $pretestNeedReview = $pretestAttempts->firstWhere('status', TestAttempt::STATUS_UNDER_REVIEW);
+    $this->selectedPretestAttemptId = $pretestNeedReview?->id ?? $pretestAttempts->first()?->id;
+
+    // For posttest: prefer under_review, then latest
+    $posttestNeedReview = $posttestAttempts->firstWhere('status', TestAttempt::STATUS_UNDER_REVIEW);
+    $this->selectedPosttestAttemptId = $posttestNeedReview?->id ?? $posttestAttempts->first()?->id;
+  }
+
   private function initializeEssayScores(): void
   {
     // Get both pretest and posttest attempts
-    $pretestAttempt = $this->getPretestAttempt();
-    $posttestAttempt = $this->getPosttestAttempt();
+    $pretestAttempt = $this->getSelectedPretestAttempt();
+    $posttestAttempt = $this->getSelectedPosttestAttempt();
 
     // Initialize pretest essay scores
     if ($pretestAttempt) {
@@ -80,39 +102,94 @@ class TestReviewAnswers extends Component
     }
   }
 
-  public function getPretestAttempt(): ?TestAttempt
+  /**
+   * Get all pretest attempts for the participant
+   */
+  public function getPretestAttempts()
   {
     $pretest = $this->training->module?->pretest;
     if (!$pretest)
-      return null;
+      return collect();
 
-    return TestAttempt::with(['answers.question.options', 'answers.selectedOption'])
-      ->where('test_id', $pretest->id)
+    return TestAttempt::where('test_id', $pretest->id)
       ->where('user_id', $this->participant->id)
       ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-      ->latest()
-      ->first();
+      ->orderBy('attempt_number', 'desc')
+      ->get();
   }
 
-  public function getPosttestAttempt(): ?TestAttempt
+  /**
+   * Get all posttest attempts for the participant
+   */
+  public function getPosttestAttempts()
   {
     $posttest = $this->training->module?->posttest;
     if (!$posttest)
+      return collect();
+
+    return TestAttempt::where('test_id', $posttest->id)
+      ->where('user_id', $this->participant->id)
+      ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
+      ->orderBy('attempt_number', 'desc')
+      ->get();
+  }
+
+  /**
+   * Get currently selected pretest attempt with answers
+   */
+  public function getSelectedPretestAttempt(): ?TestAttempt
+  {
+    if (!$this->selectedPretestAttemptId)
       return null;
 
     return TestAttempt::with(['answers.question.options', 'answers.selectedOption'])
-      ->where('test_id', $posttest->id)
-      ->where('user_id', $this->participant->id)
-      ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-      ->latest()
-      ->first();
+      ->find($this->selectedPretestAttemptId);
+  }
+
+  /**
+   * Get currently selected posttest attempt with answers
+   */
+  public function getSelectedPosttestAttempt(): ?TestAttempt
+  {
+    if (!$this->selectedPosttestAttemptId)
+      return null;
+
+    return TestAttempt::with(['answers.question.options', 'answers.selectedOption'])
+      ->find($this->selectedPosttestAttemptId);
+  }
+
+  /**
+   * When attempt selection changes, reinitialize essay scores
+   */
+  public function updatedSelectedPretestAttemptId(): void
+  {
+    $attempt = $this->getSelectedPretestAttempt();
+    if ($attempt) {
+      foreach ($attempt->answers as $answer) {
+        if ($answer->question->question_type === 'essay') {
+          $this->essayScores['pretest_' . $answer->question_id] = $answer->earned_points ?? 0;
+        }
+      }
+    }
+  }
+
+  public function updatedSelectedPosttestAttemptId(): void
+  {
+    $attempt = $this->getSelectedPosttestAttempt();
+    if ($attempt) {
+      foreach ($attempt->answers as $answer) {
+        if ($answer->question->question_type === 'essay') {
+          $this->essayScores['posttest_' . $answer->question_id] = $answer->earned_points ?? 0;
+        }
+      }
+    }
   }
 
   public function submitReview(): void
   {
     $attempt = $this->selectedTest === 'pretest'
-      ? $this->getPretestAttempt()
-      : $this->getPosttestAttempt();
+      ? $this->getSelectedPretestAttempt()
+      : $this->getSelectedPosttestAttempt();
 
     if (!$attempt) {
       $this->error('No test attempt found.');
@@ -155,12 +232,15 @@ class TestReviewAnswers extends Component
 
   public function render()
   {
-    $pretestAttempt = $this->getPretestAttempt();
-    $posttestAttempt = $this->getPosttestAttempt();
+    $pretestAttempts = $this->getPretestAttempts();
+    $posttestAttempts = $this->getPosttestAttempts();
+
+    $pretestAttempt = $this->getSelectedPretestAttempt();
+    $posttestAttempt = $this->getSelectedPosttestAttempt();
 
     // Determine which tabs are available
-    $hasPretest = $this->training->module?->pretest !== null && $pretestAttempt !== null;
-    $hasPosttest = $this->training->module?->posttest !== null && $posttestAttempt !== null;
+    $hasPretest = $this->training->module?->pretest !== null && $pretestAttempts->isNotEmpty();
+    $hasPosttest = $this->training->module?->posttest !== null && $posttestAttempts->isNotEmpty();
 
     // Auto-select first available tab
     if ($this->selectedTest === 'pretest' && !$hasPretest && $hasPosttest) {
@@ -170,6 +250,7 @@ class TestReviewAnswers extends Component
     }
 
     $currentAttempt = $this->selectedTest === 'pretest' ? $pretestAttempt : $posttestAttempt;
+    $currentAttempts = $this->selectedTest === 'pretest' ? $pretestAttempts : $posttestAttempts;
     $currentTest = $this->selectedTest === 'pretest'
       ? $this->training->module?->pretest
       : $this->training->module?->posttest;
@@ -197,18 +278,32 @@ class TestReviewAnswers extends Component
     $hasEssayToGrade = collect($questionsWithAnswers)->contains('isEssay', true);
     $isUnderReview = $currentAttempt?->status === TestAttempt::STATUS_UNDER_REVIEW;
 
+    // Build attempt options for dropdown (only for posttest - pretest is single attempt)
+    $attemptOptions = [];
+    if ($this->selectedTest === 'posttest') {
+      $attemptOptions = $posttestAttempts->map(function ($attempt) {
+        $statusLabel = $attempt->status === TestAttempt::STATUS_UNDER_REVIEW ? ' (Need Review)' : '';
+        return [
+          'value' => $attempt->id,
+          'label' => "Attempt #{$attempt->attempt_number} - {$attempt->total_score}%{$statusLabel}",
+        ];
+      })->all();
+    }
+
     return view('pages.test-review.test-review-answers', [
       'training' => $this->training,
       'participant' => $this->participant,
-      'pretestAttempt' => $pretestAttempt,
-      'posttestAttempt' => $posttestAttempt,
+      'pretestAttempts' => $pretestAttempts,
+      'posttestAttempts' => $posttestAttempts,
       'hasPretest' => $hasPretest,
       'hasPosttest' => $hasPosttest,
       'currentAttempt' => $currentAttempt,
+      'currentAttempts' => $currentAttempts,
       'currentTest' => $currentTest,
       'questionsWithAnswers' => $questionsWithAnswers,
       'hasEssayToGrade' => $hasEssayToGrade,
       'isUnderReview' => $isUnderReview,
+      'attemptOptions' => $attemptOptions,
     ]);
   }
 }

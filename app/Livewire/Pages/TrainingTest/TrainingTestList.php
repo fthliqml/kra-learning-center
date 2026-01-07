@@ -29,6 +29,9 @@ class TrainingTestList extends Component
         'posttest' => 'unavailable',
         'pretestScore' => null,
         'posttestScore' => null,
+        'posttestAttempts' => 0,
+        'posttestMaxAttempts' => null,
+        'posttestPassed' => false,
       ];
     }
 
@@ -39,7 +42,11 @@ class TrainingTestList extends Component
     $posttestStatus = 'unavailable';
     $pretestScore = null;
     $posttestScore = null;
+    $posttestAttempts = 0;
+    $posttestMaxAttempts = null;
+    $posttestPassed = false;
 
+    // PRETEST: Only check for 1 attempt
     if ($pretest) {
       $attempt = TestAttempt::where('test_id', $pretest->id)
         ->where('user_id', $userId)
@@ -50,7 +57,7 @@ class TrainingTestList extends Component
       if ($attempt) {
         if ($attempt->status === TestAttempt::STATUS_UNDER_REVIEW) {
           $pretestStatus = 'under_review';
-          $pretestScore = null; // Don't show score until reviewed
+          $pretestScore = null;
         } else {
           $pretestStatus = 'completed';
           $pretestScore = $attempt->total_score;
@@ -60,23 +67,40 @@ class TrainingTestList extends Component
       }
     }
 
+    // POSTTEST: Check multiple attempts, pass status, and max attempts
     if ($posttest) {
-      $attempt = TestAttempt::where('test_id', $posttest->id)
+      $posttestMaxAttempts = $posttest->max_attempts; // null = unlimited
+
+      $attempts = TestAttempt::where('test_id', $posttest->id)
         ->where('user_id', $userId)
         ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-        ->latest()
-        ->first();
+        ->orderBy('attempt_number', 'desc')
+        ->get();
 
-      if ($attempt) {
-        if ($attempt->status === TestAttempt::STATUS_UNDER_REVIEW) {
+      $posttestAttempts = $attempts->count();
+
+      if ($attempts->isNotEmpty()) {
+        $latestAttempt = $attempts->first();
+        $hasUnderReview = $attempts->contains('status', TestAttempt::STATUS_UNDER_REVIEW);
+        $hasPassed = $attempts->contains('is_passed', true);
+        $posttestPassed = $hasPassed;
+
+        // Get best score from completed attempts
+        $completedAttempts = $attempts->where('status', TestAttempt::STATUS_SUBMITTED);
+        $posttestScore = $completedAttempts->max('total_score');
+
+        if ($hasUnderReview) {
           $posttestStatus = 'under_review';
           $posttestScore = null; // Don't show score until reviewed
-        } else {
+        } elseif ($hasPassed) {
           $posttestStatus = 'completed';
-          $posttestScore = $attempt->total_score;
+        } else {
+          // Failed - check if can retake
+          $canRetake = !$posttestMaxAttempts || $posttestMaxAttempts == 0 || $posttestAttempts < $posttestMaxAttempts;
+          $posttestStatus = $canRetake ? 'retake' : 'failed';
         }
       } else {
-        // Posttest available only after pretest completed or under review
+        // No attempts yet - check if pretest completed
         $posttestStatus = in_array($pretestStatus, ['completed', 'under_review']) ? 'available' : 'locked';
       }
     }
@@ -86,6 +110,9 @@ class TrainingTestList extends Component
       'posttest' => $posttestStatus,
       'pretestScore' => $pretestScore,
       'posttestScore' => $posttestScore,
+      'posttestAttempts' => $posttestAttempts,
+      'posttestMaxAttempts' => $posttestMaxAttempts,
+      'posttestPassed' => $posttestPassed,
     ];
   }
 

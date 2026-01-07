@@ -37,34 +37,61 @@
         {{-- Test Tabs --}}
         <div role="tablist" class="tabs tabs-lifted mb-6">
             @if ($hasPretest)
+                @php
+                    $pretestNeedReview = $pretestAttempts->where('status', 'under_review')->count();
+                @endphp
                 <button type="button" role="tab"
                     class="tab {{ $selectedTest === 'pretest' ? 'tab-active [--tab-bg:white] [--tab-border-color:oklch(var(--p))]' : '' }}"
                     wire:click="$set('selectedTest', 'pretest')">
                     <x-icon name="o-clipboard-document-check" class="size-4 mr-2" />
                     Pretest
-                    @if ($pretestAttempt?->status === 'under_review')
-                        <span class="badge badge-warning badge-xs ml-2">Review</span>
+                    @if ($pretestNeedReview > 0)
+                        <span class="badge badge-warning badge-xs ml-2">{{ $pretestNeedReview }}</span>
                     @endif
                 </button>
             @endif
             @if ($hasPosttest)
+                @php
+                    $posttestNeedReview = $posttestAttempts->where('status', 'under_review')->count();
+                @endphp
                 <button type="button" role="tab"
                     class="tab {{ $selectedTest === 'posttest' ? 'tab-active [--tab-bg:white] [--tab-border-color:oklch(var(--p))]' : '' }}"
                     wire:click="$set('selectedTest', 'posttest')">
                     <x-icon name="o-clipboard-document-list" class="size-4 mr-2" />
                     Posttest
-                    @if ($posttestAttempt?->status === 'under_review')
-                        <span class="badge badge-warning badge-xs ml-2">Review</span>
+                    @if ($posttestNeedReview > 0)
+                        <span class="badge badge-warning badge-xs ml-2">{{ $posttestNeedReview }}</span>
                     @endif
                 </button>
             @endif
         </div>
+
+        {{-- Attempt Selector (only for posttest with multiple attempts) --}}
+        @if ($selectedTest === 'posttest' && count($attemptOptions) > 1)
+            <div class="mb-4">
+                <div class="flex items-center gap-3">
+                    <span class="text-sm font-medium text-base-content/70">Select Attempt:</span>
+                    <select class="select select-bordered select-sm w-auto" wire:model.live="selectedPosttestAttemptId">
+                        @foreach ($attemptOptions as $option)
+                            <option value="{{ $option['value'] }}">{{ $option['label'] }}</option>
+                        @endforeach
+                    </select>
+                    <span class="text-xs text-base-content/50">
+                        {{ count($attemptOptions) }} total attempts (re-attempt on fail)
+                    </span>
+                </div>
+            </div>
+        @endif
 
         {{-- Test Summary Card --}}
         @if ($currentAttempt)
             <div class="card bg-base-100 border border-base-200 mb-6">
                 <div class="card-body p-4">
                     <div class="flex flex-wrap items-center gap-6">
+                        <div>
+                            <p class="text-xs text-base-content/60 uppercase tracking-wide">Attempt</p>
+                            <p class="text-lg font-bold">#{{ $currentAttempt->attempt_number }}</p>
+                        </div>
                         <div>
                             <p class="text-xs text-base-content/60 uppercase tracking-wide">Status</p>
                             <span

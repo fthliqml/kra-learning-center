@@ -117,6 +117,8 @@
                                             @if ($training->testStatus['posttest'] === 'completed') bg-success/20 text-success
                                             @elseif($training->testStatus['posttest'] === 'under_review') bg-warning/20 text-warning
                                             @elseif($training->testStatus['posttest'] === 'available') bg-primary/20 text-primary
+                                            @elseif($training->testStatus['posttest'] === 'retake') bg-error/20 text-error
+                                            @elseif($training->testStatus['posttest'] === 'failed') bg-error/20 text-error
                                             @elseif($training->testStatus['posttest'] === 'locked') bg-base-300 text-base-content/50
                                             @else bg-base-300 text-base-content/40 @endif">
                                             @if ($training->testStatus['posttest'] === 'completed')
@@ -125,6 +127,10 @@
                                                 <x-icon name="o-clock" class="size-4" />
                                             @elseif($training->testStatus['posttest'] === 'available')
                                                 <x-icon name="o-play" class="size-4" />
+                                            @elseif($training->testStatus['posttest'] === 'retake')
+                                                <x-icon name="o-arrow-path" class="size-4" />
+                                            @elseif($training->testStatus['posttest'] === 'failed')
+                                                <x-icon name="o-x-mark" class="size-4" />
                                             @elseif($training->testStatus['posttest'] === 'locked')
                                                 <x-icon name="o-lock-closed" class="size-4" />
                                             @else
@@ -134,12 +140,36 @@
                                         <div>
                                             <p class="text-sm font-medium">Posttest</p>
                                             @if ($training->testStatus['posttest'] === 'completed')
-                                                <p class="text-xs text-success">Score:
-                                                    {{ $training->testStatus['posttestScore'] ?? 0 }}%</p>
+                                                <p class="text-xs text-success">
+                                                    Passed: {{ $training->testStatus['posttestScore'] ?? 0 }}%
+                                                    @if ($training->testStatus['posttestAttempts'] > 1)
+                                                        <span
+                                                            class="opacity-70">({{ $training->testStatus['posttestAttempts'] }}
+                                                            attempts)</span>
+                                                    @endif
+                                                </p>
                                             @elseif($training->testStatus['posttest'] === 'under_review')
                                                 <p class="text-xs text-warning">Under review</p>
                                             @elseif($training->testStatus['posttest'] === 'available')
                                                 <p class="text-xs text-base-content/60">Ready to take</p>
+                                            @elseif($training->testStatus['posttest'] === 'retake')
+                                                <p class="text-xs text-error">
+                                                    Failed: {{ $training->testStatus['posttestScore'] ?? 0 }}%
+                                                    @if ($training->testStatus['posttestMaxAttempts'])
+                                                        <span
+                                                            class="opacity-70">({{ $training->testStatus['posttestAttempts'] }}/{{ $training->testStatus['posttestMaxAttempts'] }}
+                                                            attempts)</span>
+                                                    @else
+                                                        <span
+                                                            class="opacity-70">({{ $training->testStatus['posttestAttempts'] }}
+                                                            attempts)</span>
+                                                    @endif
+                                                </p>
+                                            @elseif($training->testStatus['posttest'] === 'failed')
+                                                <p class="text-xs text-error">
+                                                    Failed: {{ $training->testStatus['posttestScore'] ?? 0 }}%
+                                                    <span class="opacity-70">(Max attempts reached)</span>
+                                                </p>
                                             @elseif($training->testStatus['posttest'] === 'locked')
                                                 <p class="text-xs text-base-content/50">Complete pretest first</p>
                                             @else
@@ -152,10 +182,17 @@
                                             wire:navigate class="btn btn-sm btn-primary">
                                             Start
                                         </a>
+                                    @elseif($training->testStatus['posttest'] === 'retake')
+                                        <a href="{{ route('training-test.take', ['training' => $training->id, 'type' => 'posttest']) }}"
+                                            wire:navigate class="btn btn-sm btn-error btn-outline">
+                                            Retake
+                                        </a>
                                     @elseif($training->testStatus['posttest'] === 'completed')
-                                        <span class="badge badge-success badge-sm">Done</span>
+                                        <span class="badge badge-success badge-sm">Passed</span>
                                     @elseif($training->testStatus['posttest'] === 'under_review')
                                         <span class="badge badge-warning badge-sm">Review</span>
+                                    @elseif($training->testStatus['posttest'] === 'failed')
+                                        <span class="badge badge-error badge-sm">Failed</span>
                                     @elseif($training->testStatus['posttest'] === 'locked')
                                         <span class="badge badge-ghost badge-sm">Locked</span>
                                     @endif

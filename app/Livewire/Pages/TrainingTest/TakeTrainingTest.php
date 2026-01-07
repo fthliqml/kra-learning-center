@@ -84,15 +84,47 @@ class TakeTrainingTest extends Component
       }
     }
 
-    // Check if already submitted
-    $alreadySubmitted = TestAttempt::where('test_id', $this->test->id)
+    // Check test attempt eligibility
+    $submittedAttempts = TestAttempt::where('test_id', $this->test->id)
       ->where('user_id', $userId)
       ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-      ->exists();
+      ->orderBy('attempt_number', 'desc')
+      ->get();
 
-    if ($alreadySubmitted) {
-      return redirect()->route('training-test.index')
-        ->with('info', 'You have already completed this test.');
+    if ($submittedAttempts->isNotEmpty()) {
+      $latestAttempt = $submittedAttempts->first();
+
+      // PRETEST: Only 1 attempt allowed (always)
+      if ($type === 'pretest') {
+        return redirect()->route('training-test.index')
+          ->with('info', 'You have already completed the pretest.');
+      }
+
+      // POSTTEST: Check if passed or max attempts reached
+      if ($type === 'posttest') {
+        // If any attempt is still under review, wait for review result
+        $hasUnderReview = $submittedAttempts->contains('status', TestAttempt::STATUS_UNDER_REVIEW);
+        if ($hasUnderReview) {
+          return redirect()->route('training-test.index')
+            ->with('info', 'Your previous posttest is still under review. Please wait for the result.');
+        }
+
+        // If already passed, no need to retake
+        $hasPassed = $submittedAttempts->contains('is_passed', true);
+        if ($hasPassed) {
+          return redirect()->route('training-test.index')
+            ->with('info', 'You have already passed the posttest.');
+        }
+
+        // Check max attempts limit (null or 0 = unlimited)
+        $maxAttempts = $this->test->max_attempts;
+        $attemptCount = $submittedAttempts->count();
+
+        if ($maxAttempts && $maxAttempts > 0 && $attemptCount >= $maxAttempts) {
+          return redirect()->route('training-test.index')
+            ->with('info', 'You have reached the maximum number of attempts (' . $maxAttempts . ') for this posttest.');
+        }
+      }
     }
 
     // Prepare questions
