@@ -101,6 +101,7 @@ class ModulePretest extends Component
         'options' => ($qModel->question_type === 'multiple') ? $opts : [],
         'answer' => ($qModel->question_type === 'multiple') ? $answerIndex : null,
         'answer_nonce' => 0,
+        'max_points' => ($qModel->question_type === 'essay') ? ($qModel->max_points ?? 10) : null,
       ];
     }
 
@@ -142,6 +143,7 @@ class ModulePretest extends Component
       'options' => $type === 'multiple' ? [''] : [],
       'answer' => null,
       'answer_nonce' => 0,
+      'max_points' => $type === 'essay' ? 10 : null, // Essay has custom points, MC auto-calculated
     ];
   }
 
@@ -200,9 +202,13 @@ class ModulePretest extends Component
       if ($type === 'essay') {
         $this->questions[$i]['options'] = [];
         $this->questions[$i]['answer'] = null;
+        if (!isset($this->questions[$i]['max_points'])) {
+          $this->questions[$i]['max_points'] = 10;
+        }
       } elseif ($type === 'multiple' && empty($this->questions[$i]['options'])) {
         $this->questions[$i]['options'] = [''];
         $this->questions[$i]['answer'] = null;
+        $this->questions[$i]['max_points'] = null; // MC uses auto-calculated points
       }
     }
 
@@ -349,16 +355,34 @@ class ModulePretest extends Component
 
       $test->questions()->delete();
 
+      // Calculate points distribution
+      $totalPoints = 100;
+      $essayQuestions = array_filter($this->questions, fn($q) => ($q['type'] ?? '') === 'essay');
+      $mcQuestions = array_filter($this->questions, fn($q) => ($q['type'] ?? '') === 'multiple');
+
+      $essayTotalPoints = 0;
+      foreach ($essayQuestions as $q) {
+        $essayTotalPoints += (int) ($q['max_points'] ?? 10);
+      }
+
+      // Remaining points for MC questions
+      $mcTotalPoints = max(0, $totalPoints - $essayTotalPoints);
+      $mcCount = count($mcQuestions);
+      $mcPointsEach = $mcCount > 0 ? round($mcTotalPoints / $mcCount, 2) : 0;
+
       foreach ($this->questions as $qOrder => $q) {
+        $questionType = in_array($q['type'] ?? '', ['multiple', 'essay']) ? $q['type'] : 'multiple';
+        $maxPoints = $questionType === 'essay' ? (int) ($q['max_points'] ?? 10) : $mcPointsEach;
+
         $questionModel = TestQuestion::create([
           'test_id' => $test->id,
-          'question_type' => in_array($q['type'] ?? '', ['multiple', 'essay']) ? $q['type'] : 'multiple',
+          'question_type' => $questionType,
           'text' => $q['question'] ?: 'Untitled Question',
           'order' => $qOrder,
-          'max_points' => 1,
+          'max_points' => $maxPoints,
         ]);
 
-        if (($q['type'] ?? '') === 'multiple') {
+        if ($questionType === 'multiple') {
           $answerIndex = $q['answer'] ?? null;
           foreach (($q['options'] ?? []) as $optIndex => $optText) {
             $optText = trim($optText);
@@ -433,6 +457,40 @@ class ModulePretest extends Component
 
   public function render()
   {
-    return view('components.training-module.module-pretest');
+    // Calculate points distribution for display
+    $pointsInfo = $this->calculatePointsDistribution();
+
+    return view('components.training-module.module-pretest', [
+      'pointsInfo' => $pointsInfo,
+    ]);
+  }
+
+  /**
+   * Calculate points distribution between essay and MC questions
+   */
+  public function calculatePointsDistribution(): array
+  {
+    $totalPoints = 100;
+    $essayQuestions = array_filter($this->questions, fn($q) => ($q['type'] ?? '') === 'essay');
+    $mcQuestions = array_filter($this->questions, fn($q) => ($q['type'] ?? '') === 'multiple');
+
+    $essayTotalPoints = 0;
+    foreach ($essayQuestions as $q) {
+      $essayTotalPoints += (int) ($q['max_points'] ?? 10);
+    }
+
+    $mcTotalPoints = max(0, $totalPoints - $essayTotalPoints);
+    $mcCount = count($mcQuestions);
+    $mcPointsEach = $mcCount > 0 ? round($mcTotalPoints / $mcCount, 2) : 0;
+
+    return [
+      'total' => $totalPoints,
+      'essayTotal' => $essayTotalPoints,
+      'essayCount' => count($essayQuestions),
+      'mcTotal' => $mcTotalPoints,
+      'mcCount' => $mcCount,
+      'mcPointsEach' => $mcPointsEach,
+      'isOverLimit' => $essayTotalPoints > $totalPoints,
+    ];
   }
 }

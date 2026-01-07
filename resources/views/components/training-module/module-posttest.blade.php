@@ -21,6 +21,40 @@
                 </label>
             </div>
         </div>
+
+        {{-- Points Distribution Info --}}
+        @if (!empty($questions))
+            <div class="mt-4 pt-3 border-t border-base-300/50">
+                <h4 class="text-xs font-semibold text-base-content/60 mb-2 flex items-center gap-1.5">
+                    <x-icon name="o-calculator" class="size-3.5" />
+                    Points Distribution (Total: {{ $pointsInfo['total'] ?? 100 }} points)
+                </h4>
+                <div class="flex flex-wrap gap-4 text-sm">
+                    @if (($pointsInfo['essayCount'] ?? 0) > 0)
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-warning badge-sm">Essay</span>
+                            <span>{{ $pointsInfo['essayCount'] }} questions × custom =
+                                <strong
+                                    class="{{ $pointsInfo['isOverLimit'] ?? false ? 'text-error' : '' }}">{{ $pointsInfo['essayTotal'] ?? 0 }}</strong>
+                                pts</span>
+                        </div>
+                    @endif
+                    @if (($pointsInfo['mcCount'] ?? 0) > 0)
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-info badge-sm">Multiple Choice</span>
+                            <span>{{ $pointsInfo['mcCount'] }} questions × {{ $pointsInfo['mcPointsEach'] ?? 0 }} =
+                                <strong>{{ $pointsInfo['mcTotal'] ?? 0 }}</strong> pts</span>
+                        </div>
+                    @endif
+                </div>
+                @if ($pointsInfo['isOverLimit'] ?? false)
+                    <p class="text-xs text-error mt-2 flex items-center gap-1">
+                        <x-icon name="o-exclamation-triangle" class="size-3.5" />
+                        Essay points exceed 100! Please reduce essay weights.
+                    </p>
+                @endif
+            </div>
+        @endif
     </div>
 
     {{-- Questions List --}}
@@ -106,6 +140,18 @@
                         @endforeach
                         <x-button type="button" size="xs" class="border-gray-400" outline icon="o-plus"
                             wire:click="addOption({{ $i }})">Add Option</x-button>
+                    </div>
+                @else
+                    {{-- Essay Weight Input --}}
+                    <div class="mt-3 flex items-center gap-3 pl-10">
+                        <div class="flex items-center gap-2">
+                            <x-icon name="o-scale" class="size-4 text-warning" />
+                            <span class="text-xs font-medium text-base-content/70">Weight (points):</span>
+                        </div>
+                        <x-input type="number" min="1" max="100"
+                            wire:model.live="questions.{{ $i }}.max_points"
+                            class="w-24 !h-8 text-center focus-within:border-0" placeholder="10" />
+                        <span class="text-xs text-base-content/50">pts</span>
                     </div>
                 @endif
             </div>
