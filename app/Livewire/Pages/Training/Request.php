@@ -2,9 +2,11 @@
 
 namespace App\Livewire\Pages\Training;
 
+use App\Exports\TrainingRequestExport;
 use App\Models\Competency;
 use App\Models\Request as TrainingRequestModel;
 use App\Models\User;
+use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -212,15 +214,47 @@ class Request extends Component
     {
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-12 md:w-[8%]'],
-            ['key' => 'user', 'label' => 'Name', 'class' => 'md:w-[40%]'],
+            ['key' => 'user', 'label' => 'Name', 'class' => 'md:w-[36%]'],
             ['key' => 'section', 'label' => 'Section', 'class' => '!text-center md:w-[18%]'],
-            ['key' => 'status', 'label' => 'Status', 'class' => '!text-center md:w-[16%]'],
+            ['key' => 'status', 'label' => 'Status', 'class' => '!text-center md:w-[20%]'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center md:w-[10%]'],
         ];
     }
 
+    /**
+     * Export current Training Requests view to Excel.
+     * Only available for admin and LID Section Head.
+     */
+    public function export()
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return null;
+        }
+
+        $isAdmin = method_exists($user, 'hasRole') && $user->hasRole('admin');
+        $isLidSectionHead = $user->hasPosition('section_head') && strtoupper($user->section ?? '') === 'LID';
+
+        if (!$isAdmin && !$isLidSectionHead) {
+            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only admin or LID Section Head can export training requests.');
+            return null;
+        }
+
+        $statusFilter = strtolower($this->filter ?? 'all');
+        $search = trim($this->search ?? '');
+
+        return Excel::download(
+            new TrainingRequestExport($user, $statusFilter, $search),
+            'training_requests_' . now()->format('Y-m-d') . '.xlsx'
+        );
+    }
+
     public function requests()
     {
+        /** @var User|null $auth */
+        $auth = Auth::user();
+
         $query = TrainingRequestModel::query()
             ->leftJoin('users', 'training_requests.created_by', '=', 'users.id')
             ->leftJoin('users as u2', 'training_requests.user_id', '=', 'u2.id')
@@ -237,9 +271,45 @@ class Request extends Component
                         ->orWhere('u2.section', 'like', $term);
                 });
             })
+            ->when($auth, function ($q) use ($auth) {
+                $section = strtolower(trim($auth->section ?? ''));
+                $department = strtolower(trim($auth->department ?? ''));
+                $division = strtolower(trim($auth->division ?? ''));
+
+                // User dengan section LID (kecuali Division Head LID) bisa melihat semua data lintas area
+                // tanpa pembatasan status tambahan; status tetap mengikuti dropdown filter di atas.
+                if ($section === 'lid' && !$auth->hasPosition('division_head')) {
+                    // Jangan tambah filter area ataupun status tambahan, langsung return
+                    return;
+                }
+
+                if ($auth->hasPosition('supervisor') && $section !== '') {
+                    // Target user (u2) section sama dengan section SPV
+                    $q->whereRaw('LOWER(u2.section) = ?', [$section]);
+                } elseif ($auth->hasPosition('department_head') && $department !== '') {
+                    // Target user (u2) department sama dengan department Dept Head
+                    $q->whereRaw('LOWER(u2.department) = ?', [$department]);
+                } elseif ($auth->hasPosition('division_head')) {
+                    // Khusus Division Head LID, bisa melihat semua request yang sudah di tahap final (lid_division_head)
+                    if ($division === 'human capital, finance & general support') {
+                        $q->where('training_requests.approval_stage', \App\Models\Request::STAGE_LID_DIV_HEAD);
+                    } elseif ($division !== '') {
+                        // Division Head lain hanya melihat request untuk division mereka sendiri
+                        $q->whereRaw('LOWER(u2.division) = ?', [$division]);
+                    }
+                }
+            })
             ->leftJoin('competency', 'training_requests.competency_id', '=', 'competency.id')
             ->orderBy('training_requests.created_at', 'desc')
-            ->select('training_requests.*', 'users.name as created_by_name', 'u2.name as user_name', 'u2.section as section', 'competency.name as competency_name');
+            ->select(
+                'training_requests.*',
+                'users.name as created_by_name',
+                'u2.name as user_name',
+                'u2.section as section',
+                'u2.department as department',
+                'u2.division as division',
+                'competency.name as competency_name'
+            );
 
         $paginator = $query->paginate(10);
 
@@ -271,6 +341,8 @@ class Request extends Component
                 'training_requests.*',
                 'target.name as user_name',
                 'target.section as user_section',
+                'target.department as user_department',
+                'target.division as user_division',
                 'competency.name as competency_name',
                 'competency.type as group_comp',
             ])
@@ -281,11 +353,14 @@ class Request extends Component
             'user_id' => $request->user_id,
             'user_name' => $request->user_name,
             'section' => $request->user_section,
+            'department' => $request->user_department,
+            'division' => $request->user_division,
             'competency_id' => $request->competency_id,
             'competency_name' => $request->competency_name ?? '',
             'group_comp' => $request->group_comp ?? '',
             'reason' => $request->reason,
             'status' => $request->status,
+            'approval_stage' => $request->approval_stage,
         ];
         $this->mode = 'preview';
         $this->modal = true;
@@ -294,15 +369,43 @@ class Request extends Component
 
     /**
      * Determine if the current authenticated user can moderate (approve/reject)
-     * a training request. Business rule: only the leader from section 'LID'.
+     * a training request at its current approval stage.
+     *
+     * Flow yang diinginkan:
+     *  - SPV mengajukan (creator)
+     *  - 1st approver  : Dept Head area terkait (section sama dengan user target)
+     *  - 2nd approver  : Division Head area terkait (section sama dengan user target)
+     *  - Final approver: Division Head LID
      */
-    protected function canModerate(): bool
+    protected function canModerate(TrainingRequestModel $request): bool
     {
         /** @var User|null $user */
         $user = Auth::user();
-        if (!$user) return false;
-        // Only section head from LID can moderate
-        return $user->hasPosition('section_head') && strtolower(trim($user->section ?? '')) === 'lid';
+        if (!$user) {
+            return false;
+        }
+
+        $targetDept = strtolower(trim($request->user?->department ?? ''));
+        $targetDiv = strtolower(trim($request->user?->division ?? ''));
+        $userDept = strtolower(trim($user->department ?? ''));
+        $userDiv = strtolower(trim($user->division ?? ''));
+
+        // Dept Head area terkait (berdasarkan DEPARTMENT yang sama)
+        if ($request->approval_stage === \App\Models\Request::STAGE_DEPT_HEAD) {
+            return $user->hasPosition('department_head') && $targetDept !== '' && $userDept === $targetDept;
+        }
+
+        // Division Head area terkait (berdasarkan DIVISION yang sama)
+        if ($request->approval_stage === \App\Models\Request::STAGE_AREA_DIV_HEAD) {
+            return $user->hasPosition('division_head') && $targetDiv !== '' && $userDiv === $targetDiv;
+        }
+
+        // Division Head LID (final) - gunakan Division LID (Human Capital, Finance & General Support)
+        if ($request->approval_stage === \App\Models\Request::STAGE_LID_DIV_HEAD) {
+            return $user->hasPosition('division_head') && $userDiv === 'human capital, finance & general support';
+        }
+
+        return false;
     }
 
     /** Approve selected request */
@@ -311,22 +414,37 @@ class Request extends Component
         if (!$this->selectedId) {
             return; // nothing selected
         }
-        if (!$this->canModerate()) {
-            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only LID leader can approve.');
-            return;
-        }
-        $req = TrainingRequestModel::find($this->selectedId);
+        $req = TrainingRequestModel::with('user')->find($this->selectedId);
         if (!$req) {
             $this->dispatch('toast', type: 'error', title: 'Not found', message: 'Request no longer exists.');
+            return;
+        }
+        if (!$this->canModerate($req)) {
+            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'You are not allowed to approve this request at its current stage.');
             return;
         }
         if (strtolower($req->status) !== 'pending') {
             $this->dispatch('toast', type: 'warning', title: 'Already processed', message: 'Request already resolved.');
             return;
         }
-        $req->update(['status' => 'approved']);
-        $this->formData['status'] = 'approved';
-        $this->flash = ['type' => 'success', 'message' => 'Training request approved'];
+        // Advance approval stage or finalize approval
+        if ($req->approval_stage === \App\Models\Request::STAGE_DEPT_HEAD) {
+            $req->approval_stage = \App\Models\Request::STAGE_AREA_DIV_HEAD;
+            $req->save();
+            $this->formData['approval_stage'] = $req->approval_stage;
+            $this->flash = ['type' => 'success', 'message' => 'Approved by Dept Head. Waiting for Division Head area approval.'];
+        } elseif ($req->approval_stage === \App\Models\Request::STAGE_AREA_DIV_HEAD) {
+            $req->approval_stage = \App\Models\Request::STAGE_LID_DIV_HEAD;
+            $req->save();
+            $this->formData['approval_stage'] = $req->approval_stage;
+            $this->flash = ['type' => 'success', 'message' => 'Approved by Division Head area. Waiting for Division Head LID approval.'];
+        } else { // LID Division Head stage -> final approval
+            $req->status = 'approved';
+            $req->save();
+            $this->formData['status'] = 'approved';
+            $this->formData['approval_stage'] = $req->approval_stage;
+            $this->flash = ['type' => 'success', 'message' => 'Training request fully approved'];
+        }
     }
 
     /** Reject selected request */
@@ -335,13 +453,13 @@ class Request extends Component
         if (!$this->selectedId) {
             return; // nothing selected
         }
-        if (!$this->canModerate()) {
-            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only LID leader can reject.');
-            return;
-        }
-        $req = TrainingRequestModel::find($this->selectedId);
+        $req = TrainingRequestModel::with('user')->find($this->selectedId);
         if (!$req) {
             $this->dispatch('toast', type: 'error', title: 'Not found', message: 'Request no longer exists.');
+            return;
+        }
+        if (!$this->canModerate($req)) {
+            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'You are not allowed to reject this request at its current stage.');
             return;
         }
         if (strtolower($req->status) !== 'pending') {
@@ -372,6 +490,8 @@ class Request extends Component
             'competency_id' => (int)$this->formData['competency_id'],
             'reason' => $this->formData['reason'],
             'status' => 'pending',
+            // Mulai dari tahap Dept Head area terkait
+            'approval_stage' => \App\Models\Request::STAGE_DEPT_HEAD,
         ]);
 
         $this->modal = false;

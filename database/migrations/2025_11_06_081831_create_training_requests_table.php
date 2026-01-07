@@ -23,6 +23,12 @@ return new class extends Migration
             $table->string('reason');
             $table->enum('status', ['pending', 'approved', 'rejected'])->default('pending');
 
+            // Multi-level approval stage:
+            // - dept_head          : waiting for Dept Head area terkait
+            // - area_division_head : waiting for Division Head area terkait
+            // - lid_division_head  : waiting for Division Head LID (final)
+            $table->string('approval_stage', 50)->default('dept_head');
+
             // Timestamps
             $table->timestamps();
         });
