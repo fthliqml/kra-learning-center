@@ -17,8 +17,7 @@
                     icon-right="o-funnel" />
             </div>
             <div class="w-full sm:w-40">
-                <x-select wire:model.live="filterStatus" :options="$statusOptions" option-value="value"
-                    option-label="label"
+                <x-select wire:model.live="filterStatus" :options="$statusOptions" option-value="value" option-label="label"
                     class="!h-10 w-full focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                     icon-right="o-adjustments-horizontal" />
             </div>
