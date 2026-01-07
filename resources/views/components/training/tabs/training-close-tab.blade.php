@@ -63,9 +63,20 @@
 
                 @if (!$isLms)
                     {{-- Custom cell untuk Pretest Score --}}
-                    @scope('cell_pretest_score', $assessment)
-                        <div class="flex justify-center">
-                            @php $trainingDone = $assessment->training_done ?? false; @endphp
+                    @scope('cell_pretest_score', $assessment, $testReviewStatus, $training)
+                        <div class="flex flex-col items-center gap-1">
+                            @php
+                                $trainingDone = $assessment->training_done ?? false;
+                                $reviewStatus = $testReviewStatus[$assessment->employee_id] ?? [];
+                                $pretestNeedReview = $reviewStatus['pretest_need_review'] ?? false;
+                            @endphp
+                            @if ($pretestNeedReview)
+                                <a href="{{ route('test-review.answers', ['training' => $training->id, 'user' => $assessment->employee_id]) }}"
+                                    class="badge badge-warning badge-xs cursor-pointer hover:badge-outline gap-1"
+                                    wire:navigate title="Click to review">
+                                    Need Review
+                                </a>
+                            @endif
                             @if ($trainingDone)
                                 <div tabindex="-1"
                                     class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
@@ -73,30 +84,43 @@
                             @else
                                 <input type="number" min="0" max="100" step="0.1"
                                     wire:model.live="tempScores.{{ $assessment->id }}.pretest_score"
-                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-                                    placeholder="0-100">
+                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary {{ $pretestNeedReview ? 'border-warning' : '' }}"
+                                    placeholder="0-100" {{ $pretestNeedReview ? 'readonly' : '' }}>
                             @endif
                         </div>
                     @endscope
                 @endif
 
                 {{-- Custom cell untuk Posttest Score --}}
-                @scope('cell_posttest_score', $assessment)
-                    <div class="flex justify-center">
-                        @php $trainingDone = $assessment->training_done ?? false; @endphp
+                @scope('cell_posttest_score', $assessment, $testReviewStatus, $training)
+                    <div class="flex flex-col items-center gap-1">
+                        @php
+                            $trainingDone = $assessment->training_done ?? false;
+                            $reviewStatus = $testReviewStatus[$assessment->employee_id] ?? [];
+                            $posttestNeedReview = $reviewStatus['posttest_need_review'] ?? false;
+                        @endphp
                         @if (!empty($assessment->is_lms))
                             <div tabindex="-1"
                                 class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
                                 {{ $assessment->temp_posttest ?? '-' }}</div>
-                        @elseif ($trainingDone)
-                            <div tabindex="-1"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
-                                {{ $assessment->posttest_score ?? '-' }}</div>
                         @else
-                            <input type="number" min="0" max="100" step="0.1"
-                                wire:model.live="tempScores.{{ $assessment->id }}.posttest_score"
-                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary"
-                                placeholder="0-100">
+                            @if ($posttestNeedReview)
+                                <a href="{{ route('test-review.answers', ['training' => $training->id, 'user' => $assessment->employee_id]) }}"
+                                    class="badge badge-warning badge-xs cursor-pointer hover:badge-outline gap-1"
+                                    wire:navigate title="Click to review">
+                                    Need Review
+                                </a>
+                            @endif
+                            @if ($trainingDone)
+                                <div tabindex="-1"
+                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
+                                    {{ $assessment->posttest_score ?? '-' }}</div>
+                            @else
+                                <input type="number" min="0" max="100" step="0.1"
+                                    wire:model.live="tempScores.{{ $assessment->id }}.posttest_score"
+                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary {{ $posttestNeedReview ? 'border-warning' : '' }}"
+                                    placeholder="0-100" {{ $posttestNeedReview ? 'readonly' : '' }}>
+                            @endif
                         @endif
                     </div>
                 @endscope
@@ -146,6 +170,27 @@
                         @endif
                     </div>
                 @endscope
+
+                @if (!$isLms)
+                    {{-- Custom cell untuk Actions --}}
+                    @scope('cell_actions', $assessment, $testReviewStatus, $training)
+                        @php
+                            $reviewStatus = $testReviewStatus[$assessment->employee_id] ?? [];
+                            $needsReview =
+                                ($reviewStatus['pretest_need_review'] ?? false) ||
+                                ($reviewStatus['posttest_need_review'] ?? false);
+                        @endphp
+                        @if ($needsReview)
+                            <div class="flex justify-center">
+                                <a href="{{ route('test-review.answers', ['training' => $training->id, 'user' => $assessment->employee_id]) }}"
+                                    class="btn btn-warning btn-xs gap-1" title="Review Test Answers" wire:navigate>
+                                    <x-icon name="o-clipboard-document-check" class="size-3.5" />
+                                    Review
+                                </a>
+                            </div>
+                        @endif
+                    @endscope
+                @endif
             </x-table>
         </div>
     @else

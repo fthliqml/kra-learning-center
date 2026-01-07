@@ -156,7 +156,9 @@ class TrainingCloseTab extends Component
 
   /**
    * For Internal Training (IN type), sync pretest and posttest scores from web-based test attempts.
-   * Only updates if the employee has completed and reviewed test attempts.
+   * Only syncs scores when fully reviewed (STATUS_SUBMITTED).
+   * For posttest: uses the highest score among all completed attempts.
+   * For pretest: uses the highest score attempt.
    */
   protected function syncInternalTrainingScores(): void
   {
@@ -169,7 +171,8 @@ class TrainingCloseTab extends Component
       return;
     }
 
-    $moduleId = (int) ($this->training?->training_module_id ?? 0);
+    // Training uses module_id, not training_module_id
+    $moduleId = (int) ($this->training?->module_id ?? 0);
     if ($moduleId <= 0) {
       return;
     }
@@ -192,12 +195,16 @@ class TrainingCloseTab extends Component
       return;
     }
 
-    // Get latest submitted attempts for pretest
+    // Only sync fully reviewed attempts (STATUS_SUBMITTED)
+    // Under review attempts have essay questions that haven't been graded yet
+
+    // Get highest score attempt for pretest (fully reviewed only)
     $pretestAttemptsByUser = collect();
     if ($pretest) {
       $pretestAttempts = TestAttempt::where('test_id', $pretest->id)
         ->whereIn('user_id', $userIds)
-        ->where('status', TestAttempt::STATUS_SUBMITTED) // Only fully reviewed attempts
+        ->where('status', TestAttempt::STATUS_SUBMITTED) // Only fully reviewed
+        ->orderByDesc('total_score')
         ->orderByDesc('submitted_at')
         ->orderByDesc('id')
         ->get(['id', 'user_id', 'total_score', 'is_passed', 'submitted_at']);
@@ -205,17 +212,18 @@ class TrainingCloseTab extends Component
       $pretestAttemptsByUser = $pretestAttempts->groupBy('user_id')->map(fn($rows) => $rows->first());
     }
 
-    // Get latest submitted attempts for posttest
-    $posttestAttemptsByUser = collect();
+    // Get highest score attempt for posttest (fully reviewed only)
+    $posttestBestScoreByUser = collect();
     if ($posttest) {
       $posttestAttempts = TestAttempt::where('test_id', $posttest->id)
         ->whereIn('user_id', $userIds)
-        ->where('status', TestAttempt::STATUS_SUBMITTED) // Only fully reviewed attempts
+        ->where('status', TestAttempt::STATUS_SUBMITTED) // Only fully reviewed
+        ->orderByDesc('total_score')
         ->orderByDesc('submitted_at')
         ->orderByDesc('id')
         ->get(['id', 'user_id', 'total_score', 'is_passed', 'submitted_at']);
 
-      $posttestAttemptsByUser = $posttestAttempts->groupBy('user_id')->map(fn($rows) => $rows->first());
+      $posttestBestScoreByUser = $posttestAttempts->groupBy('user_id')->map(fn($rows) => $rows->first());
     }
 
     foreach ($assessments as $assessment) {
@@ -224,22 +232,87 @@ class TrainingCloseTab extends Component
         $this->tempScores[$aid] = ['pretest_score' => null, 'posttest_score' => null, 'practical_score' => null];
       }
 
-      // Sync pretest score (only if not already manually set)
+      // Sync pretest score from fully reviewed web test
       if ($pretest) {
         $pretestAttempt = $pretestAttemptsByUser->get($assessment->employee_id);
-        if ($pretestAttempt && ($this->tempScores[$aid]['pretest_score'] === null || $this->tempScores[$aid]['pretest_score'] === '')) {
+        if ($pretestAttempt) {
           $this->tempScores[$aid]['pretest_score'] = (int) ($pretestAttempt->total_score ?? 0);
         }
       }
 
-      // Sync posttest score (only if not already manually set)
+      // Sync posttest score from fully reviewed web test (highest score)
       if ($posttest) {
-        $posttestAttempt = $posttestAttemptsByUser->get($assessment->employee_id);
-        if ($posttestAttempt && ($this->tempScores[$aid]['posttest_score'] === null || $this->tempScores[$aid]['posttest_score'] === '')) {
+        $posttestAttempt = $posttestBestScoreByUser->get($assessment->employee_id);
+        if ($posttestAttempt) {
           $this->tempScores[$aid]['posttest_score'] = (int) ($posttestAttempt->total_score ?? 0);
         }
       }
     }
+  }
+
+  /**
+   * Get test review status for each employee (for Internal Training)
+   * Returns array with employee_id => ['pretest_need_review' => bool, 'posttest_need_review' => bool]
+   */
+  public function getTestReviewStatus(): array
+  {
+    $trainingType = strtoupper((string) ($this->training?->type ?? ''));
+    if ($trainingType !== 'IN') {
+      return [];
+    }
+
+    // Training uses module_id, not training_module_id
+    $moduleId = (int) ($this->training?->module_id ?? 0);
+    if ($moduleId <= 0) {
+      return [];
+    }
+
+    $pretest = Test::where('training_module_id', $moduleId)->where('type', 'pretest')->first();
+    $posttest = Test::where('training_module_id', $moduleId)->where('type', 'posttest')->first();
+
+    if (!$pretest && !$posttest) {
+      return [];
+    }
+
+    $assessments = TrainingAssessment::where('training_id', $this->trainingId)->select(['id', 'employee_id'])->get();
+    $userIds = $assessments->pluck('employee_id')->filter()->unique()->values()->all();
+
+    if (empty($userIds)) {
+      return [];
+    }
+
+    $reviewStatus = [];
+
+    // Check pretest under review status
+    $pretestUnderReview = [];
+    if ($pretest) {
+      $pretestUnderReview = TestAttempt::where('test_id', $pretest->id)
+        ->whereIn('user_id', $userIds)
+        ->where('status', TestAttempt::STATUS_UNDER_REVIEW)
+        ->pluck('user_id')
+        ->unique()
+        ->all();
+    }
+
+    // Check posttest under review status
+    $posttestUnderReview = [];
+    if ($posttest) {
+      $posttestUnderReview = TestAttempt::where('test_id', $posttest->id)
+        ->whereIn('user_id', $userIds)
+        ->where('status', TestAttempt::STATUS_UNDER_REVIEW)
+        ->pluck('user_id')
+        ->unique()
+        ->all();
+    }
+
+    foreach ($assessments as $assessment) {
+      $reviewStatus[$assessment->employee_id] = [
+        'pretest_need_review' => in_array($assessment->employee_id, $pretestUnderReview),
+        'posttest_need_review' => in_array($assessment->employee_id, $posttestUnderReview),
+      ];
+    }
+
+    return $reviewStatus;
   }
 
   public function updated($property): void
@@ -268,6 +341,7 @@ class TrainingCloseTab extends Component
       ['key' => 'posttest_score', 'label' => 'Post-test Score', 'class' => '!text-center min-w-[120px]'],
       ['key' => 'practical_score', 'label' => 'Practical Score', 'class' => '!text-center min-w-[120px]'],
       ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
+      ['key' => 'actions', 'label' => '', 'class' => '!text-center w-10'],
     ];
   }
 
@@ -646,6 +720,7 @@ class TrainingCloseTab extends Component
       'assessments' => $this->assessments(),
       'headers' => $this->headers(),
       'training' => $this->training,
+      'testReviewStatus' => $this->getTestReviewStatus(),
     ]);
   }
 }

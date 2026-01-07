@@ -296,10 +296,19 @@ class TestReviewAnswers extends Component
                 }
             }
 
-            // Update attempt with manual score and recalculate total
+            // Calculate max possible score from all questions
+            $maxScore = $test->questions()->sum('max_points') ?? 0;
+
+            // Calculate total earned points (auto_score is raw points from MC, manual_score is raw points from essay)
+            $totalEarned = $attempt->auto_score + $manualScore;
+
+            // Calculate percentage score
+            $totalScore = $maxScore > 0 ? round(($totalEarned / $maxScore) * 100, 1) : 0;
+
+            // Update attempt with scores
             $attempt->manual_score = $manualScore;
-            $attempt->total_score = $attempt->auto_score + $manualScore;
-            $attempt->is_passed = $attempt->total_score >= $test->passing_score;
+            $attempt->total_score = $totalScore;
+            $attempt->is_passed = $totalScore >= $test->passing_score;
             $attempt->status = TestAttempt::STATUS_SUBMITTED;
             $attempt->save();
         });
