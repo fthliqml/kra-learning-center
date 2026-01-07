@@ -39,4 +39,9 @@ class Test extends Model
   {
     return $this->hasMany(TestQuestion::class)->orderBy('order')->orderBy('id');
   }
+
+  public function attempts(): HasMany
+  {
+    return $this->hasMany(TestAttempt::class);
+  }
 }
