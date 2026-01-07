@@ -38,7 +38,8 @@ class AppServiceProvider extends ServiceProvider
         // Blade role-based directives
         Blade::if('role', function ($role) {
             $user = Auth::user();
-            return $user && method_exists($user, 'hasRole') && $user->hasRole($role);
+            $method = 'hasRole';
+            return $user && is_callable([$user, $method]) && $user->{$method}($role);
         });
 
         Blade::if('anyrole', function (...$roles) {
@@ -49,7 +50,8 @@ class AppServiceProvider extends ServiceProvider
                 ->values()
                 ->all();
             $user = Auth::user();
-            return $user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole($roles);
+            $method = 'hasAnyRole';
+            return $user && is_callable([$user, $method]) && $user->{$method}($roles);
         });
 
         Blade::if('allroles', function (...$roles) {
@@ -60,7 +62,8 @@ class AppServiceProvider extends ServiceProvider
                 ->values()
                 ->all();
             $user = Auth::user();
-            return $user && method_exists($user, 'hasAllRoles') && $user->hasAllRoles($roles);
+            $method = 'hasAllRoles';
+            return $user && is_callable([$user, $method]) && $user->{$method}($roles);
         });
 
         // Shorthand: @r('admin','leader') or @r('admin,leader')
@@ -72,7 +75,8 @@ class AppServiceProvider extends ServiceProvider
                 ->values()
                 ->all();
             $user = Auth::user();
-            return $user && method_exists($user, 'hasAnyRole') && $user->hasAnyRole($roles);
+            $method = 'hasAnyRole';
+            return $user && is_callable([$user, $method]) && $user->{$method}($roles);
         });
 
         Paginator::defaultView('vendor.pagination.tailwind');
