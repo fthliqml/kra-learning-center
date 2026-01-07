@@ -76,13 +76,13 @@
                                         @endif
                                     </div>
                                 </td>
-                                <td>
+                                <td class="whitespace-nowrap">
                                     <span
                                         class="badge badge-sm {{ $training->type === 'IN' ? 'badge-success' : 'badge-info' }}">
                                         {{ $training->type === 'IN' ? 'In-House' : 'LMS' }}
                                     </span>
                                 </td>
-                                <td>
+                                <td class="whitespace-nowrap">
                                     @php
                                         $statusBadge = match ($training->status) {
                                             'in_progress' => 'badge-primary',
