@@ -260,6 +260,9 @@
                                 <div class="flex justify-center">
                                     @php
                                         $participantStatus = strtolower($participant->status);
+                                        // Ambil status training dari row peserta (lebih andal),
+                                        // fallback ke formData jika belum ada
+                                        $trainingStatus = strtolower($participant->training_status ?? ($formData['status'] ?? ''));
                                         $hasCertificate =
                                             $participantStatus === 'passed' &&
                                             !empty($participant->certificate_path) &&
@@ -277,14 +280,16 @@
                                                 str_pad($participant->assessment_id, 4, '0', STR_PAD_LEFT);
                                         }
                                     @endphp
-                                    @if ($hasCertificate && $certNumber)
+                                    @if ($trainingStatus === 'rejected')
+                                        <span class="text-xs text-gray-400">-</span>
+                                    @elseif ($hasCertificate && $certNumber)
                                         <a href="{{ route('certificate.training.view', $participant->assessment_id) }}"
                                             target="_blank"
                                             class="text-primary hover:text-primary/80 hover:underline text-xs font-medium transition-colors"
                                             title="View Certificate">
                                             {{ $certNumber }}
                                         </a>
-                                    @elseif ($participantStatus === 'passed')
+                                    @elseif ($trainingStatus === 'done' && $participantStatus === 'passed')
                                         <span class="text-xs text-amber-600 italic">Pending</span>
                                     @else
                                         <span class="text-xs text-gray-400">-</span>

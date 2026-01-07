@@ -72,8 +72,26 @@ class TrainingCertificateService
             // Add issue location and date (Balikpapan, dd Month YYYY) - right side
             $issueDate = Carbon::now()->format('d F Y');
             $pdf->SetFont('Times', '', 11);
-            $pdf->SetXY(185, 151.5);
-            $pdf->Cell(110, 5, 'Balikpapan, ' . $issueDate, 0, 0, 'C');
+            $pdf->SetXY(173, 150);
+            $pdf->Cell(95, 5, 'Balikpapan, ' . $issueDate, 0, 0, 'R');
+
+            // Add LID Section Head & Dept Head signatures/names on first page
+            $lidSectionHead = $this->getLidSectionHead();
+            $lidDeptHead = $this->getLidDepartmentHead();
+
+            // Dept Head area LID
+            if ($lidDeptHead) {
+                $pdf->SetFont('Times', 'BU', 10);
+                $pdf->SetXY(79.5, 183);
+                $pdf->Cell(70, 5, $lidDeptHead->name, 0, 0, 'C');
+            }
+
+            // Section Head LID
+            if ($lidSectionHead) {
+                $pdf->SetFont('Times', 'BU', 10);
+                $pdf->SetXY(207.5, 183);
+                $pdf->Cell(70, 5, $lidSectionHead->name, 0, 0, 'C');
+            }
 
             // === PAGE 2: Daftar Nilai ===
             $pdf->AddPage();
@@ -118,17 +136,29 @@ class TrainingCertificateService
             // Add average score (Nilai Rata-Rata Peserta)
             $avgScore = $this->calculateAverageScore($assessment);
             $pdf->SetXY(180.2, 133);
-            $pdf->Cell(20, 6, number_format($avgScore, 0), 0, 0, 'C');
-
-            // Add class average (Nilai Rata-Rata Kelas)
-            $pdf->SetXY(180.2, 142.7);
+            // Tampilkan dengan 2 desimal (tanpa pembulatan ke bilangan bulat)
             $pdf->Cell(20, 6, number_format($avgScore, 2), 0, 0, 'C');
 
+            // Add class average (Nilai Rata-Rata Kelas)
+            $classAvg = $this->calculateClassAverage($training);
+            $pdf->SetXY(180.2, 142.7);
+            $pdf->Cell(20, 6, number_format($classAvg, 2), 0, 0, 'C');
+
             // Add instructor name (bottom right)
-            $instructorName = $training->sessions()
+            // Ambil dari session pertama yang punya trainer,
+            // gunakan trainer.name atau fallback ke trainer.user.name
+            $firstSessionWithTrainer = $training->sessions()
                 ->whereHas('trainer')
-                ->with('trainer')
-                ->first()?->trainer?->name ?? 'Instructor';
+                ->with(['trainer.user'])
+                ->orderBy('date')
+                ->orderBy('start_time')
+                ->first();
+
+            $instructorName = 'Instructor';
+            if ($firstSessionWithTrainer && $firstSessionWithTrainer->trainer) {
+                $instructorName = $firstSessionWithTrainer->trainer->name
+                    ?? ($firstSessionWithTrainer->trainer->user->name ?? 'Instructor');
+            }
             $pdf->SetFont('Times', 'BU', 10);
             $pdf->SetXY(201.6, 180);
             $pdf->Cell(60, 5, $instructorName, 0, 0, 'C');
@@ -150,19 +180,111 @@ class TrainingCertificateService
     }
 
     /**
-     * Calculate average score from assessment
+     * Calculate average score from assessment (Nilai Rata-Rata Peserta)
+     *
+     * Rumus:
+     *   (posttest_score + max_practical_score) / 2
+     * di mana max_practical_score adalah batas atas range nilai praktik
+     * (A:100, B:90, C:80, D:70, E:60).
      */
     protected function calculateAverageScore(TrainingAssessment $assessment): float
     {
-        $scores = [];
-        if ($assessment->posttest_score !== null) {
-            $scores[] = $assessment->posttest_score;
-        }
-        if ($assessment->practical_score !== null) {
-            $scores[] = $assessment->practical_score;
+        $posttest = $assessment->posttest_score;
+        $practical = $assessment->practical_score;
+
+        // Jika tidak ada kedua-duanya
+        if ($posttest === null && $practical === null) {
+            return 0;
         }
 
-        return count($scores) > 0 ? array_sum($scores) / count($scores) : 0;
+        // Jika hanya ada posttest
+        if ($posttest !== null && $practical === null) {
+            return (float) $posttest;
+        }
+
+        // Jika hanya ada praktik
+        if ($posttest === null && $practical !== null) {
+            $maxPracticalOnly = $this->getMaxPracticalFromScore($practical);
+            return (float) $maxPracticalOnly;
+        }
+
+        // Keduanya ada: gunakan rumus (posttest + max_practical) / 2
+        $maxPractical = $this->getMaxPracticalFromScore($practical ?? 0.0);
+        if ($maxPractical <= 0) {
+            return 0;
+        }
+
+        return ($posttest + $maxPractical) / 2.0;
+    }
+
+    /**
+     * Get maximum practical score upper-bound based on numeric practical score.
+     *
+     * Mapping mengikuti range di getScoreRange():
+     *  - >= 90 => 100
+     *  - >= 81 => 90
+     *  - >= 71 => 80
+     *  - >= 61 => 70
+     *  - else  => 60
+     */
+    protected function getMaxPracticalFromScore(float $score): float
+    {
+        if ($score >= 90) return 100;
+        if ($score >= 81) return 90;
+        if ($score >= 71) return 80;
+        if ($score >= 61) return 70;
+        return 60;
+    }
+
+    /**
+     * Calculate true class average for a training.
+     *
+     * Rata-rata diambil dari seluruh assessment pada training tersebut
+     * yang memiliki minimal salah satu nilai (posttest atau praktik),
+     * dengan nilai per peserta dihitung via calculateAverageScore().
+     */
+    protected function calculateClassAverage(Training $training): float
+    {
+        $assessments = TrainingAssessment::where('training_id', $training->id)->get();
+
+        $sum = 0.0;
+        $count = 0;
+
+        foreach ($assessments as $assessment) {
+            // Lewati peserta yang sama sekali belum punya nilai
+            if ($assessment->posttest_score === null && $assessment->practical_score === null) {
+                continue;
+            }
+
+            $avg = $this->calculateAverageScore($assessment);
+            $sum += $avg;
+            $count++;
+        }
+
+        return $count > 0 ? $sum / $count : 0.0;
+    }
+
+    /**
+     * Get LID Section Head user (section = LID, position = section_head)
+     */
+    protected function getLidSectionHead(): ?User
+    {
+        return User::where('position', 'section_head')
+            ->whereRaw('UPPER(COALESCE(section, "")) = ?', ['LID'])
+            ->first();
+    }
+
+    /**
+     * Get Department Head for LID area
+     *
+     * Assumes department name "Human Capital, General Service, Security & LID"
+     * as seeded in UserSeeder.
+     */
+    protected function getLidDepartmentHead(): ?User
+    {
+        return User::where('position', 'department_head')
+            ->where('department', 'Human Capital, General Service, Security & LID')
+            ->first();
     }
 
     /**
