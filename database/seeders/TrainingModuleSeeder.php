@@ -347,13 +347,18 @@ class TrainingModuleSeeder extends Seeder
       'randomize_question' => true,
     ]);
 
+    // Calculate points for MC questions in pretest
+    // If essay included: 3 essays × 20 pts = 60 pts, leaving 40 pts for 5 MC = 8 pts each
+    // If no essay: 100 pts for 5 MC = 20 pts each
+    $pretestMcPoints = $includeEssay ? 8 : 20;
+
     foreach ($pretestQuestions as $order => $questionData) {
       $question = TestQuestion::create([
         'test_id' => $pretest->id,
         'question_type' => 'multiple',
         'text' => $questionData['text'],
         'order' => $order,
-        'max_points' => 1,
+        'max_points' => $pretestMcPoints,
       ]);
 
       foreach ($questionData['options'] as $optOrder => $optionData) {
@@ -375,13 +380,18 @@ class TrainingModuleSeeder extends Seeder
       'randomize_question' => true,
     ]);
 
+    // Calculate points for MC questions in posttest
+    // If essay included: 3 essays × 20 pts = 60 pts, leaving 40 pts for 5 MC = 8 pts each
+    // If no essay: 100 pts for 5 MC = 20 pts each
+    $posttestMcPoints = $includeEssay ? 8 : 20;
+
     foreach ($posttestQuestions as $order => $questionData) {
       $question = TestQuestion::create([
         'test_id' => $posttest->id,
         'question_type' => 'multiple',
         'text' => $questionData['text'],
         'order' => $order,
-        'max_points' => 1,
+        'max_points' => $posttestMcPoints,
       ]);
 
       foreach ($questionData['options'] as $optOrder => $optionData) {
@@ -395,6 +405,8 @@ class TrainingModuleSeeder extends Seeder
     }
 
     // Add essay questions for specific module
+    // 3 essay questions × 20 points each = 60 points total
+    // Leaving 40 points for 5 MC questions = 8 points each (calculated above)
     if ($includeEssay) {
       foreach ($essayQuestions as $order => $questionData) {
         // Add to pretest
@@ -403,7 +415,7 @@ class TrainingModuleSeeder extends Seeder
           'question_type' => 'essay',
           'text' => $questionData['text'],
           'order' => count($pretestQuestions) + $order,
-          'max_points' => 5,
+          'max_points' => 20,
         ]);
 
         // Add to posttest
@@ -412,7 +424,7 @@ class TrainingModuleSeeder extends Seeder
           'question_type' => 'essay',
           'text' => $questionData['text'],
           'order' => count($posttestQuestions) + $order,
-          'max_points' => 5,
+          'max_points' => 20,
         ]);
       }
     }
