@@ -65,17 +65,9 @@ class CourseAssignmentSeeder extends Seeder
             if ($inserts) {
                 DB::table('user_courses')->insert($inserts);
                 $totalInserted += count($inserts);
-                $this->command?->line("User {$user->id}: assigned " . count($inserts) . ' courses');
             }
         }
 
-        if ($totalInserted) {
-            $this->command?->info('Total inserted user-course assignments: ' . $totalInserted);
-        } else {
-            $this->command?->line('No new user-course assignments inserted.');
-        }
-
-        // Ensure employee@example.com has some courses for demo
         $employeeUser = User::where('email', 'employee@example.com')->first();
         if ($employeeUser) {
             $assignedCourses = UserCourse::where('user_id', $employeeUser->id)->pluck('course_id')->toArray();

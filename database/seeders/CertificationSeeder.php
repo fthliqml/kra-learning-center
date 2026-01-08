@@ -99,10 +99,6 @@ class CertificationSeeder extends Seeder
       }
       // For rejected and cancelled: no sessions or participants
     }
-
-    $this->command->info('Certification seeding completed successfully!');
-    $this->command->info('- 10 completed certifications with full participant data and scores');
-    $this->command->info('- 10 other certifications with random status (approved/rejected/scheduled/cancelled)');
   }
 
   /**

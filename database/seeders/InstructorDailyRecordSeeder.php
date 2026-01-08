@@ -85,7 +85,5 @@ class InstructorDailyRecordSeeder extends Seeder
         ]);
       }
     }
-
-    $this->command->info('Instructor Daily Record seeding completed successfully!');
   }
 }
