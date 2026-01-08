@@ -64,11 +64,23 @@ class ModulePage extends Component
             }
         }
 
-        // If course already completed (e.g., perfect posttest), block revisiting modules
+        // If course already completed (e.g., passed posttest), redirect to result
         if ($enrollment) {
             $totalUnits = (int) $course->progressUnitsCount();
             $current = (int) ($enrollment->current_step ?? 0);
             if ($current >= $totalUnits || strtolower($enrollment->status ?? '') === 'completed') {
+                return redirect()->route('courses-result.index', ['course' => $course->id]);
+            }
+        }
+
+        // If user has already attempted posttest (under_review or failed), redirect to result
+        $posttest = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
+        if ($posttest) {
+            $hasPosttestAttempt = TestAttempt::where('test_id', $posttest->id)
+                ->where('user_id', $userId)
+                ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
+                ->exists();
+            if ($hasPosttestAttempt) {
                 return redirect()->route('courses-result.index', ['course' => $course->id]);
             }
         }

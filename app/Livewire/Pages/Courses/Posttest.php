@@ -335,48 +335,41 @@ class Posttest extends Component
             }
             $attempt->save();
 
-            // Do not bump progress to 100% on failure; keep current_step unchanged for retakes
+            // After posttest submission, update progress based on result
         });
 
-        // If perfect score (100%), mark course progress as fully completed.
-        $maxAutoPoints = $questionRows->where('question_type', 'multiple')->sum('max_points');
-        $latestAuto = TestAttempt::where('test_id', $this->posttest->id)
+        // Get the latest attempt to determine status
+        $lastAttempt = TestAttempt::where('test_id', $this->posttest->id)
             ->where('user_id', $userId)
             ->orderByDesc('submitted_at')->orderByDesc('id')
-            ->value('auto_score');
-        $percent = ($maxAutoPoints > 0) ? (int) round(((int) $latestAuto / max(1, $maxAutoPoints)) * 100) : 0;
-        if ($percent === 100) {
-            $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
-            if ($enrollment) {
-                $totalUnits = (int) $this->course->progressUnitsCount();
+            ->first();
+
+        // Update progress based on attempt status
+        $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
+        if ($enrollment && $lastAttempt) {
+            $totalUnits = (int) $this->course->progressUnitsCount();
+            $current = (int) ($enrollment->current_step ?? 0);
+            $status = $lastAttempt->status ?? '';
+            $isPassed = $lastAttempt->is_passed ?? false;
+
+            if ($status === TestAttempt::STATUS_SUBMITTED && $isPassed) {
+                // PASSED: Mark as fully completed (100%)
                 $enrollment->current_step = $totalUnits;
                 $enrollment->status = 'completed';
-                $enrollment->save();
-            }
-        } else {
-            // If latest attempt exists and is not passed, DO NOT reset progress.
-            // Keep progress at modules-completed level to allow remedial without losing progress.
-            $last = TestAttempt::where('test_id', $this->posttest->id)
-                ->where('user_id', $userId)
-                ->orderByDesc('submitted_at')->orderByDesc('id')
-                ->first();
-            if ($last && !$last->is_passed) {
-                $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
-                if ($enrollment) {
-                    $totalUnits = (int) $this->course->progressUnitsCount();
-                    $requiredStep = max(0, $totalUnits - 1); // all pretest + sections completed
-                    // Ensure current_step is at least the modules-completed step; don't decrease progress
-                    $current = (int) ($enrollment->current_step ?? 0);
-                    if ($current < $requiredStep) {
-                        $enrollment->current_step = $requiredStep;
-                    }
-                    // Status should remain in_progress on failure
-                    if (strtolower($enrollment->status ?? '') === 'completed') {
-                        $enrollment->status = 'in_progress';
-                    }
-                    $enrollment->save();
+            } else {
+                // UNDER REVIEW or FAILED: Set to posttest-attempted level (totalUnits - 1)
+                // This shows ~95% progress but user can still access result page
+                $posttestAttemptedStep = max(0, $totalUnits - 1);
+                if ($current < $posttestAttemptedStep) {
+                    $enrollment->current_step = $posttestAttemptedStep;
+                }
+                // Ensure status is in_progress (not completed) for failed/under_review
+                if (strtolower($enrollment->status ?? '') === 'completed') {
+                    $enrollment->status = 'in_progress';
                 }
             }
+
+            $enrollment->save();
         }
 
         // Redirect to results page
