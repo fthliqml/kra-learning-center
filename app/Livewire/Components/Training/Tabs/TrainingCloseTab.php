@@ -94,7 +94,8 @@ class TrainingCloseTab extends Component
   }
 
   /**
-   * For LMS trainings, theory score is derived from the Course posttest result (percent) and is not editable.
+   * For LMS trainings, sync pretest and posttest scores from Course tests.
+   * Theory score is derived from the Course posttest result (percent) and is not editable.
    */
   protected function syncLmsScoresFromPosttest(): void
   {
@@ -107,14 +108,17 @@ class TrainingCloseTab extends Component
       return;
     }
 
+    // Get pretest and posttest for this course
+    $pretest = Test::where('course_id', $courseId)->where('type', 'pretest')->select(['id', 'passing_score'])->first();
     $posttest = Test::where('course_id', $courseId)->where('type', 'posttest')->select(['id', 'passing_score'])->first();
-    if (!$posttest) {
+
+    if (!$pretest && !$posttest) {
       return;
     }
 
-    $maxPoints = (int) TestQuestion::where('test_id', $posttest->id)
-      ->where('question_type', 'multiple')
-      ->sum('max_points');
+    // Calculate max points for each test (MC + Essay)
+    $pretestMaxPoints = $pretest ? (int) TestQuestion::where('test_id', $pretest->id)->sum('max_points') : 0;
+    $posttestMaxPoints = $posttest ? (int) TestQuestion::where('test_id', $posttest->id)->sum('max_points') : 0;
 
     $assessments = TrainingAssessment::where('training_id', $this->trainingId)->select(['id', 'employee_id'])->get();
     if ($assessments->isEmpty()) {
@@ -126,13 +130,29 @@ class TrainingCloseTab extends Component
       return;
     }
 
-    $attempts = TestAttempt::where('test_id', $posttest->id)
-      ->whereIn('user_id', $userIds)
-      ->orderByDesc('submitted_at')
-      ->orderByDesc('id')
-      ->get(['id', 'user_id', 'total_score', 'submitted_at']);
+    // Get latest pretest attempts (use highest score)
+    $pretestAttemptsByUser = collect();
+    if ($pretest) {
+      $pretestAttempts = TestAttempt::where('test_id', $pretest->id)
+        ->whereIn('user_id', $userIds)
+        ->where('status', TestAttempt::STATUS_SUBMITTED)
+        ->orderByDesc('total_score')
+        ->orderByDesc('submitted_at')
+        ->get(['id', 'user_id', 'auto_score', 'manual_score', 'total_score']);
+      $pretestAttemptsByUser = $pretestAttempts->groupBy('user_id')->map(fn($rows) => $rows->first());
+    }
 
-    $latestByUser = $attempts->groupBy('user_id')->map(fn($rows) => $rows->first());
+    // Get latest posttest attempts (use highest score)
+    $posttestAttemptsByUser = collect();
+    if ($posttest) {
+      $posttestAttempts = TestAttempt::where('test_id', $posttest->id)
+        ->whereIn('user_id', $userIds)
+        ->where('status', TestAttempt::STATUS_SUBMITTED)
+        ->orderByDesc('total_score')
+        ->orderByDesc('submitted_at')
+        ->get(['id', 'user_id', 'auto_score', 'manual_score', 'total_score']);
+      $posttestAttemptsByUser = $posttestAttempts->groupBy('user_id')->map(fn($rows) => $rows->first());
+    }
 
     foreach ($assessments as $assessment) {
       $aid = (int) $assessment->id;
@@ -140,13 +160,26 @@ class TrainingCloseTab extends Component
         $this->tempScores[$aid] = ['pretest_score' => null, 'posttest_score' => null, 'practical_score' => null];
       }
 
-      $attempt = $latestByUser->get($assessment->employee_id);
-      if (!$attempt) {
-        $this->tempScores[$aid]['posttest_score'] = null;
-      } else {
-        $score = (int) ($attempt->total_score ?? 0);
-        $percent = $maxPoints > 0 ? (int) round(($score / max(1, $maxPoints)) * 100) : 0;
-        $this->tempScores[$aid]['posttest_score'] = $percent;
+      // Sync pretest score
+      if ($pretest) {
+        $pretestAttempt = $pretestAttemptsByUser->get($assessment->employee_id);
+        if ($pretestAttempt) {
+          $score = (int) ($pretestAttempt->auto_score ?? 0) + (int) ($pretestAttempt->manual_score ?? 0);
+          $percent = $pretestMaxPoints > 0 ? (int) round(($score / $pretestMaxPoints) * 100) : 0;
+          $this->tempScores[$aid]['pretest_score'] = $percent;
+        }
+      }
+
+      // Sync posttest score
+      if ($posttest) {
+        $posttestAttempt = $posttestAttemptsByUser->get($assessment->employee_id);
+        if (!$posttestAttempt) {
+          $this->tempScores[$aid]['posttest_score'] = null;
+        } else {
+          $score = (int) ($posttestAttempt->auto_score ?? 0) + (int) ($posttestAttempt->manual_score ?? 0);
+          $percent = $posttestMaxPoints > 0 ? (int) round(($score / $posttestMaxPoints) * 100) : 0;
+          $this->tempScores[$aid]['posttest_score'] = $percent;
+        }
       }
 
       // LMS has no practical score
@@ -327,7 +360,8 @@ class TrainingCloseTab extends Component
       return [
         ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
         ['key' => 'employee_name', 'label' => 'Employee Name', 'class' => 'min-w-[150px]'],
-        ['key' => 'posttest_score', 'label' => 'Theory Score', 'class' => '!text-center min-w-[120px]'],
+        ['key' => 'pretest_score', 'label' => 'Pre-test Score', 'class' => '!text-center min-w-[120px]'],
+        ['key' => 'posttest_score', 'label' => 'Post-test Score', 'class' => '!text-center min-w-[120px]'],
         ['key' => 'progress', 'label' => 'Progress', 'class' => '!text-center min-w-[120px]'],
         ['key' => 'status', 'label' => 'Status', 'class' => '!text-center'],
       ];
@@ -418,18 +452,14 @@ class TrainingCloseTab extends Component
       $attendancePassed = $assessment->attendance_percentage >= 75;
 
       if ($isLms) {
+        // LMS has no attendance sessions, so skip attendance check
         if (!$hasPosttest) {
           $assessment->temp_status = 'pending';
         } else {
-          // Check attendance first
-          if (!$attendancePassed) {
-            $assessment->temp_status = 'failed';
-          } else {
-            $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
-              ->where('type', 'posttest')
-              ->value('passing_score') ?? 0);
-            $assessment->temp_status = ($passing > 0 && (float) $posttestScore >= $passing) ? 'passed' : (($passing > 0) ? 'failed' : 'passed');
-          }
+          $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
+            ->where('type', 'posttest')
+            ->value('passing_score') ?? 0);
+          $assessment->temp_status = ($passing > 0 && (float) $posttestScore >= $passing) ? 'passed' : (($passing > 0) ? 'failed' : 'passed');
         }
       } else {
         $hasPractical = is_numeric($practicalScore) && $practicalScore !== '';
@@ -495,16 +525,12 @@ class TrainingCloseTab extends Component
           // Calculate status
           $posttest = $scores['posttest_score'];
           if ($isLms) {
+            // LMS has no attendance sessions, so skip attendance check
             if (is_numeric($posttest)) {
-              // Check attendance first
-              if (!$attendancePassed) {
-                $assessment->status = 'failed';
-              } else {
-                $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
-                  ->where('type', 'posttest')
-                  ->value('passing_score') ?? 0);
-                $assessment->status = ($passing > 0 && (float) $posttest >= $passing) ? 'passed' : (($passing > 0) ? 'failed' : 'passed');
-              }
+              $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
+                ->where('type', 'posttest')
+                ->value('passing_score') ?? 0);
+              $assessment->status = ($passing > 0 && (float) $posttest >= $passing) ? 'passed' : (($passing > 0) ? 'failed' : 'passed');
             } else {
               $assessment->status = 'pending';
             }
@@ -659,17 +685,13 @@ class TrainingCloseTab extends Component
           // Calculate status
           $posttest = $assessment->posttest_score;
           if ($isLms) {
+            // LMS has no attendance sessions, so skip attendance check
             if ($posttest === null || $posttest === '') {
               $assessment->status = 'pending';
             } else {
-              // Check attendance first
-              if (!$attendancePassed) {
-                $assessment->status = 'failed';
-              } else {
-                $assessment->status = ($lmsPassingScore > 0 && (float) $posttest >= $lmsPassingScore)
-                  ? 'passed'
-                  : (($lmsPassingScore > 0) ? 'failed' : 'passed');
-              }
+              $assessment->status = ($lmsPassingScore > 0 && (float) $posttest >= $lmsPassingScore)
+                ? 'passed'
+                : (($lmsPassingScore > 0) ? 'failed' : 'passed');
             }
           } else {
             $practical = $assessment->practical_score;

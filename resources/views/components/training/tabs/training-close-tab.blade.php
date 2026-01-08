@@ -61,15 +61,22 @@
                     </div>
                 @endscope
 
-                @if (!$isLms)
-                    {{-- Custom cell untuk Pretest Score --}}
-                    @scope('cell_pretest_score', $assessment, $testReviewStatus, $training)
-                        <div class="flex flex-col items-center gap-1">
-                            @php
-                                $trainingDone = $assessment->training_done ?? false;
-                                $reviewStatus = $testReviewStatus[$assessment->employee_id] ?? [];
-                                $pretestNeedReview = $reviewStatus['pretest_need_review'] ?? false;
-                            @endphp
+                {{-- Custom cell untuk Pretest Score --}}
+                @scope('cell_pretest_score', $assessment, $testReviewStatus, $training)
+                    <div class="flex flex-col items-center gap-1">
+                        @php
+                            $trainingDone = $assessment->training_done ?? false;
+                            $isLmsType = !empty($assessment->is_lms);
+                            $reviewStatus = $testReviewStatus[$assessment->employee_id] ?? [];
+                            $pretestNeedReview = $reviewStatus['pretest_need_review'] ?? false;
+                        @endphp
+                        @if ($isLmsType)
+                            {{-- LMS: Pretest is read-only, synced from course pretest --}}
+                            <div tabindex="-1"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
+                                {{ $assessment->temp_pretest ?? '-' }}</div>
+                        @else
+                            {{-- Non-LMS: Pretest is editable unless training is done --}}
                             @if ($pretestNeedReview)
                                 <a href="{{ route('test-review.answers', ['training' => $training->id, 'user' => $assessment->employee_id]) }}"
                                     class="badge badge-warning badge-xs cursor-pointer hover:badge-outline gap-1"
@@ -87,9 +94,9 @@
                                     class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary {{ $pretestNeedReview ? 'border-warning' : '' }}"
                                     placeholder="0-100" {{ $pretestNeedReview ? 'readonly' : '' }}>
                             @endif
-                        </div>
-                    @endscope
-                @endif
+                        @endif
+                    </div>
+                @endscope
 
                 {{-- Custom cell untuk Post-Test Score --}}
                 @scope('cell_posttest_score', $assessment, $testReviewStatus, $training)
