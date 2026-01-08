@@ -337,11 +337,8 @@ class Approval extends Component
     }
 
     /** Approve selected request */
-    public function approve(): void
+    public function approve(?int $id = null): void
     {
-        if (!$this->selectedId) {
-            return;
-        }
         /** @var User|null $user */
         $user = Auth::user();
 
@@ -349,7 +346,13 @@ class Approval extends Component
             return;
         }
 
-        $training = Training::find($this->selectedId);
+        $trainingId = $id ?? $this->selectedId;
+
+        if (!$trainingId) {
+            return;
+        }
+
+        $training = Training::find($trainingId);
 
         if (!$training) {
             $this->error('Training not found.', position: 'toast-top toast-center');
@@ -419,11 +422,8 @@ class Approval extends Component
     }
 
     /** Reject selected request */
-    public function reject(): void
+    public function reject(?int $id = null): void
     {
-        if (!$this->selectedId) {
-            return;
-        }
         /** @var User|null $user */
         $user = Auth::user();
 
@@ -431,7 +431,13 @@ class Approval extends Component
             return;
         }
 
-        $training = Training::find($this->selectedId);
+        $trainingId = $id ?? $this->selectedId;
+
+        if (!$trainingId) {
+            return;
+        }
+
+        $training = Training::find($trainingId);
 
         if (!$training) {
             $this->error('Training not found.', position: 'toast-top toast-center');

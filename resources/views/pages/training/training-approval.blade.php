@@ -1,6 +1,19 @@
 <div>
     @livewire('components.confirm-dialog')
 
+    {{-- Global loading overlay for Dept Head approval (certificate generation) --}}
+    <div wire:loading.flex wire:target="approve"
+        class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm items-center justify-center">
+        <div class="bg-white rounded-lg shadow-lg px-6 py-4 flex items-center gap-3 max-w-sm mx-4">
+            <x-icon name="o-arrow-path" class="size-6 text-primary animate-spin" />
+            <div class="text-sm text-gray-800">
+                <div class="font-semibold">Generating certificates</div>
+                <div class="text-xs text-gray-500 mt-0.5">Please wait while training certificates are being
+                    generated...</div>
+            </div>
+        </div>
+    </div>
+
     {{-- Header --}}
     <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
                 grid-cols-1 lg:grid-cols-2 items-center">
@@ -168,9 +181,36 @@
 
                 {{-- Action --}}
                 @scope('cell_action', $approval)
-                    <div class="flex justify-center">
+                    @php
+                        $user = auth()->user();
+
+                        $isDeptHead =
+                            $user &&
+                            method_exists($user, 'hasPosition') &&
+                            $user->hasPosition('department_head') &&
+                            ($user->department ?? '') === 'Human Capital, General Service, Security & LID';
+
+                        $status = strtolower($approval->status ?? '');
+                        $hasLevel1Approval = !empty($approval->section_head_signed_at ?? null);
+                        $hasLevel2Approval = !empty($approval->dept_head_signed_at ?? null);
+
+                        // Row-level Dept Head actions: training done, level 1 approved, not yet level 2
+                        $showDeptHeadRowActions =
+                            $isDeptHead && $status === 'done' && $hasLevel1Approval && !$hasLevel2Approval;
+                    @endphp
+                    <div class="flex justify-center gap-1">
                         <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
                             wire:click="openDetailModal({{ $approval->id }})" />
+
+                        @if ($showDeptHeadRowActions)
+                            <x-button icon="o-x-mark"
+                                class="btn-circle btn-ghost p-2 bg-rose-600 text-white hover:bg-rose-700" spinner
+                                wire:click="reject({{ $approval->id }})" />
+
+                            <x-button icon="o-check"
+                                class="btn-circle btn-ghost p-2 bg-emerald-600 text-white hover:bg-emerald-700" spinner
+                                wire:click="approve({{ $approval->id }})" />
+                        @endif
                     </div>
                 @endscope
             </x-table>
@@ -189,7 +229,8 @@
         <x-tabs wire:model="activeTab">
             <x-tab name="information" label="Information" icon="o-information-circle">
                 <x-form no-separator>
-                    <x-input label="Training Name" :value="$formData['training_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
+                    <x-input label="Training Name" :value="$formData['training_name'] ?? ''" class="focus-within:border-0"
+                        :readonly="true" />
 
                     <div class="grid grid-cols-2 gap-4">
                         <x-input label="Type" :value="$formData['type'] ?? ''" class="focus-within:border-0" :readonly="true" />
@@ -202,7 +243,8 @@
                         <x-input label="Start Date" :value="$formData['start_date'] ?? ''" class="focus-within:border-0"
                             :readonly="true" />
 
-                        <x-input label="End Date" :value="$formData['end_date'] ?? ''" class="focus-within:border-0" :readonly="true" />
+                        <x-input label="End Date" :value="$formData['end_date'] ?? ''" class="focus-within:border-0"
+                            :readonly="true" />
                     </div>
 
                     <div class="mt-3">

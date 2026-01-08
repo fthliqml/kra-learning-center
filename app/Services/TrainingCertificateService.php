@@ -88,15 +88,53 @@ class TrainingCertificateService
             $lidSectionHead = $this->getLidSectionHead();
             $lidDeptHead = $this->getLidDepartmentHead();
 
-            // Dept Head area LID
+            // Dept Head area LID (left side)
             if ($lidDeptHead) {
+                // Signature image (if available)
+                $deptHeadSignaturePath = null;
+                if ($lidDeptHead->relationLoaded('signature') || method_exists($lidDeptHead, 'signature')) {
+                    $lidDeptHead->loadMissing('signature');
+                    $sigPath = $lidDeptHead->signature->path ?? null;
+                    if ($sigPath) {
+                        $fullPath = Storage::disk('public')->path($sigPath);
+                        if (file_exists($fullPath)) {
+                            $deptHeadSignaturePath = $fullPath;
+                        }
+                    }
+                }
+
+                if ($deptHeadSignaturePath) {
+                    // Place signature slightly above the printed name
+                    $pdf->Image($deptHeadSignaturePath, 98, 160, 34);
+                }
+
+                // Printed name
                 $pdf->SetFont('Times', 'BU', 10);
                 $pdf->SetXY(79.5, 183);
                 $pdf->Cell(70, 5, $lidDeptHead->name, 0, 0, 'C');
             }
 
-            // Section Head LID
+            // Section Head LID (right side)
             if ($lidSectionHead) {
+                // Signature image (if available)
+                $sectionHeadSignaturePath = null;
+                if ($lidSectionHead->relationLoaded('signature') || method_exists($lidSectionHead, 'signature')) {
+                    $lidSectionHead->loadMissing('signature');
+                    $sigPath = $lidSectionHead->signature->path ?? null;
+                    if ($sigPath) {
+                        $fullPath = Storage::disk('public')->path($sigPath);
+                        if (file_exists($fullPath)) {
+                            $sectionHeadSignaturePath = $fullPath;
+                        }
+                    }
+                }
+
+                if ($sectionHeadSignaturePath) {
+                    // Place signature slightly above the printed name
+                    $pdf->Image($sectionHeadSignaturePath, 225, 160, 34);
+                }
+
+                // Printed name
                 $pdf->SetFont('Times', 'BU', 10);
                 $pdf->SetXY(207.5, 183);
                 $pdf->Cell(70, 5, $lidSectionHead->name, 0, 0, 'C');
@@ -162,10 +200,26 @@ class TrainingCertificateService
                 ->first();
 
             $instructorName = 'Instructor';
+            $instructorSignaturePath = null;
             if ($firstSessionWithTrainer && $firstSessionWithTrainer->trainer) {
-                $instructorName = $firstSessionWithTrainer->trainer->name
-                    ?? ($firstSessionWithTrainer->trainer->user->name ?? 'Instructor');
+                $trainer = $firstSessionWithTrainer->trainer;
+                $instructorName = $trainer->name ?? ($trainer->user->name ?? 'Instructor');
+
+                if (!empty($trainer->signature_path)) {
+                    $sigPath = $trainer->signature_path;
+                    $fullPath = Storage::disk('public')->path($sigPath);
+                    if (file_exists($fullPath)) {
+                        $instructorSignaturePath = $fullPath;
+                    }
+                }
             }
+
+            // Instructor signature (if available) above the name on page 2
+            if ($instructorSignaturePath) {
+                $pdf->Image($instructorSignaturePath, 215.3, 158, 34);
+            }
+
+            // Instructor printed name
             $pdf->SetFont('Times', 'BU', 10);
             $pdf->SetXY(201.6, 180);
             $pdf->Cell(60, 5, $instructorName, 0, 0, 'C');
