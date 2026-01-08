@@ -24,28 +24,58 @@ class CourseTestSeeder extends Seeder
   }
 
   /**
-   * Create pretest (5 essay) and posttest (4 MC + 1 essay) for a course.
+   * Create pretest (5 MC) and posttest (4 MC + 1 essay) for a course.
    */
   private function createTestsForCourse(Course $course): void
   {
     $courseTitle = $course->title;
 
-    // Essay questions for pretest (5 questions × 20 points = 100 points)
-    $essayQuestions = [
+    // Multiple choice questions for pretest (5 MC × 20 points = 100 points)
+    $pretestQuestions = [
       [
-        'text' => "Jelaskan pemahaman Anda tentang konsep dasar dari materi \"{$courseTitle}\" dan mengapa hal ini penting dalam konteks pekerjaan Anda.",
+        'text' => "Apa tujuan utama Anda mengikuti course \"{$courseTitle}\"?",
+        'options' => [
+          ['text' => 'Meningkatkan kompetensi dan efisiensi kerja', 'is_correct' => true],
+          ['text' => 'Hanya untuk memenuhi kewajiban training', 'is_correct' => false],
+          ['text' => 'Mengisi waktu luang di kantor', 'is_correct' => false],
+          ['text' => 'Mendapatkan sertifikat tanpa belajar', 'is_correct' => false],
+        ],
       ],
       [
-        'text' => "Apa ekspektasi Anda dari mengikuti course \"{$courseTitle}\"? Sebutkan minimal 3 hal yang ingin Anda pelajari.",
+        'text' => "Seberapa penting materi \"{$courseTitle}\" menurut Anda dalam mendukung operasional harian?",
+        'options' => [
+          ['text' => 'Sangat penting untuk standar kualitas kerja', 'is_correct' => true],
+          ['text' => 'Kurang penting, bisa dipelajari sambil jalan', 'is_correct' => false],
+          ['text' => 'Tidak relevan dengan tugas saya', 'is_correct' => false],
+          ['text' => 'Hanya penting bagi manajemen saja', 'is_correct' => false],
+        ],
       ],
       [
-        'text' => "Berdasarkan pengalaman Anda sebelumnya, bagaimana \"{$courseTitle}\" dapat membantu meningkatkan kinerja di area kerja Anda?",
+        'text' => "Apa yang Anda ketahui tentang implementasi awal \"{$courseTitle}\"?",
+        'options' => [
+          ['text' => 'Perlu pemahaman teori dasar sebelum praktik', 'is_correct' => true],
+          ['text' => 'Bisa langsung dilakukan tanpa instruksi', 'is_correct' => false],
+          ['text' => 'Tidak memerlukan persiapan khusus', 'is_correct' => false],
+          ['text' => 'Hanya butuh peralatan baru saja', 'is_correct' => false],
+        ],
       ],
       [
-        'text' => "Jelaskan tantangan apa yang mungkin Anda hadapi dalam mempelajari \"{$courseTitle}\" dan bagaimana strategi Anda untuk mengatasinya.",
+        'text' => "Mengapa dokumentasi progres sangat diperlukan dalam materi \"{$courseTitle}\"?",
+        'options' => [
+          ['text' => 'Sebagai bahan evaluasi dan perbaikan berkelanjutan', 'is_correct' => true],
+          ['text' => 'Hanya untuk menambah pekerjaan administrasi', 'is_correct' => false],
+          ['text' => 'Tidak ada manfaatnya bagi tim', 'is_correct' => false],
+          ['text' => 'Agar terlihat sibuk di depan atasan', 'is_correct' => false],
+        ],
       ],
       [
-        'text' => "Bagaimana Anda akan mengaplikasikan pengetahuan dari \"{$courseTitle}\" dalam pekerjaan sehari-hari? Berikan contoh konkret.",
+        'text' => "Siapa yang paling diuntungkan jika standar dalam \"{$courseTitle}\" dijalankan dengan benar?",
+        'options' => [
+          ['text' => 'Seluruh organisasi dan pelanggan', 'is_correct' => true],
+          ['text' => 'Hanya departemen training', 'is_correct' => false],
+          ['text' => 'Hanya direktur perusahaan', 'is_correct' => false],
+          ['text' => 'Hanya kompetitor perusahaan', 'is_correct' => false],
+        ],
       ],
     ];
 
@@ -94,7 +124,7 @@ class CourseTestSeeder extends Seeder
       'text' => "Berdasarkan seluruh materi yang telah Anda pelajari di \"{$courseTitle}\", jelaskan secara komprehensif bagaimana Anda akan mengintegrasikan pengetahuan ini ke dalam rutinitas kerja harian Anda. Sertakan langkah-langkah konkret dan timeline yang realistis.",
     ];
 
-    // Create Pretest (5 Essay questions)
+    // Create Pretest (5 MC questions)
     $pretest = Test::updateOrCreate(
       [
         'course_id' => $course->id,
@@ -111,15 +141,24 @@ class CourseTestSeeder extends Seeder
     // Clear existing questions
     $pretest->questions()->delete();
 
-    // Create pretest essay questions (5 × 20 points = 100)
-    foreach ($essayQuestions as $order => $questionData) {
-      TestQuestion::create([
+    // Create pretest MC questions (5 × 20 points = 100)
+    foreach ($pretestQuestions as $order => $questionData) {
+      $question = TestQuestion::create([
         'test_id' => $pretest->id,
-        'question_type' => 'essay',
+        'question_type' => 'multiple',
         'text' => $questionData['text'],
         'order' => $order,
         'max_points' => 20,
       ]);
+
+      foreach ($questionData['options'] as $optOrder => $optionData) {
+        TestQuestionOption::create([
+          'question_id' => $question->id,
+          'text' => $optionData['text'],
+          'is_correct' => $optionData['is_correct'],
+          'order' => $optOrder,
+        ]);
+      }
     }
 
     // Create Posttest (4 MC + 1 Essay)
