@@ -44,7 +44,11 @@
                                 {{ $training->name }}
                             </h3>
                             <p class="text-sm text-base-content/60 mt-0.5 truncate">
-                                {{ $training->module?->title ?? 'No module assigned' }}
+                                @if ($training->type === 'LMS')
+                                    {{ $training->course?->title ?? 'No course assigned' }}
+                                @else
+                                    {{ $training->module?->title ?? 'No module assigned' }}
+                                @endif
                             </p>
                         </div>
 
@@ -100,10 +104,17 @@
                                         </div>
                                     </div>
                                     @if ($training->testStatus['pretest'] === 'available')
-                                        <a href="{{ route('training-test.take', ['training' => $training->id, 'type' => 'pretest']) }}"
-                                            wire:navigate class="btn btn-sm btn-primary">
-                                            Start
-                                        </a>
+                                        @if ($training->type === 'LMS' && $training->course)
+                                            <a href="{{ route('courses-pretest.index', ['course' => $training->course_id]) }}"
+                                                wire:navigate class="btn btn-sm btn-primary">
+                                                Start
+                                            </a>
+                                        @else
+                                            <a href="{{ route('training-test.take', ['training' => $training->id, 'type' => 'pretest']) }}"
+                                                wire:navigate class="btn btn-sm btn-primary">
+                                                Start
+                                            </a>
+                                        @endif
                                     @elseif($training->testStatus['pretest'] === 'completed')
                                         <span class="badge badge-success badge-sm">Done</span>
                                     @elseif($training->testStatus['pretest'] === 'under_review')
@@ -173,22 +184,40 @@
                                                     <span class="opacity-70">(Max attempts reached)</span>
                                                 </p>
                                             @elseif($training->testStatus['posttest'] === 'locked')
-                                                <p class="text-xs text-base-content/50">Complete pre-test first</p>
+                                                @if ($training->type === 'LMS')
+                                                    <p class="text-xs text-base-content/50">Complete learning modules first</p>
+                                                @else
+                                                    <p class="text-xs text-base-content/50">Complete pre-test first</p>
+                                                @endif
                                             @else
                                                 <p class="text-xs text-base-content/40">Not available</p>
                                             @endif
                                         </div>
                                     </div>
                                     @if ($training->testStatus['posttest'] === 'available')
-                                        <a href="{{ route('training-test.take', ['training' => $training->id, 'type' => 'posttest']) }}"
-                                            wire:navigate class="btn btn-sm btn-primary">
-                                            Start
-                                        </a>
+                                        @if ($training->type === 'LMS' && $training->course)
+                                            <a href="{{ route('courses-posttest.index', ['course' => $training->course_id]) }}"
+                                                wire:navigate class="btn btn-sm btn-primary">
+                                                Start
+                                            </a>
+                                        @else
+                                            <a href="{{ route('training-test.take', ['training' => $training->id, 'type' => 'posttest']) }}"
+                                                wire:navigate class="btn btn-sm btn-primary">
+                                                Start
+                                            </a>
+                                        @endif
                                     @elseif($training->testStatus['posttest'] === 'retake')
-                                        <a href="{{ route('training-test.take', ['training' => $training->id, 'type' => 'posttest']) }}"
-                                            wire:navigate class="btn btn-sm btn-error btn-outline">
-                                            Retake
-                                        </a>
+                                        @if ($training->type === 'LMS' && $training->course)
+                                            <a href="{{ route('courses-posttest.index', ['course' => $training->course_id]) }}"
+                                                wire:navigate class="btn btn-sm btn-error btn-outline">
+                                                Retake
+                                            </a>
+                                        @else
+                                            <a href="{{ route('training-test.take', ['training' => $training->id, 'type' => 'posttest']) }}"
+                                                wire:navigate class="btn btn-sm btn-error btn-outline">
+                                                Retake
+                                            </a>
+                                        @endif
                                     @elseif($training->testStatus['posttest'] === 'completed')
                                         <span class="badge badge-success badge-sm">Passed</span>
                                     @elseif($training->testStatus['posttest'] === 'under_review')
@@ -196,7 +225,17 @@
                                     @elseif($training->testStatus['posttest'] === 'failed')
                                         <span class="badge badge-error badge-sm">Failed</span>
                                     @elseif($training->testStatus['posttest'] === 'locked')
-                                        <span class="badge badge-ghost badge-sm">Locked</span>
+                                        @if ($training->type === 'LMS' && $training->course)
+                                            <a href="{{ route('courses-modules.index', ['course' => $training->course_id]) }}"
+                                                wire:navigate
+                                                class="btn btn-sm btn-ghost gap-1 px-2 text-primary hover:bg-primary/10 font-normal">
+                                                <span class="hidden sm:inline">Continue</span>
+                                                <span class="sm:hidden">Cont.</span>
+                                                <x-icon name="o-arrow-right" class="size-3" />
+                                            </a>
+                                        @else
+                                            <span class="badge badge-ghost badge-sm">Locked</span>
+                                        @endif
                                     @endif
                                 </div>
                             </div>

@@ -103,8 +103,15 @@ class TrainingTestList extends Component
                     $posttestStatus = $canRetake ? 'retake' : 'failed';
                 }
             } else {
-                // No attempts yet - check if pretest completed
-                $posttestStatus = in_array($pretestStatus, ['completed', 'under_review']) ? 'available' : 'locked';
+                // No attempts yet - check prerequisites
+                if ($training->type === 'LMS' && $training->course) {
+                    // LMS: Must complete pretest + all learning modules
+                    $learningComplete = $training->course->hasCompletedLearningForUser($userId);
+                    $posttestStatus = $learningComplete ? 'available' : 'locked';
+                } else {
+                    // IN: Only need pretest completed
+                    $posttestStatus = in_array($pretestStatus, ['completed', 'under_review']) ? 'available' : 'locked';
+                }
             }
         }
 

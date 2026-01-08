@@ -137,40 +137,8 @@
             progressPercent() {
                 return this.totalQuestions ? (this.answeredCount / this.totalQuestions) * 100 : 0;
             },
-            key() {
-                // Unique key per user+pretest
-                return `pretest:${@json($userId)}:${@json($pretestId)}`;
-            },
             init() {
-                // Restore saved answers
-                try {
-                    const raw = localStorage.getItem(this.key());
-                    if (raw) {
-                        const parsed = JSON.parse(raw);
-                        if (parsed && typeof parsed === 'object') {
-                            this.answers = parsed;
-                            // Re-check radios
-                            Object.entries(this.answers).forEach(([name, val]) => {
-                                const el = this.$refs.formEl?.querySelector(
-                                    `input[type=radio][name='${name}'][value='${val}']`);
-                                if (el) el.checked = true;
-                                const ta = this.$refs[`txt_${name}`];
-                                if (ta && ta.value !== undefined && typeof val === 'string') ta.value = val;
-                            });
-                        }
-                    }
-                } catch (e) {}
-                // Autosave on input change
-                this.$nextTick(() => {
-                    this.$refs.formEl?.addEventListener('input', this.saveDraft.bind(this));
-                    this.$refs.formEl?.addEventListener('change', this.saveDraft.bind(this));
-                });
-                window.addEventListener('beforeunload', this.saveDraft.bind(this));
-            },
-            saveDraft() {
-                try {
-                    localStorage.setItem(this.key(), JSON.stringify(this.answers));
-                } catch (e) {}
+                // No autosave/restore - start with empty answers
             },
             validate() {
                 this.errors = {};
@@ -195,7 +163,6 @@
                 this.answers = {};
                 this.errors = {};
                 this.submitted = false;
-                this.saveDraft();
             },
             submit() {
                 if (!this.validate()) {
@@ -203,8 +170,6 @@
                 }
                 this.submitting = true;
                 this.submitted = true;
-                // Persist draft immediately before sending
-                this.saveDraft();
                 Promise.resolve(this.lw.submitPretest(this.answers))
                     .catch(() => {
                         this.submitting = false;

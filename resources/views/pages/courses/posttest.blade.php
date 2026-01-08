@@ -154,45 +154,8 @@
                 progressPercent() {
                     return this.totalQuestions ? (this.answeredCount / this.totalQuestions) * 100 : 0;
                 },
-                key() {
-                    return `posttest:${@json($userId)}:${@json($posttestId)}`;
-                },
                 init() {
-                    // Clear previous attempt's draft on first load in this session
-                    try {
-                        const initKey =
-                            `posttest:initCleared:${@json($userId)}:${@json($posttestId)}`;
-                        if (!sessionStorage.getItem(initKey)) {
-                            localStorage.removeItem(this.key());
-                            sessionStorage.setItem(initKey, '1');
-                        }
-                    } catch (e) {}
-                    try {
-                        const raw = localStorage.getItem(this.key());
-                        if (raw) {
-                            const parsed = JSON.parse(raw);
-                            if (parsed && typeof parsed === 'object') {
-                                this.answers = parsed;
-                                Object.entries(this.answers).forEach(([name, val]) => {
-                                    const el = this.$refs.formEl?.querySelector(
-                                        `input[type=radio][name='${name}'][value='${val}']`);
-                                    if (el) el.checked = true;
-                                    const ta = this.$refs[`txt_${name}`];
-                                    if (ta && ta.value !== undefined && typeof val === 'string') ta.value = val;
-                                });
-                            }
-                        }
-                    } catch (e) {}
-                    this.$nextTick(() => {
-                        this.$refs.formEl?.addEventListener('input', this.saveDraft.bind(this));
-                        this.$refs.formEl?.addEventListener('change', this.saveDraft.bind(this));
-                    });
-                    window.addEventListener('beforeunload', this.saveDraft.bind(this));
-                },
-                saveDraft() {
-                    try {
-                        localStorage.setItem(this.key(), JSON.stringify(this.answers));
-                    } catch (e) {}
+                    // No autosave/restore - start with empty answers
                 },
                 validate() {
                     this.errors = {};
@@ -213,13 +176,11 @@
                     this.answers = {};
                     this.errors = {};
                     this.submitted = false;
-                    this.saveDraft();
                 },
                 submit() {
                     if (!this.validate()) return;
                     this.submitting = true;
                     this.submitted = true;
-                    this.saveDraft();
                     Promise.resolve(this.lw.submitPosttest(this.answers))
                         .catch(() => {
                             this.submitting = false;

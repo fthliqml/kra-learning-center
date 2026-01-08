@@ -254,4 +254,33 @@ class Course extends Model
 
         return true;
     }
+
+    /**
+     * Check if user has completed all learning content (pretest + all sections).
+     * This is required before user can access posttest.
+     * Posttest is available when user reaches the last section.
+     */
+    public function hasCompletedLearningForUser(int $userId): bool
+    {
+        $userCourse = $this->userCourses()->where('user_id', $userId)->first();
+        if (!$userCourse) {
+            return false;
+        }
+
+        // Calculate required steps: pretest(1) + sections - 1
+        // This means posttest is available when user is at/past the last section
+        $hasPretest = Test::where('course_id', $this->id)->where('type', 'pretest')->exists();
+        $pretestStep = $hasPretest ? 1 : 0;
+
+        $sectionCount = Section::whereHas('topic', fn($q) => $q->where('course_id', $this->id))->count();
+        if ($sectionCount === 0) {
+            $sectionCount = $this->learningModules()->count();
+        }
+
+        // User must have completed pretest and be at/past the last section
+        // requiredStep = pretest(1) + all_sections_except_last = pretestStep + sectionCount - 1
+        $requiredStep = $pretestStep + max(0, $sectionCount - 1);
+
+        return $userCourse->current_step >= $requiredStep;
+    }
 }

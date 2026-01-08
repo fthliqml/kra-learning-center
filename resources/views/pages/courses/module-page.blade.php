@@ -46,7 +46,7 @@
                 <div class="flex items-center justify-between mb-5 md:mb-6">
                     <h1 class="text-lg md:text-2xl font-bold text-gray-900">{{ $activeSection->title }}</h1>
                     <div class="hidden md:flex items-center gap-2">
-                        <button wire:click="completeSubtopic" :disabled="!(done || remedial)"
+                        <button wire:click="completeSubtopic"
                             wire:loading.attr="disabled" wire:target="completeSubtopic"
                             wire:loading.class="opacity-70 pointer-events-none"
                             class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
@@ -167,7 +167,7 @@
 
                 {{-- Bottom Action (mobile) --}}
                 <div class="mt-6 flex items-center justify-end md:hidden">
-                    <button wire:click="completeSubtopic" :disabled="!(done || remedial)" wire:loading.attr="disabled"
+                    <button wire:click="completeSubtopic" wire:loading.attr="disabled"
                         wire:target="completeSubtopic" wire:loading.class="opacity-70 pointer-events-none"
                         class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
                         <x-icon name="o-arrow-right" class="size-5" />
