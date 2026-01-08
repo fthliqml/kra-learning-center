@@ -20,24 +20,27 @@ class TrainingTestList extends Component
         $this->resetPage();
     }
 
+    /**
+     * Get test status for a training.
+     * Supports both IN (module-based) and LMS (course-based) training types.
+     */
     public function getTestStatus(Training $training, int $userId): array
     {
-        $module = $training->module;
-        if (!$module) {
-            return [
-                'pretest' => 'unavailable',
-                'posttest' => 'unavailable',
-                'pretestScore' => null,
-                'posttestScore' => null,
-                'posttestAttempts' => 0,
-                'posttestMaxAttempts' => null,
-                'posttestPassed' => false,
-            ];
+        $pretest = null;
+        $posttest = null;
+
+        // Determine test source based on training type
+        if ($training->type === 'LMS' && $training->course) {
+            // LMS: Tests are linked to Course
+            $pretest = $training->course->tests->firstWhere('type', 'pretest');
+            $posttest = $training->course->tests->firstWhere('type', 'posttest');
+        } elseif ($training->type === 'IN' && $training->module) {
+            // IN: Tests are linked to TrainingModule
+            $pretest = $training->module->pretest;
+            $posttest = $training->module->posttest;
         }
 
-        $pretest = $module->pretest;
-        $posttest = $module->posttest;
-
+        // Default values
         $pretestStatus = 'unavailable';
         $posttestStatus = 'unavailable';
         $pretestScore = null;
@@ -120,15 +123,21 @@ class TrainingTestList extends Component
     {
         $userId = Auth::id();
 
-        // Get IN-type trainings where user is assigned
-        $trainings = Training::with(['module.pretest', 'module.posttest', 'competency'])
-            ->where('type', ['IN', 'LMS'])
+        // Get IN and LMS trainings where user is assigned
+        $trainings = Training::with([
+            'module.pretest',
+            'module.posttest',
+            'course.tests',
+            'competency'
+        ])
+            ->whereIn('type', ['IN', 'LMS'])
             ->whereIn('status', ['in_progress'])
             ->whereHas('assessments', fn($q) => $q->where('employee_id', $userId))
             ->when($this->search, function ($q) {
                 $q->where(function ($sub) {
                     $sub->where('name', 'like', '%' . $this->search . '%')
-                        ->orWhereHas('module', fn($m) => $m->where('title', 'like', '%' . $this->search . '%'));
+                        ->orWhereHas('module', fn($m) => $m->where('title', 'like', '%' . $this->search . '%'))
+                        ->orWhereHas('course', fn($c) => $c->where('title', 'like', '%' . $this->search . '%'));
                 });
             })
             ->orderBy('start_date', 'desc')

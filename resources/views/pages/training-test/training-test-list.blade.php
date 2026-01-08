@@ -58,7 +58,9 @@
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     <x-icon name="o-tag" class="size-4" />
-                                    <span class="badge badge-sm badge-ghost">{{ $training->type }}</span>
+                                    <span class="badge badge-sm border {{ $training->type === 'LMS' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-green-100 text-green-700 border-green-200' }}">
+                                        {{ $training->type }}
+                                    </span>
                                 </div>
                             </div>
 
