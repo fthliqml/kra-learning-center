@@ -3,16 +3,18 @@
 namespace App\Livewire\Pages\Training;
 
 use App\Models\Training;
+use App\Models\Signature;
 use App\Models\User;
 use App\Services\TrainingCertificateService;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Auth;
 use Mary\Traits\Toast;
 
 class Approval extends Component
 {
-    use WithPagination, Toast;
+    use WithPagination, Toast, WithFileUploads;
 
     public $modal = false;
     public $selectedId = null;
@@ -20,6 +22,8 @@ class Approval extends Component
 
     public $search = '';
     public $filter = 'All';
+
+    public $signatureFile;
 
     public array $formData = [
         'training_name' => '',
@@ -217,6 +221,8 @@ class Approval extends Component
                     'end_date' => $training->end_date,
                     'status' => $training->status,
                     'actual_status' => $training->status,
+                    'section_head_signed_at' => $training->section_head_signed_at,
+                    'dept_head_signed_at' => $training->dept_head_signed_at,
                 ];
             });
     }
@@ -249,6 +255,12 @@ class Approval extends Component
             'created_at' => $training->created_at->format('d F Y'),
             'status' => $training->status,
             'actual_status' => $training->status,
+            'section_head_signed_at' => $training->section_head_signed_at
+                ? $training->section_head_signed_at->format('d F Y H:i')
+                : null,
+            'dept_head_signed_at' => $training->dept_head_signed_at
+                ? $training->dept_head_signed_at->format('d F Y H:i')
+                : null,
         ];
         $this->modal = true;
         $this->resetValidation();
@@ -267,8 +279,61 @@ class Approval extends Component
         }
 
         // Only section head from LID can moderate
-        return $user->hasPosition('section_head')
+        return strtolower(trim($user->position ?? '')) === 'section_head'
             && strtolower(trim($user->section ?? '')) === 'lid';
+    }
+
+    /** Determine if current user can sign as LID Section Head (used for upload permission) */
+    protected function canSignAsSectionHead(): bool
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        return strtolower(trim($user->position ?? '')) === 'section_head'
+            && strtolower(trim($user->section ?? '')) === 'lid';
+    }
+
+    /** Determine if current user can sign as LID Department Head (used for upload permission) */
+    protected function canSignAsDeptHead(): bool
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        return strtolower(trim($user->position ?? '')) === 'department_head'
+            && trim($user->department ?? '') === 'Human Capital, General Service, Security & LID';
+    }
+
+    public function uploadSignature(): void
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return;
+        }
+
+        if (!$this->canSignAsSectionHead() && !$this->canSignAsDeptHead()) {
+            $this->error('Only LID Section Head or LID Department Head can upload a signature.', position: 'toast-top toast-center');
+            return;
+        }
+
+        $this->validate([
+            'signatureFile' => 'required|image|max:2048', // max 2MB
+        ]);
+
+        $path = $this->signatureFile->store('signatures', 'public');
+
+        Signature::updateOrCreate(
+            ['user_id' => $user->id],
+            ['path' => $path]
+        );
+
+        $this->signatureFile = null;
+
+        $this->success('Signature uploaded successfully.', position: 'toast-top toast-center');
     }
 
     /** Approve selected request */
@@ -277,8 +342,10 @@ class Approval extends Component
         if (!$this->selectedId) {
             return;
         }
-        if (!$this->canModerate()) {
-            $this->error('Only LID leader can approve.', position: 'toast-top toast-center');
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if (!$user) {
             return;
         }
 
@@ -289,27 +356,66 @@ class Approval extends Component
             return;
         }
 
-        // Update status to approved
-        $training->update([
-            'status' => 'approved',
-        ]);
+        $status = strtolower($training->status);
 
-        // Generate certificates for passed participants
-        $certificateService = new TrainingCertificateService();
-        $certificatesGenerated = $certificateService->generateCertificatesForTraining($training);
-
-        $this->formData['status'] = 'approved';
-
-        // Notify other components that training status changed
-        $this->dispatch('training-closed', ['id' => $training->id, 'status' => 'approved']);
-
-        if ($certificatesGenerated > 0) {
-            $this->success("Training approved successfully. {$certificatesGenerated} certificate(s) generated.", position: 'toast-top toast-center');
-        } else {
-            $this->success('Training approved successfully', position: 'toast-top toast-center');
+        if ($status !== 'done') {
+            $this->error('Only trainings with status DONE can be approved.', position: 'toast-top toast-center');
+            return;
         }
 
-        $this->modal = false;
+        // Level 1 approval: Section Head LID
+        if ($this->canSignAsSectionHead() && !$training->section_head_signed_at && !$training->dept_head_signed_at) {
+            $training->update([
+                'section_head_signed_by' => $user->id,
+                'section_head_signed_at' => now(),
+            ]);
+
+            $training->refresh();
+
+            $this->formData['status'] = $training->status; // still 'done'
+            $this->formData['section_head_signed_at'] = $training->section_head_signed_at
+                ? $training->section_head_signed_at->format('d F Y H:i')
+                : null;
+
+            $this->success('Level 1 approval completed. Waiting for Department Head approval.', position: 'toast-top toast-center');
+
+            $this->modal = false;
+            return;
+        }
+
+        // Level 2 approval: Department Head LID (after Section Head approved)
+        if ($this->canSignAsDeptHead() && $training->section_head_signed_at && !$training->dept_head_signed_at) {
+            $training->update([
+                'dept_head_signed_by' => $user->id,
+                'dept_head_signed_at' => now(),
+                'status' => 'approved',
+            ]);
+
+            // Generate certificates for passed participants at final approval
+            $certificateService = new TrainingCertificateService();
+            $certificatesGenerated = $certificateService->generateCertificatesForTraining($training);
+
+            $training->refresh();
+
+            $this->formData['status'] = 'approved';
+            $this->formData['dept_head_signed_at'] = $training->dept_head_signed_at
+                ? $training->dept_head_signed_at->format('d F Y H:i')
+                : null;
+
+            // Notify other components that training status changed
+            $this->dispatch('training-closed', ['id' => $training->id, 'status' => 'approved']);
+
+            if ($certificatesGenerated > 0) {
+                $this->success("Training fully approved. {$certificatesGenerated} certificate(s) generated.", position: 'toast-top toast-center');
+            } else {
+                $this->success('Training fully approved.', position: 'toast-top toast-center');
+            }
+
+            $this->modal = false;
+            return;
+        }
+
+        $this->error('You are not allowed to approve at this stage.', position: 'toast-top toast-center');
     }
 
     /** Reject selected request */
@@ -318,8 +424,10 @@ class Approval extends Component
         if (!$this->selectedId) {
             return;
         }
-        if (!$this->canModerate()) {
-            $this->error('Only LID leader can reject.', position: 'toast-top toast-center');
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        if (!$user) {
             return;
         }
 
@@ -330,8 +438,30 @@ class Approval extends Component
             return;
         }
 
-        // Update status to rejected
-        $training->update(['status' => 'rejected']);
+        $status = strtolower($training->status);
+
+        if ($status !== 'done') {
+            $this->error('Only trainings with status DONE can be rejected.', position: 'toast-top toast-center');
+            return;
+        }
+
+        // Level 1 reject: Section Head LID before any approval
+        if ($this->canSignAsSectionHead() && !$training->section_head_signed_at && !$training->dept_head_signed_at) {
+            $training->update([
+                'status' => 'rejected',
+            ]);
+        }
+        // Level 2 reject: Department Head LID after Section Head approval
+        elseif ($this->canSignAsDeptHead() && $training->section_head_signed_at && !$training->dept_head_signed_at) {
+            $training->update([
+                'status' => 'rejected',
+                'dept_head_signed_by' => $user->id,
+                'dept_head_signed_at' => now(),
+            ]);
+        } else {
+            $this->error('You are not allowed to reject at this stage.', position: 'toast-top toast-center');
+            return;
+        }
 
         // Hapus semua sertifikat yang sudah pernah digenerate untuk training ini
         $certificateService = new TrainingCertificateService();
@@ -347,7 +477,12 @@ class Approval extends Component
             $assessment->save();
         }
 
+        $training->refresh();
+
         $this->formData['status'] = 'rejected';
+        $this->formData['dept_head_signed_at'] = $training->dept_head_signed_at
+            ? $training->dept_head_signed_at->format('d F Y H:i')
+            : null;
 
         // Notify other components that training status changed
         $this->dispatch('training-closed', ['id' => $training->id, 'status' => 'rejected']);

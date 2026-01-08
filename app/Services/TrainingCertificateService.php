@@ -63,9 +63,18 @@ class TrainingCertificateService
             $pdf->Cell(120, 6, strtoupper($training->name ?? '-'), 0, 0, 'L');
 
             // Add period dates (after "Periode/Period :")
-            $startDate = $training->start_date ? Carbon::parse($training->start_date)->format('d M Y') : '-';
-            $endDate = $training->end_date ? Carbon::parse($training->end_date)->format('d M Y') : '-';
-            $periodText = $startDate . ' s.d. ' . $endDate;
+            $startDateRaw = $training->start_date ? Carbon::parse($training->start_date) : null;
+            $endDateRaw = $training->end_date ? Carbon::parse($training->end_date) : null;
+
+            $startDate = $startDateRaw ? $startDateRaw->format('d M Y') : '-';
+            $endDate = $endDateRaw ? $endDateRaw->format('d M Y') : '-';
+
+            // If training only 1 day (start == end), don't show "s.d."
+            if ($startDateRaw && $endDateRaw && $startDateRaw->isSameDay($endDateRaw)) {
+                $periodText = $startDate;
+            } else {
+                $periodText = $startDate . ' s.d. ' . $endDate;
+            }
             $pdf->SetXY(156, 123.3);
             $pdf->Cell(120, 6, $periodText, 0, 0, 'L');
 
@@ -99,22 +108,22 @@ class TrainingCertificateService
             $pdf->Image($template2Path, 0, 0, 297, 210);
 
             // Add training material name (Materi Training column)
-            $pdf->SetFont('Times', '', 12);
+            $pdf->SetFont('Times', '', 11);
             $pdf->SetTextColor(0, 0, 0);
-            $pdf->SetXY(27, 79);
-            $pdf->Cell(120, 20, $training->name ?? '', 0, 0, 'C');
+            $pdf->SetXY(40, 79);
+            $pdf->Cell(94, 20, $training->name ?? '', 0, 0, 'C');
 
             // Add theory score in words (Teori - Huruf column)
             if ($assessment->posttest_score !== null) {
                 $theoryWords = $this->getScoreInWords($assessment->posttest_score);
-                $pdf->SetFont('Times', 'I', 12);
-                $pdf->SetXY(145.3, 79);
-                $pdf->Cell(25, 20, $theoryWords, 0, 0, 'C');
+                $pdf->SetFont('Times', 'I', 11);
+                $pdf->SetXY(136.5, 79);
+                $pdf->Cell(43, 20, $theoryWords, 0, 0, 'C');
             }
 
             // Add theory score number (Teori - Angka column)
             if ($assessment->posttest_score !== null) {
-                $pdf->SetFont('Times', '', 12);
+                $pdf->SetFont('Times', '', 11);
                 $pdf->SetXY(180.2, 79);
                 $pdf->Cell(20, 20, number_format($assessment->posttest_score, 0), 0, 0, 'C');
             }
@@ -145,8 +154,6 @@ class TrainingCertificateService
             $pdf->Cell(20, 6, number_format($classAvg, 2), 0, 0, 'C');
 
             // Add instructor name (bottom right)
-            // Ambil dari session pertama yang punya trainer,
-            // gunakan trainer.name atau fallback ke trainer.user.name
             $firstSessionWithTrainer = $training->sessions()
                 ->whereHas('trainer')
                 ->with(['trainer.user'])
