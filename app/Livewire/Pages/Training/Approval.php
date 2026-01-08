@@ -38,11 +38,15 @@ class Approval extends Component
         // No need for user searchable since we don't have create mode
     }
 
-    public function updated($property): void
+    // Reset pagination only when relevant filters change
+    public function updatingSearch(): void
     {
-        if (!is_array($property) && $property != "") {
-            $this->resetPage();
-        }
+        $this->resetPage();
+    }
+
+    public function updatingFilter(): void
+    {
+        $this->resetPage();
     }
 
     public function headers(): array
@@ -132,11 +136,6 @@ class Approval extends Component
             // Get assessment for this employee
             $assessment = $training->assessments->firstWhere('employee_id', $employee->id);
 
-            // Count absent (sessions not attended)
-            $totalSessions = $training->sessions->count();
-            $attendedSessions = $training->attendances->where('employee_id', $employee->id)->count();
-            $absentCount = max(0, $totalSessions - $attendedSessions);
-
             // Determine status
             $status = $assessment ? $assessment->status : 'pending';
             $theoryScore = $assessment ? $assessment->posttest_score : null;
@@ -168,7 +167,9 @@ class Approval extends Component
     public function approvals()
     {
         $query = Training::query()
-            ->whereIn('status', ['done', 'approved', 'rejected']);
+            ->select('trainings.*')
+            ->whereIn('status', ['done', 'approved', 'rejected'])
+            ->distinct();
 
         // Filter by search
         if ($this->search) {
@@ -202,6 +203,7 @@ class Approval extends Component
 
         return $query
             ->orderBy('created_at', 'desc')
+            ->orderBy('id', 'desc')
             ->paginate(10)
             ->through(function ($training) {
                 // Keep status as is - 'done' means closed and waiting for approval
@@ -213,7 +215,7 @@ class Approval extends Component
                     'group_comp' => $training->group_comp ?? '-',
                     'start_date' => $training->start_date,
                     'end_date' => $training->end_date,
-                    'status' => $training->status, // Show actual status
+                    'status' => $training->status,
                     'actual_status' => $training->status,
                 ];
             });

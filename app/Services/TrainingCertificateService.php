@@ -72,7 +72,7 @@ class TrainingCertificateService
             // Add issue location and date (Balikpapan, dd Month YYYY) - right side
             $issueDate = Carbon::now()->format('d F Y');
             $pdf->SetFont('Times', '', 11);
-            $pdf->SetXY(173, 150);
+            $pdf->SetXY(172, 150);
             $pdf->Cell(95, 5, 'Balikpapan, ' . $issueDate, 0, 0, 'R');
 
             // Add LID Section Head & Dept Head signatures/names on first page
