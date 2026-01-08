@@ -40,7 +40,12 @@ class TestReviewAnswers extends Component
 
     public function mount(Training $training, User $user)
     {
-        $this->training = $training->load(['module.pretest.questions.options', 'module.posttest.questions.options']);
+        // Load appropriate relationships based on training type
+        if ($training->type === 'LMS') {
+            $this->training = $training->load(['course.tests.questions.options']);
+        } else {
+            $this->training = $training->load(['module.pretest.questions.options', 'module.posttest.questions.options']);
+        }
         $this->participant = $user;
 
         // Verify trainer has access
@@ -114,7 +119,7 @@ class TestReviewAnswers extends Component
      */
     public function getPretestAttempts()
     {
-        $pretest = $this->training->module?->pretest;
+        $pretest = $this->getPretest();
         if (!$pretest)
             return collect();
 
@@ -130,7 +135,7 @@ class TestReviewAnswers extends Component
      */
     public function getPosttestAttempts()
     {
-        $posttest = $this->training->module?->posttest;
+        $posttest = $this->getPosttest();
         if (!$posttest)
             return collect();
 
@@ -139,6 +144,28 @@ class TestReviewAnswers extends Component
             ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
             ->orderBy('attempt_number', 'desc')
             ->get();
+    }
+
+    /**
+     * Get pretest based on training type
+     */
+    private function getPretest(): ?Test
+    {
+        if ($this->training->type === 'LMS' && $this->training->course) {
+            return $this->training->course->tests->firstWhere('type', 'pretest');
+        }
+        return $this->training->module?->pretest;
+    }
+
+    /**
+     * Get posttest based on training type
+     */
+    private function getPosttest(): ?Test
+    {
+        if ($this->training->type === 'LMS' && $this->training->course) {
+            return $this->training->course->tests->firstWhere('type', 'posttest');
+        }
+        return $this->training->module?->posttest;
     }
 
     /**
@@ -326,8 +353,8 @@ class TestReviewAnswers extends Component
         $posttestAttempt = $this->getSelectedPosttestAttempt();
 
         // Determine which tabs are available
-        $hasPretest = $this->training->module?->pretest !== null && $pretestAttempts->isNotEmpty();
-        $hasPosttest = $this->training->module?->posttest !== null && $posttestAttempts->isNotEmpty();
+        $hasPretest = $this->getPretest() !== null && $pretestAttempts->isNotEmpty();
+        $hasPosttest = $this->getPosttest() !== null && $posttestAttempts->isNotEmpty();
 
         // Auto-select first available tab
         if ($this->selectedTest === 'pretest' && !$hasPretest && $hasPosttest) {
@@ -339,8 +366,8 @@ class TestReviewAnswers extends Component
         $currentAttempt = $this->selectedTest === 'pretest' ? $pretestAttempt : $posttestAttempt;
         $currentAttempts = $this->selectedTest === 'pretest' ? $pretestAttempts : $posttestAttempts;
         $currentTest = $this->selectedTest === 'pretest'
-            ? $this->training->module?->pretest
-            : $this->training->module?->posttest;
+            ? $this->getPretest()
+            : $this->getPosttest();
 
         // Get questions with answers for current test
         $questionsWithAnswers = [];

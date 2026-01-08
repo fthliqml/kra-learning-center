@@ -42,7 +42,7 @@ class TestReviewList extends Component
     $user = Auth::user();
     $trainerId = Trainer::where('user_id', $user->id)->value('id');
 
-    $trainings = Training::with(['module.pretest.questions', 'module.posttest.questions', 'sessions.trainer', 'assessments'])
+    $trainings = Training::with(['module.pretest.questions', 'module.posttest.questions', 'course.tests.questions', 'sessions.trainer', 'assessments'])
       ->whereIn('type', ['IN', 'LMS'])
       ->where(function ($query) use ($trainerId) {
         // IN type: trainer must be assigned to at least one session
@@ -53,17 +53,30 @@ class TestReviewList extends Component
           // LMS type: all trainers can review
           ->orWhere('type', 'LMS');
       })
-      ->whereHas('module', function ($q) {
-        // Must have pretest or posttest
-        $q->where(function ($sub) {
-          $sub->whereHas('pretest')
-            ->orWhereHas('posttest');
-        });
+      ->where(function ($query) {
+        // IN type: check tests via module (TrainingModule)
+        $query->where(function ($q) {
+          $q->where('type', 'IN')
+            ->whereHas('module', function ($m) {
+              $m->where(function ($sub) {
+                $sub->whereHas('pretest')
+                  ->orWhereHas('posttest');
+              });
+            });
+        })
+          // LMS type: check tests via course
+          ->orWhere(function ($q) {
+            $q->where('type', 'LMS')
+              ->whereHas('course', function ($c) {
+                $c->whereHas('tests');
+              });
+          });
       })
       ->when($this->search, function ($q) {
         $q->where(function ($sub) {
           $sub->where('name', 'like', '%' . $this->search . '%')
-            ->orWhereHas('module', fn($m) => $m->where('title', 'like', '%' . $this->search . '%'));
+            ->orWhereHas('module', fn($m) => $m->where('title', 'like', '%' . $this->search . '%'))
+            ->orWhereHas('course', fn($c) => $c->where('title', 'like', '%' . $this->search . '%'));
         });
       })
       ->when($this->filterType, fn($q) => $q->where('type', $this->filterType))
@@ -98,19 +111,19 @@ class TestReviewList extends Component
    */
   private function getReviewStats(Training $training): array
   {
-    $module = $training->module;
-    if (!$module) {
-      return [
-        'totalParticipants' => 0,
-        'needReview' => 0,
-        'reviewed' => 0,
-        'hasPretest' => false,
-        'hasPosttest' => false,
-      ];
-    }
+    $pretest = null;
+    $posttest = null;
 
-    $pretest = $module->pretest;
-    $posttest = $module->posttest;
+    // Get pretest/posttest based on training type
+    if ($training->type === 'LMS' && $training->course) {
+      // LMS uses course->tests
+      $pretest = $training->course->tests->firstWhere('type', 'pretest');
+      $posttest = $training->course->tests->firstWhere('type', 'posttest');
+    } elseif ($training->type === 'IN' && $training->module) {
+      // IN uses module->pretest/posttest
+      $pretest = $training->module->pretest;
+      $posttest = $training->module->posttest;
+    }
 
     $testIds = collect([$pretest?->id, $posttest?->id])->filter()->values()->all();
 

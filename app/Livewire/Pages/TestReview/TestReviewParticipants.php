@@ -21,7 +21,12 @@ class TestReviewParticipants extends Component
 
   public function mount(Training $training)
   {
-    $this->training = $training->load(['module.pretest', 'module.posttest']);
+    // Load appropriate relationships based on training type
+    if ($training->type === 'LMS') {
+      $this->training = $training->load(['course.tests']);
+    } else {
+      $this->training = $training->load(['module.pretest', 'module.posttest']);
+    }
 
     // Verify trainer has access to this training
     $this->authorizeAccess();
@@ -57,9 +62,15 @@ class TestReviewParticipants extends Component
 
   public function render()
   {
-    $module = $this->training->module;
-    $pretest = $module?->pretest;
-    $posttest = $module?->posttest;
+    // Get pretest/posttest based on training type
+    if ($this->training->type === 'LMS' && $this->training->course) {
+      $pretest = $this->training->course->tests->firstWhere('type', 'pretest');
+      $posttest = $this->training->course->tests->firstWhere('type', 'posttest');
+    } else {
+      $module = $this->training->module;
+      $pretest = $module?->pretest;
+      $posttest = $module?->posttest;
+    }
 
     // Get participants with their test attempts
     $participants = TrainingAssessment::with(['employee'])
