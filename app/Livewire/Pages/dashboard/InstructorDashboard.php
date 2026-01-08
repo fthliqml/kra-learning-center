@@ -226,7 +226,7 @@ class InstructorDashboard extends Component
 
     /**
      * Load trainings that need test review
-     * Efficient query: only fetch trainings with under_review test attempts
+     * Handles both IN (module-based) and LMS (course-based) trainings
      */
     public function loadTrainingsNeedReview()
     {
@@ -238,20 +238,11 @@ class InstructorDashboard extends Component
             return;
         }
 
-        // Get trainings with tests that have under_review attempts
-        $trainings = Training::with(['module'])
-            ->whereIn('type', ['IN', 'LMS'])
-            ->where(function ($query) use ($trainer) {
-                // IN type: trainer must be assigned to session
-                $query->where(function ($q) use ($trainer) {
-                    $q->where('type', 'IN')
-                        ->whereHas('sessions', fn($s) => $s->where('trainer_id', $trainer->id));
-                })
-                    // LMS type: all trainers can review
-                    ->orWhere('type', 'LMS');
-            })
+        // Get IN type trainings with module tests that need review
+        $inTrainings = Training::with(['module.pretest', 'module.posttest'])
+            ->where('type', 'IN')
+            ->whereHas('sessions', fn($s) => $s->where('trainer_id', $trainer->id))
             ->whereHas('module', function ($q) {
-                // Must have pretest or posttest with under_review attempts
                 $q->where(function ($sub) {
                     $sub->whereHas('pretest.attempts', fn($a) => $a->where('status', TestAttempt::STATUS_UNDER_REVIEW))
                         ->orWhereHas('posttest.attempts', fn($a) => $a->where('status', TestAttempt::STATUS_UNDER_REVIEW));
@@ -260,7 +251,7 @@ class InstructorDashboard extends Component
             ->limit(5)
             ->get();
 
-        foreach ($trainings as $training) {
+        foreach ($inTrainings as $training) {
             $module = $training->module;
             $pretest = $module?->pretest;
             $posttest = $module?->posttest;
@@ -285,6 +276,46 @@ class InstructorDashboard extends Component
                 ];
             }
         }
+
+        // Get LMS type trainings with course tests that need review
+        $lmsTrainings = Training::with(['course.tests'])
+            ->where('type', 'LMS')
+            ->whereHas('course.tests', function ($q) {
+                $q->whereHas('attempts', fn($a) => $a->where('status', TestAttempt::STATUS_UNDER_REVIEW));
+            })
+            ->limit(5)
+            ->get();
+
+        foreach ($lmsTrainings as $training) {
+            $course = $training->course;
+            $tests = $course?->tests ?? collect();
+            $pretest = $tests->firstWhere('type', 'pretest');
+            $posttest = $tests->firstWhere('type', 'posttest');
+
+            $testIds = $tests->pluck('id')->filter()->values()->all();
+
+            $needReviewCount = 0;
+            if (!empty($testIds)) {
+                $needReviewCount = TestAttempt::whereIn('test_id', $testIds)
+                    ->where('status', TestAttempt::STATUS_UNDER_REVIEW)
+                    ->count();
+            }
+
+            if ($needReviewCount > 0) {
+                $this->trainingsNeedReview[] = [
+                    'id' => $training->id,
+                    'name' => $training->name,
+                    'type' => $training->type,
+                    'need_review_count' => $needReviewCount,
+                    'has_pretest' => $pretest !== null,
+                    'has_posttest' => $posttest !== null,
+                ];
+            }
+        }
+
+        // Sort by need_review_count descending and limit to 5
+        usort($this->trainingsNeedReview, fn($a, $b) => $b['need_review_count'] - $a['need_review_count']);
+        $this->trainingsNeedReview = array_slice($this->trainingsNeedReview, 0, 5);
     }
 
     public function render()
