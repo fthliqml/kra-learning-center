@@ -17,7 +17,7 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
      */
     public function collection()
     {
-        $trainers = Trainer::with(['user', 'competencies'])
+        $trainers = Trainer::with(['user'])
             ->orderByDesc('created_at')
             ->get();
 
@@ -28,16 +28,12 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
                 optional($trainer->user)->name : ($trainer->name ?? 'N/A');
 
             $institution = $trainer->institution;
-            $competencies = $trainer->competencies
-                ->map(fn($c) => "[{$c->code}] {$c->name}")
-                ->implode(', ');
 
             return [
                 $index + 1,       // No
                 $trainerType,     // Trainer Type (Internal/External)
                 $name,            // Name
                 $institution,     // Institution
-                $competencies,    // Competencies (comma-separated)
             ];
         });
     }
@@ -47,13 +43,13 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
      */
     public function headings(): array
     {
-        return ['No', 'Trainer Type', 'Name', 'Institution', 'Competencies'];
+        return ['No', 'Trainer Type', 'Name', 'Institution'];
     }
 
     public function styles(Worksheet $sheet)
     {
         // Style header (row 1)
-        $sheet->getStyle('A1:E1')->applyFromArray([
+        $sheet->getStyle('A1:D1')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -69,7 +65,6 @@ class DataTrainerExport implements FromCollection, WithHeadings, WithStyles
         $sheet->getColumnDimension('B')->setWidth(15);  // Trainer Type
         $sheet->getColumnDimension('C')->setWidth(30);  // Name
         $sheet->getColumnDimension('D')->setWidth(24);  // Institution
-        $sheet->getColumnDimension('E')->setWidth(50);  // Competencies
 
         // Style all cells
         $sheet->getStyle($sheet->calculateWorksheetDimension())->applyFromArray([

@@ -13,7 +13,6 @@ class DataTrainerTemplateExport implements WithMultipleSheets
         return [
             'Data Trainer' => new DataTrainerTemplateSheet(),
             'User List' => new UserListSheet(),
-            'Competency List' => new CompetencyListSheet(),
         ];
     }
 }
@@ -36,23 +35,23 @@ class DataTrainerTemplateSheet implements
     public function array(): array
     {
         return [
-            ['1', 'Internal', 'John Doe', 'PT Komatsu Remanufacturing Asia', 'BMC001, BC001'],
-            ['', '', '', '', ''],
-            ['', '', '', '', ''],
-            ['', '', '', '', ''],
-            ['', '', '', '', ''],
+            ['1', 'Internal', 'John Doe', 'PT Komatsu Remanufacturing Asia'],
+            ['', '', '', ''],
+            ['', '', '', ''],
+            ['', '', '', ''],
+            ['', '', '', ''],
         ];
     }
 
     public function headings(): array
     {
-        return ['No', 'Trainer Type', 'Name', 'Institution', 'Competency Codes (comma separated)'];
+        return ['No', 'Trainer Type', 'Name', 'Institution'];
     }
 
     public function styles(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet)
     {
         // Header style
-        $sheet->getStyle('A1:E1')->applyFromArray([
+        $sheet->getStyle('A1:D1')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -70,10 +69,9 @@ class DataTrainerTemplateSheet implements
         $sheet->getColumnDimension('B')->setWidth(15);  // Trainer Type
         $sheet->getColumnDimension('C')->setWidth(30);  // Name
         $sheet->getColumnDimension('D')->setWidth(30);  // Institution
-        $sheet->getColumnDimension('E')->setWidth(50);  // Competencies
 
         // Add borders to header
-        $sheet->getStyle('A1:E1')->applyFromArray([
+        $sheet->getStyle('A1:D1')->applyFromArray([
             'borders' => [
                 'allBorders' => [
                     'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
@@ -109,9 +107,9 @@ class DataTrainerTemplateSheet implements
 
                 // Add instruction note
                 $sheet->setCellValue('A102', 'Note:');
-                $sheet->setCellValue('B102', 'For Internal trainers, use names from "User List" sheet. For Competencies, enter codes from "Competency List" sheet separated by comma.');
-                $sheet->mergeCells('B102:E102');
-                $sheet->getStyle('A102:E102')->applyFromArray([
+                $sheet->setCellValue('B102', 'For Internal trainers, use names from "User List" sheet.');
+                $sheet->mergeCells('B102:D102');
+                $sheet->getStyle('A102:D102')->applyFromArray([
                     'font' => ['italic' => true, 'size' => 9, 'color' => ['rgb' => '666666']],
                 ]);
             },
@@ -185,68 +183,4 @@ class UserListSheet implements
     }
 }
 
-// Sheet 3: Competency List Reference
-class CompetencyListSheet implements
-    \Maatwebsite\Excel\Concerns\FromCollection,
-    \Maatwebsite\Excel\Concerns\WithHeadings,
-    \Maatwebsite\Excel\Concerns\WithStyles,
-    \Maatwebsite\Excel\Concerns\WithTitle
-{
-    public function title(): string
-    {
-        return 'Competency List';
-    }
-
-    public function collection()
-    {
-        return Competency::orderBy('code')
-            ->get(['code', 'name', 'type'])
-            ->map(function ($item, $index) {
-                return [
-                    'no' => $index + 1,
-                    'code' => $item->code,
-                    'name' => $item->name,
-                    'type' => $item->type,
-                ];
-            });
-    }
-
-    public function headings(): array
-    {
-        return ['No', 'Code', 'Name', 'Type'];
-    }
-
-    public function styles(\PhpOffice\PhpSpreadsheet\Worksheet\Worksheet $sheet)
-    {
-        // Header style
-        $sheet->getStyle('A1:D1')->applyFromArray([
-            'font' => ['bold' => true],
-            'fill' => [
-                'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
-                'startColor' => ['rgb' => '90EE90'], // Light green
-            ],
-            'alignment' => [
-                'horizontal' => \PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_CENTER,
-                'vertical' => \PhpOffice\PhpSpreadsheet\Style\Alignment::VERTICAL_CENTER,
-            ],
-        ]);
-
-        // Column widths
-        $sheet->getColumnDimension('A')->setWidth(6);   // No
-        $sheet->getColumnDimension('B')->setWidth(15);  // Code
-        $sheet->getColumnDimension('C')->setWidth(40);  // Name
-        $sheet->getColumnDimension('D')->setWidth(15);  // Type
-
-        // Add borders to header
-        $sheet->getStyle('A1:D1')->applyFromArray([
-            'borders' => [
-                'allBorders' => [
-                    'borderStyle' => \PhpOffice\PhpSpreadsheet\Style\Border::BORDER_THIN,
-                    'color' => ['rgb' => '000000'],
-                ],
-            ],
-        ]);
-
-        return $sheet;
-    }
-}
+// (Competency List sheet removed: trainer import no longer uses competencies)

@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
 use App\Models\User;
 use App\Models\Trainer;
-use App\Models\Competency;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\Concerns\SkipsEmptyRows;
@@ -45,15 +44,8 @@ class DataTrainerImport implements ToCollection, WithHeadingRow, SkipsEmptyRows,
                 continue;
             }
 
-            // Parse competencies: split by comma/semicolon/newline
-            $competencyNames = collect(preg_split('/[;,\n]+/', $competenciesRaw))
-                ->map(fn($c) => trim((string)$c))
-                ->filter()
-                ->unique()
-                ->values();
-
             try {
-                DB::transaction(function () use ($trainerType, $name, $institution, $competencyNames) {
+                DB::transaction(function () use ($trainerType, $name, $institution) {
                     $isInternal = strtolower($trainerType) === 'internal';
 
                     if ($isInternal) {
@@ -84,21 +76,6 @@ class DataTrainerImport implements ToCollection, WithHeadingRow, SkipsEmptyRows,
 
                     // Count per trainer-row created/updated
                     $isNewTrainer ? $this->created++ : $this->updated++;
-
-                    // Find competencies by code or name from Competency Book
-                    $competencyIds = $competencyNames->map(function ($compRef) {
-                        // Try to find by code first (e.g., BMC001)
-                        $competency = Competency::where('code', $compRef)->first();
-
-                        // If not found by code, try by name
-                        if (!$competency) {
-                            $competency = Competency::where('name', 'like', '%' . $compRef . '%')->first();
-                        }
-
-                        return $competency ? $competency->id : null;
-                    })->filter()->all();
-
-                    $trainer->competencies()->sync($competencyIds);
                 });
             } catch (\Throwable $e) {
                 Log::warning('DataTrainerImport row skipped', [
@@ -120,7 +97,6 @@ class DataTrainerImport implements ToCollection, WithHeadingRow, SkipsEmptyRows,
             'trainer_type' => ['required', 'string', 'in:internal,external,Internal,External'],
             'name' => ['required', 'string', 'max:255'],
             'institution' => ['nullable', 'string', 'max:255'],
-            'competencies' => ['nullable', 'string'],
         ];
     }
 }

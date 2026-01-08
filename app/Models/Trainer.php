@@ -15,6 +15,7 @@ class Trainer extends Model
         'user_id',
         'name',
         'institution',
+        'signature_path',
     ];
 
     /**
@@ -27,22 +28,6 @@ class Trainer extends Model
 
     /**
      * Get the trainer competencies for the trainer.
-     */
-    public function trainerCompetencies(): HasMany
-    {
-        return $this->hasMany(TrainerCompetency::class, 'trainer_id');
-    }
-
-    /**
-     * Get the competencies for the trainer.
-     */
-    public function competencies(): BelongsToMany
-    {
-        return $this->belongsToMany(Competency::class, 'trainer_competency', 'trainer_id', 'competency_id');
-    }
-
-    /**
-     * Get the training sessions conducted by the trainer.
      */
     public function trainingSessions(): HasMany
     {

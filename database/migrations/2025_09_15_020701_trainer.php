@@ -20,6 +20,7 @@ return new class extends Migration
             // Details
             $table->string('name')->nullable();
             $table->string('institution');
+            $table->string('signature_path')->nullable();
 
             // Timestamps
             $table->timestamps();
