@@ -5,6 +5,8 @@ namespace App\Livewire\Pages\Survey;
 use Livewire\Component;
 use Illuminate\Support\Facades\Auth;
 use App\Models\TrainingSurvey;
+use App\Models\User;
+use Carbon\Carbon;
 
 class SurveyEmployee extends Component
 {
@@ -24,21 +26,59 @@ class SurveyEmployee extends Component
 
   public function surveys()
   {
+    /** @var User|null $user */
     $user = Auth::user();
     if (!$user) {
-      return collect(); // atau paginator kosong
+      return TrainingSurvey::query()->whereRaw('1 = 0')->paginate(9);
     }
 
-    // Ambil survey untuk employee berdasarkan training assessments.
-    // NOTE: Jangan mengharuskan survey_responses sudah ada, karena response bisa dibuat saat submit.
+    // Special rule: Survey Level 3 can only be filled by area approver.
+    // - If there is any SPV (position=supervisor) in the area -> SPV area can fill.
+    // - If there is no SPV in the area -> Section Head area can fill.
+    // Area is based on the user's section (preferred) or department (fallback).
+    if ((int) $this->surveyLevel === 3) {
+      $areaKey = null;
+      $areaValue = null;
+      if (!empty($user->section)) {
+        $areaKey = 'section';
+        $areaValue = $user->section;
+      } elseif (!empty($user->department)) {
+        $areaKey = 'department';
+        $areaValue = $user->department;
+      }
+
+      if (!$areaKey || !$areaValue) {
+        return TrainingSurvey::query()->whereRaw('1 = 0')->paginate(9);
+      }
+
+      $hasSpvInArea = User::query()
+        ->whereRaw('LOWER(TRIM(position)) = ?', ['supervisor'])
+        ->whereRaw('LOWER(TRIM(COALESCE(' . $areaKey . ', ""))) = ?', [strtolower(trim((string) $areaValue))])
+        ->exists();
+
+      $isSpvAreaUser = $user->hasPosition('supervisor');
+      $isSectionHeadAreaUser = $user->hasPosition('section_head');
+
+      if ($hasSpvInArea) {
+        if (!$isSpvAreaUser) {
+          return TrainingSurvey::query()->whereRaw('1 = 0')->paginate(9);
+        }
+      } else {
+        if (!$isSectionHeadAreaUser) {
+          return TrainingSurvey::query()->whereRaw('1 = 0')->paginate(9);
+        }
+      }
+    }
+
+    // Base query differs for Level 3 (area approver) vs others (employee participant)
     $base = TrainingSurvey::query()
-      ->forEmployee($user->id)
       ->with([
         'training',
+        'training.assessments.employee',
         // My response only (for badge/status)
         'surveyResponses' => function ($q) use ($user) {
           $q->where('employee_id', $user->id);
-        }
+        },
       ])
       ->withCount('surveyResponses')
       ->when($this->filterStatus, function ($q) use ($user) {
@@ -74,6 +114,24 @@ class SurveyEmployee extends Component
       ->orderByRaw("CASE WHEN status = 'draft' THEN 1 ELSE 0 END ASC")
       ->orderByDesc('id');
 
+    if ((int) $this->surveyLevel === 3) {
+      // Show surveys only for trainings that include employees from the user's area.
+      if (!empty($user->section)) {
+        $base->whereHas('training.assessments.employee', function ($q) use ($user) {
+          $q->where('section', $user->section);
+        });
+      } elseif (!empty($user->department)) {
+        $base->whereHas('training.assessments.employee', function ($q) use ($user) {
+          $q->where('department', $user->department);
+        });
+      } else {
+        $base->whereRaw('1 = 0');
+      }
+    } else {
+      // Default: employee participant surveys
+      $base->forEmployee($user->id);
+    }
+
     $paginator = $base->paginate(9)->onEachSide(1);
 
     return $paginator->through(function ($survey, $index) use ($paginator, $user) {
@@ -98,10 +156,27 @@ class SurveyEmployee extends Component
       $trainingStatus = strtolower($survey->training?->status ?? '');
       $trainingReady = in_array($trainingStatus, ['done', 'approved'], true);
 
+      // Level 3 additional time gate: only available 3 months after training last day.
+      $isLevel3 = ((int) ($survey->level ?? 0)) === 3;
+      $availableAt = null;
+      $timeReady = true;
+      if ($isLevel3) {
+        $endDate = $survey->training?->end_date;
+        if ($endDate) {
+          $availableAt = Carbon::parse($endDate)->addMonthsNoOverflow(3);
+          $timeReady = now()->greaterThanOrEqualTo($availableAt);
+        } else {
+          $timeReady = false;
+        }
+      }
+
       if ($status === 'complete') {
         $survey->badge_label = 'Complete';
         $survey->badge_class = 'badge-primary bg-primary/95';
       } elseif ($isDraft || !$trainingReady) {
+        $survey->badge_label = 'Not Ready';
+        $survey->badge_class = 'badge-warning';
+      } elseif ($isLevel3 && !$timeReady) {
         $survey->badge_label = 'Not Ready';
         $survey->badge_class = 'badge-warning';
       } elseif ($status === 'incomplete') {
@@ -112,7 +187,7 @@ class SurveyEmployee extends Component
         $survey->badge_class = 'badge-ghost';
       }
       // Determine if Start Survey button should be disabled
-      $survey->start_disabled = $isDraft || !$trainingReady;
+      $survey->start_disabled = $isDraft || !$trainingReady || ($isLevel3 && !$timeReady);
 
       return $survey;
     });
