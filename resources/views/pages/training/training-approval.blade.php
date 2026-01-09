@@ -2,17 +2,28 @@
     @livewire('components.confirm-dialog')
 
     {{-- Global loading overlay for Dept Head approval (certificate generation) --}}
-    <div wire:loading.flex wire:target="approve"
-        class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm items-center justify-center">
-        <div class="bg-white rounded-lg shadow-lg px-6 py-4 flex items-center gap-3 max-w-sm mx-4">
-            <x-icon name="o-arrow-path" class="size-6 text-primary animate-spin" />
-            <div class="text-sm text-gray-800">
-                <div class="font-semibold">Generating certificates</div>
-                <div class="text-xs text-gray-500 mt-0.5">Please wait while training certificates are being
-                    generated...</div>
+    @php
+        $overlayUser = auth()->user();
+        $showGenerateCertificatesOverlay =
+            $overlayUser &&
+            method_exists($overlayUser, 'hasPosition') &&
+            $overlayUser->hasPosition('department_head') &&
+            ($overlayUser->department ?? '') === 'Human Capital, General Service, Security & LID';
+    @endphp
+
+    @if ($showGenerateCertificatesOverlay)
+        <div wire:loading.flex wire:target="approve"
+            class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm items-center justify-center">
+            <div class="bg-white rounded-lg shadow-lg px-6 py-4 flex items-center gap-3 max-w-sm mx-4">
+                <x-icon name="o-arrow-path" class="size-6 text-primary animate-spin" />
+                <div class="text-sm text-gray-800">
+                    <div class="font-semibold">Generating certificates</div>
+                    <div class="text-xs text-gray-500 mt-0.5">Please wait while training certificates are being
+                        generated...</div>
+                </div>
             </div>
         </div>
-    </div>
+    @endif
 
     {{-- Header --}}
     <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
@@ -164,6 +175,15 @@
                         } elseif ($status === 'done' && $isLevel1Approved && !$isLevel2Approved) {
                             $classes = 'bg-blue-100 text-blue-700';
                             $statusLabel = 'Waiting Dept Head Approval';
+                        } elseif ($status === 'rejected') {
+                            $classes = 'bg-rose-100 text-rose-700';
+                            if ($isLevel2Approved) {
+                                $statusLabel = 'Rejected by Dept Head';
+                            } elseif ($isLevel1Approved) {
+                                $statusLabel = 'Rejected by Section Head';
+                            } else {
+                                $statusLabel = 'Rejected';
+                            }
                         } else {
                             $map = [
                                 'pending' => ['bg-amber-100 text-amber-700', 'Pending'],
@@ -197,6 +217,8 @@
                         // Row-level Dept Head actions: training done, level 1 approved, not yet level 2
                         $showDeptHeadRowActions =
                             $isDeptHead && $status === 'done' && $hasLevel1Approval && !$hasLevel2Approval;
+
+                        $userHasSignature = !empty($user?->signature?->path);
                     @endphp
                     <div class="flex justify-center gap-1">
                         <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
@@ -260,6 +282,15 @@
                             } elseif ($status === 'done' && $isLevel1Approved && !$isLevel2Approved) {
                                 $classes = 'bg-blue-100 text-blue-700';
                                 $statusLabel = 'Waiting Dept Head Approval';
+                            } elseif ($status === 'rejected') {
+                                $classes = 'bg-rose-100 text-rose-700';
+                                if ($isLevel2Approved) {
+                                    $statusLabel = 'Rejected by Dept Head';
+                                } elseif ($isLevel1Approved) {
+                                    $statusLabel = 'Rejected by Section Head';
+                                } else {
+                                    $statusLabel = 'Rejected';
+                                }
                             } else {
                                 $map = [
                                     'pending' => ['bg-amber-100 text-amber-700', 'Pending'],
@@ -467,6 +498,8 @@
 
                 // Level 2 actions: Dept Head LID, training done, level 1 approved, not yet level 2
                 $showLevel2Actions = $isDeptHead && $status === 'done' && $hasLevel1Approval && !$hasLevel2Approval;
+
+                $userHasSignature = !empty($user?->signature?->path);
             @endphp
             @if ($showLevel1Actions || $showLevel2Actions)
                 <x-ui.button variant="danger" type="button" wire:click="reject" wire:target="reject"
