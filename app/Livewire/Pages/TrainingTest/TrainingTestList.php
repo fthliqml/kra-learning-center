@@ -139,6 +139,22 @@ class TrainingTestList extends Component
         ])
             ->whereIn('type', ['IN', 'LMS'])
             ->whereIn('status', ['in_progress'])
+            // Filter by start date: IN shows H-1 (day before), LMS shows on hari H (start_date)
+            ->where(function ($query) {
+                $today = now()->toDateString();
+                $tomorrow = now()->addDay()->toDateString();
+                
+                // IN type: show from H-1 (start_date <= tomorrow)
+                $query->where(function ($q) use ($tomorrow) {
+                    $q->where('type', 'IN')
+                      ->where('start_date', '<=', $tomorrow);
+                })
+                // LMS type: show from hari H (start_date <= today)
+                ->orWhere(function ($q) use ($today) {
+                    $q->where('type', 'LMS')
+                      ->where('start_date', '<=', $today);
+                });
+            })
             ->whereHas('assessments', fn($q) => $q->where('employee_id', $userId))
             ->when($this->search, function ($q) {
                 $q->where(function ($sub) {
@@ -147,14 +163,50 @@ class TrainingTestList extends Component
                         ->orWhereHas('course', fn($c) => $c->where('title', 'like', '%' . $this->search . '%'));
                 });
             })
-            ->orderBy('start_date', 'desc')
-            ->paginate(10);
+            ->get();
 
         // Add test status to each training
-        $trainings->getCollection()->transform(function ($training) use ($userId) {
+        $trainings->transform(function ($training) use ($userId) {
             $training->testStatus = $this->getTestStatus($training, $userId);
             return $training;
         });
+
+        // Smart sorting: active trainings first (with pending tests), completed trainings at bottom
+        // Both groups sorted by start_date (newest first)
+        $sorted = $trainings->sort(function ($a, $b) {
+            $aStatus = $a->testStatus;
+            $bStatus = $b->testStatus;
+            
+            // Determine if training is fully completed
+            // Completed = pretest done AND posttest passed (completed status, not retake/failed/locked)
+            $aCompleted = in_array($aStatus['pretest'], ['completed', 'under_review']) 
+                       && $aStatus['posttest'] === 'completed';
+            $bCompleted = in_array($bStatus['pretest'], ['completed', 'under_review']) 
+                       && $bStatus['posttest'] === 'completed';
+            
+            // Priority 1: Active trainings (not completed) come first
+            if (!$aCompleted && $bCompleted) return -1;
+            if ($aCompleted && !$bCompleted) return 1;
+            
+            // Priority 2: Within same group, sort by start_date (newest first)
+            $aStart = $a->start_date ?? '';
+            $bStart = $b->start_date ?? '';
+            return $bStart <=> $aStart; // DESC
+        })->values();
+
+        // Manual pagination
+        $page = request()->get('page', 1);
+        $perPage = 10;
+        $total = $sorted->count();
+        $items = $sorted->forPage($page, $perPage);
+
+        $trainings = new \Illuminate\Pagination\LengthAwarePaginator(
+            $items,
+            $total,
+            $perPage,
+            $page,
+            ['path' => request()->url(), 'query' => request()->query()]
+        );
 
         return view('pages.training-test.training-test-list', [
             'trainings' => $trainings,
