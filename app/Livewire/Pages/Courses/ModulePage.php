@@ -427,8 +427,41 @@ class ModulePage extends Component
         $this->showQuizModal = true;
     }
 
+    /**
+     * Close quiz modal without advancing progress.
+     * Used when user closes modal without submitting quiz.
+     */
+    public function closeQuizModalOnly(): void
+    {
+        $this->showQuizModal = false;
+        $this->quizQuestions = [];
+        $this->quizResult = null;
+        $this->quizHasEssay = false;
+        $this->quizSectionId = null;
+        // Clear the reopen flag since user explicitly closed
+        session()->forget('reopen_quiz_section');
+    }
+
+    /**
+     * Close quiz modal and advance progress.
+     * Only advances if quiz was actually submitted (attempt exists).
+     */
     public function closeQuizModalAndAdvance(): mixed
     {
+        $userId = Auth::id();
+        $sectionId = $this->quizSectionId ?? $this->activeSectionId;
+        
+        // Check if quiz was actually submitted before advancing
+        $hasQuizAttempt = SectionQuizAttempt::where('section_id', $sectionId)
+            ->where('user_id', $userId)
+            ->exists();
+        
+        if (!$hasQuizAttempt) {
+            // Quiz not submitted - just close modal without advancing
+            $this->closeQuizModalOnly();
+            return null;
+        }
+        
         $this->showQuizModal = false;
         $this->quizQuestions = [];
         $this->quizResult = null;

@@ -7,9 +7,9 @@
     <div class="flex items-center gap-3">
         <span
             class="inline-flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-info/10 text-info text-xs font-semibold">{{ $loop->iteration }}</span>
-        <x-select :options="[['value' => 'multiple', 'label' => 'Multiple'], ['value' => 'essay', 'label' => 'Essay']]" option-value="value" option-label="label" class="w-40"
-            wire:model="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.type"
-            wire:change="$refresh" />
+        {{-- Quiz only supports multiple choice --}}
+        <span class="badge badge-info badge-sm">Multiple Choice</span>
+        <input type="hidden" wire:model="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.type" value="multiple" />
         <div class="flex-1 relative">
             <x-input class="w-full pr-10 focus-within:border-0" placeholder="Write the question"
                 wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.question" />

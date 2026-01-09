@@ -187,19 +187,21 @@
     {{-- Quiz Modal --}}
     <div x-data="{ quizOpen: @entangle('showQuizModal') }">
         <div x-cloak x-show="quizOpen" x-transition.opacity class="fixed inset-0 z-40 bg-black/40"></div>
-        <div x-cloak x-show="quizOpen" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div class="w-full max-w-3xl bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden"
-                @keydown.escape.window="quizOpen=false; $wire.closeQuizModalAndAdvance()">
-                <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200">
+        <div x-cloak x-show="quizOpen" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+            <div class="w-full max-w-3xl bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden flex flex-col max-h-[90vh]"
+                @keydown.escape.window="quizOpen=false; $wire.closeQuizModalOnly()">
+                {{-- Modal Header (fixed) --}}
+                <div class="flex items-center justify-between px-4 py-3 border-b border-gray-200 flex-shrink-0">
                     <h2 class="text-base md:text-lg font-semibold text-gray-900">Quiz:
                         {{ $activeSection->title ?? '' }}
                     </h2>
                     <button class="p-1.5 rounded-md hover:bg-gray-100"
-                        @click="quizOpen=false; $wire.closeQuizModalAndAdvance()" aria-label="Tutup">
+                        @click="quizOpen=false; $wire.closeQuizModalOnly()" aria-label="Tutup">
                         <x-icon name="o-x-mark" class="size-5 text-gray-500" />
                     </button>
                 </div>
-                <div class="p-4 md:p-6" x-data="sectionQuizInModal($wire)">
+                {{-- Modal Content (scrollable) --}}
+                <div class="p-4 md:p-6 overflow-y-auto flex-1" x-data="sectionQuizInModal($wire)">
                     @php $qCount = is_array($quizQuestions ?? null) ? count($quizQuestions) : 0; @endphp
                     @if ($qCount === 0)
                         <div class="p-6 text-sm text-gray-500 border border-dashed rounded-lg">Belum ada soal untuk
@@ -269,66 +271,128 @@
                         </template>
 
                         <template x-if="result">
-                            <div class="space-y-4">
-                                <div class="rounded-lg border p-4 bg-white">
-                                    <div class="text-sm text-gray-700">
-                                        <span class="font-semibold">Ringkasan:</span>
-                                        <span x-text="`${result.score}/${result.total}`"></span>
-                                        <template x-if="result.hasEssay">
-                                            <span class="ml-2 text-amber-700">(terdapat jawaban essay — penilaian
-                                                manual)</span>
-                                        </template>
+                            <div class="space-y-5">
+                                {{-- Score Summary Card --}}
+                                <div class="relative overflow-hidden rounded-xl bg-gradient-to-br from-primary/5 via-primary/10 to-primary/5 border border-primary/20 p-5">
+                                    <div class="flex items-center gap-5">
+                                        {{-- Score Circle --}}
+                                        <div class="relative flex-shrink-0">
+                                            <div class="w-20 h-20 rounded-full bg-white shadow-lg flex items-center justify-center border-4"
+                                                :class="result.score === result.total ? 'border-green-400' : (result.score >= result.total/2 ? 'border-amber-400' : 'border-red-400')">
+                                                <div class="text-center">
+                                                    <div class="text-2xl font-bold text-gray-900" x-text="result.score"></div>
+                                                    <div class="text-xs text-gray-500" x-text="'/ ' + result.total"></div>
+                                                </div>
+                                            </div>
+                                            {{-- Perfect Score Badge --}}
+                                            <template x-if="result.score === result.total">
+                                                <div class="absolute -top-1 -right-1 w-7 h-7 rounded-full bg-green-500 flex items-center justify-center shadow-md">
+                                                    <x-icon name="o-check" class="size-4 text-white" />
+                                                </div>
+                                            </template>
+                                        </div>
+                                        {{-- Summary Text --}}
+                                        <div class="flex-1">
+                                            <h3 class="text-lg font-semibold text-gray-900">Hasil Quiz</h3>
+                                            <p class="text-sm text-gray-600 mt-1">
+                                                <span x-text="result.score === result.total ? 'Sempurna! Semua jawaban benar.' : 
+                                                    (result.score >= result.total/2 ? 'Bagus! Anda menjawab sebagian besar dengan benar.' : 
+                                                    'Tetap semangat! Pelajari kembali materinya.')"></span>
+                                            </p>
+                                            <div class="flex items-center gap-3 mt-2">
+                                                <span class="inline-flex items-center gap-1 text-xs font-medium text-green-700 bg-green-50 px-2 py-1 rounded-full">
+                                                    <x-icon name="o-check-circle" class="size-3.5" />
+                                                    <span x-text="result.score + ' Benar'"></span>
+                                                </span>
+                                                <span class="inline-flex items-center gap-1 text-xs font-medium text-red-700 bg-red-50 px-2 py-1 rounded-full">
+                                                    <x-icon name="o-x-circle" class="size-3.5" />
+                                                    <span x-text="(result.total - result.score) + ' Salah'"></span>
+                                                </span>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
-                                <template x-for="(item, idx) in (result.items || [])" :key="item.id">
-                                    <div class="rounded-lg border p-4">
-                                        <div class="flex items-start gap-2">
-                                            <template x-if="item.type === 'multiple'">
-                                                <div>
-                                                    <span
-                                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium"
-                                                        :class="item.is_correct ?
-                                                            'bg-green-50 text-green-700 ring-1 ring-green-200' :
-                                                            'bg-red-50 text-red-700 ring-1 ring-red-200'">
-                                                        <span x-text="item.is_correct ? 'Benar' : 'Salah'"></span>
-                                                    </span>
+
+                                {{-- Questions Review --}}
+                                <div class="space-y-3">
+                                    <template x-for="(item, idx) in (result.items || [])" :key="item.id">
+                                        <div class="rounded-xl border-2 transition-all overflow-hidden"
+                                            :class="item.is_correct ? 'border-green-200 bg-green-50/30' : 'border-red-200 bg-red-50/30'">
+                                            {{-- Question Header --}}
+                                            <div class="px-4 py-3 flex items-start gap-3"
+                                                :class="item.is_correct ? 'bg-green-100/50' : 'bg-red-100/50'">
+                                                {{-- Status Icon --}}
+                                                <div class="flex-shrink-0 mt-0.5">
+                                                    <template x-if="item.is_correct">
+                                                        <div class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
+                                                            <x-icon name="o-check" class="size-4 text-white" />
+                                                        </div>
+                                                    </template>
+                                                    <template x-if="!item.is_correct">
+                                                        <div class="w-6 h-6 rounded-full bg-red-500 flex items-center justify-center">
+                                                            <x-icon name="o-x-mark" class="size-4 text-white" />
+                                                        </div>
+                                                    </template>
                                                 </div>
-                                            </template>
-                                            <template x-if="item.type !== 'multiple'">
-                                                <div>
-                                                    <span
-                                                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-amber-50 text-amber-700 ring-1 ring-amber-200">Essay</span>
+                                                {{-- Question Number & Text --}}
+                                                <div class="flex-1 min-w-0">
+                                                    <div class="flex items-center gap-2 mb-1">
+                                                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                                                            :class="item.is_correct ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'"
+                                                            x-text="'Soal ' + (idx + 1)"></span>
+                                                        <span class="text-xs font-medium"
+                                                            :class="item.is_correct ? 'text-green-700' : 'text-red-700'"
+                                                            x-text="item.is_correct ? 'Benar' : 'Salah'"></span>
+                                                    </div>
+                                                    <p class="text-sm font-medium text-gray-900 leading-relaxed" x-text="item.text"></p>
                                                 </div>
-                                            </template>
-                                        </div>
-                                        <div class="mt-2 text-sm text-gray-900 font-medium"
-                                            x-text="`${idx+1}. ${item.text}`"></div>
-                                        <div class="mt-2 text-sm">
-                                            <div class="text-gray-700"><span class="font-semibold">Jawaban
-                                                    Anda:</span>
-                                                <span x-text="item.user_answer || '-' "></span>
                                             </div>
-                                            <template x-if="item.type === 'multiple' && item.is_correct === false">
-                                                <div class="text-gray-700"><span class="font-semibold">Jawaban
-                                                        Benar:</span> <span
-                                                        x-text="item.correct_answer || '-' "></span>
+                                            
+                                            {{-- Answers Comparison --}}
+                                            <div class="px-4 py-3 space-y-2 bg-white/50">
+                                                {{-- User Answer --}}
+                                                <div class="flex items-start gap-2">
+                                                    <div class="flex-shrink-0 w-24 text-xs font-medium text-gray-500">Jawaban Anda</div>
+                                                    <div class="flex-1 flex items-center gap-2">
+                                                        <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium"
+                                                            :class="item.is_correct ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'">
+                                                            <template x-if="item.is_correct">
+                                                                <x-icon name="o-check-circle" class="size-4" />
+                                                            </template>
+                                                            <template x-if="!item.is_correct">
+                                                                <x-icon name="o-x-circle" class="size-4" />
+                                                            </template>
+                                                            <span x-text="item.user_answer || '-'"></span>
+                                                        </span>
+                                                    </div>
                                                 </div>
-                                            </template>
-                                            <template x-if="item.type !== 'multiple'">
-                                                <div class="text-amber-700 text-xs mt-1">Menunggu penilaian.</div>
-                                            </template>
+                                                {{-- Correct Answer (only if wrong) --}}
+                                                <template x-if="!item.is_correct">
+                                                    <div class="flex items-start gap-2">
+                                                        <div class="flex-shrink-0 w-24 text-xs font-medium text-gray-500">Jawaban Benar</div>
+                                                        <div class="flex-1">
+                                                            <span class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-sm font-medium bg-green-100 text-green-800">
+                                                                <x-icon name="o-check-circle" class="size-4" />
+                                                                <span x-text="item.correct_answer || '-'"></span>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </template>
+                                            </div>
                                         </div>
-                                    </div>
-                                </template>
-                                <div class="flex items-center justify-end gap-2">
+                                    </template>
+                                </div>
+
+                                {{-- Continue Button --}}
+                                <div class="flex items-center justify-end gap-2 pt-2 border-t border-gray-200">
                                     <button
-                                        class="inline-flex items-center gap-2 rounded-md bg-primary text-white px-4 py-2 text-sm font-medium hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed"
+                                        class="inline-flex items-center gap-2 rounded-lg bg-primary text-white px-5 py-2.5 text-sm font-medium shadow-lg shadow-primary/25 hover:bg-primary/90 hover:shadow-primary/30 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed transition-all"
                                         :disabled="advancing" wire:loading.attr="disabled"
                                         wire:loading.class="opacity-70 pointer-events-none"
                                         wire:target="closeQuizModalAndAdvance"
                                         @click="if (advancing) return; advancing = true; quizOpen=false; Promise.resolve($wire.closeQuizModalAndAdvance())">
                                         <span class="inline-flex items-center gap-2" x-show="!advancing">
-                                            <span>Lanjut</span>
+                                            <span>Lanjut ke Materi Berikutnya</span>
                                             <x-icon name="o-arrow-right" class="size-4" />
                                         </span>
                                         <span class="inline-flex items-center gap-2" x-show="advancing">
