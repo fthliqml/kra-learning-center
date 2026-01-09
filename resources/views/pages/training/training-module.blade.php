@@ -164,10 +164,14 @@
                     wire:model.defer="formData.theory_passing_score" placeholder="80" class="focus-within:border-0"
                     min="0" max="100" step="0.01" :error="$errors->first('formData.theory_passing_score')" :readonly="$mode === 'preview'" />
 
-                <x-input label="Practical Passing Score (%)" type="number"
-                    wire:model.defer="formData.practical_passing_score" placeholder="80"
-                    class="focus-within:border-0" min="0" max="100" step="0.01" :error="$errors->first('formData.practical_passing_score')"
-                    :readonly="$mode === 'preview'" />
+                @if ($mode === 'preview')
+                    <x-input label="Practical Passing Grade" wire:model="formData.practical_passing_score"
+                        class="focus-within:border-0" readonly />
+                @else
+                    <x-choices label="Practical Passing Grade" wire:model.defer="formData.practical_passing_score"
+                        :options="$practicalGradeOptions" option-value="value" option-label="label" placeholder="Select grade (A-E)"
+                        class="focus-within:border-0" :error="$errors->first('formData.practical_passing_score')" single />
+                @endif
             </div>
 
             {{-- Actions --}}

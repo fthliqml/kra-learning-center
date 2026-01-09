@@ -67,6 +67,11 @@ class User extends Authenticatable
         ];
     }
 
+    public function signature(): HasOne
+    {
+        return $this->hasOne(Signature::class);
+    }
+
     /**
      * Get the trainer profile for the user.
      */

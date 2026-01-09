@@ -6,12 +6,23 @@
         </h1>
 
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
-            <x-select wire:model="selectedYear" :options="collect(range(now()->year - 3, now()->year + 1))
-                ->map(fn($y) => ['value' => (string) $y, 'label' => (string) $y])
-                ->values()" option-value="value" option-label="label"
-                class="!h-10 focus-within:border-0" placeholder="Select year" />
+            <div class="flex items-center justify-center gap-2">
+                {{-- Export to Excel (align style with Training Request) --}}
+                <x-button class="btn-success h-10 text-white shadow-sm" wire:click="export" wire:loading.attr="disabled"
+                    spinner="export">
+                    <x-icon name="o-arrow-down-on-square" class="size-4 mr-2" />
+                    Export
+                </x-button>
 
-            <x-search-input placeholder="Search employee..." class="max-w-md" wire:model.live.debounce.600ms="search" />
+                {{-- Year Filter (same style as Development Plan) --}}
+                <x-input type="number" wire:model.live.debounce.500ms="selectedYear" icon="o-calendar"
+                    class="number-no-spinner !w-24 md:!w-28" min="2000" max="2100" />
+            </div>
+
+            <div class="flex items-center justify-center gap-2">
+                <x-search-input placeholder="Search employee..." class="max-w-72"
+                    wire:model.live.debounce.600ms="search" />
+            </div>
         </div>
     </div>
 

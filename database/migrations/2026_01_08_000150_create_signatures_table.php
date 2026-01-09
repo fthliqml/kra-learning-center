@@ -11,14 +11,10 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('trainer_competency', function (Blueprint $table) {
+        Schema::create('signatures', function (Blueprint $table) {
             $table->id();
-
-            // Foreign keys
-            $table->foreignId('trainer_id')->constrained('trainer')->cascadeOnDelete();
-            $table->foreignId('competency_id')->constrained('competency')->cascadeOnDelete();
-
-            // Timestamps
+            $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
+            $table->string('path');
             $table->timestamps();
         });
     }
@@ -28,6 +24,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('trainer_competency');
+        Schema::dropIfExists('signatures');
     }
 };

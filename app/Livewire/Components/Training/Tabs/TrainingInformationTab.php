@@ -64,8 +64,19 @@ class TrainingInformationTab extends Component
         $this->group_comp = $this->training->group_comp;
         $this->type = $this->training->type;
 
-        $start = $this->training->start_date ? Carbon::parse($this->training->start_date)->toDateString() : null;
-        $end = $this->training->end_date ? Carbon::parse($this->training->end_date)->toDateString() : null;
+        // Use actual session dates for display range when available,
+        // so it matches the Day dropdown and real training days.
+        $sessionStart = $this->training->sessions->min('date');
+        $sessionEnd = $this->training->sessions->max('date');
+
+        if ($sessionStart || $sessionEnd) {
+            $start = $sessionStart ? Carbon::parse($sessionStart)->toDateString() : null;
+            $end = $sessionEnd ? Carbon::parse($sessionEnd)->toDateString() : null;
+        } else {
+            $start = $this->training->start_date ? Carbon::parse($this->training->start_date)->toDateString() : null;
+            $end = $this->training->end_date ? Carbon::parse($this->training->end_date)->toDateString() : null;
+        }
+
         $this->dateRange = ($start ?? '') . ' to ' . ($end ?? '');
 
         $this->sessions = $this->training->sessions->sortBy('day_number')->values()->toArray();
@@ -131,6 +142,10 @@ class TrainingInformationTab extends Component
             $e = Carbon::parse($end);
         } catch (\Throwable $th) {
             return $this->dateRange;
+        }
+        // Single day: show only one date, e.g. "7 January 2026"
+        if ($s->isSameDay($e)) {
+            return sprintf('%d %s %d', $s->day, $s->format('F'), $s->year);
         }
         if ($s->isSameMonth($e) && $s->year === $e->year) {
             return sprintf('%d-%d %s %d', $s->day, $e->day, $e->format('F'), $e->year);

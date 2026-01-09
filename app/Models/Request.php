@@ -37,6 +37,22 @@ class Request extends Model
     ];
 
     /**
+     * Multi-level approval stages for training requests.
+     * - dept_head          : waiting for Dept Head area terkait
+     * - area_division_head : waiting for Division Head area terkait
+     * - lid_division_head  : waiting for Division Head LID (final)
+     */
+    public const STAGE_DEPT_HEAD         = 'dept_head';
+    public const STAGE_AREA_DIV_HEAD     = 'area_division_head';
+    public const STAGE_LID_DIV_HEAD      = 'lid_division_head';
+
+    public const STAGES = [
+        self::STAGE_DEPT_HEAD,
+        self::STAGE_AREA_DIV_HEAD,
+        self::STAGE_LID_DIV_HEAD,
+    ];
+
+    /**
      * Mass assignable attributes.
      */
     protected $fillable = [
@@ -45,6 +61,7 @@ class Request extends Model
         'competency_id',
         'reason',
         'status',
+        'approval_stage',
     ];
 
     /**
@@ -56,6 +73,7 @@ class Request extends Model
         'competency_id' => 'integer',
         'reason'        => 'string',
         'status'     => 'string',
+        'approval_stage' => 'string',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
     ];
@@ -65,6 +83,7 @@ class Request extends Model
      */
     protected $attributes = [
         'status' => self::STATUS_PENDING,
+        'approval_stage' => self::STAGE_DEPT_HEAD,
     ];
 
     /* ========================= Relationships ========================= */
@@ -105,6 +124,24 @@ class Request extends Model
     public function isRejected(): bool
     {
         return $this->status === self::STATUS_REJECTED;
+    }
+
+    /**
+     * Convenience helpers for checking current approval stage.
+     */
+    public function isDeptHeadStage(): bool
+    {
+        return $this->approval_stage === self::STAGE_DEPT_HEAD;
+    }
+
+    public function isAreaDivisionHeadStage(): bool
+    {
+        return $this->approval_stage === self::STAGE_AREA_DIV_HEAD;
+    }
+
+    public function isLidDivisionHeadStage(): bool
+    {
+        return $this->approval_stage === self::STAGE_LID_DIV_HEAD;
     }
 
     /* ========================= Mutators ========================= */

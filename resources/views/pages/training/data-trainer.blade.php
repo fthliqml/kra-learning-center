@@ -86,7 +86,7 @@
         </div>
     @else
         {{-- Table --}}
-        <div wire:loading.remove wire:target="search,filter,file,openCreateModal"
+        <div wire:loading.remove wire:target="search,filter,save,deleteTrainer,file,openCreateModal"
             class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$trainers" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
@@ -102,25 +102,43 @@
 
                 {{-- Custom cell untuk kolom Action --}}
                 @scope('cell_action', $trainer)
-                    <div class="flex gap-2 justify-center">
+                    @php
+                        $currentUser = auth()->user();
+                        $isAdmin =
+                            $currentUser && method_exists($currentUser, 'hasRole') && $currentUser->hasRole('admin');
 
+                        $canManageTrainer = false;
+                        if ($currentUser) {
+                            if (!empty($trainer->user_id)) {
+                                // Internal trainer: only the linked user can manage
+                                $canManageTrainer = $currentUser->id === $trainer->user_id;
+                            } else {
+                                // External trainer: only admin can manage
+                                $canManageTrainer = $isAdmin;
+                            }
+                        }
+                    @endphp
+
+                    <div class="flex gap-2 justify-center">
                         <!-- Details -->
                         <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
                             wire:click="openDetailModal({{ $trainer->id }})" />
 
-                        <!-- Edit -->
-                        <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
-                            wire:click="openEditModal({{ $trainer->id }})" />
+                        @if ($canManageTrainer)
+                            <!-- Edit -->
+                            <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
+                                wire:click="openEditModal({{ $trainer->id }})" />
 
-                        <!-- Delete -->
-                        <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85"
-                            spinner
-                            wire:click="$dispatch('confirm', {
-                            title: 'Are you sure you want to delete?',
-                            text: 'This action is permanent and cannot be undone.',
-                            action: 'deleteTrainer',
-                            id: {{ $trainer->id }}
-                        })" />
+                            <!-- Delete -->
+                            <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85"
+                                spinner
+                                wire:click="$dispatch('confirm', {
+                                    title: 'Are you sure you want to delete?',
+                                    text: 'This action is permanent and cannot be undone.',
+                                    action: 'deleteTrainer',
+                                    id: {{ $trainer->id }}
+                                })" />
+                        @endif
                     </div>
                 @endscope
             </x-table>
@@ -171,6 +189,43 @@
             <x-input label="Institution" placeholder="Institution name..." wire:model.defer="formData.institution"
                 class="focus-within:border-0" :error="$errors->first('formData.institution')" :readonly="$mode === 'preview'" />
 
+            {{-- Signature Upload / Preview --}}
+            <div class="mt-3 space-y-2">
+                <label class="label p-0">
+                    <span class="label-text text-xs leading-[18px] font-semibold text-[#123456]">Signature</span>
+                </label>
+
+                @if ($mode === 'preview')
+                    @if (!empty($formData['signature_path']))
+                        <div class="flex items-center gap-3">
+                            <img src="{{ asset('storage/' . $formData['signature_path']) }}" alt="Signature preview"
+                                class="h-20 max-w-[320px] object-contain border border-gray-200 bg-white px-3 py-2 rounded" />
+                        </div>
+                    @elseif (!empty($formData['signature_exists']))
+                        <p class="text-xs text-gray-500 italic">Signature has been uploaded by the instructor.</p>
+                    @else
+                        <p class="text-xs text-gray-400 italic">No signature uploaded.</p>
+                    @endif
+                @else
+                    <div class="flex flex-col md:flex-row items-start md:items-center gap-3">
+                        <input type="file" wire:model="signatureFile" accept="image/*"
+                            class="file-input file-input-sm file-input-bordered w-full md:w-flex-1" />
+
+                        @if (!empty($formData['signature_path']))
+                            <div class="flex items-center gap-2 text-xs text-gray-600">
+                                <span>Current:</span>
+                                <img src="{{ asset('storage/' . $formData['signature_path']) }}"
+                                    alt="Current signature"
+                                    class="h-16 max-w-[240px] object-contain border border-gray-200 bg-white px-2 py-1 rounded" />
+                            </div>
+                        @endif
+                    </div>
+                    @error('signatureFile')
+                        <div class="text-error text-xs mt-1">{{ $message }}</div>
+                    @enderror
+                @endif
+            </div>
+
             @if (!empty($duplicateWarning) && $mode === 'create')
                 <div class="bg-amber-50 border border-amber-200 rounded-md p-3">
                     <div class="flex items-start">
@@ -183,30 +238,6 @@
                     </div>
                 </div>
             @endif
-
-            <div class="space-y-3">
-                @if ($mode === 'preview')
-                    <label class="label p-0">
-                        <span class="label-text text-xs leading-[18px] font-semibold text-[#123456]">Competency</span>
-                    </label>
-                    @php
-                        $selectedCompetencies = collect($competencyOptions)
-                            ->whereIn('id', $formData['competencies'] ?? [])
-                            ->values()
-                            ->map(fn($item, $index) => $index + 1 . '. ' . $item['display_name'])
-                            ->implode("\n");
-                    @endphp
-                    <textarea class="textarea textarea-bordered w-full" rows="{{ max(3, count($formData['competencies'] ?? [])) }}"
-                        readonly>{{ $selectedCompetencies ?: 'No competency selected' }}</textarea>
-                @else
-                    <x-choices label="Competency" wire:model="formData.competencies" :options="$competencyOptions"
-                        option-value="id" option-label="name" placeholder="Select competencies..." searchable
-                        class="focus-within:border-0" />
-                    @error('formData.competencies')
-                        <div class="text-error text-xs mt-1">{{ $message }}</div>
-                    @enderror
-                @endif
-            </div>
 
             {{-- Actions --}}
             <x-slot:actions>

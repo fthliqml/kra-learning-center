@@ -1,6 +1,19 @@
 <div>
     @livewire('components.confirm-dialog')
 
+    {{-- Global loading overlay for Dept Head approval (certificate generation) --}}
+    <div wire:loading.flex wire:target="approve"
+        class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm items-center justify-center">
+        <div class="bg-white rounded-lg shadow-lg px-6 py-4 flex items-center gap-3 max-w-sm mx-4">
+            <x-icon name="o-arrow-path" class="size-6 text-primary animate-spin" />
+            <div class="text-sm text-gray-800">
+                <div class="font-semibold">Generating certificates</div>
+                <div class="text-xs text-gray-500 mt-0.5">Please wait while training certificates are being
+                    generated...</div>
+            </div>
+        </div>
+    </div>
+
     {{-- Header --}}
     <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
                 grid-cols-1 lg:grid-cols-2 items-center">
@@ -21,6 +34,77 @@
             <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.600ms="search" />
         </div>
     </div>
+
+    {{-- Signature Info & Upload (for LID leaders) --}}
+    @php
+        $currentUser = auth()->user();
+        $canUploadSignature =
+            $currentUser &&
+            method_exists($currentUser, 'hasPosition') &&
+            (($currentUser->hasPosition('section_head') && strtolower($currentUser->section ?? '') === 'lid') ||
+                ($currentUser->hasPosition('department_head') &&
+                    ($currentUser->department ?? '') === 'Human Capital, General Service, Security & LID'));
+        $currentSignature = $currentUser?->signature;
+    @endphp
+
+    @if ($canUploadSignature)
+        <div class="mb-5 rounded-lg border border-gray-200 bg-white shadow-sm">
+            <div class="px-4 pt-3 pb-2 border-b border-gray-100 flex items-center justify-between">
+                <div>
+                    <div class="text-sm font-semibold text-gray-800">Digital Signature</div>
+                    <div class="text-[11px] text-gray-500">Used on training certificates approved from this page.</div>
+                </div>
+            </div>
+
+            <div class="px-4 py-3 space-y-3">
+                @if ($currentSignature && $currentSignature->path)
+                    <div class="flex items-start gap-3 p-3 rounded-md bg-emerald-50 border border-emerald-200">
+                        <div class="mt-0.5">
+                            <x-icon name="o-check-circle" class="size-5 text-emerald-500" />
+                        </div>
+                        <div class="text-xs text-emerald-800">
+                            <div class="font-semibold">Digital signature is already uploaded.</div>
+                            <div class="mt-1 flex items-center gap-2">
+                                <span class="text-emerald-700">Current signature preview:</span>
+                                <img src="{{ asset('storage/' . $currentSignature->path) }}" alt="Signature preview"
+                                    class="h-8 object-contain border border-emerald-200 bg-white px-2 py-1 rounded" />
+                            </div>
+                        </div>
+                    </div>
+                @else
+                    <div class="flex items-start gap-3 p-3 rounded-md bg-amber-50 border border-amber-200">
+                        <div class="mt-0.5">
+                            <x-icon name="o-exclamation-triangle" class="size-5 text-amber-500" />
+                        </div>
+                        <div class="text-xs text-amber-800">
+                            <div class="font-semibold">No digital signature uploaded yet.</div>
+                            <div class="mt-1">Please upload your signature before approving training certificates.
+                            </div>
+                        </div>
+                    </div>
+                @endif
+
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-3 text-xs w-full">
+                    <input type="file" wire:model="signatureFile" accept="image/*"
+                        class="file-input file-input-sm file-input-bordered w-full md:flex-1" />
+                    <x-ui.button type="button" variant="secondary" wire:click="uploadSignature"
+                        wire:target="uploadSignature,signatureFile" wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="uploadSignature" class="flex items-center gap-2">
+                            <x-icon name="o-arrow-up-tray" class="size-3" />
+                            Upload Signature
+                        </span>
+                        <span wire:loading wire:target="uploadSignature">
+                            <x-icon name="o-arrow-path" class="size-3 animate-spin" />
+                        </span>
+                    </x-ui.button>
+                </div>
+
+                @error('signatureFile')
+                    <div class="text-xs text-rose-600">{{ $message }}</div>
+                @enderror
+            </div>
+        </div>
+    @endif
 
     {{-- Skeleton Loading --}}
     <x-skeletons.table :columns="5" :rows="10" targets="search,filter,approve,reject" />
@@ -71,14 +155,24 @@
                 @scope('cell_status', $approval)
                     @php
                         $status = strtolower($approval->status ?? 'pending');
-                        $classes =
-                            [
-                                'pending' => 'bg-amber-100 text-amber-700',
-                                'done' => 'bg-blue-100 text-blue-700',
-                                'approved' => 'bg-emerald-100 text-emerald-700',
-                                'rejected' => 'bg-rose-100 text-rose-700',
-                            ][$status] ?? 'bg-gray-100 text-gray-700';
-                        $statusLabel = $status === 'done' ? 'Ready for Approval' : ucfirst($status);
+                        $isLevel1Approved = !empty($approval->section_head_signed_at);
+                        $isLevel2Approved = !empty($approval->dept_head_signed_at);
+
+                        if ($status === 'done' && !$isLevel1Approved) {
+                            $classes = 'bg-amber-100 text-amber-700';
+                            $statusLabel = 'Waiting Section Head Approval';
+                        } elseif ($status === 'done' && $isLevel1Approved && !$isLevel2Approved) {
+                            $classes = 'bg-blue-100 text-blue-700';
+                            $statusLabel = 'Waiting Dept Head Approval';
+                        } else {
+                            $map = [
+                                'pending' => ['bg-amber-100 text-amber-700', 'Pending'],
+                                'approved' => ['bg-emerald-100 text-emerald-700', 'Approved'],
+                                'rejected' => ['bg-rose-100 text-rose-700', 'Rejected'],
+                                'done' => ['bg-blue-100 text-blue-700', 'Ready for Approval'],
+                            ];
+                            [$classes, $statusLabel] = $map[$status] ?? ['bg-gray-100 text-gray-700', ucfirst($status)];
+                        }
                     @endphp
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
                         {{ $statusLabel }}
@@ -87,9 +181,36 @@
 
                 {{-- Action --}}
                 @scope('cell_action', $approval)
-                    <div class="flex justify-center">
+                    @php
+                        $user = auth()->user();
+
+                        $isDeptHead =
+                            $user &&
+                            method_exists($user, 'hasPosition') &&
+                            $user->hasPosition('department_head') &&
+                            ($user->department ?? '') === 'Human Capital, General Service, Security & LID';
+
+                        $status = strtolower($approval->status ?? '');
+                        $hasLevel1Approval = !empty($approval->section_head_signed_at ?? null);
+                        $hasLevel2Approval = !empty($approval->dept_head_signed_at ?? null);
+
+                        // Row-level Dept Head actions: training done, level 1 approved, not yet level 2
+                        $showDeptHeadRowActions =
+                            $isDeptHead && $status === 'done' && $hasLevel1Approval && !$hasLevel2Approval;
+                    @endphp
+                    <div class="flex justify-center gap-1">
                         <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
                             wire:click="openDetailModal({{ $approval->id }})" />
+
+                        @if ($showDeptHeadRowActions)
+                            <x-button icon="o-x-mark"
+                                class="btn-circle btn-ghost p-2 bg-rose-600 text-white hover:bg-rose-700" spinner
+                                wire:click="reject({{ $approval->id }})" />
+
+                            <x-button icon="o-check"
+                                class="btn-circle btn-ghost p-2 bg-emerald-600 text-white hover:bg-emerald-700" spinner
+                                wire:click="approve({{ $approval->id }})" />
+                        @endif
                     </div>
                 @endscope
             </x-table>
@@ -108,7 +229,8 @@
         <x-tabs wire:model="activeTab">
             <x-tab name="information" label="Information" icon="o-information-circle">
                 <x-form no-separator>
-                    <x-input label="Training Name" :value="$formData['training_name'] ?? ''" class="focus-within:border-0" :readonly="true" />
+                    <x-input label="Training Name" :value="$formData['training_name'] ?? ''" class="focus-within:border-0"
+                        :readonly="true" />
 
                     <div class="grid grid-cols-2 gap-4">
                         <x-input label="Type" :value="$formData['type'] ?? ''" class="focus-within:border-0" :readonly="true" />
@@ -121,21 +243,35 @@
                         <x-input label="Start Date" :value="$formData['start_date'] ?? ''" class="focus-within:border-0"
                             :readonly="true" />
 
-                        <x-input label="End Date" :value="$formData['end_date'] ?? ''" class="focus-within:border-0" :readonly="true" />
+                        <x-input label="End Date" :value="$formData['end_date'] ?? ''" class="focus-within:border-0"
+                            :readonly="true" />
                     </div>
 
                     <div class="mt-3">
                         {{-- Status badge --}}
                         @php
                             $status = strtolower($formData['status'] ?? 'pending');
-                            $classes =
-                                [
-                                    'pending' => 'bg-amber-100 text-amber-700',
-                                    'done' => 'bg-blue-100 text-blue-700',
-                                    'approved' => 'bg-emerald-100 text-emerald-700',
-                                    'rejected' => 'bg-rose-100 text-rose-700',
-                                ][$status] ?? 'bg-gray-100 text-gray-700';
-                            $statusLabel = $status === 'done' ? 'Ready for Approval' : ucfirst($status);
+                            $isLevel1Approved = !empty($formData['section_head_signed_at'] ?? null);
+                            $isLevel2Approved = !empty($formData['dept_head_signed_at'] ?? null);
+
+                            if ($status === 'done' && !$isLevel1Approved) {
+                                $classes = 'bg-amber-100 text-amber-700';
+                                $statusLabel = 'Waiting Section Head Approval';
+                            } elseif ($status === 'done' && $isLevel1Approved && !$isLevel2Approved) {
+                                $classes = 'bg-blue-100 text-blue-700';
+                                $statusLabel = 'Waiting Dept Head Approval';
+                            } else {
+                                $map = [
+                                    'pending' => ['bg-amber-100 text-amber-700', 'Pending'],
+                                    'approved' => ['bg-emerald-100 text-emerald-700', 'Approved'],
+                                    'rejected' => ['bg-rose-100 text-rose-700', 'Rejected'],
+                                    'done' => ['bg-blue-100 text-blue-700', 'Ready for Approval'],
+                                ];
+                                [$classes, $statusLabel] = $map[$status] ?? [
+                                    'bg-gray-100 text-gray-700',
+                                    ucfirst($status),
+                                ];
+                            }
                         @endphp
                         <div class="text-xs font-semibold">Status</div>
                         <span
@@ -143,6 +279,7 @@
                             {{ $statusLabel }}
                         </span>
                     </div>
+
                 </x-form>
             </x-tab>
 
@@ -260,6 +397,11 @@
                                 <div class="flex justify-center">
                                     @php
                                         $participantStatus = strtolower($participant->status);
+                                        // Ambil status training dari row peserta (lebih andal),
+                                        // fallback ke formData jika belum ada
+                                        $trainingStatus = strtolower(
+                                            $participant->training_status ?? ($formData['status'] ?? ''),
+                                        );
                                         $hasCertificate =
                                             $participantStatus === 'passed' &&
                                             !empty($participant->certificate_path) &&
@@ -277,14 +419,16 @@
                                                 str_pad($participant->assessment_id, 4, '0', STR_PAD_LEFT);
                                         }
                                     @endphp
-                                    @if ($hasCertificate && $certNumber)
+                                    @if ($trainingStatus === 'rejected')
+                                        <span class="text-xs text-gray-400">-</span>
+                                    @elseif ($hasCertificate && $certNumber)
                                         <a href="{{ route('certificate.training.view', $participant->assessment_id) }}"
                                             target="_blank"
                                             class="text-primary hover:text-primary/80 hover:underline text-xs font-medium transition-colors"
                                             title="View Certificate">
                                             {{ $certNumber }}
                                         </a>
-                                    @elseif ($participantStatus === 'passed')
+                                    @elseif ($trainingStatus === 'done' && $participantStatus === 'passed')
                                         <span class="text-xs text-amber-600 italic">Pending</span>
                                     @else
                                         <span class="text-xs text-gray-400">-</span>
@@ -301,14 +445,30 @@
             <x-ui.button @click="$wire.modal = false" type="button">Close</x-ui.button>
             @php
                 $user = auth()->user();
-                $canModerate =
+                $status = strtolower($formData['status'] ?? '');
+
+                $isSectionHead =
                     $user &&
                     method_exists($user, 'hasPosition') &&
                     $user->hasPosition('section_head') &&
                     strtolower($user->section ?? '') === 'lid';
-                $isDone = strtolower($formData['status'] ?? '') === 'done';
+
+                $isDeptHead =
+                    $user &&
+                    method_exists($user, 'hasPosition') &&
+                    $user->hasPosition('department_head') &&
+                    ($user->department ?? '') === 'Human Capital, General Service, Security & LID';
+
+                $hasLevel1Approval = !empty($formData['section_head_signed_at'] ?? null);
+                $hasLevel2Approval = !empty($formData['dept_head_signed_at'] ?? null);
+
+                // Level 1 actions: Section Head LID, training done, no approvals yet
+                $showLevel1Actions = $isSectionHead && $status === 'done' && !$hasLevel1Approval && !$hasLevel2Approval;
+
+                // Level 2 actions: Dept Head LID, training done, level 1 approved, not yet level 2
+                $showLevel2Actions = $isDeptHead && $status === 'done' && $hasLevel1Approval && !$hasLevel2Approval;
             @endphp
-            @if ($canModerate && $isDone)
+            @if ($showLevel1Actions || $showLevel2Actions)
                 <x-ui.button variant="danger" type="button" wire:click="reject" wire:target="reject"
                     wire:loading.attr="disabled" class="bg-rose-600 hover:bg-rose-700 border-rose-600 text-white">
                     <span wire:loading.remove wire:target="reject" class="flex items-center gap-2">

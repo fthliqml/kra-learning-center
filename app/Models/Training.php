@@ -18,12 +18,28 @@ class Training extends Model
         'start_date',
         'end_date',
         'status',
+        'section_head_signed_by',
+        'section_head_signed_at',
+        'dept_head_signed_by',
+        'dept_head_signed_at',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'end_date' => 'date',
+        'section_head_signed_at' => 'datetime',
+        'dept_head_signed_at' => 'datetime',
     ];
+
+    public function sectionHeadSigner()
+    {
+        return $this->belongsTo(User::class, 'section_head_signed_by');
+    }
+
+    public function deptHeadSigner()
+    {
+        return $this->belongsTo(User::class, 'dept_head_signed_by');
+    }
 
     /**
      * Get the training sessions for the training.

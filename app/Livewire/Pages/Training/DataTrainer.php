@@ -5,9 +5,9 @@ namespace App\Livewire\Pages\Training;
 use App\Exports\DataTrainerExport;
 use App\Exports\DataTrainerTemplateExport;
 use App\Imports\DataTrainerImport;
-use App\Models\Competency;
 use App\Models\Trainer;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\On;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -33,6 +33,7 @@ class DataTrainer extends Component
     public $filter = '';
     public $duplicateWarning = '';
     public array $trainersSearchable = [];
+    public $signatureFile;
 
     public function mount()
     {
@@ -48,23 +49,6 @@ class DataTrainer extends Component
             ->map(fn($u) => ['id' => $u['value'], 'name' => $u['label']])
             ->values()
             ->all();
-
-        $this->loadCompetencyOptions();
-    }
-
-    /**
-     * Load competency options from Competency Book
-     */
-    public function loadCompetencyOptions(): void
-    {
-        $this->competencyOptions = Competency::orderBy('code')
-            ->get()
-            ->map(fn($c) => [
-                'id' => $c->id,
-                'name' => "[{$c->code}] {$c->name}",
-                'display_name' => $c->name, // For preview without code
-            ])
-            ->toArray();
     }
 
     public $groupOptions = [
@@ -72,14 +56,13 @@ class DataTrainer extends Component
         ['value' => 'External', 'label' => 'External'],
     ];
 
-    public array $competencyOptions = [];
-
     public $formData = [
         'trainer_type' => '',
         'name' => '',
         'user_id' => '',
         'institution' => '',
-        'competencies' => [],
+        'signature_path' => null,
+        'signature_exists' => false,
     ];
 
     protected function rules()
@@ -90,17 +73,7 @@ class DataTrainer extends Component
             'formData.user_id' => [$isInternal ? 'required' : 'nullable'],
             'formData.name' => [$isInternal ? 'nullable' : 'required', 'string', 'max:255'],
             'formData.institution' => 'required|string',
-            'formData.competencies' => [
-                'required',
-                'array',
-                function ($attr, $value, $fail) {
-                    $nonEmpty = collect($value)->filter(fn($v) => !empty($v));
-                    if ($nonEmpty->isEmpty()) {
-                        $fail('Select at least one competency.');
-                    }
-                }
-            ],
-            'formData.competencies.*' => 'nullable|integer|exists:competency,id',
+            'signatureFile' => ['nullable', 'image', 'max:2048'],
         ];
     }
 
@@ -133,8 +106,7 @@ class DataTrainer extends Component
             'formData.user_id' => 'internal trainer',
             'formData.name' => 'trainer name',
             'formData.institution' => 'institution',
-            'formData.competencies' => 'competencies',
-            'formData.competencies.*' => 'competency',
+            'signatureFile' => 'signature',
         ];
     }
 
@@ -145,6 +117,48 @@ class DataTrainer extends Component
         }
     }
 
+    /**
+     * Determine if the current user can view a trainer's signature.
+     * - Internal trainer (has user_id): only that user can view.
+     * - External trainer (no user_id): only admin role can view.
+     */
+    protected function canViewSignature(Trainer $trainer): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        // Internal trainer: only the linked user can view their signature
+        if ($trainer->user_id) {
+            return $user->id === $trainer->user_id;
+        }
+
+        // External trainer: only admin functional role can view
+        return $user->hasRole('admin');
+    }
+
+    /**
+     * Determine if the current user can manage (edit/delete) a trainer record/signature.
+     * - Internal trainer: only the linked user.
+     * - External trainer: only admin.
+     */
+    protected function canManageTrainer(Trainer $trainer): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        if ($trainer->user_id) {
+            return $user->id === $trainer->user_id;
+        }
+
+        return $user->hasRole('admin');
+    }
+
     public function openCreateModal()
     {
         $this->reset(['formData', 'selectedId', 'duplicateWarning']);
@@ -153,7 +167,8 @@ class DataTrainer extends Component
             'name' => '',
             'user_id' => '',
             'institution' => '',
-            'competencies' => [],
+            'signature_path' => null,
+            'signature_exists' => false,
         ];
         $this->mode = 'create';
         $this->modal = true;
@@ -250,16 +265,18 @@ class DataTrainer extends Component
     {
         $trainer = Trainer::findOrFail($id);
 
-        $competencyIds = $trainer->competencies->pluck('id')->toArray();
-
         $this->selectedId = $id;
         $isInternal = !is_null($trainer->user_id);
+        $hasSignature = !empty($trainer->signature_path);
+        $signaturePath = $this->canViewSignature($trainer) ? $trainer->signature_path : null;
+
         $this->formData = [
             'trainer_type' => $isInternal ? 'internal' : 'external',
             'name' => $isInternal ? ($trainer->user->name ?? '') : ($trainer->name ?? ''),
             'user_id' => $trainer->user_id,
             'institution' => $trainer->institution,
-            'competencies' => $competencyIds,
+            'signature_path' => $signaturePath,
+            'signature_exists' => $hasSignature,
         ];
 
         $this->mode = 'preview';
@@ -281,7 +298,10 @@ class DataTrainer extends Component
     {
         $trainer = Trainer::findOrFail($id);
 
-        $competencyIds = $trainer->competencies->pluck('id')->toArray();
+        if (!$this->canManageTrainer($trainer)) {
+            $this->error('You are not allowed to edit this trainer.', position: 'toast-top toast-center');
+            return;
+        }
 
         $this->selectedId = $id;
         $isInternal = !is_null($trainer->user_id);
@@ -290,7 +310,8 @@ class DataTrainer extends Component
             'name' => $isInternal ? '' : ($trainer->name ?? ''),
             'user_id' => $trainer->user_id,
             'institution' => $trainer->institution,
-            'competencies' => $competencyIds,
+            'signature_path' => $trainer->signature_path,
+            'signature_exists' => !empty($trainer->signature_path),
         ];
 
         $this->duplicateWarning = '';
@@ -314,19 +335,18 @@ class DataTrainer extends Component
     {
         $this->validate();
 
-        // Get competency IDs directly (already IDs from dropdown)
-        $competencyIds = collect($this->formData['competencies'] ?? [])
-            ->filter(fn($v) => !empty($v))
-            ->unique()
-            ->values()
-            ->all();
-
         $isInternal = ($this->formData['trainer_type'] ?? 'internal') === 'internal';
         $trainerData = [
             'user_id' => $isInternal ? $this->formData['user_id'] : null,
             'name' => $isInternal ? null : ($this->formData['name'] ?? null),
             'institution' => $this->formData['institution'],
         ];
+
+        // Handle signature upload if provided
+        if ($this->signatureFile) {
+            $path = $this->signatureFile->store('trainer-signatures', 'public');
+            $trainerData['signature_path'] = $path;
+        }
 
         if ($this->mode === 'create') {
             $existingTrainer = null;
@@ -341,19 +361,25 @@ class DataTrainer extends Component
 
             if ($existingTrainer) {
                 $existingTrainer->update($trainerData);
-                $existingTrainer->competencies()->sync($competencyIds);
                 $this->success('Trainer already exists. Successfully updated existing data.', position: 'toast-top toast-center');
             } else {
                 $trainer = Trainer::create($trainerData);
-                $trainer->competencies()->attach($competencyIds);
                 $this->success('Successfully added new trainer.', position: 'toast-top toast-center');
             }
         } else {
             $trainer = Trainer::findOrFail($this->selectedId);
+
+            if (!$this->canManageTrainer($trainer)) {
+                $this->error('You are not allowed to update this trainer.', position: 'toast-top toast-center');
+                return;
+            }
+
             $trainer->update($trainerData);
-            $trainer->competencies()->sync($competencyIds);
             $this->success('Trainer data updated successfully.', position: 'toast-top toast-center');
         }
+
+        // Reset signature file after save
+        $this->signatureFile = null;
 
         $this->modal = false;
     }
@@ -371,6 +397,12 @@ class DataTrainer extends Component
     {
         try {
             $trainer = Trainer::findOrFail($id);
+
+            if (!$this->canManageTrainer($trainer)) {
+                $this->error('You are not allowed to delete this trainer.', position: 'toast-top toast-center');
+                $this->dispatch('confirm-done');
+                return;
+            }
             $trainerName = $trainer->user_id ?
                 ($trainer->user->name ?? 'Trainer') :
                 $trainer->name;
@@ -389,7 +421,7 @@ class DataTrainer extends Component
     {
         return [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center'],
-            ['key' => 'name', 'label' => 'Trainer Name', 'class' => 'w-[300px]'],
+            ['key' => 'name', 'label' => 'Trainer Name', 'class' => 'w-[260px]'],
             ['key' => 'institution', 'label' => 'Institution', 'class' => '!text-center'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center'],
         ];

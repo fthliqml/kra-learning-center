@@ -29,11 +29,6 @@ class TrainingSeeder extends Seeder
             return;
         }
 
-        // Get competencies by type for specific assignments
-        $bmcCompetencies = $competencies->where('type', 'BMC');
-        $tocCompetencies = $competencies->where('type', 'TOC');
-        $mmpCompetencies = $competencies->where('type', 'MMP');
-
         // 1. Ensure trainers exist
         // First trainer: internal user (instructor@example.com) - specializes in BMC & TOC
         $instructorUser = User::where('email', 'instructor@example.com')->first();
@@ -41,11 +36,6 @@ class TrainingSeeder extends Seeder
             'user_id' => $instructorUser?->id,
             'institution' => 'KRA',
         ]);
-        // Assign competencies to first trainer (BMC and TOC)
-        $trainerCompetencyIds = $bmcCompetencies->pluck('id')
-            ->merge($tocCompetencies->pluck('id'))
-            ->toArray();
-        $trainer->competencies()->attach($trainerCompetencyIds);
 
         // Second trainer: external (no user_id) - specializes in Safety (BMC)
         $trainer2 = Trainer::create([
@@ -53,7 +43,6 @@ class TrainingSeeder extends Seeder
             'name' => 'Ahmad Fauzi',
             'institution' => 'PT. Safety Training Indonesia',
         ]);
-        $trainer2->competencies()->attach($bmcCompetencies->pluck('id')->toArray());
 
         // Third trainer: external (no user_id) - specializes in MMP
         $trainer3 = Trainer::create([
@@ -61,7 +50,6 @@ class TrainingSeeder extends Seeder
             'name' => 'Budi Santoso',
             'institution' => 'Lembaga Sertifikasi Profesi',
         ]);
-        $trainer3->competencies()->attach($mmpCompetencies->pluck('id')->toArray());
 
         // 2. Employees pool for assessments/attendances
         $employees = User::inRandomOrder()->limit(10)->get();
@@ -71,9 +59,8 @@ class TrainingSeeder extends Seeder
             $employees->push($employeeUser);
         }
 
-        // Get a default competency for fallback (first BMC competency - Safety Awareness)
+        // Get a default competency for fallback (prefer specific BMC code, otherwise first competency)
         $defaultCompetency = $competencies->where('code', 'BMC003')->first()
-            ?? $bmcCompetencies->first()
             ?? $competencies->first();
 
         // Get training modules for IN-HOUSE type

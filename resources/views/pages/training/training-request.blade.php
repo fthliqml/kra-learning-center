@@ -39,6 +39,24 @@
                     </x-ui.button>
                 @endif
 
+                @php
+                    $user = auth()->user();
+                    $isAdmin = $user && method_exists($user, 'hasRole') && $user->hasRole('admin');
+                    $isLidSectionHead =
+                        $user &&
+                        method_exists($user, 'hasPosition') &&
+                        $user->hasPosition('section_head') &&
+                        strtoupper($user->section ?? '') === 'LID';
+                @endphp
+
+                @if ($isAdmin || $isLidSectionHead)
+                    <x-button class="btn-success h-10 text-white shadow-sm" wire:click="export"
+                        wire:loading.attr="disabled" spinner="export">
+                        <x-icon name="o-arrow-down-on-square" class="size-4 mr-2" />
+                        Export
+                    </x-button>
+                @endif
+
                 <!-- Filter -->
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
                     placeholder="All"
@@ -46,7 +64,9 @@
                     icon-right="o-funnel" />
             </div>
 
-            <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.600ms="search" />
+            <div class="flex items-center justify-center gap-2">
+                <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.600ms="search" />
+            </div>
         </div>
     </div>
 
@@ -96,6 +116,26 @@
                 @scope('cell_status', $request)
                     @php
                         $status = strtolower($request->status ?? 'pending');
+                        $stage = strtolower($request->approval_stage ?? 'dept_head');
+                        // Human readable label combining status + stage
+                        if ($status === 'pending') {
+                            $label = match ($stage) {
+                                'dept_head' => 'Pending Dept Head',
+                                'area_division_head' => 'Pending Division Head Area',
+                                'lid_division_head' => 'Pending Division Head LID',
+                                default => 'Pending',
+                            };
+                        } elseif ($status === 'rejected') {
+                            $label = match ($stage) {
+                                'dept_head' => 'Rejected by Dept Head',
+                                'area_division_head' => 'Rejected by Division Head Area',
+                                'lid_division_head' => 'Rejected by Division Head LID',
+                                default => 'Rejected',
+                            };
+                        } else {
+                            // Approved or other terminal statuses
+                            $label = ucfirst($status);
+                        }
                         $classes =
                             [
                                 'pending' => 'bg-amber-100 text-amber-700',
@@ -104,7 +144,7 @@
                             ][$status] ?? 'bg-gray-100 text-gray-700';
                     @endphp
                     <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
-                        {{ ucfirst($status) }}
+                        {{ $label }}
                     </span>
                 @endscope
 
@@ -151,11 +191,11 @@
             @endif
 
             @if ($mode === 'preview')
-                <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
-                    class="focus-within:border-0" :error="$errors->first('formData.reason')" :readonly="true" />
+                <x-textarea label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
+                    class="focus-within:border-0" :error="$errors->first('formData.reason')" :readonly="true" rows="3" />
             @else
-                <x-input label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
-                    class="focus-within:border-0" :error="$errors->first('formData.reason')" />
+                <x-textarea label="Reason" placeholder="Enter reason..." wire:model.defer="formData.reason"
+                    class="focus-within:border-0" :error="$errors->first('formData.reason')" rows="3" />
             @endif
 
             <div class="mt-3">
@@ -165,6 +205,28 @@
                         $status = strtolower(
                             $formData['status'] ?? ($requests->firstWhere('id', $selectedId)->status ?? 'pending'),
                         );
+                        $stage = strtolower(
+                            $formData['approval_stage'] ??
+                                ($requests->firstWhere('id', $selectedId)->approval_stage ?? 'dept_head'),
+                        );
+                        if ($status === 'pending') {
+                            $label = match ($stage) {
+                                'dept_head' => 'Pending Dept Head',
+                                'area_division_head' => 'Pending Division Head Area',
+                                'lid_division_head' => 'Pending Division Head LID',
+                                default => 'Pending',
+                            };
+                        } elseif ($status === 'rejected') {
+                            $label = match ($stage) {
+                                'dept_head' => 'Rejected by Dept Head',
+                                'area_division_head' => 'Rejected by Division Head Area',
+                                'lid_division_head' => 'Rejected by Division Head LID',
+                                default => 'Rejected',
+                            };
+                        } else {
+                            // Approved or other terminal statuses
+                            $label = ucfirst($status);
+                        }
                         $classes =
                             [
                                 'pending' => 'bg-amber-100 text-amber-700',
@@ -175,7 +237,7 @@
                     <div class="text-xs font-semibold">Status</div>
                     <span
                         class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
-                        {{ ucfirst($status) }}
+                        {{ $label }}
                     </span>
                 @endif
             </div>
@@ -193,14 +255,31 @@
                 @else
                     @php
                         $user = auth()->user();
-                        $canModerate =
-                            $user &&
-                            method_exists($user, 'hasPosition') &&
-                            $user->hasPosition('section_head') &&
-                            strtolower($user->section ?? '') === 'lid';
-                        $isPending = strtolower($formData['status'] ?? 'pending') === 'pending';
+                        $status = strtolower($formData['status'] ?? 'pending');
+                        $stage = strtolower($formData['approval_stage'] ?? 'dept_head');
+                        $targetDept = strtolower($formData['department'] ?? '');
+                        $targetDiv = strtolower($formData['division'] ?? '');
+                        $userDept = strtolower($user->department ?? '');
+                        $userDiv = strtolower($user->division ?? '');
+
+                        $canModerate = false;
+                        if ($user && method_exists($user, 'hasPosition') && $status === 'pending') {
+                            if ($stage === 'dept_head') {
+                                $canModerate =
+                                    $user->hasPosition('department_head') &&
+                                    $targetDept !== '' &&
+                                    $userDept === $targetDept;
+                            } elseif ($stage === 'area_division_head') {
+                                $canModerate =
+                                    $user->hasPosition('division_head') && $targetDiv !== '' && $userDiv === $targetDiv;
+                            } elseif ($stage === 'lid_division_head') {
+                                $canModerate =
+                                    $user->hasPosition('division_head') &&
+                                    $userDiv === 'human capital, finance & general support';
+                            }
+                        }
                     @endphp
-                    @if ($canModerate && $isPending)
+                    @if ($canModerate)
                         <x-ui.button variant="danger" type="button" wire:click="reject" wire:target="reject"
                             wire:loading.attr="disabled"
                             class="bg-rose-600 hover:bg-rose-700 border-rose-600 text-white">

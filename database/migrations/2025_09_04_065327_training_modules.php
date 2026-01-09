@@ -23,7 +23,8 @@ return new class extends Migration
             $table->integer('duration');
             $table->integer('frequency');
             $table->double('theory_passing_score')->default(0);
-            $table->double('practical_passing_score')->default(0);
+            // Practical passing score now uses letter grade (A-E)
+            $table->enum('practical_passing_score', ['A', 'B', 'C', 'D', 'E'])->default('C');
 
             // Timestamps
             $table->timestamps();

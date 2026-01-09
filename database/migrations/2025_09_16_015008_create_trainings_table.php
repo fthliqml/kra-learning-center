@@ -26,6 +26,12 @@ return new class extends Migration
             $table->date('end_date')->nullable();
             $table->enum('status', ['canceled', 'in_progress', 'done', 'approved', 'rejected'])->default('in_progress');
 
+            // Multi-level approval tracking
+            $table->foreignId('section_head_signed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('section_head_signed_at')->nullable();
+            $table->foreignId('dept_head_signed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->timestamp('dept_head_signed_at')->nullable();
+
             // Timestamps
             $table->timestamps();
         });
