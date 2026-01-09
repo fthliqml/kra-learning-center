@@ -12,13 +12,9 @@
             <x-input label="Max Attempts" type="number" wire:model.live="maxAttempts" placeholder="Unlimited"
                 min="1" class="focus-within:border-0" />
 
-            <div class="flex flex-col gap-2">
-                <span class="text-xs font-medium text-base-content/60">Options</span>
-                <label class="flex items-center gap-2 cursor-pointer">
-                    <input type="checkbox" wire:model.live="randomizeQuestion"
-                        class="checkbox checkbox-sm checkbox-primary" />
-                    <span class="text-sm">Randomize Questions</span>
-                </label>
+            <div class="flex items-center gap-3 pt-9">
+                <input type="checkbox" class="toggle toggle-sm" wire:model.live="randomizeQuestion" />
+                <span class="text-xs font-medium">Randomize</span>
             </div>
         </div>
 
