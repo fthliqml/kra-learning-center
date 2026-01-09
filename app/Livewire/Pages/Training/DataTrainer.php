@@ -159,6 +159,26 @@ class DataTrainer extends Component
         return $user->hasRole('admin');
     }
 
+    /**
+     * Determine if the current user can delete a trainer record.
+     * - Admin can delete any trainer (internal/external)
+     * - Otherwise follows existing manage rules
+     */
+    protected function canDeleteTrainer(Trainer $trainer): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        return $this->canManageTrainer($trainer);
+    }
+
     public function openCreateModal()
     {
         $this->reset(['formData', 'selectedId', 'duplicateWarning']);
@@ -398,7 +418,7 @@ class DataTrainer extends Component
         try {
             $trainer = Trainer::findOrFail($id);
 
-            if (!$this->canManageTrainer($trainer)) {
+            if (!$this->canDeleteTrainer($trainer)) {
                 $this->error('You are not allowed to delete this trainer.', position: 'toast-top toast-center');
                 $this->dispatch('confirm-done');
                 return;

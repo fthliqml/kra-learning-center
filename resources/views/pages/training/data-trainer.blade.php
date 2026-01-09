@@ -107,14 +107,17 @@
                         $isAdmin =
                             $currentUser && method_exists($currentUser, 'hasRole') && $currentUser->hasRole('admin');
 
-                        $canManageTrainer = false;
+                        $canEditTrainer = false;
+                        $canDeleteTrainer = false;
                         if ($currentUser) {
                             if (!empty($trainer->user_id)) {
-                                // Internal trainer: only the linked user can manage
-                                $canManageTrainer = $currentUser->id === $trainer->user_id;
+                                // Internal trainer: only the linked user can edit; admin can delete
+                                $canEditTrainer = $currentUser->id === $trainer->user_id;
+                                $canDeleteTrainer = $isAdmin || $currentUser->id === $trainer->user_id;
                             } else {
-                                // External trainer: only admin can manage
-                                $canManageTrainer = $isAdmin;
+                                // External trainer: only admin can manage/delete
+                                $canEditTrainer = $isAdmin;
+                                $canDeleteTrainer = $isAdmin;
                             }
                         }
                     @endphp
@@ -124,11 +127,13 @@
                         <x-button icon="o-eye" class="btn-circle btn-ghost p-2 bg-info text-white" spinner
                             wire:click="openDetailModal({{ $trainer->id }})" />
 
-                        @if ($canManageTrainer)
+                        @if ($canEditTrainer)
                             <!-- Edit -->
                             <x-button icon="o-pencil-square" class="btn-circle btn-ghost p-2 bg-tetriary" spinner
                                 wire:click="openEditModal({{ $trainer->id }})" />
+                        @endif
 
+                        @if ($canDeleteTrainer)
                             <!-- Delete -->
                             <x-button icon="o-trash" class="btn-circle btn-ghost p-2 bg-danger text-white hover:opacity-85"
                                 spinner
@@ -154,7 +159,7 @@
                 <x-input label="Trainer Name" placeholder="Name of the trainer..." wire:model.defer="formData.name"
                     class="focus-within:border-0" :error="$errors->first('formData.name')" :readonly="true" />
             @elseif ($mode === 'create')
-                <x-choices label="Trainer Type" wire:model.live="formData.trainer_type" :options="[
+                <x-choices label="Trainer Type*" wire:model.live="formData.trainer_type" :options="[
                     ['value' => 'internal', 'label' => 'Internal'],
                     ['value' => 'external', 'label' => 'External'],
                 ]"
@@ -162,31 +167,31 @@
                     class="focus-within:border-0" :error="$errors->first('formData.trainer_type')" single clearable />
 
                 @if (($formData['trainer_type'] ?? 'internal') === 'internal')
-                    <x-choices label="Trainer Name" wire:model.live="formData.user_id" :options="$trainersSearchable"
+                    <x-choices label="Trainer Name*" wire:model.live="formData.user_id" :options="$trainersSearchable"
                         search-function="trainerSearch" debounce="300ms" option-value="id" option-label="name"
                         placeholder="Search trainer name..." class="focus-within:border-0" min-chars=2
                         hint="Type at least 2 chars" searchable single clearable
                         wire:change="checkDuplicateTrainer" />
                 @else
-                    <x-input label="Trainer Name" placeholder="Name of the trainer..."
+                    <x-input label="Trainer Name*" placeholder="Name of the trainer..."
                         wire:model.live.debounce.500ms="formData.name" class="focus-within:border-0"
                         :error="$errors->first('formData.name')" />
                 @endif
             @elseif ($mode === 'edit')
                 @if (($formData['trainer_type'] ?? 'internal') === 'internal')
-                    <x-choices label="Trainer Name" wire:model.live="formData.user_id" :options="$trainersSearchable"
+                    <x-choices label="Trainer Name*" wire:model.live="formData.user_id" :options="$trainersSearchable"
                         search-function="trainerSearch" debounce="300ms" option-value="id" option-label="name"
                         placeholder="Search trainer name..." class="focus-within:border-0" min-chars=2
                         hint="Type at least 2 chars" searchable single clearable
                         wire:change="checkDuplicateTrainer" />
                 @else
-                    <x-input label="Trainer Name" placeholder="Name of the trainer..."
+                    <x-input label="Trainer Name{{ $mode === 'preview' ? '' : '*' }}" placeholder="Name of the trainer..."
                         wire:model.live.debounce.500ms="formData.name" class="focus-within:border-0"
                         :error="$errors->first('formData.name')" />
                 @endif
             @endif
 
-            <x-input label="Institution" placeholder="Institution name..." wire:model.defer="formData.institution"
+            <x-input label="Institution{{ $mode === 'edit' || $mode === 'create' ? '*' : '' }}" placeholder="Institution name..." wire:model.defer="formData.institution"
                 class="focus-within:border-0" :error="$errors->first('formData.institution')" :readonly="$mode === 'preview'" />
 
             {{-- Signature Upload / Preview --}}
