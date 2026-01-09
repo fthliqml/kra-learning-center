@@ -96,12 +96,26 @@ class Posttest extends Component
             ->first();
 
         if ($this->posttest) {
-            // Allow multiple attempts unless course is fully completed (locked after perfect score)
+            // Allow multiple attempts unless course is fully completed AND user passed posttest
+            // If user failed posttest, they should be able to retry even if enrollment shows 'completed'
             $enrollment = $course->userCourses()->where('user_id', $userId)->first();
             if ($enrollment) {
                 $totalUnits = (int) $this->course->progressUnitsCount();
-                if ((int) ($enrollment->current_step ?? 0) >= $totalUnits || strtolower($enrollment->status ?? '') === 'completed') {
-                    return redirect()->route('courses-result.index', ['course' => $course->id]);
+                $isEnrollmentComplete = (int) ($enrollment->current_step ?? 0) >= $totalUnits || strtolower($enrollment->status ?? '') === 'completed';
+                
+                if ($isEnrollmentComplete) {
+                    // Check if user's latest posttest attempt was passed
+                    // If not passed (failed or under_review), allow retry
+                    $latestAttempt = TestAttempt::where('test_id', $this->posttest->id)
+                        ->where('user_id', $userId)
+                        ->orderByDesc('submitted_at')->orderByDesc('id')
+                        ->first();
+                    
+                    // Only redirect to result if user actually passed the posttest
+                    // Failed users can retry, under_review users should wait for grading (redirect to result)
+                    if ($latestAttempt && ($latestAttempt->is_passed || $latestAttempt->status === TestAttempt::STATUS_UNDER_REVIEW)) {
+                        return redirect()->route('courses-result.index', ['course' => $course->id]);
+                    }
                 }
             }
 
