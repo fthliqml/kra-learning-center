@@ -2,12 +2,14 @@
 
 namespace App\Livewire\Pages\Development;
 
+use App\Exports\DevelopmentRecapExport;
 use App\Models\Training;
 use App\Models\TrainingPlan;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
+use Maatwebsite\Excel\Facades\Excel;
 
 class DevelopmentRecap extends Component
 {
@@ -26,6 +28,14 @@ class DevelopmentRecap extends Component
         if (!is_array($property) && $property !== '') {
             $this->resetPage();
         }
+    }
+
+    public function export()
+    {
+        $year = (int) $this->selectedYear;
+        $fileName = 'development_recap_' . $year . '_' . date('Y-m-d_H-i-s') . '.xlsx';
+
+        return Excel::download(new DevelopmentRecapExport($year, $this->search), $fileName);
     }
 
     public function headers(): array

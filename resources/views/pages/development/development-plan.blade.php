@@ -7,8 +7,8 @@
 
         <div class="flex items-center justify-center gap-3">
             {{-- Year Filter --}}
-            <x-input type="number" wire:model.live.debounce.500ms="selectedYear" icon="o-calendar" class="!w-32"
-                min="2000" max="2100" />
+            <x-input type="number" wire:model.live.debounce.500ms="selectedYear" icon="o-calendar"
+                class="!w-32 number-no-spinner" min="2000" max="2100" />
 
             {{-- Show when any plan exists and is editable --}}
             @php
