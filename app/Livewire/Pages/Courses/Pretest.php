@@ -19,6 +19,10 @@ class Pretest extends Component
     public ?Test $pretest = null;
     public array $questions = [];
 
+    public bool $isReviewMode = false;
+    public ?TestAttempt $attempt = null;
+    public array $attemptAnswers = [];
+
     public function mount(Course $course)
     {
         $userId = Auth::id();
@@ -65,7 +69,7 @@ class Pretest extends Component
                 $q->select('id', 'test_id', 'question_type', 'text', 'max_points');
             },
             'questions.options' => function ($q) {
-                $q->select('id', 'question_id', 'text');
+                $q->select('id', 'question_id', 'text', 'is_correct');
             },
         ])
             ->where('course_id', $this->course->id)
@@ -73,32 +77,68 @@ class Pretest extends Component
             ->first();
 
         if ($this->pretest) {
-            // If already submitted an attempt, skip pretest page
-            $alreadySubmitted = TestAttempt::where('test_id', $this->pretest->id)
+            // Check if already submitted an attempt
+            $existingAttempt = TestAttempt::where('test_id', $this->pretest->id)
                 ->where('user_id', $userId)
                 ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-                ->exists();
-            if ($alreadySubmitted) {
-                return redirect()->route('courses-modules.index', ['course' => $course->id]);
+                ->orderByDesc('submitted_at')
+                ->first();
+            
+            // Check if user has posttest attempt (remedial mode)
+            $posttest = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
+            $hasPosttestAttempt = false;
+            if ($posttest) {
+                $hasPosttestAttempt = TestAttempt::where('test_id', $posttest->id)
+                    ->where('user_id', $userId)
+                    ->exists();
+            }
+            
+            if ($existingAttempt) {
+                if ($hasPosttestAttempt) {
+                    // Review mode: show pretest result with answers
+                    $this->isReviewMode = true;
+                    $this->attempt = $existingAttempt;
+                    
+                    // Load attempt answers with question and option details
+                    $this->attemptAnswers = TestAttemptAnswer::where('attempt_id', $existingAttempt->id)
+                        ->get()
+                        ->keyBy('question_id')
+                        ->toArray();
+                } else {
+                    // Normal mode: redirect to modules
+                    return redirect()->route('courses-modules.index', ['course' => $course->id]);
+                }
             }
 
             $collection = $this->pretest->questions->map(function ($q) {
+                $attemptAnswer = $this->attemptAnswers[$q->id] ?? null;
+                $correctOption = $q->options->first(fn($o) => $o->is_correct);
+                
                 return [
                     'id' => 'q' . $q->id,
                     'db_id' => $q->id,
                     'type' => $q->question_type,
                     'text' => $q->text,
+                    'max_points' => $q->max_points ?? 1,
                     'options' => $q->question_type === 'multiple'
                         ? $q->options->map(fn($o) => [
                             'id' => $o->id,
                             'text' => $o->text,
+                            'is_correct' => $o->is_correct,
                         ])->values()->all()
                         : [],
+                    // Review data
+                    'user_answer_id' => $attemptAnswer['selected_option_id'] ?? null,
+                    'user_essay_answer' => $attemptAnswer['essay_answer'] ?? null,
+                    'is_correct' => $attemptAnswer['is_correct'] ?? null,
+                    'earned_points' => $attemptAnswer['earned_points'] ?? 0,
+                    'correct_option_id' => $correctOption?->id,
+                    'correct_option_text' => $correctOption?->text,
                 ];
             });
 
-            // Randomize once if flag set
-            if ($this->pretest->randomize_question) {
+            // Randomize once if flag set (only in non-review mode)
+            if (!$this->isReviewMode && $this->pretest->randomize_question) {
                 $collection = $collection->shuffle();
             }
 
@@ -108,13 +148,26 @@ class Pretest extends Component
 
     public function render()
     {
+        $userId = Auth::id();
+        
+        // Check if user has posttest attempt for sidebar navigation
+        $posttest = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+        $hasPosttestAttempt = false;
+        if ($posttest) {
+            $hasPosttestAttempt = TestAttempt::where('test_id', $posttest->id)
+                ->where('user_id', $userId)
+                ->exists();
+        }
+        
         /** @var \Illuminate\View\View&\App\Support\Ide\LivewireViewMacros $view */
         $view = view('pages.courses.pretest', [
             'course' => $this->course,
             'pretest' => $this->pretest,
             'questions' => $this->questions,
             'pretestId' => $this->pretest?->id,
-            'userId' => Auth::id(),
+            'userId' => $userId,
+            'isReviewMode' => $this->isReviewMode,
+            'attempt' => $this->attempt,
         ]);
 
         return $view->layout('layouts.livewire.course', [
@@ -123,6 +176,8 @@ class Pretest extends Component
             'progress' => $this->course->progressForUser(),
             'stages' => ['pretest', 'module', 'posttest', 'result'],
             'modules' => $this->course->learningModules,
+            'hasPosttestAttempt' => $hasPosttestAttempt,
+            'courseId' => $this->course->id,
         ]);
     }
 

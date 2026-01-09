@@ -380,6 +380,8 @@ class Result extends Component
             'stages' => ['pretest', 'module', 'posttest', 'result'],
             'modules' => $this->course->learningModules,
             'completedModuleIds' => $completedModuleIds,
+            'hasPosttestAttempt' => true, // Result page means posttest was attempted
+            'courseId' => $this->course->id,
         ]);
     }
 }

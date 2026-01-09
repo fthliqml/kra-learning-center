@@ -13,7 +13,20 @@
         <main class="lg:col-span-12">
             {{-- Posttest Eligibility --}}
             @isset($eligibleForPosttest)
-                @if ($eligibleForPosttest)
+                @if (!empty($hasPosttestAttempt))
+                    {{-- User has already attempted posttest - show "Lihat Hasil" instead --}}
+                    <div
+                        class="mb-4 p-3 md:p-4 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 flex items-center justify-between">
+                        <div class="text-sm md:text-[13px] font-medium">
+                            Anda telah mengerjakan Post-Test. Retry Post-Test dapat dilakukan melalui halaman Hasil.
+                        </div>
+                        <a wire:navigate href="{{ route('courses-result.index', $course) }}"
+                            class="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-3 py-1.5 text-xs md:text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400/50">
+                            Lihat Hasil
+                            <x-icon name="o-arrow-right" class="size-4" />
+                        </a>
+                    </div>
+                @elseif ($eligibleForPosttest)
                     <div
                         class="mb-4 p-3 md:p-4 rounded-lg border border-green-200 bg-green-50 text-green-800 flex items-center justify-between">
                         <div class="text-sm md:text-[13px] font-medium">Semua materi selesai. Anda dapat melanjutkan ke
@@ -24,20 +37,6 @@
                             <x-icon name="o-arrow-right" class="size-4" />
                         </a>
                     </div>
-                @elseif (!empty($canRetakePosttest))
-                    <div
-                        class="mb-4 p-3 md:p-4 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 flex items-center justify-between gap-2 flex-wrap">
-                        <div class="text-sm md:text-[13px] font-medium">
-                            Anda dapat mencoba Post-Test lagi kapan saja, atau kembali mempelajari materi.
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <a wire:navigate href="{{ route('courses-posttest.index', $course) }}"
-                                class="inline-flex items-center gap-2 rounded-md bg-amber-600 text-white px-3 py-1.5 text-xs md:text-sm font-medium hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-amber-400/50">
-                                Coba Lagi Post-Test
-                                <x-icon name="o-arrow-right" class="size-4" />
-                            </a>
-                        </div>
-                    </div>
                 @endif
             @endisset
 
@@ -46,19 +45,28 @@
                 <div class="flex items-center justify-between mb-5 md:mb-6">
                     <h1 class="text-lg md:text-2xl font-bold text-gray-900">{{ $activeSection->title }}</h1>
                     <div class="hidden md:flex items-center gap-2">
-                        <button wire:click="completeSubtopic"
-                            wire:loading.attr="disabled" wire:target="completeSubtopic"
-                            wire:loading.class="opacity-70 pointer-events-none"
-                            class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
-                            <x-icon name="o-arrow-right" class="size-4" />
-                            <span>
-                                @if (!empty($hasSectionQuiz) && empty($canRetakePosttest))
-                                    Quiz
-                                @else
-                                    {{ $isLastSection ?? false ? 'Post-Test' : 'Next' }}
-                                @endif
-                            </span>
-                        </button>
+                        @if (!empty($hasPosttestAttempt) && ($isLastSection ?? false))
+                            {{-- User has posttest attempt and is on last section - show Lihat Hasil --}}
+                            <a wire:navigate href="{{ route('courses-result.index', $course) }}"
+                                class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400/40">
+                                <x-icon name="o-arrow-right" class="size-4" />
+                                <span>Lihat Hasil</span>
+                            </a>
+                        @else
+                            <button wire:click="completeSubtopic"
+                                wire:loading.attr="disabled" wire:target="completeSubtopic"
+                                wire:loading.class="opacity-70 pointer-events-none"
+                                class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
+                                <x-icon name="o-arrow-right" class="size-4" />
+                                <span>
+                                    @if (!empty($hasSectionQuiz) && empty($hasPosttestAttempt))
+                                        Quiz
+                                    @else
+                                        {{ $isLastSection ?? false ? 'Post-Test' : 'Next' }}
+                                    @endif
+                                </span>
+                            </button>
+                        @endif
                     </div>
                 </div>
 

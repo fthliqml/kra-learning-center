@@ -8,6 +8,8 @@
     'activeSectionId' => null,
     'completedModuleIds' => [],
     'moduleRouteName' => null,
+    'hasPosttestAttempt' => false,
+    'courseId' => null,
 ])
 
 <aside x-cloak
@@ -142,12 +144,30 @@
                                                                 </span>
 
                                                                 {{-- Section Title --}}
-                                                                <button type="button"
-                                                                    @if ($stage === 'module') wire:click="selectSection({{ $sec->id }})" @endif
-                                                                    class="flex-1 text-left pt-1 text-[11px] leading-snug truncate rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary/30 px-1 {{ $sectionActive ? 'text-primary font-semibold' : 'text-gray-600 group-hover/section:text-gray-800' }}"
-                                                                    title="{{ $sec->title ?? 'Section ' . ($index + 1) }}">
-                                                                    {{ Str::limit($sec->title ?? 'Section ' . ($index + 1), 70) }}
-                                                                </button>
+                                                                @if ($hasPosttestAttempt && $courseId)
+                                                                    {{-- Remedial mode: clickable link to any section --}}
+                                                                    <a href="{{ route('courses-modules.index', ['course' => $courseId, 'section' => $sec->id]) }}"
+                                                                        wire:navigate
+                                                                        class="flex-1 text-left pt-1 text-[11px] leading-snug truncate rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary/30 px-1 {{ $sectionActive ? 'text-primary font-semibold' : 'text-gray-600 group-hover/section:text-gray-800' }}"
+                                                                        title="{{ $sec->title ?? 'Section ' . ($index + 1) }}">
+                                                                        {{ Str::limit($sec->title ?? 'Section ' . ($index + 1), 70) }}
+                                                                    </a>
+                                                                @elseif ($stage === 'module')
+                                                                    {{-- Normal module mode: use wire:click --}}
+                                                                    <button type="button"
+                                                                        wire:click="selectSection({{ $sec->id }})"
+                                                                        class="flex-1 text-left pt-1 text-[11px] leading-snug truncate rounded hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-primary/30 px-1 {{ $sectionActive ? 'text-primary font-semibold' : 'text-gray-600 group-hover/section:text-gray-800' }}"
+                                                                        title="{{ $sec->title ?? 'Section ' . ($index + 1) }}">
+                                                                        {{ Str::limit($sec->title ?? 'Section ' . ($index + 1), 70) }}
+                                                                    </button>
+                                                                @else
+                                                                    {{-- Other stages without posttest attempt: non-clickable --}}
+                                                                    <span
+                                                                        class="flex-1 text-left pt-1 text-[11px] leading-snug truncate px-1 text-gray-400 cursor-not-allowed"
+                                                                        title="{{ $sec->title ?? 'Section ' . ($index + 1) }}">
+                                                                        {{ Str::limit($sec->title ?? 'Section ' . ($index + 1), 70) }}
+                                                                    </span>
+                                                                @endif
                                                             </li>
                                                         @endforeach
                                                     </ul>
@@ -174,40 +194,76 @@
                             $thisIndex = array_search($s, $stageOrder, true);
                             $isCompletedStage =
                                 $thisIndex !== false && $currentIndex !== false && $thisIndex < $currentIndex;
+                            
+                            // Posttest logic: if hasPosttestAttempt, posttest shows as completed but not clickable
+                            $isPosttestWithAttempt = $s === 'posttest' && $hasPosttestAttempt;
+                            // Pretest should also show completed if we have posttest attempt
+                            $isPretestCompleted = $s === 'pretest' && $hasPosttestAttempt;
                         @endphp
 
                         {{-- Stages --}}
                         <li class="group relative border border-transparent rounded-md bg-white transition-colors"
                             :class="stage === '{{ $s }}' ? 'border-primary/40 bg-primary/5 shadow-sm' :
                                 'hover:border-primary/20 hover:bg-gray-50'">
-                            <button type="button"
-                                class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md"
-                                :class="stage === '{{ $s }}' ? 'font-semibold text-primary' :
-                                    'font-medium text-gray-700'">
-
-                                {{-- Stage Name (Sidebar Open) --}}
-                                <span class="flex-1 truncate capitalize" x-show="openSidebar" x-transition.opacity>
-                                    {{ ucfirst($s) }}
-                                </span>
-
-                                {{-- Stage Initial (Sidebar Close) --}}
-                                <span class="capitalize" x-show="!openSidebar" x-transition.opacity>
-                                    {{ strtoupper(substr($s, 0, 1)) }}
-                                </span>
-
-                                {{-- Stage Indicator --}}
-                                <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
-                                    @if ($isCompletedStage)
+                            @if ($isPosttestWithAttempt)
+                                {{-- Posttest with attempt: not clickable, just display with checkmark --}}
+                                <div
+                                    class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left rounded-md cursor-not-allowed opacity-70"
+                                    title="Retry Post-Test melalui halaman Result">
+                                    <span class="flex-1 truncate capitalize text-gray-500" x-show="openSidebar" x-transition.opacity>
+                                        {{ ucfirst($s) }}
+                                    </span>
+                                    <span class="capitalize text-gray-500" x-show="!openSidebar" x-transition.opacity>
+                                        {{ strtoupper(substr($s, 0, 1)) }}
+                                    </span>
+                                    <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
                                         <x-icon name="o-check-circle" class="size-5 text-green-500" />
-                                    @elseif($isStageActive)
-                                        <span class="absolute inset-0 rounded-full bg-primary"></span>
-                                        <span class="absolute rounded-full bg-white" style="inset:5px"></span>
-                                    @else
-                                        <span
-                                            class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
-                                    @endif
-                                </span>
-                            </button>
+                                    </span>
+                                </div>
+                            @elseif ($isPretestCompleted && $courseId)
+                                {{-- Pretest completed in remedial mode: clickable to review --}}
+                                <a href="{{ route('courses-pretest.index', ['course' => $courseId]) }}" wire:navigate
+                                    class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary">
+                                    <span class="flex-1 truncate capitalize" x-show="openSidebar" x-transition.opacity>
+                                        {{ ucfirst($s) }}
+                                    </span>
+                                    <span class="capitalize" x-show="!openSidebar" x-transition.opacity>
+                                        {{ strtoupper(substr($s, 0, 1)) }}
+                                    </span>
+                                    <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                        <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                    </span>
+                                </a>
+                            @else
+                                <button type="button"
+                                    class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md"
+                                    :class="stage === '{{ $s }}' ? 'font-semibold text-primary' :
+                                        'font-medium text-gray-700'">
+
+                                    {{-- Stage Name (Sidebar Open) --}}
+                                    <span class="flex-1 truncate capitalize" x-show="openSidebar" x-transition.opacity>
+                                        {{ ucfirst($s) }}
+                                    </span>
+
+                                    {{-- Stage Initial (Sidebar Close) --}}
+                                    <span class="capitalize" x-show="!openSidebar" x-transition.opacity>
+                                        {{ strtoupper(substr($s, 0, 1)) }}
+                                    </span>
+
+                                    {{-- Stage Indicator --}}
+                                    <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                        @if ($isCompletedStage || $isPretestCompleted)
+                                            <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                        @elseif($isStageActive)
+                                            <span class="absolute inset-0 rounded-full bg-primary"></span>
+                                            <span class="absolute rounded-full bg-white" style="inset:5px"></span>
+                                        @else
+                                            <span
+                                                class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
+                                        @endif
+                                    </span>
+                                </button>
+                            @endif
                         </li>
                     @endif
                 @endforeach
