@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Livewire\Pages\Survey;
 
 use Illuminate\Support\Facades\Auth;
@@ -6,9 +7,11 @@ use App\Models\SurveyResponse;
 use App\Models\SurveyAnswer;
 use App\Models\SurveyQuestion;
 use App\Models\TrainingSurvey;
+use App\Models\User;
 use Livewire\Component;
 use Mary\Traits\Toast;
 use App\Services\SurveyAnswersValidator;
+use Carbon\Carbon;
 
 class TakeSurvey extends Component
 {
@@ -27,18 +30,114 @@ class TakeSurvey extends Component
     {
         $this->surveyLevel = (int) $level;
         $this->surveyId = (int) $surveyId;
+
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return redirect()->route('survey.index', ['level' => $this->surveyLevel]);
+        }
+
+        $surveyModel = TrainingSurvey::with(['training.assessments.employee', 'training'])
+            ->find($this->surveyId);
+        if (!$surveyModel) {
+            $this->error('Survey not found.', timeout: 6000, position: 'toast-top toast-center');
+            return redirect()->route('survey.index', ['level' => $this->surveyLevel]);
+        }
+
+        if (!$this->canAccessSurvey($surveyModel, $user)) {
+            $this->error('You are not allowed to fill this survey.', timeout: 6000, position: 'toast-top toast-center');
+            return redirect()->route('survey.index', ['level' => $this->surveyLevel]);
+        }
+
+        if (!$this->isSurveyAvailableNow($surveyModel)) {
+            $this->error('This survey is not available yet.', timeout: 6000, position: 'toast-top toast-center');
+            return redirect()->route('survey.index', ['level' => $this->surveyLevel]);
+        }
+
         $this->questions = SurveyQuestion::with('options')
             ->where('training_survey_id', $this->surveyId)
             ->orderBy('order')
             ->get();
 
         // Get training name from survey
-        $survey = TrainingSurvey::with('training')->find($this->surveyId);
-        $this->trainingName = $survey?->training?->name ?? '';
+        $this->trainingName = $surveyModel?->training?->name ?? '';
 
         // Initialize answers if already exist
         $this->currentUser = Auth::user();
         $this->hydrateAnswersFromDb();
+    }
+
+    private function resolveSurveyArea(TrainingSurvey $survey): array
+    {
+        $assessments = $survey->training?->assessments;
+        if (!$assessments) {
+            return ['key' => null, 'value' => null];
+        }
+
+        $employees = $assessments->map(fn($a) => $a->employee)->filter();
+
+        $withSection = $employees->first(fn($e) => $e && !empty($e->section));
+        if ($withSection && !empty($withSection->section)) {
+            return ['key' => 'section', 'value' => $withSection->section];
+        }
+
+        $withDepartment = $employees->first(fn($e) => $e && !empty($e->department));
+        if ($withDepartment && !empty($withDepartment->department)) {
+            return ['key' => 'department', 'value' => $withDepartment->department];
+        }
+
+        return ['key' => null, 'value' => null];
+    }
+
+    private function canAccessSurvey(TrainingSurvey $survey, User $user): bool
+    {
+        // Only Survey 3 has special access rules.
+        if ((int) ($survey->level ?? 0) !== 3) {
+            return true;
+        }
+
+        $area = $this->resolveSurveyArea($survey);
+        $areaKey = $area['key'];
+        $areaValue = $area['value'];
+        if (!$areaKey || !$areaValue) {
+            return false;
+        }
+
+        $normalizedAreaValue = strtolower(trim((string) $areaValue));
+
+        $hasSpvInArea = User::query()
+            ->whereRaw('LOWER(TRIM(position)) = ?', ['supervisor'])
+            ->whereRaw('LOWER(TRIM(COALESCE(' . $areaKey . ', ""))) = ?', [$normalizedAreaValue])
+            ->exists();
+
+        $userAreaValue = $areaKey === 'section' ? ($user->section ?? '') : ($user->department ?? '');
+        if (strtolower(trim((string) $userAreaValue)) !== $normalizedAreaValue) {
+            return false;
+        }
+
+        // If there is an SPV in the area, only SPV area can fill.
+        // If there is no SPV, fallback to Section Head area.
+        if ($hasSpvInArea) {
+            return $user->hasPosition('supervisor');
+        }
+
+        return $user->hasPosition('section_head');
+    }
+
+    private function isSurveyAvailableNow(TrainingSurvey $survey): bool
+    {
+        // Only Survey 3 has special time rules.
+        if ((int) ($survey->level ?? 0) !== 3) {
+            return true;
+        }
+
+        $endDate = $survey->training?->end_date;
+        if (!$endDate) {
+            return false;
+        }
+
+        $availableAt = Carbon::parse($endDate)->addMonthsNoOverflow(3);
+        return now()->greaterThanOrEqualTo($availableAt);
     }
 
     /**
@@ -77,6 +176,28 @@ class TakeSurvey extends Component
     {
         $this->currentUser = Auth::user();
 
+        if (!$this->currentUser) {
+            $this->error('User not found.', timeout: 6000, position: 'toast-top toast-center');
+            return;
+        }
+
+        $surveyModel = TrainingSurvey::with(['training.assessments.employee', 'training'])
+            ->find($this->surveyId);
+        if (!$surveyModel) {
+            $this->error('Survey not found.', timeout: 6000, position: 'toast-top toast-center');
+            return;
+        }
+
+        if (!$this->canAccessSurvey($surveyModel, $this->currentUser)) {
+            $this->error('You are not allowed to fill this survey.', timeout: 6000, position: 'toast-top toast-center');
+            return;
+        }
+
+        if (!$this->isSurveyAvailableNow($surveyModel)) {
+            $this->error('This survey is not available yet.', timeout: 6000, position: 'toast-top toast-center');
+            return;
+        }
+
         $validator = new SurveyAnswersValidator();
         $questionsArr = is_array($this->questions) ? $this->questions : $this->questions->toArray();
         $result = $validator->validate($questionsArr, $this->answers);
@@ -101,10 +222,6 @@ class TakeSurvey extends Component
         $this->errorQuestionIndexes = [];
 
         // Save answers to SurveyResponse and SurveyAnswer
-        if (!$this->currentUser) {
-            $this->error('User not found.', timeout: 6000, position: 'toast-top toast-center');
-            return;
-        }
         $response = SurveyResponse::firstOrCreate([
             'survey_id' => $this->surveyId,
             'employee_id' => $this->currentUser->id,

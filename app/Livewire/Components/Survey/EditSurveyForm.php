@@ -71,10 +71,12 @@ class EditSurveyForm extends Component
                 'options' => ($qModel->question_type === 'multiple') ? $opts : [],
             ];
         }
-        $this->questions = array_merge($this->questions, $imported);
+        // Replace current questions with imported ones (user can still Save Draft / Save afterwards)
+        $this->questions = $imported;
+        $this->errorQuestionIndexes = [];
         $this->isDirty = true;
         $this->persisted = false;
-        $this->success('Template questions imported and appended successfully.', timeout: 4000, position: 'toast-top toast-center');
+        $this->success('Template questions imported successfully.', timeout: 4000, position: 'toast-top toast-center');
         // Close modal on UI
         if (method_exists($this, 'dispatch')) {
             // Livewire v3

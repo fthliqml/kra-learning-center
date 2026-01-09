@@ -161,6 +161,8 @@ class Module extends Component
             ['key' => 'title', 'label' => 'Module Title', 'class' => 'w-[400px]'],
             ['key' => 'competency.name', 'label' => 'Competency', 'class' => 'min-w-[150px]'],
             ['key' => 'competency.type', 'label' => 'Group Comp', 'class' => '!text-center'],
+            ['key' => 'pretest_questions_ready', 'label' => 'Pre Test', 'class' => '!text-center min-w-[120px]'],
+            ['key' => 'posttest_questions_ready', 'label' => 'Post Test', 'class' => '!text-center min-w-[120px]'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center'],
         ];
     }
@@ -168,6 +170,11 @@ class Module extends Component
     public function modules()
     {
         $query = TrainingModule::with('competency')
+            ->withCount([
+                // 0/1 indicator: whether test exists AND has at least 1 question
+                'pretest as pretest_questions_ready' => fn($q) => $q->whereHas('questions'),
+                'posttest as posttest_questions_ready' => fn($q) => $q->whereHas('questions'),
+            ])
             ->when(
                 $this->search,
                 fn($q) =>

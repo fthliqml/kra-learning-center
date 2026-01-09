@@ -44,10 +44,15 @@
                                 <span class="text-[11px] font-medium text-gray-500">
                                     {{ chr(65 + $oi) }}
                                 </span>
-                                <x-input class="flex-1 pr-10 focus-within:border-0" placeholder="Option"
-                                    wire:model.defer="questions.{{ $i }}.options.{{ $oi }}" />
-                                <x-button icon="o-x-mark" class="btn-ghost text-error" title="Remove option"
-                                    wire:click="removeOption({{ $i }}, {{ $oi }})" />
+                                <div class="flex-1 relative">
+                                    <x-input class="w-full pr-10 focus-within:border-0" placeholder="Option"
+                                        wire:model.defer="questions.{{ $i }}.options.{{ $oi }}" />
+                                    <button type="button" title="Remove option"
+                                        class="absolute cursor-pointer inset-y-0 right-0 my-[3px] mr-1 flex items-center justify-center h-8 w-8 rounded-md text-red-500 border border-transparent hover:bg-red-50"
+                                        wire:click="removeOption({{ $i }}, {{ $oi }})">
+                                        <x-icon name="o-x-mark" class="size-4" />
+                                    </button>
+                                </div>
                             </div>
                         @endforeach
                         <x-button type="button" size="xs" class="border-gray-400 btn btn-sm" outline

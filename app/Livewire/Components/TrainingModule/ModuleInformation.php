@@ -11,6 +11,14 @@ class ModuleInformation extends Component
 {
   use Toast;
 
+  public array $practicalGradeOptions = [
+    ['value' => 'A', 'label' => 'A'],
+    ['value' => 'B', 'label' => 'B'],
+    ['value' => 'C', 'label' => 'C'],
+    ['value' => 'D', 'label' => 'D'],
+    ['value' => 'E', 'label' => 'E'],
+  ];
+
   public array $formData = [
     'title' => '',
     'competency_id' => '',
@@ -20,7 +28,7 @@ class ModuleInformation extends Component
     'duration' => '',
     'frequency' => '',
     'theory_passing_score' => '75',
-    'practical_passing_score' => '75',
+    'practical_passing_score' => 'C',
   ];
 
   public ?int $moduleId = null;
@@ -40,7 +48,7 @@ class ModuleInformation extends Component
     'formData.duration' => 'required|numeric|min:1',
     'formData.frequency' => 'required|integer|min:1',
     'formData.theory_passing_score' => 'required|numeric|min:0|max:100',
-    'formData.practical_passing_score' => 'required|numeric|min:0|max:100',
+    'formData.practical_passing_score' => 'required|string|in:A,B,C,D,E',
   ];
 
   protected $messages = [
@@ -52,7 +60,7 @@ class ModuleInformation extends Component
     'formData.duration.required' => 'Duration is required.',
     'formData.frequency.required' => 'Frequency is required.',
     'formData.theory_passing_score.required' => 'Theory passing score is required.',
-    'formData.practical_passing_score.required' => 'Practical passing score is required.',
+    'formData.practical_passing_score.required' => 'Practical passing grade is required.',
   ];
 
   public function mount(): void
@@ -72,7 +80,7 @@ class ModuleInformation extends Component
           'duration' => $module->duration ?? '',
           'frequency' => $module->frequency ?? '',
           'theory_passing_score' => $module->theory_passing_score ?? '75',
-          'practical_passing_score' => $module->practical_passing_score ?? '75',
+          'practical_passing_score' => $module->practical_passing_score ?? 'C',
         ];
         $this->hasEverSaved = true;
         $this->persisted = true;

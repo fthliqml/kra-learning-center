@@ -16,7 +16,7 @@
         </div>
     </div>
 
-    <x-tabs wire:model="activeTab" class="bg-base-100 p-3 rounded-box shadow-sm pt-0">
+    <x-tabs wire:model="activeTab" class="bg-base-100 p-3 rounded-box shadow-sm pt-0 mt-5">
         {{-- TAB: Module Info --}}
         <x-tab name="module-info" label="Module Info" icon="m-document-text">
             <livewire:components.training-module.module-information :moduleId="$module->id ?? null" lazy />
