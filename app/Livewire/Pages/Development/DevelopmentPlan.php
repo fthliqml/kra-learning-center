@@ -587,7 +587,8 @@ class DevelopmentPlan extends Component
      *   - If there is any SPV in the same section/department
      *     OR (when no SPV) any Dept Head in the same area (non-LID)
      *       -> first approval goes to that area approver (pending_spv).
-     *   - If there is no such SPV/Dept Head -> send directly to Leader LID (pending_lid).
+     *   - Special case (LID employees): if there is no SPV, send directly to Section Head/Leader LID (pending_lid).
+     *   - Otherwise, if there is no such SPV/Dept Head -> send directly to Leader LID (pending_lid).
      */
     private function determineInitialStatus(User $user, bool $isDraft = false): string
     {
@@ -618,6 +619,12 @@ class DevelopmentPlan extends Component
 
         if ($hasSpvInArea) {
             return 'pending_spv';
+        }
+
+        // LID employees: when there is no supervisor available, route directly to Leader LID
+        // (Section Head LID will handle the approval at the LID layer).
+        if ($section === 'lid') {
+            return 'pending_lid';
         }
 
         // If no SPV, check for Department Head in the same department (non-LID)

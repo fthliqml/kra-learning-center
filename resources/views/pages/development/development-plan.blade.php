@@ -261,7 +261,7 @@
                                                 {{ $plan->competency->name ?? 'N/A' }}
                                             </p>
                                         </div>
-                                        <div class="flex flex-col items-end gap-1 shrink-0">
+                                        <div class="flex flex-wrap items-center justify-end gap-1 shrink-0">
                                             @if ($plan->status === 'approved')
                                                 @include('pages.development.partials.realization-badge', [
                                                     'status' => $plan->getRealizationStatus(),

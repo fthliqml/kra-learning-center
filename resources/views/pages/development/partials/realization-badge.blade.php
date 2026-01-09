@@ -4,7 +4,7 @@
     $config = [
         'completed' => [
             'class' => 'bg-emerald-100 text-emerald-700',
-            'label' => 'Completed',
+            'label' => 'Training Completed',
         ],
         'scheduled' => [
             'class' => 'bg-blue-100 text-blue-700',
@@ -12,7 +12,7 @@
         ],
         'waiting' => [
             'class' => 'bg-amber-100 text-amber-700',
-            'label' => 'Waiting Scheduling',
+            'label' => 'Waiting for Scheduling',
         ],
     ];
 
