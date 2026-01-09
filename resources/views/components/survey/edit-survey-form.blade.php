@@ -138,7 +138,7 @@
                         </span>
                     </x-ui.button>
                 </div>
-                <p class="text-xs text-gray-500">Questions will be appended and will not replace existing ones.</p>
+                <p class="text-xs text-gray-500">Imported questions will replace existing ones.</p>
             </div>
         </div>
     </div>
