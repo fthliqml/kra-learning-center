@@ -38,12 +38,21 @@ class DevelopmentPlan extends Component
 
     // Self Learning Plans (multiple)
     public $selfLearningPlans = [
-        ['id' => null, 'title' => '', 'objective' => '', 'mentor_id' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
+        ['id' => null, 'title' => '', 'objective' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
     ];
 
     // Mentoring Plans (multiple)
     public $mentoringPlans = [
-        ['id' => null, 'mentor_id' => '', 'objective' => '', 'method' => '', 'frequency' => '', 'duration' => '', 'status' => null],
+        [
+            'id' => null,
+            'mentor_id' => '',
+            'objective' => '',
+            'method' => '',
+            'frequency' => 2,
+            'duration' => '',
+            'plan_months' => ['', ''],
+            'status' => null,
+        ],
     ];
 
     // Project Plans (multiple)
@@ -55,7 +64,6 @@ class DevelopmentPlan extends Component
     public $selfLearning = [
         'title' => '',
         'objective' => '',
-        'mentor_id' => '',
         'start_date' => '',
         'end_date' => '',
     ];
@@ -170,7 +178,6 @@ class DevelopmentPlan extends Component
                 'id' => $plan->id,
                 'title' => $plan->title,
                 'objective' => $plan->objective,
-                'mentor_id' => $plan->mentor_id,
                 'start_date' => $plan->start_date?->format('Y-m-d'),
                 'end_date' => $plan->end_date?->format('Y-m-d'),
                 'status' => $plan->status,
@@ -182,7 +189,6 @@ class DevelopmentPlan extends Component
                 'id' => null,
                 'title' => '',
                 'objective' => '',
-                'mentor_id' => '',
                 'start_date' => '',
                 'end_date' => '',
                 'status' => null
@@ -196,6 +202,12 @@ class DevelopmentPlan extends Component
 
         $this->mentoringPlans = [];
         foreach ($mentoringPlans as $plan) {
+            $months = $plan->plan_months ?? [];
+            // Ensure at least 2 rows for UI
+            while (count($months) < 2) {
+                $months[] = '';
+            }
+
             $this->mentoringPlans[] = [
                 'id' => $plan->id,
                 'mentor_id' => $plan->mentor_id,
@@ -203,6 +215,7 @@ class DevelopmentPlan extends Component
                 'method' => $plan->method,
                 'frequency' => $plan->frequency,
                 'duration' => $plan->duration,
+                'plan_months' => $months,
                 'status' => $plan->status,
             ];
         }
@@ -212,8 +225,9 @@ class DevelopmentPlan extends Component
                 'mentor_id' => '',
                 'objective' => '',
                 'method' => '',
-                'frequency' => '',
+                'frequency' => 2,
                 'duration' => '',
+                'plan_months' => ['', ''],
                 'status' => null
             ];
         }
@@ -258,12 +272,21 @@ class DevelopmentPlan extends Component
 
     public function addSelfLearningRow()
     {
-        $this->selfLearningPlans[] = ['id' => null, 'title' => '', 'objective' => '', 'mentor_id' => '', 'start_date' => '', 'end_date' => '', 'status' => null];
+        $this->selfLearningPlans[] = ['id' => null, 'title' => '', 'objective' => '', 'start_date' => '', 'end_date' => '', 'status' => null];
     }
 
     public function addMentoringRow()
     {
-        $this->mentoringPlans[] = ['id' => null, 'mentor_id' => '', 'objective' => '', 'method' => '', 'frequency' => '', 'duration' => '', 'status' => null];
+        $this->mentoringPlans[] = [
+            'id' => null,
+            'mentor_id' => '',
+            'objective' => '',
+            'method' => '',
+            'frequency' => 2,
+            'duration' => '',
+            'plan_months' => ['', ''],
+            'status' => null,
+        ];
     }
 
     public function addProjectRow()
@@ -404,10 +427,19 @@ class DevelopmentPlan extends Component
             ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
         ];
         $this->selfLearningPlans = [
-            ['id' => null, 'title' => '', 'objective' => '', 'mentor_id' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
+            ['id' => null, 'title' => '', 'objective' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
         ];
         $this->mentoringPlans = [
-            ['id' => null, 'mentor_id' => '', 'objective' => '', 'method' => '', 'frequency' => '', 'duration' => '', 'status' => null],
+            [
+                'id' => null,
+                'mentor_id' => '',
+                'objective' => '',
+                'method' => '',
+                'frequency' => 2,
+                'duration' => '',
+                'plan_months' => ['', ''],
+                'status' => null,
+            ],
         ];
         $this->projectPlans = [
             ['id' => null, 'name' => '', 'objective' => '', 'mentor_id' => '', 'status' => null],
@@ -416,7 +448,6 @@ class DevelopmentPlan extends Component
         $this->selfLearning = [
             'title' => '',
             'objective' => '',
-            'mentor_id' => '',
             'start_date' => '',
             'end_date' => '',
         ];
@@ -424,7 +455,7 @@ class DevelopmentPlan extends Component
             'mentor_id' => '',
             'objective' => '',
             'method' => '',
-            'frequency' => '',
+            'frequency' => 2,
             'duration' => '',
         ];
         $this->project = [
@@ -434,6 +465,46 @@ class DevelopmentPlan extends Component
             'start_date' => '',
             'end_date' => '',
         ];
+    }
+
+    public function updatedMentoringPlans($value, $name)
+    {
+        if (strpos($name, '.frequency') === false) {
+            return;
+        }
+
+        $parts = explode('.', $name);
+
+        if (count($parts) < 3) {
+            return;
+        }
+
+        $index = (int) $parts[1];
+
+        if (!isset($this->mentoringPlans[$index])) {
+            return;
+        }
+
+        $rawFrequency = $this->mentoringPlans[$index]['frequency'] ?? 0;
+        $frequency = (int) $rawFrequency;
+
+        if ($frequency < 2) {
+            $frequency = 2;
+            $this->mentoringPlans[$index]['frequency'] = $frequency;
+        }
+
+        $months = $this->mentoringPlans[$index]['plan_months'] ?? [];
+        $currentCount = count($months);
+
+        if ($currentCount < $frequency) {
+            for ($i = $currentCount; $i < $frequency; $i++) {
+                $months[] = '';
+            }
+        } elseif ($currentCount > $frequency) {
+            $months = array_slice($months, 0, $frequency);
+        }
+
+        $this->mentoringPlans[$index]['plan_months'] = $months;
     }
 
     public function getCompetenciesByType($type)
@@ -511,12 +582,12 @@ class DevelopmentPlan extends Component
      * Rules:
      * - If saving as draft  -> always 'draft'.
      * - If employee is a first-level approver in their own area (SPV / Dept Head non-LID)
-     *   -> skip first layer and go directly to Leader LID (pending_leader).
+     *   -> skip first layer and go directly to Leader LID (pending_lid).
      * - Otherwise:
      *   - If there is any SPV in the same section/department
      *     OR (when no SPV) any Dept Head in the same area (non-LID)
      *       -> first approval goes to that area approver (pending_spv).
-     *   - If there is no such SPV/Dept Head -> send directly to Leader LID (pending_leader).
+     *   - If there is no such SPV/Dept Head -> send directly to Leader LID (pending_lid).
      */
     private function determineInitialStatus(User $user, bool $isDraft = false): string
     {
@@ -530,7 +601,7 @@ class DevelopmentPlan extends Component
         // If the requester is themselves a first-level approver in their area
         // (supervisor or department head outside LID), skip the first layer.
         if ($position === 'supervisor' || ($position === 'department_head' && $section !== 'lid')) {
-            return 'pending_leader';
+            return 'pending_lid';
         }
 
         // Check if there is any supervisor in the same section or department
@@ -558,7 +629,9 @@ class DevelopmentPlan extends Component
             ->whereRaw('LOWER(TRIM(COALESCE(section, ""))) != ?', ['lid'])
             ->exists();
 
-        return $hasDeptHeadInArea ? 'pending_spv' : 'pending_leader';
+        // If there is a Dept Head in the same department (non-LID),
+        // mark as pending_dept_head so it's clear who should approve first.
+        return $hasDeptHeadInArea ? 'pending_dept_head' : 'pending_lid';
     }
 
     private function saveTrainingPlans($user, $isDraft = false)
@@ -601,7 +674,6 @@ class DevelopmentPlan extends Component
             }
 
             $data = [
-                'mentor_id' => $plan['mentor_id'] ?: null,
                 'title' => $plan['title'] ?: 'Draft',
                 'objective' => $plan['objective'] ?: '',
                 'start_date' => $plan['start_date'] ?: now(),
@@ -627,18 +699,35 @@ class DevelopmentPlan extends Component
     {
         $status = $this->determineInitialStatus($user, $isDraft);
 
+        // First pass: validate and normalize planned months
+        $normalizedPlans = [];
+
         foreach ($this->mentoringPlans as $plan) {
             // Skip empty rows
             if (empty($plan['objective']) && empty($plan['mentor_id'])) {
                 continue;
             }
 
+            $months = $plan['plan_months'] ?? [];
+            $months = array_values(array_filter($months, fn($m) => !empty($m)));
+
+            if (!$isDraft && count($months) < 2) {
+                throw new \Exception('Each mentoring plan must have at least 2 planned months.');
+            }
+
+            $plan['plan_months'] = $months;
+            $normalizedPlans[] = $plan;
+        }
+
+        // Second pass: save to database
+        foreach ($normalizedPlans as $plan) {
             $data = [
                 'mentor_id' => $plan['mentor_id'] ?: null,
                 'objective' => $plan['objective'] ?: '',
                 'method' => $plan['method'] ?: '',
                 'frequency' => $plan['frequency'] ?: 0,
                 'duration' => $plan['duration'] ?: 0,
+                'plan_months' => $plan['plan_months'] ?: null,
                 'status' => $status,
                 'year' => (int) $this->selectedYear,
             ];
@@ -652,6 +741,36 @@ class DevelopmentPlan extends Component
                 MentoringPlan::create(array_merge(['user_id' => $user->id], $data));
             }
         }
+    }
+
+    public function addMentoringMonth($planIndex)
+    {
+        if (!isset($this->mentoringPlans[$planIndex]['plan_months'])) {
+            $this->mentoringPlans[$planIndex]['plan_months'] = ['', ''];
+        }
+
+        $this->mentoringPlans[$planIndex]['plan_months'][] = '';
+
+        $months = $this->mentoringPlans[$planIndex]['plan_months'];
+        $this->mentoringPlans[$planIndex]['frequency'] = max(2, count($months));
+    }
+
+    public function removeMentoringMonth($planIndex, $monthIndex)
+    {
+        if (!isset($this->mentoringPlans[$planIndex]['plan_months'])) {
+            return;
+        }
+
+        $months = $this->mentoringPlans[$planIndex]['plan_months'];
+
+        if (count($months) <= 2) {
+            return; // minimal dua bulan
+        }
+
+        unset($months[$monthIndex]);
+        $months = array_values($months);
+        $this->mentoringPlans[$planIndex]['plan_months'] = $months;
+        $this->mentoringPlans[$planIndex]['frequency'] = max(2, count($months));
     }
 
     private function saveProjectPlan($user, $isDraft = false)
@@ -843,7 +962,7 @@ class DevelopmentPlan extends Component
             ->where('year', $selectedYearInt)
             ->get();
 
-        $selfLearningData = SelfLearningPlan::with(['mentor', 'approver'])
+        $selfLearningData = SelfLearningPlan::with(['approver'])
             ->where('user_id', $user->id)
             ->where('year', $selectedYearInt)
             ->get();

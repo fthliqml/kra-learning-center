@@ -4,22 +4,35 @@ namespace App\Livewire\Components\EditCourse;
 
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
 use Illuminate\Support\Facades\DB;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Test;
 use App\Models\TestQuestion;
 use App\Models\TestQuestionOption;
+use App\Exports\TestQuestionsTemplateExport;
+use App\Imports\TestQuestionsImport;
+use App\Services\PostTestQuestionsValidator;
+use Illuminate\Validation\ValidationException;
 
 class PostTestQuestions extends Component
 {
-  use Toast;
+  use Toast, WithFileUploads;
+
   public array $questions = [];
+  public $file; // For file upload
   public ?int $courseId = null;
   public bool $hasEverSaved = false;
   public bool $persisted = false;
   public bool $isDirty = false; // track unsaved changes
   protected string $originalHash = ''; // hash of saved state
   public array $errorQuestionIndexes = [];
+
+  // Test configuration
+  public int $passingScore = 75;
+  public ?int $maxAttempts = null;
+  public bool $randomizeQuestion = false;
 
   // Listen for new course draft creation so we can attach and persist
   protected $listeners = [
@@ -56,6 +69,12 @@ class PostTestQuestions extends Component
       $this->questions = [];
       return;
     }
+
+    // Load test config
+    $this->passingScore = $existingTest->passing_score ?? 75;
+    $this->maxAttempts = $existingTest->max_attempts;
+    $this->randomizeQuestion = $existingTest->randomize_question ?? false;
+
     $existingTest->load(['questions.options']);
     $loaded = [];
     foreach ($existingTest->questions->sortBy('order')->values() as $qModel) {
@@ -75,6 +94,7 @@ class PostTestQuestions extends Component
         'options' => ($qModel->question_type === 'multiple') ? $opts : [],
         'answer' => ($qModel->question_type === 'multiple') ? $answerIndex : null,
         'answer_nonce' => 0,
+        'max_points' => ($qModel->question_type === 'essay') ? ($qModel->max_points ?? 10) : null,
       ];
     }
     $this->questions = $loaded;
@@ -87,13 +107,23 @@ class PostTestQuestions extends Component
 
   protected function snapshot(): void
   {
-    $this->originalHash = md5(json_encode($this->questions));
+    $this->originalHash = md5(json_encode([
+      'questions' => $this->questions,
+      'passingScore' => $this->passingScore,
+      'maxAttempts' => $this->maxAttempts,
+      'randomizeQuestion' => $this->randomizeQuestion,
+    ]));
     $this->isDirty = false;
   }
 
   protected function computeDirty(): void
   {
-    $currentHash = md5(json_encode($this->questions));
+    $currentHash = md5(json_encode([
+      'questions' => $this->questions,
+      'passingScore' => $this->passingScore,
+      'maxAttempts' => $this->maxAttempts,
+      'randomizeQuestion' => $this->randomizeQuestion,
+    ]));
     $this->isDirty = $currentHash !== $this->originalHash;
     if ($this->isDirty) {
       $this->persisted = false;
@@ -109,6 +139,7 @@ class PostTestQuestions extends Component
       'options' => $type === 'multiple' ? [''] : [],
       'answer' => null,
       'answer_nonce' => 0,
+      'max_points' => $type === 'essay' ? 10 : null, // Essay has custom points, MC auto-calculated
     ];
   }
 
@@ -166,14 +197,18 @@ class PostTestQuestions extends Component
       if ($type === 'essay') {
         $this->questions[$i]['options'] = [];
         $this->questions[$i]['answer'] = null;
+        if (!isset($this->questions[$i]['max_points'])) {
+          $this->questions[$i]['max_points'] = 10;
+        }
       } elseif ($type === 'multiple' && empty($this->questions[$i]['options'])) {
         $this->questions[$i]['options'] = [''];
         $this->questions[$i]['answer'] = null;
+        $this->questions[$i]['max_points'] = null; // MC uses auto-calculated points
       }
     }
 
     // Track any changes to questions array for dirty state
-    if (str_starts_with($prop, 'questions')) {
+    if (str_starts_with($prop, 'questions') || in_array($prop, ['passingScore', 'maxAttempts', 'randomizeQuestion'])) {
       $this->computeDirty();
     }
   }
@@ -250,7 +285,7 @@ class PostTestQuestions extends Component
       $this->error('Please save the Course Info tab first to create the course before adding post test questions.', timeout: 6000, position: 'toast-top toast-center');
       return;
     }
-    $validator = new \App\Services\PostTestQuestionsValidator();
+    $validator = new PostTestQuestionsValidator();
     $result = $validator->validate($this->questions);
     $errors = $result['errors'];
     $this->errorQuestionIndexes = $result['errorQuestionIndexes'];
@@ -279,25 +314,44 @@ class PostTestQuestions extends Component
     unset($q);
 
     DB::transaction(function () {
-      $test = Test::firstOrCreate(
+      $test = Test::updateOrCreate(
         ['course_id' => $this->courseId, 'type' => 'posttest'],
         [
-          'passing_score' => 0,
-          'max_attempts' => null,
-          'randomize_question' => false,
+          'passing_score' => $this->passingScore,
+          'max_attempts' => $this->maxAttempts,
+          'randomize_question' => $this->randomizeQuestion,
           'show_result_immediately' => true,
         ]
       );
       $test->questions()->delete();
+
+      // Calculate points distribution
+      $totalPoints = 100;
+      $essayQuestions = array_filter($this->questions, fn($q) => ($q['type'] ?? '') === 'essay');
+      $mcQuestions = array_filter($this->questions, fn($q) => ($q['type'] ?? '') === 'multiple');
+
+      $essayTotalPoints = 0;
+      foreach ($essayQuestions as $q) {
+        $essayTotalPoints += (int) ($q['max_points'] ?? 10);
+      }
+
+      // Remaining points for MC questions
+      $mcTotalPoints = max(0, $totalPoints - $essayTotalPoints);
+      $mcCount = count($mcQuestions);
+      $mcPointsEach = $mcCount > 0 ? round($mcTotalPoints / $mcCount, 2) : 0;
+
       foreach ($this->questions as $qOrder => $q) {
+        $questionType = in_array(($q['type'] ?? ''), ['multiple', 'essay']) ? $q['type'] : 'multiple';
+        $maxPoints = $questionType === 'essay' ? (int) ($q['max_points'] ?? 10) : $mcPointsEach;
+
         $questionModel = TestQuestion::create([
           'test_id' => $test->id,
-          'question_type' => in_array(($q['type'] ?? ''), ['multiple', 'essay']) ? $q['type'] : 'multiple',
+          'question_type' => $questionType,
           'text' => $q['question'] ?: 'Untitled Question',
           'order' => $qOrder,
-          'max_points' => 1,
+          'max_points' => $maxPoints,
         ]);
-        if (($q['type'] ?? '') === 'multiple') {
+        if ($questionType === 'multiple') {
           $answerIndex = $q['answer'] ?? null;
           foreach (($q['options'] ?? []) as $optIndex => $optText) {
             $optText = trim($optText);
@@ -321,6 +375,74 @@ class PostTestQuestions extends Component
     $this->success('Post test questions saved successfully', timeout: 4000, position: 'toast-top toast-center');
   }
 
+  /**
+   * Download template Excel file for importing questions.
+   */
+  public function downloadTemplate()
+  {
+    return response()->streamDownload(function () {
+      echo Excel::raw(new TestQuestionsTemplateExport('posttest'), \Maatwebsite\Excel\Excel::XLSX);
+    }, 'posttest_questions_template.xlsx');
+  }
+
+  /**
+   * Handle file upload and import questions from Excel.
+   */
+  public function updatedFile()
+  {
+    if (!$this->file) {
+      return;
+    }
+
+    try {
+      $import = new TestQuestionsImport('posttest');
+      Excel::import($import, $this->file->getRealPath());
+
+      $importedQuestions = $import->getQuestions();
+
+      if (empty($importedQuestions)) {
+        $this->error(
+          'No valid questions found in the uploaded file.',
+          timeout: 6000,
+          position: 'toast-top toast-center'
+        );
+        $this->reset('file');
+        return;
+      }
+
+      // Merge imported questions with existing ones
+      $this->questions = array_merge($this->questions, $importedQuestions);
+      $this->computeDirty();
+
+      $this->success(
+        count($importedQuestions) . ' question(s) imported successfully.',
+        timeout: 4000,
+        position: 'toast-top toast-center'
+      );
+    } catch (ValidationException $e) {
+      $errors = $e->errors()['import'] ?? [];
+      $bulletLines = collect($errors)->take(6)->map(fn($err) => '• ' . $err);
+      $display = $bulletLines->implode("\n");
+      if (count($errors) > 6) {
+        $display .= "\n..." . (count($errors) - 6) . " more errors";
+      }
+      $htmlMessage = "<div style=\"white-space:pre-line; text-align:left\"><strong>Import failed:</strong>\n" . e($display) . '</div>';
+      $this->error(
+        $htmlMessage,
+        timeout: 10000,
+        position: 'toast-top toast-center'
+      );
+    } catch (\Exception $e) {
+      $this->error(
+        'Failed to import file: ' . $e->getMessage(),
+        timeout: 6000,
+        position: 'toast-top toast-center'
+      );
+    }
+
+    $this->reset('file');
+  }
+
   public function placeholder()
   {
     return view('components.skeletons.post-test-questions');
@@ -328,6 +450,40 @@ class PostTestQuestions extends Component
 
   public function render()
   {
-    return view('components.edit-course.post-test-questions');
+    // Calculate points distribution for display
+    $pointsInfo = $this->calculatePointsDistribution();
+
+    return view('components.edit-course.post-test-questions', [
+      'pointsInfo' => $pointsInfo,
+    ]);
+  }
+
+  /**
+   * Calculate points distribution between essay and MC questions
+   */
+  public function calculatePointsDistribution(): array
+  {
+    $totalPoints = 100;
+    $essayQuestions = array_filter($this->questions, fn($q) => ($q['type'] ?? '') === 'essay');
+    $mcQuestions = array_filter($this->questions, fn($q) => ($q['type'] ?? '') === 'multiple');
+
+    $essayTotalPoints = 0;
+    foreach ($essayQuestions as $q) {
+      $essayTotalPoints += (int) ($q['max_points'] ?? 10);
+    }
+
+    $mcTotalPoints = max(0, $totalPoints - $essayTotalPoints);
+    $mcCount = count($mcQuestions);
+    $mcPointsEach = $mcCount > 0 ? round($mcTotalPoints / $mcCount, 2) : 0;
+
+    return [
+      'total' => $totalPoints,
+      'essayTotal' => $essayTotalPoints,
+      'essayCount' => count($essayQuestions),
+      'mcTotal' => $mcTotalPoints,
+      'mcCount' => $mcCount,
+      'mcPointsEach' => $mcPointsEach,
+      'isOverLimit' => $essayTotalPoints > $totalPoints,
+    ];
   }
 }

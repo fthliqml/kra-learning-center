@@ -62,20 +62,50 @@
         @php
             $assignment = $course->userCourses->first();
             $progress = (int) ($course->progress_percent ?? 0);
+            
+            // Determine posttest status for proper display
+            $posttestStatus = 'not_attempted';
+            $postTest = \App\Models\Test::where('course_id', $course->id)->where('type', 'posttest')->first();
+            if ($postTest) {
+                $latestAttempt = \App\Models\TestAttempt::where('test_id', $postTest->id)
+                    ->where('user_id', auth()->id())
+                    ->orderByDesc('submitted_at')->orderByDesc('id')
+                    ->first();
+                if ($latestAttempt) {
+                    if ($latestAttempt->status === \App\Models\TestAttempt::STATUS_UNDER_REVIEW) {
+                        $posttestStatus = 'under_review';
+                    } elseif ($latestAttempt->is_passed) {
+                        $posttestStatus = 'passed';
+                    } else {
+                        $posttestStatus = 'failed';
+                    }
+                }
+            }
+            
+            $barColor = match($posttestStatus) {
+                'passed' => 'bg-primary',
+                'under_review' => 'bg-amber-500',
+                'failed' => 'bg-red-500',
+                default => 'bg-primary',
+            };
         @endphp
         <div class="mt-2 sm:mt-3" x-data>
             <div class="h-1.5 sm:h-2 w-full rounded-full bg-gray-200/80 overflow-hidden" role="progressbar"
                 aria-label="Course progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ $progress }}"
                 aria-valuetext="{{ $progress }} percent">
-                <div class="h-full bg-primary rounded-full transition-all" style="width: {{ $progress }}%">
+                <div class="h-full {{ $barColor }} rounded-full transition-all" style="width: {{ $progress }}%">
                 </div>
             </div>
             <div class="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-gray-600 flex justify-between">
                 <span>
-                    @if ($progress === 0)
+                    @if ($posttestStatus === 'passed')
+                        <span class="text-green-600 font-medium">Completed</span>
+                    @elseif($posttestStatus === 'under_review')
+                        <span class="text-amber-600 font-medium">Awaiting Review</span>
+                    @elseif($posttestStatus === 'failed')
+                        <span class="text-red-600 font-medium">Retry Required</span>
+                    @elseif($progress === 0)
                         Not Started
-                    @elseif($progress === 100)
-                        Completed
                     @else
                         In Progress
                     @endif
@@ -85,11 +115,25 @@
         </div>
 
         {{-- Action --}}
-        @if ($progress === 100)
+        @if ($posttestStatus === 'passed')
             <a wire:navigate href="{{ route('courses-result.index', $course) }}" data-card-action
-                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-gray-300"
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-green-300 bg-green-50 text-green-700"
                 aria-label="See results" @click.stop>
                 <span>See Results</span>
+                <span aria-hidden="true">→</span>
+            </a>
+        @elseif ($posttestStatus === 'under_review')
+            <a wire:navigate href="{{ route('courses-result.index', $course) }}" data-card-action
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-amber-300 bg-amber-50 text-amber-700"
+                aria-label="View status" @click.stop>
+                <span>View Status</span>
+                <span aria-hidden="true">→</span>
+            </a>
+        @elseif ($posttestStatus === 'failed')
+            <a wire:navigate href="{{ route('courses-result.index', $course) }}" data-card-action
+                class="mt-3 inline-flex w-full items-center justify-center gap-2 text-sm font-medium rounded-full px-3 py-2 border border-red-300 bg-red-50 text-red-700"
+                aria-label="Retry test" @click.stop>
+                <span>Retry Test</span>
                 <span aria-hidden="true">→</span>
             </a>
         @elseif ($progress > 0)

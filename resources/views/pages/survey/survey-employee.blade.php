@@ -1,18 +1,24 @@
 <div>
-    <div class="w-full grid gap-10 lg:gap-5 mb-5 lg:mb-9
-                grid-cols-1 lg:grid-cols-2 items-center">
-        <h1 class="text-primary text-2xl sm:text-3xl lg:text-4xl font-bold text-center lg:text-start">
+    <div class="w-full flex flex-col lg:flex-row gap-4 mb-6 items-center justify-between">
+        <h1 class="text-primary text-2xl sm:text-3xl font-bold text-center lg:text-start">
             Survey {{ $surveyLevel }}
         </h1>
 
-        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
-            <x-select wire:model="filterStatus" :options="$filterOptions" option-value="value" option-label="label"
-                placeholder="Filter" wire:change="$refresh"
-                class="!h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
-                icon-right="o-funnel" />
-            <x-search-input placeholder="Search..." class="max-w-md" wire:model.live.debounce.600ms="search" />
+        <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            <div class="w-full sm:w-48">
+                <x-select wire:model="filterStatus" :options="$filterOptions" option-value="value" option-label="label"
+                    placeholder="Filter Status" wire:change="$refresh"
+                    class="!h-10 w-full focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
+                    icon-right="o-funnel" />
+            </div>
+            <div class="w-full sm:w-64">
+                <x-search-input placeholder="Search..." class="!w-full" wire:model.live.debounce.600ms="search" />
+            </div>
         </div>
     </div>
+
+    {{-- Divider --}}
+    <div class="border-b-2 border-base-300 mb-6"></div>
 
     <x-skeletons.survey-employee />
 

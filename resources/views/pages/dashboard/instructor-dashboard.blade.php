@@ -22,7 +22,7 @@
         </a>
 
         {{-- Instructor Daily Record Card --}}
-        <a href="{{ route('reports.training-activity') }}" wire:navigate
+        <a href="{{ route('reports.instructor-daily-record') }}" wire:navigate
             class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 hover:shadow-md hover:border-primary/30 transition-all duration-200">
             <div class="flex items-center gap-4">
                 <div
@@ -45,8 +45,8 @@
 
     {{-- Main Content: 2 Columns Layout --}}
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {{-- Left Column: Upcoming Schedule (65-70%) --}}
-        <div class="lg:col-span-2">
+        {{-- Left Column: Upcoming Schedule + Test Review (65-70%) --}}
+        <div class="lg:col-span-2 space-y-6">
             {{-- Upcoming Schedule List --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                 <div class="flex items-center justify-between mb-5">
@@ -66,9 +66,9 @@
                     </a>
                 </div>
 
-                {{-- Schedule List --}}
+                {{-- Schedule List with max height and scroll --}}
                 @if (count($upcomingSchedules) > 0)
-                    <div class="space-y-3">
+                    <div class="space-y-3 max-h-[300px] overflow-y-auto pr-1 custom-scrollbar">
                         @foreach ($upcomingSchedules as $schedule)
                             @php
                                 $isCertification = ($schedule['schedule_type'] ?? 'training') === 'certification';
@@ -76,15 +76,15 @@
                                 $badgeColorLight = $isCertification ? 'bg-amber-500/90' : 'bg-secondary/90';
                             @endphp
                             <div
-                                class="flex items-start gap-4 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+                                class="flex items-start gap-3 p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                                 {{-- Date Badge --}}
                                 <div class="flex-shrink-0 text-center">
-                                    <div class="w-14 {{ $badgeColor }} rounded-lg overflow-hidden shadow-sm">
-                                        <div class="{{ $badgeColorLight }} text-white text-xs font-medium py-1">
+                                    <div class="w-12 {{ $badgeColor }} rounded-lg overflow-hidden shadow-sm">
+                                        <div class="{{ $badgeColorLight }} text-white text-[10px] font-medium py-0.5">
                                             {{ \Carbon\Carbon::parse($schedule['start_date'])->format('M') }}
                                         </div>
                                         <div
-                                            class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-xl font-bold py-2">
+                                            class="bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-lg font-bold py-1.5">
                                             {{ \Carbon\Carbon::parse($schedule['start_date'])->format('d') }}
                                         </div>
                                     </div>
@@ -114,7 +114,7 @@
                                         @endif
                                     </div>
                                     <div
-                                        class="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                                        class="mt-1 flex flex-wrap items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
                                         <span class="flex items-center gap-1">
                                             <x-mary-icon name="o-calendar" class="w-3.5 h-3.5" />
                                             @if (!empty($schedule['end_date']) && $schedule['end_date'] !== $schedule['start_date'])
@@ -163,6 +163,17 @@
                             </div>
                         @endforeach
                     </div>
+
+                    {{-- Show "and X more" if there are more schedules --}}
+                    @if ($totalUpcomingCount > 5)
+                        <div class="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700">
+                            <a href="{{ route('training-schedule.index') }}" wire:navigate
+                                class="text-sm text-gray-500 dark:text-gray-400 hover:text-secondary transition-colors flex items-center justify-center gap-1">
+                                <x-mary-icon name="o-plus-circle" class="w-4 h-4" />
+                                and {{ $totalUpcomingCount - 5 }} more schedules
+                            </a>
+                        </div>
+                    @endif
                 @else
                     <div class="text-center py-10">
                         <div
@@ -171,6 +182,89 @@
                         </div>
                         <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-1">No Upcoming Schedule</h4>
                         <p class="text-sm text-gray-500 dark:text-gray-400">You don't have any scheduled sessions.</p>
+                    </div>
+                @endif
+            </div>
+
+            {{-- Test Review Section --}}
+            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+                <div class="flex items-center justify-between mb-5">
+                    <div class="flex items-center gap-3">
+                        <div class="p-2 bg-warning/10 rounded-lg">
+                            <x-mary-icon name="o-document-magnifying-glass" class="w-5 h-5 text-warning" />
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Tests Need Review</h3>
+                            <p class="text-sm text-gray-500 dark:text-gray-400">Trainings with pending test submissions
+                            </p>
+                        </div>
+                    </div>
+                    <a href="{{ route('test-review.index') }}" wire:navigate
+                        class="text-sm text-warning hover:text-warning/80 font-medium flex items-center gap-1 transition-colors">
+                        View All
+                        <x-mary-icon name="o-arrow-right" class="w-4 h-4" />
+                    </a>
+                </div>
+
+                @if (count($trainingsNeedReview) > 0)
+                    <div class="space-y-3">
+                        @foreach ($trainingsNeedReview as $training)
+                            <a href="{{ route('test-review.participants', $training['id']) }}" wire:navigate
+                                class="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-warning/5 dark:hover:bg-warning/10 transition-colors group">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    {{-- Training Type Badge --}}
+                                    <div class="flex-shrink-0">
+                                        @if ($training['type'] === 'IN')
+                                            <span
+                                                class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold">
+                                                IN
+                                            </span>
+                                        @else
+                                            <span
+                                                class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold">
+                                                LMS
+                                            </span>
+                                        @endif
+                                    </div>
+
+                                    <div class="min-w-0">
+                                        <h4
+                                            class="text-sm font-medium text-gray-900 dark:text-white truncate group-hover:text-warning transition-colors">
+                                            {{ $training['name'] }}
+                                        </h4>
+                                        <div class="flex items-center gap-2 mt-0.5">
+                                            @if ($training['has_pretest'])
+                                                <span
+                                                    class="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary font-medium">Pre</span>
+                                            @endif
+                                            @if ($training['has_posttest'])
+                                                <span
+                                                    class="text-[10px] px-1.5 py-0.5 rounded bg-secondary/10 text-secondary font-medium">Post</span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {{-- Need Review Count Badge --}}
+                                <div class="flex items-center gap-2 flex-shrink-0">
+                                    <span
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-warning/10 text-warning">
+                                        <x-mary-icon name="o-clock" class="w-3.5 h-3.5" />
+                                        {{ $training['need_review_count'] }} pending
+                                    </span>
+                                    <x-mary-icon name="o-chevron-right"
+                                        class="w-4 h-4 text-gray-400 group-hover:text-warning group-hover:translate-x-0.5 transition-all" />
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
+                @else
+                    <div class="text-center py-8">
+                        <div class="inline-flex items-center justify-center w-14 h-14 bg-success/10 rounded-full mb-3">
+                            <x-mary-icon name="o-check-circle" class="w-7 h-7 text-success" />
+                        </div>
+                        <h4 class="text-sm font-medium text-gray-900 dark:text-white mb-1">All Caught Up!</h4>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">No tests pending review at the moment.</p>
                     </div>
                 @endif
             </div>

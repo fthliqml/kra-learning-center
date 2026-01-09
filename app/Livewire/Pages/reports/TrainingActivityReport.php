@@ -5,7 +5,9 @@ namespace App\Livewire\Pages\Reports;
 use App\Exports\TrainingActivityReportExport;
 use App\Models\Training;
 use App\Models\TrainingAssessment;
+use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
@@ -17,6 +19,8 @@ class TrainingActivityReport extends Component
 
     public $search = '';
     public $dateRange = null;
+    public $filterDepartment = '';
+    public $filterSection = '';
 
     public function mount(): void
     {
@@ -25,11 +29,117 @@ class TrainingActivityReport extends Component
     }
 
     /**
+     * Check if current user has full access to all training data
+     * Full access: admin, instructor, certificator, multimedia roles, or section_head with section "LID"
+     */
+    protected function hasFullAccess(): bool
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return false;
+        }
+
+        // Admin, Instructor, Certificator, Multimedia roles have full access
+        if ($user->hasAnyRole(['admin', 'instructor', 'certificator', 'multimedia'])) {
+            return true;
+        }
+
+        // Section head of LID section has full access
+        if ($user->hasPosition('section_head') && strtoupper($user->section) === 'LID') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Get the access filter type and value for current user
+     * Based on menu.php: only section_head position and specific roles can access this menu
+     * Returns: ['type' => 'full'|'section'|'department'|'none', 'value' => string|null]
+     */
+    protected function getAccessFilter(): array
+    {
+        $user = Auth::user();
+
+        if (!$user) {
+            return ['type' => 'none', 'value' => null];
+        }
+
+        // Full access for admin, instructor, certificator, multimedia, or section_head LID
+        if ($this->hasFullAccess()) {
+            return ['type' => 'full', 'value' => null];
+        }
+
+        // Section head (non-LID) - filter by their section
+        if ($user->hasPosition('section_head')) {
+            return ['type' => 'section', 'value' => $user->section];
+        }
+
+        // Department head - filter by their department
+        if ($user->hasPosition('department_head')) {
+            return ['type' => 'department', 'value' => $user->department];
+        }
+
+        // No access for other positions (employee, supervisor, etc.) - they can't see menu anyway
+        return ['type' => 'none', 'value' => null];
+    }
+
+    /**
+     * Get list of departments for filter dropdown (only for full access users)
+     */
+    public function getDepartmentsProperty()
+    {
+        if (!$this->hasFullAccess()) {
+            return collect();
+        }
+
+        return User::whereNotNull('department')
+            ->where('department', '!=', '')
+            ->distinct()
+            ->orderBy('department')
+            ->pluck('department')
+            ->map(fn($dept) => ['id' => $dept, 'name' => $dept]);
+    }
+
+    /**
+     * Get list of sections for filter dropdown (only for full access users)
+     * If department is selected, filter sections by that department
+     */
+    public function getSectionsProperty()
+    {
+        if (!$this->hasFullAccess()) {
+            return collect();
+        }
+
+        $query = User::whereNotNull('section')
+            ->where('section', '!=', '');
+
+        if ($this->filterDepartment) {
+            $query->where('department', $this->filterDepartment);
+        }
+
+        return $query->distinct()
+            ->orderBy('section')
+            ->pluck('section')
+            ->map(fn($section) => ['id' => $section, 'name' => $section]);
+    }
+
+    /**
+     * Reset section filter when department changes
+     */
+    public function updatedFilterDepartment(): void
+    {
+        $this->filterSection = '';
+        $this->resetPage();
+    }
+
+    /**
      * Clear all filters
      */
     public function clearFilters(): void
     {
-        $this->reset(['search', 'dateRange']);
+        $this->reset(['search', 'dateRange', 'filterDepartment', 'filterSection']);
         $this->resetPage();
     }
 
@@ -51,7 +161,7 @@ class TrainingActivityReport extends Component
 
     public function updated($property): void
     {
-        if (in_array($property, ['search', 'dateRange'])) {
+        if (in_array($property, ['search', 'dateRange', 'filterSection'])) {
             $this->resetPage();
         }
     }
@@ -71,6 +181,8 @@ class TrainingActivityReport extends Component
             ['key' => 'section', 'label' => 'Section', 'class' => '!text-center w-[90px]'],
             ['key' => 'period', 'label' => 'Period', 'class' => '!text-center w-[220px]'],
             ['key' => 'duration', 'label' => 'Duration', 'class' => '!text-center w-[140px]'],
+            ['key' => 'pretest_score', 'label' => 'Pre Test', 'class' => '!text-center w-[90px]'],
+            ['key' => 'attendance', 'label' => 'Attendance', 'class' => '!text-center w-[100px]'],
             ['key' => 'theory_score', 'label' => 'Theory', 'class' => '!text-center w-[90px]'],
             ['key' => 'practical_score', 'label' => 'Practical', 'class' => '!text-center w-[90px]'],
             ['key' => 'remarks', 'label' => 'Remarks', 'class' => '!text-center w-[110px]'],
@@ -83,6 +195,12 @@ class TrainingActivityReport extends Component
     public function getReportsProperty()
     {
         [$dateFrom, $dateTo] = $this->parseDateRange();
+        $accessFilter = $this->getAccessFilter();
+
+        // If no access, return empty collection
+        if ($accessFilter['type'] === 'none') {
+            return collect();
+        }
 
         // Get all trainings with status 'approved' within date range
         $query = Training::with([
@@ -93,6 +211,31 @@ class TrainingActivityReport extends Component
             ->when($dateFrom, fn($q) => $q->whereDate('end_date', '>=', $dateFrom))
             ->when($dateTo, fn($q) => $q->whereDate('end_date', '<=', $dateTo))
             ->when($this->search, fn($q) => $q->where('name', 'like', '%' . $this->search . '%'));
+
+        // Apply access filter based on user role/position
+        // For full access users, apply manual department/section filters if set
+        if ($accessFilter['type'] === 'full') {
+            if ($this->filterDepartment) {
+                $query->whereHas('assessments.employee', function ($q) {
+                    $q->where('department', $this->filterDepartment);
+                });
+            }
+            if ($this->filterSection) {
+                $query->whereHas('assessments.employee', function ($q) {
+                    $q->where('section', $this->filterSection);
+                });
+            }
+        } elseif ($accessFilter['type'] === 'section' && $accessFilter['value']) {
+            // Filter trainings that have assessments with employees in the specified section
+            $query->whereHas('assessments.employee', function ($q) use ($accessFilter) {
+                $q->where('section', $accessFilter['value']);
+            });
+        } elseif ($accessFilter['type'] === 'department' && $accessFilter['value']) {
+            // Filter trainings that have assessments with employees in the specified department
+            $query->whereHas('assessments.employee', function ($q) use ($accessFilter) {
+                $q->where('department', $accessFilter['value']);
+            });
+        }
 
         $trainings = $query->orderBy('end_date', 'desc')->get();
 
@@ -122,6 +265,9 @@ class TrainingActivityReport extends Component
                 })
                 : ($days * 8); // Default 8 hours per day
 
+            // Format totalHours to max 1 decimal
+            $totalHours = round($totalHours, 1);
+
             // For LMS type, show only days; for others, show hours and days
             if (strtoupper($training->type ?? '') === 'LMS') {
                 $durationText = $days . ' Days';
@@ -134,8 +280,33 @@ class TrainingActivityReport extends Component
             $endDate = $training->end_date ? Carbon::parse($training->end_date)->format('d-m-Y') : '-';
             $period = $startDate . ' - ' . $endDate;
 
+            // Filter assessments based on access level (for section/department filtering)
+            $assessments = $training->assessments;
+
+            if ($accessFilter['type'] === 'full') {
+                // For full access users, apply manual filters if set
+                if ($this->filterDepartment) {
+                    $assessments = $assessments->filter(function ($assessment) {
+                        return $assessment->employee && $assessment->employee->department === $this->filterDepartment;
+                    });
+                }
+                if ($this->filterSection) {
+                    $assessments = $assessments->filter(function ($assessment) {
+                        return $assessment->employee && $assessment->employee->section === $this->filterSection;
+                    });
+                }
+            } elseif ($accessFilter['type'] === 'section' && $accessFilter['value']) {
+                $assessments = $assessments->filter(function ($assessment) use ($accessFilter) {
+                    return $assessment->employee && $assessment->employee->section === $accessFilter['value'];
+                });
+            } elseif ($accessFilter['type'] === 'department' && $accessFilter['value']) {
+                $assessments = $assessments->filter(function ($assessment) use ($accessFilter) {
+                    return $assessment->employee && $assessment->employee->department === $accessFilter['value'];
+                });
+            }
+
             // For each assessment (participant)
-            foreach ($training->assessments as $assessment) {
+            foreach ($assessments as $assessment) {
                 $employee = $assessment->employee;
 
                 $reports->push((object) [
@@ -150,10 +321,14 @@ class TrainingActivityReport extends Component
                     'nrp' => $employee->nrp ?? '-',
                     'employee_name' => $employee->name ?? '-',
                     'section' => $employee->section ?? '-',
+                    'attendance' => $assessment->attendance_percentage !== null ? round($assessment->attendance_percentage) . '%' : '-',
+                    'attendance_raw' => $assessment->attendance_percentage,
                     'period' => $period,
                     'duration' => $durationText,
+                    'pretest_score' => $assessment->pretest_score !== null ? number_format($assessment->pretest_score, 1) : '-',
                     'theory_score' => $assessment->posttest_score !== null ? number_format($assessment->posttest_score, 1) : '-',
                     'practical_score' => $assessment->practical_score !== null ? number_format($assessment->practical_score, 1) : '-',
+                    'pretest_raw' => $assessment->pretest_score,
                     'theory_raw' => $assessment->posttest_score,
                     'practical_raw' => $assessment->practical_score,
                     'remarks' => $assessment->status ?? 'failed',
@@ -190,8 +365,12 @@ class TrainingActivityReport extends Component
     {
         [$dateFrom, $dateTo] = $this->parseDateRange();
 
+        // Pass filter department and section for full access users
+        $filterDept = $this->hasFullAccess() ? $this->filterDepartment : null;
+        $filterSec = $this->hasFullAccess() ? $this->filterSection : null;
+
         return Excel::download(
-            new TrainingActivityReportExport($dateFrom, $dateTo, $this->search),
+            new TrainingActivityReportExport($dateFrom, $dateTo, $this->search, $filterDept, $filterSec),
             'training_activity_report_' . Carbon::now()->format('Y-m-d') . '.xlsx'
         );
     }
@@ -201,6 +380,9 @@ class TrainingActivityReport extends Component
         return view('pages.reports.training-activity-report', [
             'reports' => $this->reports(),
             'headers' => $this->headers(),
+            'hasFullAccess' => $this->hasFullAccess(),
+            'departments' => $this->departments,
+            'sections' => $this->sections,
         ]);
     }
 }

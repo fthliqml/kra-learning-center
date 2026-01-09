@@ -188,10 +188,10 @@ class leaderDashboard extends Component
         $pendingRequests = Request::where('status', 'pending')->count();
 
         // IDP (Individual Development Plan) pending approvals for leaders
-        $pendingIdp = TrainingPlan::where('status', 'pending_leader')->count()
-            + SelfLearningPlan::where('status', 'pending_leader')->count()
-            + MentoringPlan::where('status', 'pending_leader')->count()
-            + ProjectPlan::where('status', 'pending_leader')->count();
+        $pendingIdp = TrainingPlan::where('status', 'pending_lid')->count()
+            + SelfLearningPlan::where('status', 'pending_lid')->count()
+            + MentoringPlan::where('status', 'pending_lid')->count()
+            + ProjectPlan::where('status', 'pending_lid')->count();
 
         $this->pendingApprovals = $pendingCertifications + $pendingTrainings + $pendingRequests + $pendingIdp;
     }

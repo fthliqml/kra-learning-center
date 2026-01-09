@@ -161,30 +161,63 @@
                     <h2 class="text-base font-semibold mb-4">Course Content</h2>
                     <ol class="text-sm divide-y divide-gray-200 mb-5">
                         <li class="py-2 flex items-center gap-2">
-                            <span class="w-6 text-xs font-medium text-gray-500">1.</span><span>Pre Test</span>
+                            <span class="w-6 text-xs font-medium text-gray-500">1.</span><span>Pre-Test</span>
                         </li>
                         <li class="py-2 flex items-center gap-2">
                             <span class="w-6 text-xs font-medium text-gray-500">2.</span><span>Learning Module</span>
                         </li>
                         <li class="py-2 flex items-center gap-2">
-                            <span class="w-6 text-xs font-medium text-gray-500">3.</span><span>Post Test</span>
+                            <span class="w-6 text-xs font-medium text-gray-500">3.</span><span>Post-Test</span>
                         </li>
                         <li class="py-2 flex items-center gap-2">
                             <span class="w-6 text-xs font-medium text-gray-500">4.</span><span>Result</span>
                         </li>
                     </ol>
-                    @php $progress = (int) ($course->progressForUser() ?? 0); @endphp
-                    @if (!$canStart && $progress < 100)
+                    @php 
+                        $progress = (int) ($course->progressForUser() ?? 0);
+                        
+                        // Determine posttest status
+                        $posttestStatus = 'not_attempted';
+                        $postTest = \App\Models\Test::where('course_id', $course->id)->where('type', 'posttest')->first();
+                        if ($postTest) {
+                            $latestAttempt = \App\Models\TestAttempt::where('test_id', $postTest->id)
+                                ->where('user_id', auth()->id())
+                                ->orderByDesc('submitted_at')->orderByDesc('id')
+                                ->first();
+                            if ($latestAttempt) {
+                                if ($latestAttempt->status === \App\Models\TestAttempt::STATUS_UNDER_REVIEW) {
+                                    $posttestStatus = 'under_review';
+                                } elseif ($latestAttempt->is_passed) {
+                                    $posttestStatus = 'passed';
+                                } else {
+                                    $posttestStatus = 'failed';
+                                }
+                            }
+                        }
+                    @endphp
+                    @if (!$canStart && $posttestStatus === 'not_attempted')
                         <button type="button" disabled
                             class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-gray-300 rounded-md h-10 cursor-not-allowed"
                             aria-label="Course not available yet">
                             Not available yet
                         </button>
-                    @elseif ($progress === 100)
+                    @elseif ($posttestStatus === 'passed')
                         <a wire:navigate href="{{ route('courses-result.index', $course) }}"
-                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-primary hover:bg-primary/90 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-primary"
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-green-600 hover:bg-green-700 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-green-600"
                             aria-label="See results">
                             See Results
+                        </a>
+                    @elseif ($posttestStatus === 'under_review')
+                        <a wire:navigate href="{{ route('courses-result.index', $course) }}"
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-amber-500 hover:bg-amber-600 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-amber-500"
+                            aria-label="View status">
+                            View Status
+                        </a>
+                    @elseif ($posttestStatus === 'failed')
+                        <a wire:navigate href="{{ route('courses-result.index', $course) }}"
+                            class="w-full inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md h-10 transition focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-red-500"
+                            aria-label="Retry test">
+                            Retry Test
                         </a>
                     @elseif ($progress > 0)
                         <a wire:navigate href="{{ route('courses-modules.index', $course) }}"

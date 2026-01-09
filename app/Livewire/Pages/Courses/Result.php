@@ -24,6 +24,8 @@ class Result extends Component
     {
         $userId = Auth::id();
         if (!$userId) abort(401);
+        
+        $attemptId = request()->query('attemptId');
 
         // Ensure user is assigned to this course
         $assigned = $course->trainings()
@@ -86,22 +88,44 @@ class Result extends Component
         // Posttest summary
         $post = Test::where('course_id', $course->id)->where('type', 'posttest')->first();
         if ($post) {
-            $attempt = TestAttempt::where('test_id', $post->id)
-                ->where('user_id', $userId)
-                ->orderByDesc('submitted_at')->orderByDesc('id')
-                ->first();
+            $query = TestAttempt::where('test_id', $post->id)
+                ->where('user_id', $userId);
+            
+            if ($attemptId) {
+                $attempt = $query->find($attemptId);
+                // Ensure attempt belongs to user/test
+                if (!$attempt || (int)$attempt->test_id !== (int)$post->id || (int)$attempt->user_id !== (int)$userId) {
+                    abort(404);
+                }
+            } else {
+                $attempt = $query->orderByDesc('submitted_at')->orderByDesc('id')->first();
+            }
+
             $maxAuto = (int) TestQuestion::where('test_id', $post->id)
                 ->where('question_type', 'multiple')
                 ->sum('max_points');
-            if ($maxAuto === 0) {
-                $maxAuto = (int) TestQuestion::where('test_id', $post->id)
-                    ->where('question_type', 'multiple')
-                    ->count();
+            $maxManual = (int) TestQuestion::where('test_id', $post->id)
+                ->whereIn('question_type', ['essay', 'text']) // assuming 'essay' or 'text'
+                ->sum('max_points');
+            $essayCount = (int) TestQuestion::where('test_id', $post->id)
+                ->whereIn('question_type', ['essay', 'text'])
+                ->count();
+            
+            if ($maxAuto === 0 && $maxManual === 0) {
+                 // Fallback if no points assigned
+                 $maxAuto = (int) TestQuestion::where('test_id', $post->id)->where('question_type', 'multiple')->count();
+                 $maxManual = $essayCount;
             }
+            
             $percent = null;
-            if ($attempt && $maxAuto > 0) {
-                $percent = (int) round(($attempt->auto_score / max(1, $maxAuto)) * 100);
+            $maxTotal = $maxAuto + $maxManual;
+            if ($attempt && $maxTotal > 0) {
+                 // If under review, percent is provisional (based on what's graded + auto)
+                 // But typically specific score logic happens in render
+                 $currentTotal = $attempt->auto_score + $attempt->manual_score;
+                 $percent = (int) round(($currentTotal / $maxTotal) * 100);
             }
+
             // Extra aggregates for donut chart and history
             $mcTotal = (int) TestQuestion::where('test_id', $post->id)
                 ->where('question_type', 'multiple')
@@ -134,6 +158,7 @@ class Result extends Component
                     }
                 }
                 return [
+                    'id' => $a->id,
                     'number' => (int) $a->attempt_number,
                     'submitted_at' => optional($a->submitted_at)->format('Y-m-d H:i') ?? '-',
                     'auto' => (int) $a->auto_score,
@@ -141,19 +166,29 @@ class Result extends Component
                     'percent' => $pct,
                     'status' => (string) $a->status,
                     'passed' => $derivedPass,
+                    'is_current' => (isset($this->posttest['attempt']->id) && $a->id === $this->posttest['attempt']->id),
                 ];
             })->values()->all();
 
+            // Latest attempt globally
+            $latestGlobal = TestAttempt::where('test_id', $post->id)
+                ->where('user_id', $userId)
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->first();
+                
             $this->posttest = [
                 'test' => $post,
                 'attempt' => $attempt,
                 'max_auto' => $maxAuto,
+                'max_manual' => $maxManual,
+                'essay_count' => $essayCount,
                 'percent' => $percent,
                 'passing' => $post->passing_score,
                 'mc_total' => $mcTotal,
                 'q_total' => $qTotal,
                 'correct' => $correct,
                 'attempts' => $attempts,
+                'is_latest' => ($attempt && $latestGlobal && $attempt->id === $latestGlobal->id),
             ];
         }
 
@@ -224,11 +259,120 @@ class Result extends Component
             }
         }
 
+        // --- Logic moved from Blade to Controller ---
+        $pre = $this->pretest ?? [];
+        $post = $this->posttest ?? [];
+
+        // Get attempt details
+        $topAttempt = $post['attempt'] ?? null;
+        $topUnderReview = $topAttempt && $topAttempt->status === \App\Models\TestAttempt::STATUS_UNDER_REVIEW;
+        
+        // Check if viewing historical attempt (not the latest)
+        $isLatest = (bool) ($post['is_latest'] ?? true);
+        $isHistorical = !$isLatest;
+        
+        // Calculate MC-only percentage (for Pilihan Ganda section)
+        $maxAuto = (int) ($post['max_auto'] ?? 0);
+        $mcScore = (int) ($topAttempt->auto_score ?? 0);
+        $mcPct = $maxAuto > 0 ? (int) round(($mcScore / $maxAuto) * 100) : 0;
+        
+        // Calculate total percentage (MC + Essay)
+        $maxManual = (int) ($post['max_manual'] ?? 0);
+        $essayScore = (int) ($topAttempt->manual_score ?? 0);
+        $maxTotal = $maxAuto + $maxManual;
+        $totalScore = $mcScore + $essayScore;
+        $totalPct = $maxTotal > 0 ? (int) round(($totalScore / $maxTotal) * 100) : 0;
+        
+        // Pre-test percentage
+        $prePct = (int) ($pre['percent'] ?? 0 ?: 0);
+        
+        // For comparison chart: use MC-only if essay pending, else total
+        $postPct = $topUnderReview ? $mcPct : $totalPct;
+        $delta = $postPct - $prePct;
+
+        // Determine pass/fail status
+        $topPassed = false;
+        if ($topAttempt && !$topUnderReview) {
+            $passing = (int) ($post['passing'] ?? 0);
+            if ($totalPct === 100) {
+                $topPassed = true;
+            } elseif ($passing > 0 && $totalPct >= $passing) {
+                $topPassed = true;
+            } elseif ((bool) $topAttempt->is_passed) {
+                $topPassed = true;
+            }
+        }
+
+        // Status label/color for summary card
+        $statusLabel = 'Not Attempted';
+        $statusColor = 'gray';
+        if ($topAttempt) {
+            if ($topUnderReview) {
+                $statusLabel = 'Under Review';
+                $statusColor = 'amber';
+            } elseif ($topPassed) {
+                $statusLabel = 'Passed';
+                $statusColor = 'green';
+            } else {
+                $statusLabel = 'Failed';
+                $statusColor = 'red';
+            }
+        }
+        $statusIcon = match ($statusColor) {
+            'green' => 'o-check-circle',
+            'red' => 'o-x-circle',
+            'amber' => 'o-clock',
+            default => 'o-information-circle',
+        };
+
+        // Post-Test MC details
+        $mcTotal = (int) ($post['mc_total'] ?? 0);
+        $correct = (int) ($post['correct'] ?? 0);
+        $incorrect = max(0, $mcTotal - $correct);
+        $attempts = $post['attempts'] ?? [];
+        $currentAttemptNum = (int) ($topAttempt->attempt_number ?? 0);
+        
+        // Essay details
+        $essayCount = (int) ($post['essay_count'] ?? 0);
+        $essayPending = $topUnderReview && $essayCount > 0;
+
+        // Pre-Test details (for donut)
+        $preMcTotal = (int) ($pre['mc_total'] ?? 0);
+        $preCorrect = (int) ($pre['correct'] ?? 0);
+        $preIncorrect = max(0, $preMcTotal - $preCorrect);
+
         return view('pages.courses.result', [
             'course' => $this->course,
             'pre' => $this->pretest,
             'post' => $this->posttest,
             'quizzes' => $this->quizzes,
+            // Computed view data
+            'prePct' => $prePct,
+            'postPct' => $postPct,
+            'mcPct' => $mcPct,
+            'totalPct' => $totalPct,
+            'delta' => $delta,
+            'topAttempt' => $topAttempt,
+            'topUnderReview' => $topUnderReview,
+            'topPassed' => $topPassed,
+            'isHistorical' => $isHistorical,
+            'statusLabel' => $statusLabel,
+            'statusColor' => $statusColor,
+            'statusIcon' => $statusIcon,
+            'mcTotal' => $mcTotal,
+            'mcScore' => $mcScore,
+            'maxAuto' => $maxAuto,
+            'correct' => $correct,
+            'incorrect' => $incorrect,
+            'essayCount' => $essayCount,
+            'essayScore' => $essayScore,
+            'maxManual' => $maxManual,
+            'essayPending' => $essayPending,
+            'attempts' => $attempts,
+            'currentAttemptNum' => $currentAttemptNum,
+            'preMcTotal' => $preMcTotal,
+            'preCorrect' => $preCorrect,
+            'preIncorrect' => $preIncorrect,
         ])->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'result',
@@ -236,6 +380,8 @@ class Result extends Component
             'stages' => ['pretest', 'module', 'posttest', 'result'],
             'modules' => $this->course->learningModules,
             'completedModuleIds' => $completedModuleIds,
+            'hasPosttestAttempt' => true, // Result page means posttest was attempted
+            'courseId' => $this->course->id,
         ]);
     }
 }

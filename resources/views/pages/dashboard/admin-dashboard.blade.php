@@ -46,7 +46,8 @@
             </div>
 
             {{-- Training Chart --}}
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 overflow-hidden">
                 <div class="flex items-center justify-between mb-6">
                     <div>
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Monthly Training</h3>
@@ -62,7 +63,7 @@
                 </div>
 
                 {{-- ApexCharts Container --}}
-                <div id="training-chart" wire:ignore></div>
+                <div id="training-chart" class="w-full min-w-0" wire:ignore></div>
 
                 {{-- Hint for clicking data points --}}
                 @if (!$selectedMonth)
@@ -190,6 +191,17 @@
                         type: 'area',
                         height: 350,
                         fontFamily: 'inherit',
+                        redrawOnParentResize: true,
+                        redrawOnWindowResize: true,
+                        animations: {
+                            enabled: true,
+                            easing: 'easeinout',
+                            speed: 400,
+                            dynamicAnimation: {
+                                enabled: true,
+                                speed: 350
+                            }
+                        },
                         toolbar: {
                             show: false
                         },
@@ -336,8 +348,30 @@
                 setTimeout(initTrainingChart, 100);
             });
 
-            let donutTypeChart = null;
-            let donutGroupChart = null;
+            // Listen for sidebar toggle and resize charts smoothly
+            window.addEventListener('sidebar-toggled', function() {
+                const resizeCharts = () => {
+                    if (window.trainingChart) {
+                        window.trainingChart.updateOptions({}, false, false);
+                    }
+                    if (window.donutTypeChart) {
+                        window.donutTypeChart.updateOptions({}, false, false);
+                    }
+                    if (window.donutGroupChart) {
+                        window.donutGroupChart.updateOptions({}, false, false);
+                    }
+                };
+                let frame = 0;
+                const animate = () => {
+                    resizeCharts();
+                    frame++;
+                    if (frame < 30) requestAnimationFrame(animate);
+                };
+                requestAnimationFrame(animate);
+            });
+
+            window.donutTypeChart = null;
+            window.donutGroupChart = null;
 
             Livewire.on('breakdown-loaded', ({
                 byType,
@@ -358,8 +392,8 @@
                 const el = document.querySelector('#donut-type-chart');
                 if (!el) return;
 
-                if (donutTypeChart) {
-                    donutTypeChart.destroy();
+                if (window.donutTypeChart) {
+                    window.donutTypeChart.destroy();
                 }
 
                 const typeLabels = {
@@ -437,16 +471,16 @@
                     }]
                 };
 
-                donutTypeChart = new ApexCharts(el, options);
-                donutTypeChart.render();
+                window.donutTypeChart = new ApexCharts(el, options);
+                window.donutTypeChart.render();
             }
 
             function renderDonutGroupChart(data) {
                 const el = document.querySelector('#donut-group-chart');
                 if (!el) return;
 
-                if (donutGroupChart) {
-                    donutGroupChart.destroy();
+                if (window.donutGroupChart) {
+                    window.donutGroupChart.destroy();
                 }
 
                 const labels = Object.keys(data).map(k => (k || 'Unspecified').toUpperCase());
@@ -519,8 +553,8 @@
                     }]
                 };
 
-                donutGroupChart = new ApexCharts(el, options);
-                donutGroupChart.render();
+                window.donutGroupChart = new ApexCharts(el, options);
+                window.donutGroupChart.render();
             }
         </script>
     @endpush

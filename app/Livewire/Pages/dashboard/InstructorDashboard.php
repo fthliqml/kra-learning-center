@@ -4,6 +4,8 @@ namespace App\Livewire\Pages\dashboard;
 
 use App\Models\Certification;
 use App\Models\Training;
+use App\Models\Trainer;
+use App\Models\TestAttempt;
 use Livewire\Component;
 
 class InstructorDashboard extends Component
@@ -13,11 +15,16 @@ class InstructorDashboard extends Component
 
     // Upcoming schedules (trainings + certifications)
     public array $upcomingSchedules = [];
+    public int $totalUpcomingCount = 0;
+
+    // Trainings needing test review
+    public array $trainingsNeedReview = [];
 
     public function mount()
     {
         $this->loadCalendarEvents();
         $this->loadUpcomingSchedules();
+        $this->loadTrainingsNeedReview();
     }
 
     public function loadCalendarEvents()
@@ -205,12 +212,110 @@ class InstructorDashboard extends Component
             }
         }
 
-        // Sort all schedules by start_date and limit to 5
+        // Sort all schedules by start_date
         usort($this->upcomingSchedules, function ($a, $b) {
             return strtotime($a['start_date']) - strtotime($b['start_date']);
         });
 
+        // Store total count before limiting
+        $this->totalUpcomingCount = count($this->upcomingSchedules);
+
+        // Limit to 5 for display
         $this->upcomingSchedules = array_slice($this->upcomingSchedules, 0, 5);
+    }
+
+    /**
+     * Load trainings that need test review
+     * Handles both IN (module-based) and LMS (course-based) trainings
+     */
+    public function loadTrainingsNeedReview()
+    {
+        $this->trainingsNeedReview = [];
+        $userId = auth()->id();
+        $trainer = Trainer::where('user_id', $userId)->first();
+
+        if (!$trainer) {
+            return;
+        }
+
+        // Get IN type trainings with module tests that need review
+        $inTrainings = Training::with(['module.pretest', 'module.posttest'])
+            ->where('type', 'IN')
+            ->whereHas('sessions', fn($s) => $s->where('trainer_id', $trainer->id))
+            ->whereHas('module', function ($q) {
+                $q->where(function ($sub) {
+                    $sub->whereHas('pretest.attempts', fn($a) => $a->where('status', TestAttempt::STATUS_UNDER_REVIEW))
+                        ->orWhereHas('posttest.attempts', fn($a) => $a->where('status', TestAttempt::STATUS_UNDER_REVIEW));
+                });
+            })
+            ->limit(5)
+            ->get();
+
+        foreach ($inTrainings as $training) {
+            $module = $training->module;
+            $pretest = $module?->pretest;
+            $posttest = $module?->posttest;
+
+            $testIds = collect([$pretest?->id, $posttest?->id])->filter()->values()->all();
+
+            $needReviewCount = 0;
+            if (!empty($testIds)) {
+                $needReviewCount = TestAttempt::whereIn('test_id', $testIds)
+                    ->where('status', TestAttempt::STATUS_UNDER_REVIEW)
+                    ->count();
+            }
+
+            if ($needReviewCount > 0) {
+                $this->trainingsNeedReview[] = [
+                    'id' => $training->id,
+                    'name' => $training->name,
+                    'type' => $training->type,
+                    'need_review_count' => $needReviewCount,
+                    'has_pretest' => $pretest !== null,
+                    'has_posttest' => $posttest !== null,
+                ];
+            }
+        }
+
+        // Get LMS type trainings with course tests that need review
+        $lmsTrainings = Training::with(['course.tests'])
+            ->where('type', 'LMS')
+            ->whereHas('course.tests', function ($q) {
+                $q->whereHas('attempts', fn($a) => $a->where('status', TestAttempt::STATUS_UNDER_REVIEW));
+            })
+            ->limit(5)
+            ->get();
+
+        foreach ($lmsTrainings as $training) {
+            $course = $training->course;
+            $tests = $course?->tests ?? collect();
+            $pretest = $tests->firstWhere('type', 'pretest');
+            $posttest = $tests->firstWhere('type', 'posttest');
+
+            $testIds = $tests->pluck('id')->filter()->values()->all();
+
+            $needReviewCount = 0;
+            if (!empty($testIds)) {
+                $needReviewCount = TestAttempt::whereIn('test_id', $testIds)
+                    ->where('status', TestAttempt::STATUS_UNDER_REVIEW)
+                    ->count();
+            }
+
+            if ($needReviewCount > 0) {
+                $this->trainingsNeedReview[] = [
+                    'id' => $training->id,
+                    'name' => $training->name,
+                    'type' => $training->type,
+                    'need_review_count' => $needReviewCount,
+                    'has_pretest' => $pretest !== null,
+                    'has_posttest' => $posttest !== null,
+                ];
+            }
+        }
+
+        // Sort by need_review_count descending and limit to 5
+        usort($this->trainingsNeedReview, fn($a, $b) => $b['need_review_count'] - $a['need_review_count']);
+        $this->trainingsNeedReview = array_slice($this->trainingsNeedReview, 0, 5);
     }
 
     public function render()

@@ -179,9 +179,12 @@
                                 <div class="text-sm">{{ $participant->section }}</div>
                             @endscope
 
-                            {{-- Absent --}}
-                            @scope('cell_absent', $participant)
-                                <div class="text-center text-sm">{{ $participant->absent }}</div>
+                            {{-- Attendance --}}
+                            @scope('cell_attendance', $participant)
+                                <div
+                                    class="text-center text-sm font-semibold {{ ($participant->attendance_raw ?? 0) >= 75 ? 'text-emerald-600' : (($participant->attendance_raw ?? null) !== null ? 'text-rose-600' : 'text-gray-400') }}">
+                                    {{ $participant->attendance }}
+                                </div>
                             @endscope
 
                             {{-- Theory Score --}}

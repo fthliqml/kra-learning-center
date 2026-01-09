@@ -5,8 +5,8 @@
             <livewire:components.edit-course.course-info :courseId="$course->id" lazy />
         </x-tab>
 
-        {{-- TAB: Pre Test --}}
-        <x-tab name="pretest" label="Pre Test" icon="m-clipboard-document-list" :disabled="!$courseId">
+        {{-- TAB: Pre-Test --}}
+        <x-tab name="pretest" label="Pre-Test" icon="m-clipboard-document-list" :disabled="!$courseId">
             <livewire:components.edit-course.pretest-questions :courseId="$course->id" lazy />
         </x-tab>
 
@@ -15,8 +15,8 @@
             <livewire:components.edit-course.learning-modules :courseId="$course->id" lazy />
         </x-tab>
 
-        {{-- TAB: Post Test --}}
-        <x-tab name="post-test" label="Post Test" icon="m-check-badge" :disabled="!$courseId">
+        {{-- TAB: Post-Test --}}
+        <x-tab name="post-test" label="Post-Test" icon="m-check-badge" :disabled="!$courseId">
             <livewire:components.edit-course.post-test-questions :courseId="$course->id" lazy />
         </x-tab>
 

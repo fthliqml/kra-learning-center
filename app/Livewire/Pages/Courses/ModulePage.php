@@ -64,11 +64,24 @@ class ModulePage extends Component
             }
         }
 
-        // If course already completed (e.g., perfect posttest), block revisiting modules
+        // If course already completed (e.g., passed posttest), redirect to result
         if ($enrollment) {
             $totalUnits = (int) $course->progressUnitsCount();
             $current = (int) ($enrollment->current_step ?? 0);
             if ($current >= $totalUnits || strtolower($enrollment->status ?? '') === 'completed') {
+                return redirect()->route('courses-result.index', ['course' => $course->id]);
+            }
+        }
+
+        // If user has PASSED posttest, redirect to result (course completed)
+        // Failed/under_review attempts should allow remedial access to modules
+        $posttest = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
+        if ($posttest) {
+            $passedAttempt = TestAttempt::where('test_id', $posttest->id)
+                ->where('user_id', $userId)
+                ->where('is_passed', true)
+                ->exists();
+            if ($passedAttempt) {
                 return redirect()->route('courses-result.index', ['course' => $course->id]);
             }
         }
@@ -415,8 +428,41 @@ class ModulePage extends Component
         $this->showQuizModal = true;
     }
 
+    /**
+     * Close quiz modal without advancing progress.
+     * Used when user closes modal without submitting quiz.
+     */
+    public function closeQuizModalOnly(): void
+    {
+        $this->showQuizModal = false;
+        $this->quizQuestions = [];
+        $this->quizResult = null;
+        $this->quizHasEssay = false;
+        $this->quizSectionId = null;
+        // Clear the reopen flag since user explicitly closed
+        session()->forget('reopen_quiz_section');
+    }
+
+    /**
+     * Close quiz modal and advance progress.
+     * Only advances if quiz was actually submitted (attempt exists).
+     */
     public function closeQuizModalAndAdvance(): mixed
     {
+        $userId = Auth::id();
+        $sectionId = $this->quizSectionId ?? $this->activeSectionId;
+        
+        // Check if quiz was actually submitted before advancing
+        $hasQuizAttempt = SectionQuizAttempt::where('section_id', $sectionId)
+            ->where('user_id', $userId)
+            ->exists();
+        
+        if (!$hasQuizAttempt) {
+            // Quiz not submitted - just close modal without advancing
+            $this->closeQuizModalOnly();
+            return null;
+        }
+        
         $this->showQuizModal = false;
         $this->quizQuestions = [];
         $this->quizResult = null;
@@ -601,16 +647,20 @@ class ModulePage extends Component
         $totalUnits = (int) $this->course->progressUnitsCount();
         $eligibleForPosttest = $currentStep >= max(0, $totalUnits - 1);
 
-        // Retake allowance: if last posttest attempt failed, show CTA to retry anytime
+        // Check if user has ANY posttest attempt (enables remedial navigation)
         $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+        $hasPosttestAttempt = false;
         $canRetakePosttest = false;
         if ($postRow) {
             $lastAttempt = TestAttempt::where('test_id', $postRow->id)
                 ->where('user_id', $userId)
                 ->orderByDesc('submitted_at')->orderByDesc('id')
                 ->first();
-            if ($lastAttempt && !$lastAttempt->is_passed) {
-                $canRetakePosttest = true;
+            if ($lastAttempt) {
+                $hasPosttestAttempt = true;
+                if (!$lastAttempt->is_passed) {
+                    $canRetakePosttest = true;
+                }
             }
         }
 
@@ -643,6 +693,7 @@ class ModulePage extends Component
             'eligibleForPosttest' => $eligibleForPosttest,
             'isLastSection' => $isLastSection,
             'canRetakePosttest' => $canRetakePosttest,
+            'hasPosttestAttempt' => $hasPosttestAttempt,
             'hasSectionQuiz' => $hasSectionQuiz,
             'quizQuestions' => $this->quizQuestions,
             'quizResult' => $this->quizResult,
@@ -657,6 +708,8 @@ class ModulePage extends Component
             'activeModuleId' => $this->activeTopicId,
             'activeSectionId' => $this->activeSectionId,
             'completedModuleIds' => $completedModuleIds,
+            'hasPosttestAttempt' => $hasPosttestAttempt,
+            'courseId' => $this->course->id,
         ]);
     }
 }

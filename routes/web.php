@@ -33,8 +33,14 @@ use App\Livewire\Pages\Training\Approval;
 use App\Livewire\Pages\Training\DataTrainer;
 use App\Livewire\Pages\Training\History;
 use App\Livewire\Pages\Training\Module;
+use App\Livewire\Pages\Training\ModuleEdit;
 use App\Livewire\Pages\Training\Request;
 use App\Livewire\Pages\Training\Schedule;
+use App\Livewire\Pages\TrainingTest\TrainingTestList;
+use App\Livewire\Pages\TrainingTest\TakeTrainingTest;
+use App\Livewire\Pages\TestReview\TestReviewList;
+use App\Livewire\Pages\TestReview\TestReviewParticipants;
+use App\Livewire\Pages\TestReview\TestReviewAnswers;
 use App\Livewire\Pages\Reports\TrainingActivityReport;
 use App\Livewire\Pages\Reports\CertificationActivityReport;
 use App\Livewire\Pages\Reports\InstructorDailyRecordReport;
@@ -57,6 +63,8 @@ Route::middleware('auth')->group(function () {
 
   // Training
   Route::get('/training/module', Module::class)->name('training-module.index');
+  Route::get('/training/module/{module}/edit', ModuleEdit::class)->name('training-module.edit');
+  Route::get('/training/module/create', ModuleEdit::class)->name('training-module.create');
   Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
   Route::get('/training/request', Request::class)->name('training-request.index');
   Route::get('/training/approval', Approval::class)->name('training-approval.index');
@@ -64,6 +72,16 @@ Route::middleware('auth')->group(function () {
   Route::get('/training/history', History::class)->name('training-history.index');
   Route::get('/training/{assessment}/certificate', [CertificateController::class, 'viewTrainingCertificate'])
     ->name('certificate.training.view');
+  // Training Test (Employee)
+  Route::get('/training-test', TrainingTestList::class)->name('training-test.index');
+  Route::get('/training-test/{training}/{type}', TakeTrainingTest::class)
+    ->where('type', 'pretest|posttest')
+    ->name('training-test.take');
+
+  // Test Review (Trainer/Instructor)
+  Route::get('/test-review', TestReviewList::class)->name('test-review.index');
+  Route::get('/test-review/{training}', TestReviewParticipants::class)->name('test-review.participants');
+  Route::get('/test-review/{training}/participant/{user}', TestReviewAnswers::class)->name('test-review.answers');
 
   // Courses
   Route::get('/courses', Courses::class)->name('courses.index');
@@ -91,7 +109,7 @@ Route::middleware('auth')->group(function () {
   // Certification
   Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
   Route::get('/certification/schedule', CertificationSchedule::class)->name('certification-schedule.index');
-  Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
+  //   Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
   Route::get('/certification/approval', CertificationApproval::class)->name('certification-approval.index');
   Route::get('/certification/history', CertificationHistory::class)->name('certification-history.index');
 

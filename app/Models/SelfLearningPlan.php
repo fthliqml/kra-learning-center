@@ -15,22 +15,25 @@ class SelfLearningPlan extends Model
     /**
      * Status Flow:
      * - draft: Initial state, not submitted
-     * - pending_spv: Submitted, waiting for SPV approval
-     * - rejected_spv: Rejected by SPV, needs revision
-     * - pending_leader: Approved by SPV, waiting for Leader LID approval
-     * - rejected_leader: Rejected by Leader LID, needs revision
-     * - approved: Fully approved by both SPV and Leader LID
+     * - pending_spv: Submitted, waiting for Supervisor approval
+     * - rejected_spv: Rejected by Supervisor, needs revision
+     * - pending_dept_head: Submitted, waiting for Dept Head approval (no SPV in area)
+     * - rejected_dept_head: Rejected by Dept Head, needs revision
+     * - pending_lid: Approved by area approver, waiting for Leader LID approval
+     * - rejected_lid: Rejected by Leader LID, needs revision
+     * - approved: Fully approved by both area approver and Leader LID
      */
     const STATUS_DRAFT = 'draft';
     const STATUS_PENDING_SPV = 'pending_spv';
     const STATUS_REJECTED_SPV = 'rejected_spv';
-    const STATUS_PENDING_LEADER = 'pending_leader';
-    const STATUS_REJECTED_LEADER = 'rejected_leader';
+    const STATUS_PENDING_DEPT_HEAD = 'pending_dept_head';
+    const STATUS_REJECTED_DEPT_HEAD = 'rejected_dept_head';
+    const STATUS_PENDING_LID = 'pending_lid';
+    const STATUS_REJECTED_LID = 'rejected_lid';
     const STATUS_APPROVED = 'approved';
 
     protected $fillable = [
         'user_id',
-        'mentor_id',
         'title',
         'objective',
         'start_date',
@@ -41,6 +44,8 @@ class SelfLearningPlan extends Model
         'approved_at',
         'spv_approved_by',
         'spv_approved_at',
+        'dept_head_approved_by',
+        'dept_head_approved_at',
         'leader_approved_by',
         'leader_approved_at',
         'rejection_reason',
@@ -52,12 +57,13 @@ class SelfLearningPlan extends Model
         'year' => 'integer',
         'approved_at' => 'datetime',
         'spv_approved_at' => 'datetime',
+        'dept_head_approved_at' => 'datetime',
         'leader_approved_at' => 'datetime',
     ];
 
     /**
      * Check if this plan can be edited by the employee.
-     * Editable when: draft, pending_spv, rejected_spv, or rejected_leader
+     * Editable when: draft, pending_spv, rejected_spv, or rejected_lid
      */
     public function canEdit(): bool
     {
@@ -65,7 +71,9 @@ class SelfLearningPlan extends Model
             self::STATUS_DRAFT,
             self::STATUS_PENDING_SPV,
             self::STATUS_REJECTED_SPV,
-            self::STATUS_REJECTED_LEADER,
+            self::STATUS_PENDING_DEPT_HEAD,
+            self::STATUS_REJECTED_DEPT_HEAD,
+            self::STATUS_REJECTED_LID,
         ]);
     }
 
@@ -74,7 +82,10 @@ class SelfLearningPlan extends Model
      */
     public function canApproveBySpv(): bool
     {
-        return $this->status === self::STATUS_PENDING_SPV;
+        return in_array($this->status, [
+            self::STATUS_PENDING_SPV,
+            self::STATUS_PENDING_DEPT_HEAD,
+        ]);
     }
 
     /**
@@ -82,7 +93,7 @@ class SelfLearningPlan extends Model
      */
     public function canApproveByLeader(): bool
     {
-        return $this->status === self::STATUS_PENDING_LEADER;
+        return $this->status === self::STATUS_PENDING_LID;
     }
 
     /**
@@ -92,7 +103,8 @@ class SelfLearningPlan extends Model
     {
         return in_array($this->status, [
             self::STATUS_PENDING_SPV,
-            self::STATUS_PENDING_LEADER,
+            self::STATUS_PENDING_DEPT_HEAD,
+            self::STATUS_PENDING_LID,
         ]);
     }
 
@@ -103,7 +115,8 @@ class SelfLearningPlan extends Model
     {
         return in_array($this->status, [
             self::STATUS_REJECTED_SPV,
-            self::STATUS_REJECTED_LEADER,
+            self::STATUS_REJECTED_DEPT_HEAD,
+            self::STATUS_REJECTED_LID,
         ]);
     }
 
@@ -113,6 +126,14 @@ class SelfLearningPlan extends Model
     public function spvApprover(): BelongsTo
     {
         return $this->belongsTo(User::class, 'spv_approved_by');
+    }
+
+    /**
+     * Get the Dept Head approver for this plan.
+     */
+    public function deptHeadApprover(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'dept_head_approved_by');
     }
 
     /**
@@ -137,13 +158,5 @@ class SelfLearningPlan extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    /**
-     * Get the mentor for this self learning plan.
-     */
-    public function mentor(): BelongsTo
-    {
-        return $this->belongsTo(User::class, 'mentor_id');
     }
 }

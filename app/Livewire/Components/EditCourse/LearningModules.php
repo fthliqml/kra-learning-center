@@ -265,14 +265,15 @@ class LearningModules extends Component
     $this->snapshot(); // Take snapshot after loading
   }
 
-  private function makeQuestion(string $type = 'multiple'): array
+  private function makeQuestion(): array
   {
+    // Quiz only supports multiple choice
     return [
       'id' => Str::uuid()->toString(),
-      'type' => $type,
+      'type' => 'multiple',
       'question' => '',
-      'options' => $type === 'multiple' ? [''] : [],
-      'answer' => null, // index of correct option (for multiple)
+      'options' => [''],
+      'answer' => null, // index of correct option
       'answer_nonce' => 0, // bump to force radio group remount when answer reset
     ];
   }

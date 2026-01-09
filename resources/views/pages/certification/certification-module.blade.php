@@ -166,37 +166,23 @@
                     class="focus-within:border-0" :error="$errors->first('form.module_title')" />
             @endif
 
+            {{-- Group Certification just below Module Title --}}
             @if ($mode === 'preview')
-                <x-input label="Competency" :value="$this->selectedCompetencyLabel" readonly class="focus-within:border-0" />
+                <x-input label="Group Certification" wire:model="form.group_certification" readonly
+                    class="focus-within:border-0" />
             @else
-                <x-choices label="Competency" wire:model.defer="form.competency_id" :options="$competencyOptions"
-                    option-value="id" option-label="name" placeholder="Select competency"
-                    class="focus-within:border-0" :error="$errors->first('form.competency_id')" searchable search-function="searchCompetency"
-                    debounce="300ms" single />
+                <x-choices label="Group Certification" wire:model.defer="form.group_certification" :options="$groupCertificationOptions"
+                    option-value="value" option-label="label" placeholder="Select group certification"
+                    class="focus-within:border-0" :error="$errors->first('form.group_certification')" single />
             @endif
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <x-input label="Code" placeholder="Enter code" wire:model.defer="form.code"
-                    class="focus-within:border-0" :error="$errors->first('form.code')" :readonly="$mode === 'preview'" />
-
                 @if ($mode === 'preview')
                     <x-input label="Level" wire:model="form.level" readonly class="focus-within:border-0" />
                 @else
                     <x-choices label="Level" wire:model.defer="form.level" :options="$groupOptions" option-value="value"
                         option-label="label" placeholder="Select level" class="focus-within:border-0"
                         :error="$errors->first('form.level')" single />
-                @endif
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                @if ($mode === 'preview')
-                    <x-input label="Group Certification" wire:model="form.group_certification" readonly
-                        class="focus-within:border-0" />
-                @else
-                    <x-choices label="Group Certification" wire:model.defer="form.group_certification"
-                        :options="$groupCertificationOptions" option-value="value" option-label="label"
-                        placeholder="Select group certification" class="focus-within:border-0" :error="$errors->first('form.group_certification')"
-                        single />
                 @endif
 
                 <x-input label="Point" type="number" min="0" wire:model.defer="form.points_per_module"

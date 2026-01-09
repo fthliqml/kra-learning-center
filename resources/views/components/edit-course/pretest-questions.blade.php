@@ -1,4 +1,63 @@
 <div class="space-y-4" x-data>
+    {{-- Test Configuration --}}
+    <div class="bg-base-200/50 rounded-xl p-4 mb-4">
+        <h3 class="text-sm font-semibold text-base-content/70 mb-3 flex items-center gap-2">
+            <x-icon name="o-cog-6-tooth" class="size-4" />
+            Test Configuration
+        </h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+            <x-input label="Passing Score (%)" type="number" wire:model.live="passingScore" min="0" max="100"
+                class="focus-within:border-0" />
+
+            <x-input label="Max Attempts" type="number" wire:model.live="maxAttempts" placeholder="Unlimited"
+                min="1" class="focus-within:border-0" />
+
+            <div class="flex flex-col gap-2">
+                <span class="text-xs font-medium text-base-content/60">Options</span>
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" wire:model.live="randomizeQuestion"
+                        class="checkbox checkbox-sm checkbox-primary" />
+                    <span class="text-sm">Randomize Questions</span>
+                </label>
+            </div>
+        </div>
+
+        {{-- Points Distribution Info --}}
+        @if (!empty($questions))
+            <div class="mt-4 pt-3 border-t border-base-300/50">
+                <h4 class="text-xs font-semibold text-base-content/60 mb-2 flex items-center gap-1.5">
+                    <x-icon name="o-calculator" class="size-3.5" />
+                    Points Distribution (Total: {{ $pointsInfo['total'] ?? 100 }} points)
+                </h4>
+                <div class="flex flex-wrap gap-4 text-sm">
+                    @if (($pointsInfo['essayCount'] ?? 0) > 0)
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-warning badge-sm">Essay</span>
+                            <span>{{ $pointsInfo['essayCount'] }} questions × custom =
+                                <strong
+                                    class="{{ $pointsInfo['isOverLimit'] ?? false ? 'text-error' : '' }}">{{ $pointsInfo['essayTotal'] ?? 0 }}</strong>
+                                pts</span>
+                        </div>
+                    @endif
+                    @if (($pointsInfo['mcCount'] ?? 0) > 0)
+                        <div class="flex items-center gap-2">
+                            <span class="badge badge-info badge-sm">Multiple Choice</span>
+                            <span>{{ $pointsInfo['mcCount'] }} questions × {{ $pointsInfo['mcPointsEach'] ?? 0 }} =
+                                <strong>{{ $pointsInfo['mcTotal'] ?? 0 }}</strong> pts</span>
+                        </div>
+                    @endif
+                </div>
+                @if ($pointsInfo['isOverLimit'] ?? false)
+                    <p class="text-xs text-error mt-2 flex items-center gap-1">
+                        <x-icon name="o-exclamation-triangle" class="size-3.5" />
+                        Essay points exceed 100! Please reduce essay weights.
+                    </p>
+                @endif
+            </div>
+        @endif
+    </div>
+
+    {{-- Questions List --}}
     <div id="pretest-list" class="space-y-4" x-init="(() => {
         const list = $el;
         new Sortable(list, {
@@ -80,6 +139,18 @@
                         <x-button type="button" size="xs" class="border-gray-400" outline icon="o-plus"
                             wire:click="addOption({{ $i }})">Add Option</x-button>
                     </div>
+                @else
+                    {{-- Essay Weight Input --}}
+                    <div class="mt-3 flex items-center gap-3 pl-10">
+                        <div class="flex items-center gap-2">
+                            <x-icon name="o-scale" class="size-4 text-warning" />
+                            <span class="text-xs font-medium text-base-content/70">Weight (points):</span>
+                        </div>
+                        <x-input type="number" min="1" max="100"
+                            wire:model.live="questions.{{ $i }}.max_points"
+                            class="w-24 !h-8 text-center focus-within:border-0" placeholder="10" />
+                        <span class="text-xs text-base-content/50">pts</span>
+                    </div>
                 @endif
             </div>
         @empty
@@ -88,8 +159,39 @@
             </div>
         @endforelse
     </div>
-    <x-button type="button" variant="primary" outline icon="o-plus" wire:click="addQuestion"
-        class="border-gray-400">Add Question</x-button>
+
+    {{-- Action buttons: Add Question and Excel Import/Export --}}
+    <div class="flex items-center gap-2">
+        <x-button type="button" variant="primary" outline icon="o-plus" wire:click="addQuestion"
+            class="border-gray-400">Add Question</x-button>
+
+        {{-- Excel Dropdown --}}
+        <x-dropdown no-x-anchor right>
+            <x-slot:trigger>
+                <x-button type="button" class="btn-success h-10" wire:target="file" wire:loading.attr="disabled">
+                    <span class="flex items-center gap-2" wire:loading.remove wire:target="file">
+                        <x-icon name="o-clipboard-document-list" class="size-4" />
+                        Excel
+                    </span>
+                    <span class="flex items-center gap-2" wire:loading wire:target="file">
+                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                    </span>
+                </x-button>
+            </x-slot:trigger>
+
+            <label class="w-full cursor-pointer relative" wire:loading.class="opacity-60 pointer-events-none"
+                wire:target="file">
+                <x-menu-item title="Import Questions" icon="o-arrow-up-on-square" />
+                <div class="absolute right-2 top-2" wire:loading wire:target="file">
+                    <x-icon name="o-arrow-path" class="size-4 animate-spin text-gray-500" />
+                </div>
+                <input type="file" wire:model="file" accept=".xlsx,.xls" class="hidden" />
+            </label>
+
+            <x-menu-item title="Download Template" icon="o-document-arrow-down" wire:click.stop="downloadTemplate"
+                spinner="downloadTemplate" />
+        </x-dropdown>
+    </div>
 
     <div class="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-base-300/50 mt-4">
         <div class="flex items-center gap-3 mt-5">
