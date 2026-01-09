@@ -170,10 +170,27 @@ class Approval extends Component
 
     public function approvals()
     {
+        $isSectionHead = $this->canSignAsSectionHead();
+        $isDeptHead = $this->canSignAsDeptHead();
+
         $query = Training::query()
             ->select('trainings.*')
             ->whereIn('status', ['done', 'approved', 'rejected'])
             ->distinct();
+
+        // Role-based visibility:
+        // - Section Head LID: can see everything (done/approved/rejected)
+        // - Dept Head LID: can see history (approved/rejected) + queue already approved by Section Head
+        if ($isDeptHead && !$isSectionHead) {
+            $query->where(function ($q) {
+                $q->whereIn('status', ['approved', 'rejected'])
+                    ->orWhere(function ($qq) {
+                        $qq->where('status', 'done')
+                            ->whereNotNull('section_head_signed_at')
+                            ->whereNull('dept_head_signed_at');
+                    });
+            });
+        }
 
         // Filter by search
         if ($this->search) {
@@ -202,7 +219,19 @@ class Approval extends Component
         // Filter by actual status
         if ($this->filter && strtolower($this->filter) !== 'all') {
             $filterStatus = strtolower($this->filter);
-            $query->where('status', $filterStatus);
+
+            if ($filterStatus === 'done') {
+                // Re-apply the role-relevant "done" queue condition
+                if ($isDeptHead && !$isSectionHead) {
+                    $query->where('status', 'done')
+                        ->whereNotNull('section_head_signed_at')
+                        ->whereNull('dept_head_signed_at');
+                } else {
+                    $query->where('status', 'done');
+                }
+            } else {
+                $query->where('status', $filterStatus);
+            }
         }
 
         return $query
@@ -307,6 +336,22 @@ class Approval extends Component
             && trim($user->department ?? '') === 'Human Capital, General Service, Security & LID';
     }
 
+    /**
+     * Approver must upload a signature before approving.
+     */
+    protected function ensureApproverHasSignature(User $user): bool
+    {
+        $user->loadMissing('signature');
+        $path = $user->signature?->path;
+
+        if (empty($path)) {
+            $this->error('Please upload your digital signature before approving.', position: 'toast-top toast-center');
+            return false;
+        }
+
+        return true;
+    }
+
     public function uploadSignature(): void
     {
         $user = Auth::user();
@@ -368,6 +413,10 @@ class Approval extends Component
 
         // Level 1 approval: Section Head LID
         if ($this->canSignAsSectionHead() && !$training->section_head_signed_at && !$training->dept_head_signed_at) {
+            if (!$this->ensureApproverHasSignature($user)) {
+                return;
+            }
+
             $training->update([
                 'section_head_signed_by' => $user->id,
                 'section_head_signed_at' => now(),
@@ -388,6 +437,10 @@ class Approval extends Component
 
         // Level 2 approval: Department Head LID (after Section Head approved)
         if ($this->canSignAsDeptHead() && $training->section_head_signed_at && !$training->dept_head_signed_at) {
+            if (!$this->ensureApproverHasSignature($user)) {
+                return;
+            }
+
             $training->update([
                 'dept_head_signed_by' => $user->id,
                 'dept_head_signed_at' => now(),
@@ -455,6 +508,8 @@ class Approval extends Component
         if ($this->canSignAsSectionHead() && !$training->section_head_signed_at && !$training->dept_head_signed_at) {
             $training->update([
                 'status' => 'rejected',
+                'section_head_signed_by' => $user->id,
+                'section_head_signed_at' => now(),
             ]);
         }
         // Level 2 reject: Department Head LID after Section Head approval
