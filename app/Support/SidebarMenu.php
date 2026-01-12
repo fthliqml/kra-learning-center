@@ -11,16 +11,20 @@ class SidebarMenu
     {
         $all = config('menu.sidebar', []);
         $position = null;
+        $section = null;
         if ($user) {
             // Get position from user
             $position = data_get($user, 'position');
+            $section = data_get($user, 'section');
         }
         $flatten = config('menu.flatten_child_when_parent_hidden', true);
 
-        $visible = function (array $item) use ($position, $user) {
+        $visible = function (array $item) use ($position, $section, $user) {
             $hasPositions = isset($item['positions']) && $item['positions'] !== null;
             $hasRoles = isset($item['roles']) && $item['roles'] !== null;
             $hasExcludeRoles = isset($item['exclude_roles']) && $item['exclude_roles'] !== null;
+            $hasSections = isset($item['sections']) && $item['sections'] !== null;
+            $hasExcludeSections = isset($item['exclude_sections']) && $item['exclude_sections'] !== null;
 
             // Check exclude_roles first - if user has any excluded role, hide menu
             if ($hasExcludeRoles && $user instanceof User) {
@@ -31,13 +35,35 @@ class SidebarMenu
                 }
             }
 
+            // Check exclude_sections - if user section is in excluded sections, hide menu
+            if ($hasExcludeSections) {
+                $excludedSections = is_array($item['exclude_sections']) ? $item['exclude_sections'] : explode(',', $item['exclude_sections']);
+                $excludedSections = array_map(fn($s) => strtolower(trim($s)), $excludedSections);
+                if (in_array(strtolower(trim((string) $section)), $excludedSections, true)) {
+                    return false;
+                }
+            }
+
             // If no restrictions, visible to all
-            if (!$hasPositions && !$hasRoles) {
+            if (!$hasPositions && !$hasRoles && !$hasSections && !$hasExcludeSections && !$hasExcludeRoles) {
                 return true;
             }
 
             $positionMatch = false;
             $roleMatch = false;
+            $sectionMatch = false;
+
+            // Check sections (organizational area)
+            if ($hasSections) {
+                $allowedSections = is_array($item['sections']) ? $item['sections'] : explode(',', $item['sections']);
+                $allowedSections = array_map(fn($s) => strtolower(trim($s)), $allowedSections);
+                $sectionMatch = in_array(strtolower(trim((string) $section)), $allowedSections, true);
+
+                // If section restriction is present and doesn't match, immediately hide.
+                if (!$sectionMatch) {
+                    return false;
+                }
+            }
 
             // Check positions (organizational hierarchy)
             if ($hasPositions) {

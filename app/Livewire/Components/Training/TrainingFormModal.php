@@ -1158,20 +1158,54 @@ class TrainingFormModal extends Component
 
         // Update SurveyResponse for all surveys of this training
         $surveys = TrainingSurvey::where('training_id', $training->id)->get();
-        // Add SurveyResponse for new participants
+
+        // Level 1 & 2: responses belong to participants.
         foreach ($toAdd as $empId) {
             foreach ($surveys as $survey) {
+                if ((int) ($survey->level ?? 0) === 3) {
+                    continue;
+                }
                 SurveyResponse::firstOrCreate([
                     'survey_id' => $survey->id,
                     'employee_id' => $empId,
                 ]);
             }
         }
-        // Remove SurveyResponse for removed participants
+
         if (!empty($toRemove)) {
             foreach ($surveys as $survey) {
+                if ((int) ($survey->level ?? 0) === 3) {
+                    continue;
+                }
                 SurveyResponse::where('survey_id', $survey->id)
                     ->whereIn('employee_id', $toRemove)
+                    ->delete();
+            }
+        }
+
+        // Level 3: responses belong to the expected approvers of current participants.
+        $level3Survey = $surveys->firstWhere('level', 3);
+        if ($level3Survey) {
+            $desiredApproverIds = $this->resolveLevel3ApproverIds($newParticipantIds);
+
+            $existingResponderIds = SurveyResponse::where('survey_id', $level3Survey->id)
+                ->pluck('employee_id')
+                ->map(fn($id) => (int) $id)
+                ->toArray();
+
+            $toAddApprovers = array_diff($desiredApproverIds, $existingResponderIds);
+            $toRemoveApprovers = array_diff($existingResponderIds, $desiredApproverIds);
+
+            foreach ($toAddApprovers as $approverId) {
+                SurveyResponse::firstOrCreate([
+                    'survey_id' => $level3Survey->id,
+                    'employee_id' => (int) $approverId,
+                ]);
+            }
+
+            if (!empty($toRemoveApprovers)) {
+                SurveyResponse::where('survey_id', $level3Survey->id)
+                    ->whereIn('employee_id', $toRemoveApprovers)
                     ->delete();
             }
         }
@@ -1223,14 +1257,120 @@ class TrainingFormModal extends Component
         if (empty($participants) || empty($surveys)) {
             return;
         }
+
+        // Level 1 & 2: responses belong to training participants.
         foreach ($participants as $participantId) {
             foreach ($surveys as $survey) {
+                if ((int) ($survey->level ?? 0) === 3) {
+                    continue;
+                }
                 SurveyResponse::firstOrCreate([
                     'survey_id' => $survey->id,
                     'employee_id' => $participantId,
                 ]);
             }
         }
+
+        // Level 3: responses belong to the participant's approver (SPV/Section Head/Dept Head).
+        $level3Survey = $surveys[3] ?? null;
+        if ($level3Survey && (int) ($level3Survey->level ?? 0) === 3) {
+            $approverIds = $this->resolveLevel3ApproverIds(array_map('intval', $participants));
+            foreach ($approverIds as $approverId) {
+                SurveyResponse::firstOrCreate([
+                    'survey_id' => $level3Survey->id,
+                    'employee_id' => $approverId,
+                ]);
+            }
+        }
+    }
+
+    private function resolveLevel3ApproverIds(array $participantIds): array
+    {
+        if (empty($participantIds)) {
+            return [];
+        }
+
+        $participants = User::query()
+            ->whereIn('id', $participantIds)
+            ->get(['id', 'section', 'department', 'position']);
+
+        $approverIds = [];
+        foreach ($participants as $participant) {
+            $approverId = $this->resolveLevel3ApproverIdForParticipant($participant);
+            if ($approverId) {
+                $approverIds[] = $approverId;
+            }
+        }
+
+        return array_values(array_unique(array_filter($approverIds)));
+    }
+
+    /**
+     * Level 3 approver priority by participant area:
+     * - employee submits: SPV -> Section Head -> Dept Head
+     * - supervisor submits: Section Head -> Dept Head
+     * - section head submits: Dept Head
+     */
+    private function resolveLevel3ApproverIdForParticipant(User $participant): ?int
+    {
+        $position = strtolower(trim($participant->position ?? ''));
+        $section = (string) ($participant->section ?? '');
+        $department = (string) ($participant->department ?? '');
+
+        if ($position === 'supervisor') {
+            $sectionHead = User::query()
+                ->whereRaw('LOWER(TRIM(position)) = ?', ['section_head'])
+                ->when($section !== '', fn($q) => $q->where('section', $section))
+                ->when($section === '' && $department !== '', fn($q) => $q->where('department', $department))
+                ->first();
+            if ($sectionHead) {
+                return (int) $sectionHead->id;
+            }
+
+            $deptHead = User::query()
+                ->whereRaw('LOWER(TRIM(position)) = ?', ['department_head'])
+                ->when($department !== '', fn($q) => $q->where('department', $department))
+                ->whereRaw('LOWER(TRIM(COALESCE(section, ""))) != ?', ['lid'])
+                ->first();
+
+            return $deptHead ? (int) $deptHead->id : null;
+        }
+
+        if ($position === 'section_head') {
+            $deptHead = User::query()
+                ->whereRaw('LOWER(TRIM(position)) = ?', ['department_head'])
+                ->when($department !== '', fn($q) => $q->where('department', $department))
+                ->whereRaw('LOWER(TRIM(COALESCE(section, ""))) != ?', ['lid'])
+                ->first();
+
+            return $deptHead ? (int) $deptHead->id : null;
+        }
+
+        $spv = User::query()
+            ->whereRaw('LOWER(TRIM(position)) = ?', ['supervisor'])
+            ->when($section !== '', fn($q) => $q->where('section', $section))
+            ->when($section === '' && $department !== '', fn($q) => $q->where('department', $department))
+            ->first();
+        if ($spv) {
+            return (int) $spv->id;
+        }
+
+        $sectionHead = User::query()
+            ->whereRaw('LOWER(TRIM(position)) = ?', ['section_head'])
+            ->when($section !== '', fn($q) => $q->where('section', $section))
+            ->when($section === '' && $department !== '', fn($q) => $q->where('department', $department))
+            ->first();
+        if ($sectionHead) {
+            return (int) $sectionHead->id;
+        }
+
+        $deptHead = User::query()
+            ->whereRaw('LOWER(TRIM(position)) = ?', ['department_head'])
+            ->when($department !== '', fn($q) => $q->where('department', $department))
+            ->whereRaw('LOWER(TRIM(COALESCE(section, ""))) != ?', ['lid'])
+            ->first();
+
+        return $deptHead ? (int) $deptHead->id : null;
     }
 
     /**
