@@ -71,6 +71,22 @@ class DevelopmentApproval extends Component
     }
 
     /**
+     * Check if current user is Section Head in area (non-LID, first-level approver type 1 alt)
+     */
+    private function isSectionHeadArea(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        $section = strtolower(trim($user->section ?? ''));
+
+        return $user->hasPosition('section_head') && $section !== 'lid';
+    }
+
+    /**
      * Check if current user is Dept Head in area (non-LID, first-level approver type 2)
      */
     private function isDeptHeadArea(): bool
@@ -91,7 +107,69 @@ class DevelopmentApproval extends Component
      */
     public function isSpv(): bool
     {
-        return $this->isSupervisorArea() || $this->isDeptHeadArea();
+        return $this->isSupervisorArea() || $this->isSectionHeadArea() || $this->isDeptHeadArea();
+    }
+
+    private function existsSupervisorInUserArea(User $target): bool
+    {
+        $section = (string) ($target->section ?? '');
+        $department = (string) ($target->department ?? '');
+
+        if ($section !== '') {
+            return User::query()
+                ->whereRaw('LOWER(TRIM(position)) = ?', ['supervisor'])
+                ->where('section', $section)
+                ->exists();
+        }
+
+        if ($department !== '') {
+            return User::query()
+                ->whereRaw('LOWER(TRIM(position)) = ?', ['supervisor'])
+                ->where('department', $department)
+                ->exists();
+        }
+
+        return false;
+    }
+
+    private function canApproveUserAtStatus(int $targetUserId, string $expectedStatus): bool
+    {
+        if ($expectedStatus === 'pending_lid') {
+            return $this->isLidApprover();
+        }
+
+        if ($expectedStatus === 'pending_dept_head') {
+            return $this->isDeptHeadArea();
+        }
+
+        if ($expectedStatus !== 'pending_spv') {
+            return false;
+        }
+
+        $target = User::find($targetUserId);
+        if (!$target) {
+            return false;
+        }
+
+        $targetPosition = strtolower(trim($target->position ?? ''));
+
+        // Supervisor can only approve employee submissions (not supervisors).
+        if ($this->isSupervisorArea()) {
+            return $targetPosition !== 'supervisor';
+        }
+
+        // Section Head approves:
+        // - supervisor submissions always
+        // - employee submissions only when no supervisor exists in that area
+        if ($this->isSectionHeadArea()) {
+            if ($targetPosition === 'supervisor') {
+                return true;
+            }
+
+            return !$this->existsSupervisorInUserArea($target);
+        }
+
+        return false;
     }
 
     /**
@@ -108,16 +186,83 @@ class DevelopmentApproval extends Component
     }
 
     /**
+     * Level-2 approver: only Section Head LID
+     */
+    public function isLidApprover(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+
+        return $user
+            && $user->hasPosition('section_head')
+            && strtolower(trim($user->section ?? '')) === 'lid';
+    }
+
+    /**
      * Get current approval level based on user role
      */
     public function getApprovalLevel(): string
     {
-        if ($this->isLeaderLid()) {
+        if ($this->isLidApprover()) {
             return 'leader';
         } elseif ($this->isSpv()) {
             return 'spv';
         }
         return '';
+    }
+
+    /**
+     * Determine whether current user is allowed to view a given employee's development plans.
+     *
+     * Rule:
+     * - Leader LID: can view all.
+     * - SPV: same section.
+     * - Dept Head (non-LID): same department.
+     * - Section Head (non-LID): same section.
+     * - Division Head (non-LID): same division.
+     * - Otherwise: cannot view.
+     */
+    private function canViewUser(User $target): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        if ($this->isLeaderLid()) {
+            return true;
+        }
+
+        if ($this->isSupervisorArea()) {
+            return (string) ($target->section ?? '') !== ''
+                && (string) ($user->section ?? '') !== ''
+                && $target->section === $user->section;
+        }
+
+        if ($this->isDeptHeadArea()) {
+            return (string) ($target->department ?? '') !== ''
+                && (string) ($user->department ?? '') !== ''
+                && $target->department === $user->department;
+        }
+
+        $userSection = strtolower(trim($user->section ?? ''));
+
+        // Non-LID Section Head: same section
+        if ($user->hasPosition('section_head') && $userSection !== 'lid') {
+            return (string) ($target->section ?? '') !== ''
+                && (string) ($user->section ?? '') !== ''
+                && $target->section === $user->section;
+        }
+
+        // Non-LID Division Head: same division
+        if ($user->hasPosition('division_head') && $userSection !== 'lid') {
+            return (string) ($target->division ?? '') !== ''
+                && (string) ($user->division ?? '') !== ''
+                && $target->division === $user->division;
+        }
+
+        return false;
     }
 
     public function headers(): array
@@ -136,6 +281,7 @@ class DevelopmentApproval extends Component
     public function getApprovalDataProperty()
     {
         $year = (int) $this->selectedYear;
+        /** @var User|null $user */
         $user = Auth::user();
         $approvalLevel = $this->getApprovalLevel();
 
@@ -159,6 +305,13 @@ class DevelopmentApproval extends Component
             // Supervisors: limit by same section
             if ($this->isSupervisorArea()) {
                 $query->where('section', $user->section)
+                    ->whereRaw('LOWER(TRIM(position)) != ?', ['supervisor'])
+                    ->where('id', '!=', $user->id); // Exclude self
+            }
+
+            // Section Heads (non-LID): limit by same section
+            if ($this->isSectionHeadArea()) {
+                $query->where('section', $user->section)
                     ->where('id', '!=', $user->id); // Exclude self
             }
 
@@ -166,6 +319,23 @@ class DevelopmentApproval extends Component
             if ($this->isDeptHeadArea()) {
                 $query->where('department', $user->department)
                     ->where('id', '!=', $user->id); // Exclude self
+            }
+        }
+
+        // Non-LID leaders should NOT see all data; restrict to related area only.
+        // Leader LID keeps full access.
+        if (!$this->isLeaderLid() && $user && $approvalLevel !== 'spv') {
+            $userSection = strtolower(trim($user->section ?? ''));
+
+            if ($user->hasPosition('section_head') && $userSection !== 'lid') {
+                $query->where('section', $user->section)
+                    ->where('id', '!=', $user->id);
+            } elseif ($user->hasPosition('division_head') && $userSection !== 'lid') {
+                $query->where('division', $user->division)
+                    ->where('id', '!=', $user->id);
+            } else {
+                // Safety: if user is not in a known viewing role, show nothing.
+                $query->whereRaw('1 = 0');
             }
         }
 
@@ -266,6 +436,11 @@ class DevelopmentApproval extends Component
         $year = (int) $this->selectedYear;
 
         $user = User::find($userId);
+        if (!$user || !$this->canViewUser($user)) {
+            $this->error('You do not have access to this data.', position: 'toast-top toast-center');
+            $this->selectedUserId = null;
+            return;
+        }
         $this->selectedUserData = [
             'name' => $user->name,
             'nrp' => $user->nrp,
@@ -321,11 +496,11 @@ class DevelopmentApproval extends Component
      */
     private function getExpectedPendingStatus(): string
     {
-        if ($this->isLeaderLid()) {
+        if ($this->isLidApprover()) {
             return 'pending_lid';
         }
 
-        if ($this->isSupervisorArea()) {
+        if ($this->isSupervisorArea() || $this->isSectionHeadArea()) {
             return 'pending_spv';
         }
 
@@ -343,7 +518,7 @@ class DevelopmentApproval extends Component
     {
         if ($this->isSpv()) {
             return 'pending_lid'; // After SPV/Dept Head approves, goes to Leader
-        } elseif ($this->isLeaderLid()) {
+        } elseif ($this->isLidApprover()) {
             return 'approved'; // After Leader approves, fully approved
         }
         return '';
@@ -354,7 +529,7 @@ class DevelopmentApproval extends Component
      */
     private function getRejectionStatus(): string
     {
-        if ($this->isSupervisorArea()) {
+        if ($this->isSupervisorArea() || $this->isSectionHeadArea()) {
             return 'rejected_spv';
         }
 
@@ -362,7 +537,7 @@ class DevelopmentApproval extends Component
             return 'rejected_dept_head';
         }
 
-        if ($this->isLeaderLid()) {
+        if ($this->isLidApprover()) {
             return 'rejected_lid';
         }
         return '';
@@ -379,6 +554,11 @@ class DevelopmentApproval extends Component
         $nextStatus = $this->getNextApprovedStatus();
 
         if (!$expectedStatus || !$nextStatus) {
+            $this->error('You do not have permission to approve', position: 'toast-top toast-center');
+            return;
+        }
+
+        if (!$this->canApproveUserAtStatus((int) $this->selectedUserId, $expectedStatus)) {
             $this->error('You do not have permission to approve', position: 'toast-top toast-center');
             return;
         }
@@ -466,6 +646,11 @@ class DevelopmentApproval extends Component
             return;
         }
 
+        if (!$this->canApproveUserAtStatus((int) $this->selectedUserId, $expectedStatus)) {
+            $this->error('You do not have permission to reject', position: 'toast-top toast-center');
+            return;
+        }
+
         $rejectionFields = [
             'status' => $rejectionStatus,
             'rejection_reason' => $this->rejectionReason,
@@ -518,6 +703,11 @@ class DevelopmentApproval extends Component
             return;
         }
 
+        if (!$this->canApproveUserAtStatus((int) $plan->user_id, $expectedStatus)) {
+            $this->error('You do not have permission to approve', position: 'toast-top toast-center');
+            return;
+        }
+
         $updateData = ['status' => $nextStatus];
 
         if ($this->isSpv()) {
@@ -560,6 +750,11 @@ class DevelopmentApproval extends Component
             return;
         }
 
+        if (!$this->canApproveUserAtStatus((int) $plan->user_id, $expectedStatus)) {
+            $this->error('You do not have permission to reject', position: 'toast-top toast-center');
+            return;
+        }
+
         $updateData = [
             'status' => $rejectionStatus,
             'rejection_reason' => $this->rejectionReason,
@@ -581,15 +776,6 @@ class DevelopmentApproval extends Component
         $this->error('Plan rejected. Employee must revise and resubmit.', position: 'toast-top toast-center');
     }
 
-    /**
-     * Check if current user can approve/reject the given plan
-     */
-    public function canApprovePlan($plan): bool
-    {
-        $expectedStatus = $this->getExpectedPendingStatus();
-        return $plan['status'] === $expectedStatus;
-    }
-
     private function getPlanModel($type)
     {
         return match ($type) {
@@ -609,7 +795,8 @@ class DevelopmentApproval extends Component
     {
         $fields = ['status' => $status];
 
-        if ($this->isSupervisorArea()) {
+        // Treat 'pending_spv' as a generic area-approver bucket (SPV or Section Head).
+        if ($this->isSupervisorArea() || $this->isSectionHeadArea()) {
             $fields['spv_approved_by'] = $approverId;
             $fields['spv_approved_at'] = $timestamp;
         } elseif ($this->isDeptHeadArea()) {
@@ -623,14 +810,46 @@ class DevelopmentApproval extends Component
     /**
      * Check if there are any plans pending approval for current user
      */
-    public function hasPendingPlans(): bool
+    private function hasPendingPlans(): bool
     {
+        // NOTE: approval authorization is enforced by getExpectedPendingStatus() + status matching.
         $expectedStatus = $this->getExpectedPendingStatus();
+        if (!$expectedStatus) {
+            return false;
+        }
+
+        if (!$this->selectedUserId) {
+            return false;
+        }
+
+        if (!$this->canApproveUserAtStatus((int) $this->selectedUserId, $expectedStatus)) {
+            return false;
+        }
 
         return count(array_filter($this->userTrainingPlans, fn($p) => $p['status'] === $expectedStatus)) > 0
             || count(array_filter($this->userSelfLearningPlans, fn($p) => $p['status'] === $expectedStatus)) > 0
             || count(array_filter($this->userMentoringPlans, fn($p) => $p['status'] === $expectedStatus)) > 0
             || count(array_filter($this->userProjectPlans, fn($p) => $p['status'] === $expectedStatus)) > 0;
+    }
+
+    public function canApprovePlan(array $plan): bool
+    {
+        $expectedStatus = $this->getExpectedPendingStatus();
+        if (!$expectedStatus) {
+            return false;
+        }
+
+        $status = (string) ($plan['status'] ?? '');
+        if ($status !== $expectedStatus) {
+            return false;
+        }
+
+        $targetUserId = (int) ($plan['user_id'] ?? $this->selectedUserId ?? 0);
+        if (!$targetUserId) {
+            return false;
+        }
+
+        return $this->canApproveUserAtStatus($targetUserId, $expectedStatus);
     }
 
     public function render()
