@@ -2,12 +2,50 @@
   if (window.__modulePageReady) return; window.__modulePageReady = true;
 
   // Expose Alpine x-data helpers
-  window.videoGate = function(count) {
-    count = count | 0;
+  window.videoGate = function(requiredIds, storageKey) {
+    const ids = Array.isArray(requiredIds) ? requiredIds.filter(Boolean) : [];
+    const key = String(storageKey || 'videoGate');
+
     return {
-      videoCount: count,
+      requiredIds: ids,
+      storageKey: key,
       ended: {},
-      get done() { return this.videoCount === 0 || Object.keys(this.ended).length >= this.videoCount; }
+
+      init() {
+        // Load persisted completion state so refresh doesn't reset the gate.
+        try {
+          const raw = localStorage.getItem(this.storageKey);
+          if (!raw) return;
+          const parsed = JSON.parse(raw);
+          if (parsed && typeof parsed === 'object' && parsed.ended && typeof parsed.ended === 'object') {
+            this.ended = parsed.ended;
+          }
+        } catch (e) {}
+      },
+
+      persist() {
+        try {
+          localStorage.setItem(
+            this.storageKey,
+            JSON.stringify({ ended: this.ended, updatedAt: Date.now() })
+          );
+        } catch (e) {}
+      },
+
+      markEnded(id) {
+        if (!id) return;
+        this.ended[id] = true;
+        this.persist();
+      },
+
+      get done() {
+        if (!this.requiredIds || this.requiredIds.length === 0) return true;
+        for (let i = 0; i < this.requiredIds.length; i++) {
+          const id = this.requiredIds[i];
+          if (!this.ended || !this.ended[id]) return false;
+        }
+        return true;
+      }
     };
   };
 

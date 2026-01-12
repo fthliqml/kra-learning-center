@@ -9,7 +9,9 @@
             class="inline-flex items-center justify-center w-7 h-7 shrink-0 rounded-full bg-info/10 text-info text-xs font-semibold">{{ $loop->iteration }}</span>
         {{-- Quiz only supports multiple choice --}}
         <span class="badge badge-info badge-sm">Multiple Choice</span>
-        <input type="hidden" wire:model="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.type" value="multiple" />
+        <input type="hidden"
+            wire:model="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.type"
+            value="multiple" />
         <div class="flex-1 relative">
             <x-input class="w-full pr-10 focus-within:border-0" placeholder="Write the question"
                 wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.question" />
@@ -38,7 +40,7 @@
             @foreach ($qq['options'] ?? [] as $oi => $opt)
                 <div class="flex items-center gap-2"
                     wire:key="sec-q-{{ $qq['id'] }}-opt-{{ $oi }}-n{{ $answerNonce }}-{{ substr(md5($qq['id'] . '|' . $oi . '|' . $opt), 0, 6) }}">
-                    <label class="flex items-center gap-1 cursor-pointer select-none">
+                    <label class="flex items-center gap-1 cursor-pointer select-none shrink-0">
                         <input type="radio" name="answer-{{ $qq['id'] }}-{{ $answerNonce }}"
                             value="{{ $oi }}" @if (!is_null($answerIndex) && $answerIndex === $oi) checked @endif
                             class="radio radio-success radio-xs"
@@ -48,12 +50,17 @@
                             {{ chr(65 + $oi) }}
                         </span>
                     </label>
-                    <x-input
-                        class="flex-1 pr-10 focus-within:border-0 {{ $answerIndex === null && count(array_filter($qq['options'] ?? [], fn($x) => trim($x) !== '')) >= 2 && $oi === 0 && in_array($qKey, $errorQuestionKeys ?? []) ? 'border-error/60' : '' }}"
-                        placeholder="Option"
-                        wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.options.{{ $oi }}" />
-                    <x-button icon="o-x-mark" class="btn-ghost text-error" title="Remove option"
-                        wire:click="removeSectionQuizOption({{ $ti }}, {{ $si }}, {{ $qi }}, {{ $oi }})" />
+                    <div class="flex-1 relative">
+                        <x-input
+                            class="w-full pr-10 focus-within:border-0 {{ $answerIndex === null && count(array_filter($qq['options'] ?? [], fn($x) => trim($x) !== '')) >= 2 && $oi === 0 && in_array($qKey, $errorQuestionKeys ?? []) ? 'border-error/60' : '' }}"
+                            placeholder="Option"
+                            wire:model.defer="topics.{{ $ti }}.sections.{{ $si }}.quiz.questions.{{ $qi }}.options.{{ $oi }}" />
+                        <button type="button" title="Remove option"
+                            class="absolute inset-y-0 right-0 my-[3px] mr-1 flex items-center justify-center h-8 w-8 rounded-md text-red-500 border border-transparent hover:bg-red-50"
+                            wire:click="removeSectionQuizOption({{ $ti }}, {{ $si }}, {{ $qi }}, {{ $oi }})">
+                            <x-icon name="o-x-mark" class="size-4" />
+                        </button>
+                    </div>
                 </div>
             @endforeach
             <x-button type="button" size="xs" class="border-gray-400" outline icon="o-plus"
