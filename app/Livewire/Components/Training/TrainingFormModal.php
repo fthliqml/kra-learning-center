@@ -700,13 +700,13 @@ class TrainingFormModal extends Component
             // Training created before module_id feature - show info message
             $this->selected_module_id = null;
             session()->flash('info_module', 'This training was created without a module reference. Please select a training module to update it.');
-        } elseif ($training->type === 'LMS' && $training->course_id) {
-            // For LMS, selected_module_id actually stores course_id (workaround for x-choices binding)
+        } elseif (in_array($training->type, ['LMS', 'BLENDED']) && $training->course_id) {
+            // For LMS and BLENDED, selected_module_id actually stores course_id (workaround for x-choices binding)
             $this->selected_module_id = (int) $training->course_id;
         } else {
             $this->selected_module_id = null;
         }
-        if ($training->type !== 'LMS') {
+        if (!in_array($training->type, ['LMS', 'BLENDED'])) {
             $this->setTrainingNameProgrammatically($training->name, autoFilled: false);
         } else {
             $this->setTrainingNameProgrammatically($training->course?->title ?? $training->name, autoFilled: false);
@@ -944,6 +944,9 @@ class TrainingFormModal extends Component
 
         $courseTitle = null;
         if (in_array($this->training_type, ['LMS', 'BLENDED'])) {
+            // Form binds course selection to selected_module_id for LMS/BLENDED
+            // Sync to course_id for consistency
+            $this->course_id = $this->selected_module_id;
             $course = Course::find($this->course_id);
             $courseTitle = $course?->title;
         }
@@ -1079,7 +1082,8 @@ class TrainingFormModal extends Component
     private function updateTrainingFields($training, $courseTitle, $startDate, $endDate): void
     {
         $training->type = $this->training_type;
-        if ($this->training_type === 'LMS') {
+        if (in_array($this->training_type, ['LMS', 'BLENDED'])) {
+            // LMS and BLENDED use course
             $training->course_id = $this->course_id;
             $training->module_id = null;
             $training->competency_id = null;
@@ -1090,6 +1094,7 @@ class TrainingFormModal extends Component
             $training->competency_id = null;
             $training->name = $this->training_name;
         } else {
+            // OUT type
             $training->course_id = null;
             $training->module_id = null;
             $training->competency_id = $this->competency_id;
@@ -1104,7 +1109,7 @@ class TrainingFormModal extends Component
         }
 
         // group_comp is no longer persisted on trainings; keep it as UI-only display value.
-        if ($this->training_type === 'LMS' && $this->course_id) {
+        if (in_array($this->training_type, ['LMS', 'BLENDED']) && $this->course_id) {
             $syncedGroup = $this->getCourseGroupComp((int) $this->course_id);
             if ($syncedGroup) {
                 $this->group_comp = $syncedGroup;
