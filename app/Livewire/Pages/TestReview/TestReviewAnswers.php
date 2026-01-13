@@ -366,6 +366,13 @@ class TestReviewAnswers extends Component
             }
         });
 
+        // After transaction: check if all participants passed and mark training done
+        // This works for LMS, BLENDED, and IN types (OUT is manual)
+        if ($this->selectedTest === 'posttest') {
+            $this->training->refresh(); // Refresh to get latest data
+            $this->training->checkAndMarkAsDone();
+        }
+
         $this->closeConfirmModal();
         $this->success('Review submitted successfully.', position: 'toast-top toast-center');
     }

@@ -384,6 +384,19 @@ class Posttest extends Component
             }
 
             $enrollment->save();
+
+            // If user passed (auto-graded, no essay), check if training should be marked done
+            if ($isPassed && $status === TestAttempt::STATUS_SUBMITTED) {
+                // Get trainings linked to this course where user is assigned
+                $trainings = \App\Models\Training::whereIn('type', ['LMS', 'BLENDED'])
+                    ->where('course_id', $this->course->id)
+                    ->whereHas('assessments', fn($q) => $q->where('employee_id', $userId))
+                    ->get();
+                
+                foreach ($trainings as $training) {
+                    $training->checkAndMarkAsDone();
+                }
+            }
         }
 
         // Redirect to results page

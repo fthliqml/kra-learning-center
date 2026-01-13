@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use App\Models\TestAttempt;
 use Carbon\Carbon;
 
 class Training extends Model
@@ -125,5 +126,57 @@ class Training extends Model
                 return 1;
             }
         );
+    }
+
+    /**
+     * Check if all participants have passed the post-test and mark training as done.
+     * Only applies to LMS, BLENDED, and IN types. OUT is manual.
+     * 
+     * @return bool True if training was marked as done
+     */
+    public function checkAndMarkAsDone(): bool
+    {
+        // Skip if already done or type is OUT (manual)
+        if ($this->status === 'done' || $this->type === 'OUT') {
+            return false;
+        }
+
+        // Get post-test based on training type
+        $posttest = null;
+        if (in_array($this->type, ['LMS', 'BLENDED']) && $this->course) {
+            $posttest = $this->course->tests()->where('type', 'posttest')->first();
+        } elseif ($this->type === 'IN' && $this->module) {
+            $posttest = $this->module->posttest;
+        }
+
+        if (!$posttest) {
+            return false;
+        }
+
+        // Get all assigned participant IDs
+        $participantIds = $this->assessments()->pluck('employee_id')->toArray();
+        
+        if (empty($participantIds)) {
+            return false;
+        }
+
+        // Check if ALL participants have at least one passed attempt
+        $passedParticipantIds = TestAttempt::where('test_id', $posttest->id)
+            ->whereIn('user_id', $participantIds)
+            ->where('is_passed', true)
+            ->distinct('user_id')
+            ->pluck('user_id')
+            ->toArray();
+
+        // Compare: all participants must have passed
+        $allPassed = count($passedParticipantIds) === count($participantIds)
+            && empty(array_diff($participantIds, $passedParticipantIds));
+
+        if ($allPassed) {
+            $this->update(['status' => 'done']);
+            return true;
+        }
+
+        return false;
     }
 }
