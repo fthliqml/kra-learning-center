@@ -13,6 +13,24 @@
                 </div>
             </div>
         </div>
+
+        @php
+            /** @var \App\Models\User|null $auth */
+            $auth = auth()->user();
+            $isAdmin = $auth && method_exists($auth, 'hasRole') && $auth->hasRole('admin');
+            $isLidSectionHead =
+                $auth &&
+                method_exists($auth, 'hasPosition') &&
+                $auth->hasPosition('section_head') &&
+                strtoupper($auth->section ?? '') === 'LID';
+            $canExport = ($isAdmin || $isLidSectionHead) && in_array((int) ($surveyLevel ?? 0), [1, 3], true);
+        @endphp
+
+        @if ($canExport)
+            <x-button class="btn btn-primary btn-sm" icon="o-arrow-down-tray" wire:click="exportAnswers">
+                Export Excel
+            </x-button>
+        @endif
     </div>
 
     <div class="space-y-6">
