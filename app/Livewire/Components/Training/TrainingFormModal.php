@@ -989,8 +989,11 @@ class TrainingFormModal extends Component
             'competency_id' => $this->training_type === 'OUT' ? $this->competency_id : null,
         ]);
 
-        $surveys = $this->createSurveysForTraining($training);
-        $this->createSurveyResponsesForParticipants($surveys, $this->participants);
+        // LMS trainings don't have surveys - skip survey creation for LMS type
+        if ($this->training_type !== 'LMS') {
+            $surveys = $this->createSurveysForTraining($training);
+            $this->createSurveyResponsesForParticipants($surveys, $this->participants);
+        }
 
         $sessions = $this->createSessionsForTraining($training, $startDate, $endDate);
 
