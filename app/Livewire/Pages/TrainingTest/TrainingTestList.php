@@ -104,7 +104,7 @@ class TrainingTestList extends Component
                 }
             } else {
                 // No attempts yet - check prerequisites
-                if ($training->type === 'LMS' && $training->course) {
+                if (in_array($training->type, ['LMS', 'BLENDED']) && $training->course) {
                     // LMS: Must complete pretest + all learning modules
                     $learningComplete = $training->course->hasCompletedLearningForUser($userId);
                     $posttestStatus = $learningComplete ? 'available' : 'locked';
