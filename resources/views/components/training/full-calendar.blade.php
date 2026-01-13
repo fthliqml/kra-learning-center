@@ -48,6 +48,10 @@
                                             $typeColor = ($isDone || $isFaded) ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-60'
                                                 : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
                                             break;
+                                        case 'BLENDED':
+                                            $typeColor = ($isDone || $isFaded) ? 'border-purple-300 bg-purple-50 hover:bg-purple-100 opacity-60'
+                                                : 'border-purple-500 bg-purple-50 hover:bg-purple-100';
+                                            break;
                                         default:
                                             $typeColor = ($isDone || $isFaded) ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#d4ebfc] opacity-60'
                                                 : 'border-primary bg-[#E4F3FF] hover:bg-[#d4ebfc]';
@@ -114,6 +118,10 @@
                                         case 'LMS':
                                             $typeColor = ($isDone || $isFaded) ? 'border-indigo-300 bg-indigo-50 hover:bg-indigo-100 opacity-60'
                                                 : 'border-indigo-500 bg-indigo-50 hover:bg-indigo-100';
+                                            break;
+                                        case 'BLENDED':
+                                            $typeColor = ($isDone || $isFaded) ? 'border-purple-300 bg-purple-50 hover:bg-purple-100 opacity-60'
+                                                : 'border-purple-500 bg-purple-50 hover:bg-purple-100';
                                             break;
                                         default:
                                             $typeColor = ($isDone || $isFaded) ? 'border-primary/50 bg-[#E4F3FF] hover:bg-[#d4ebfc] opacity-60'

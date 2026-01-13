@@ -49,6 +49,11 @@
                         'badge' =>
                             $isDone || $isFaded ? 'border-indigo-300 bg-indigo-50' : 'border-indigo-500 bg-indigo-50',
                     ],
+                    'BLENDED' => [
+                        'dot' => $isDone || $isFaded ? 'bg-purple-300' : 'bg-purple-500',
+                        'badge' =>
+                            $isDone || $isFaded ? 'border-purple-300 bg-purple-50' : 'border-purple-500 bg-purple-50',
+                    ],
                     default => [
                         'dot' => $isDone || $isFaded ? 'bg-primary/60' : 'bg-primary',
                         'badge' =>

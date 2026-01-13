@@ -7,6 +7,7 @@
                 ['label' => 'LMS', 'value' => 'LMS'],
                 ['label' => 'IN', 'value' => 'IN'],
                 ['label' => 'OUT', 'value' => 'OUT'],
+                ['label' => 'Blended', 'value' => 'BLENDED'],
             ]" placeholder="Select Type" option-label="label"
                 option-value="value" wire:model="type" />
         </div>
