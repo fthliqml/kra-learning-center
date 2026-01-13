@@ -483,8 +483,8 @@ class TrainingCertificateService
             }
         }
 
-        // LMS type: prefer course competency
-        if ($type === 'LMS' || $type === '') {
+        // LMS and BLENDED types: prefer course competency
+        if (in_array($type, ['LMS', 'BLENDED']) || $type === '') {
             if ($training->course && !empty($training->course->competency_id)) {
                 return $training->course->competency_id;
             }
