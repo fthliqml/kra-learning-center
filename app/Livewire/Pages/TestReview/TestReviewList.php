@@ -43,15 +43,15 @@ class TestReviewList extends Component
     $trainerId = Trainer::where('user_id', $user->id)->value('id');
 
     $trainings = Training::with(['module.pretest.questions', 'module.posttest.questions', 'course.tests.questions', 'sessions.trainer', 'assessments'])
-      ->whereIn('type', ['IN', 'LMS'])
-      // Filter by start date: IN shows H-1 (day before), LMS shows on hari H (start_date)
+      ->whereIn('type', ['IN', 'LMS', 'BLENDED'])
+      // Filter by start date: IN/BLENDED shows H-1 (day before), LMS shows on hari H (start_date)
       ->where(function ($query) {
         $today = now()->toDateString();
         $tomorrow = now()->addDay()->toDateString();
         
-        // IN type: show from H-1 (start_date <= tomorrow)
+        // IN and BLENDED type: show from H-1 (start_date <= tomorrow)
         $query->where(function ($q) use ($tomorrow) {
-          $q->where('type', 'IN')
+          $q->whereIn('type', ['IN', 'BLENDED'])
             ->where('start_date', '<=', $tomorrow);
         })
         // LMS type: show from hari H (start_date <= today)
@@ -61,9 +61,9 @@ class TestReviewList extends Component
         });
       })
       ->where(function ($query) use ($trainerId) {
-        // IN type: trainer must be assigned to at least one session
+        // IN and BLENDED type: trainer must be assigned to at least one session
         $query->where(function ($q) use ($trainerId) {
-          $q->where('type', 'IN')
+          $q->whereIn('type', ['IN', 'BLENDED'])
             ->whereHas('sessions', fn($s) => $s->where('trainer_id', $trainerId));
         })
           // LMS type: all trainers can review
@@ -80,9 +80,9 @@ class TestReviewList extends Component
               });
             });
         })
-          // LMS type: check tests via course
+          // LMS and BLENDED type: check tests via course
           ->orWhere(function ($q) {
-            $q->where('type', 'LMS')
+            $q->whereIn('type', ['LMS', 'BLENDED'])
               ->whereHas('course', function ($c) {
                 $c->whereHas('tests');
               });
@@ -150,6 +150,7 @@ class TestReviewList extends Component
         ['value' => '', 'label' => 'All Types'],
         ['value' => 'IN', 'label' => 'In-House'],
         ['value' => 'LMS', 'label' => 'LMS'],
+        ['value' => 'BLENDED', 'label' => 'Blended'],
       ],
       'statusOptions' => [
         ['value' => '', 'label' => 'All Status'],
@@ -169,8 +170,8 @@ class TestReviewList extends Component
     $posttest = null;
 
     // Get pretest/posttest based on training type
-    if ($training->type === 'LMS' && $training->course) {
-      // LMS uses course->tests
+    if (in_array($training->type, ['LMS', 'BLENDED']) && $training->course) {
+      // LMS and BLENDED use course->tests
       $pretest = $training->course->tests->firstWhere('type', 'pretest');
       $posttest = $training->course->tests->firstWhere('type', 'posttest');
     } elseif ($training->type === 'IN' && $training->module) {
@@ -217,7 +218,7 @@ class TestReviewList extends Component
     $posttest = null;
 
     // Get pretest/posttest based on training type (same logic as getReviewStats)
-    if ($training->type === 'LMS' && $training->course) {
+    if (in_array($training->type, ['LMS', 'BLENDED']) && $training->course) {
       $pretest = $training->course->tests->firstWhere('type', 'pretest');
       $posttest = $training->course->tests->firstWhere('type', 'posttest');
     } elseif ($training->type === 'IN' && $training->module) {
