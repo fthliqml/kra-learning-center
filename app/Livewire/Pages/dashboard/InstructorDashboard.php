@@ -313,6 +313,44 @@ class InstructorDashboard extends Component
             }
         }
 
+        // Get BLENDED type trainings with course tests that need review
+        // Similar to LMS (uses course tests) BUT checks session access (like IN)
+        $blendedTrainings = Training::with(['course.tests'])
+            ->where('type', 'BLENDED')
+            ->whereHas('sessions', fn($s) => $s->where('trainer_id', $trainer->id)) // Check session access
+            ->whereHas('course.tests', function ($q) {
+                $q->whereHas('attempts', fn($a) => $a->where('status', TestAttempt::STATUS_UNDER_REVIEW));
+            })
+            ->limit(5)
+            ->get();
+
+        foreach ($blendedTrainings as $training) {
+            $course = $training->course;
+            $tests = $course?->tests ?? collect();
+            $pretest = $tests->firstWhere('type', 'pretest');
+            $posttest = $tests->firstWhere('type', 'posttest');
+
+            $testIds = $tests->pluck('id')->filter()->values()->all();
+
+            $needReviewCount = 0;
+            if (!empty($testIds)) {
+                $needReviewCount = TestAttempt::whereIn('test_id', $testIds)
+                    ->where('status', TestAttempt::STATUS_UNDER_REVIEW)
+                    ->count();
+            }
+
+            if ($needReviewCount > 0) {
+                $this->trainingsNeedReview[] = [
+                    'id' => $training->id,
+                    'name' => $training->name,
+                    'type' => $training->type,
+                    'need_review_count' => $needReviewCount,
+                    'has_pretest' => $pretest !== null,
+                    'has_posttest' => $posttest !== null,
+                ];
+            }
+        }
+
         // Sort by need_review_count descending and limit to 5
         usort($this->trainingsNeedReview, fn($a, $b) => $b['need_review_count'] - $a['need_review_count']);
         $this->trainingsNeedReview = array_slice($this->trainingsNeedReview, 0, 5);
