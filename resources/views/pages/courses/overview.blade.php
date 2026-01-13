@@ -162,12 +162,12 @@
                     @endif
                 </section>
 
-                {{-- Jadwal Kelas Offline (BLENDED only) --}}
+                {{-- Offline Class Schedule (BLENDED only) --}}
                 @if ($blendedTraining && $blendedTraining->sessions->isNotEmpty())
                 <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                     <h2 class="text-base md:text-lg font-semibold mb-4 flex items-center gap-2">
                         <x-icon name="o-calendar-days" class="size-5 text-purple-500" />
-                        Jadwal Kelas Offline
+                        Offline Class Schedule
                     </h2>
                     <div class="space-y-3">
                         @foreach ($blendedTraining->sessions->sortBy('day_number') as $session)
