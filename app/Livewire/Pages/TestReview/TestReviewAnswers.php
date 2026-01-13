@@ -338,6 +338,32 @@ class TestReviewAnswers extends Component
             $attempt->is_passed = $totalScore >= $test->passing_score;
             $attempt->status = TestAttempt::STATUS_SUBMITTED;
             $attempt->save();
+
+            // Update course progress for LMS/BLENDED if this is a post-test
+            if (in_array($this->training->type, ['LMS', 'BLENDED']) && $this->training->course && $test->type === 'posttest') {
+                $enrollment = $this->training->course->userCourses()->where('user_id', $this->participant->id)->first();
+                if ($enrollment) {
+                    $totalUnits = (int) $this->training->course->progressUnitsCount();
+                    
+                    if ($attempt->is_passed) {
+                         // PASSED: Mark as fully completed (100%)
+                        $enrollment->current_step = $totalUnits;
+                        $enrollment->status = 'completed';
+                    } else {
+                        // FAILED: Set to posttest-attempted level (totalUnits - 1)
+                        // This shows ~95% progress
+                        $posttestAttemptedStep = max(0, $totalUnits - 1);
+                        if (($enrollment->current_step ?? 0) < $posttestAttemptedStep) {
+                            $enrollment->current_step = $posttestAttemptedStep;
+                        }
+                        // Ensure status is in_progress (not completed) for failed
+                        if (strtolower($enrollment->status ?? '') === 'completed') {
+                            $enrollment->status = 'in_progress';
+                        }
+                    }
+                    $enrollment->save();
+                }
+            }
         });
 
         $this->closeConfirmModal();
