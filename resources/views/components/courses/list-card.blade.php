@@ -6,11 +6,22 @@
     $userId = auth()->id();
     $canStart = $userId ? $course->isAvailableForUser((int) $userId) : false;
     
-    // Check if this course has a BLENDED training for the user
-    $isBlended = $userId && $course->trainings()
-        ->where('type', 'BLENDED')
-        ->whereHas('assessments', fn($q) => $q->where('employee_id', $userId))
-        ->exists();
+    // Check if context is injected (from Courses list page)
+    if (isset($course->training_context)) {
+        $isBlended = ($course->training_context['type'] ?? '') === 'BLENDED';
+        $isLMS = ($course->training_context['type'] ?? '') === 'LMS';
+    } else {
+        // Fallback logic for other pages
+        $isBlended = $userId && $course->trainings()
+            ->where('type', 'BLENDED')
+            ->whereHas('assessments', fn($q) => $q->where('employee_id', $userId))
+            ->exists();
+
+        $isLMS = $userId && $course->trainings()
+            ->where('type', 'LMS')
+            ->whereHas('assessments', fn($q) => $q->where('employee_id', $userId))
+            ->exists();
+    }
 @endphp
 <div wire:key="course-list-{{ $course->id }}"
     x-on:click="if(!$event.target.closest('[data-card-action]')) { (window.Livewire && Livewire.navigate) ? Livewire.navigate('{{ route('courses-overview.show', $course) }}') : window.location.assign('{{ route('courses-overview.show', $course) }}'); }"
@@ -41,6 +52,11 @@
                     @if ($isBlended)
                         <span class="inline-flex items-center gap-1 rounded-full bg-purple-100 text-purple-700 border border-purple-300 px-2 py-0.5 text-[10px] font-medium">
                             Blended
+                        </span>
+                    @endif
+                    @if ($isLMS)
+                        <span class="inline-flex items-center gap-1 rounded-full bg-indigo-100 text-indigo-700 border border-indigo-300 px-2 py-0.5 text-[10px] font-medium">
+                            LMS
                         </span>
                     @endif
                 </div>

@@ -20,6 +20,12 @@
                     Blended Training
                 </span>
             @endif
+            @if ($lmsTraining)
+                <span class="inline-flex items-center gap-1 bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs px-2.5 py-1 rounded-full font-medium">
+                    <x-icon name="o-computer-desktop" class="size-3.5" />
+                    LMS Training
+                </span>
+            @endif
         </div>
 
         {{-- Thumbnail --}}
