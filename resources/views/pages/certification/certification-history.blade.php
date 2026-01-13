@@ -61,12 +61,12 @@
                     <div class="flex justify-center">
                         @if ($history->status === 'passed')
                             <span
-                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700 whitespace-nowrap">
                                 Passed
                             </span>
                         @elseif($history->status === 'failed')
                             <span
-                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-700">
+                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-700 whitespace-nowrap">
                                 Failed
                             </span>
                         @else

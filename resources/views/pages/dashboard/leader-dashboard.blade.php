@@ -11,7 +11,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Training This Year</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $totalTrainingThisYear }}
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1 whitespace-nowrap">{{ $totalTrainingThisYear }}
                                 <span class="text-base font-normal text-gray-400">trainings</span>
                             </p>
                         </div>
@@ -30,7 +30,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Upcoming Schedules</p>
-                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1">{{ $upcomingSchedules }}
+                            <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1 whitespace-nowrap">{{ $upcomingSchedules }}
                                 <span class="text-base font-normal text-gray-400">sessions</span>
                             </p>
                         </div>

@@ -107,7 +107,7 @@
                 {{-- Section --}}
                 @scope('cell_section', $request)
                     <span
-                        class="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium">
+                        class="inline-flex items-center px-2 py-0.5 rounded bg-gray-100 text-gray-700 text-xs font-medium whitespace-nowrap">
                         {{ $request->section ?? '-' }}
                     </span>
                 @endscope
@@ -143,7 +143,7 @@
                                 'rejected' => 'bg-rose-100 text-rose-700',
                             ][$status] ?? 'bg-gray-100 text-gray-700';
                     @endphp
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }} whitespace-nowrap">
                         {{ $label }}
                     </span>
                 @endscope
@@ -236,7 +236,7 @@
                     @endphp
                     <div class="text-xs font-semibold">Status</div>
                     <span
-                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }} whitespace-nowrap">
                         {{ $label }}
                     </span>
                 @endif
