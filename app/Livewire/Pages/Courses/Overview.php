@@ -23,12 +23,6 @@ class Overview extends Component
         $userId = Auth::id();
         $today = Carbon::today();
         $isAssigned = $course->trainings()
-            // ->where(function ($w) use ($today) {
-            //     $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
-            // })
-            // ->where(function ($w) use ($today) {
-            //     $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
-            // })
             ->whereHas('assessments', function ($a) use ($userId) {
                 $a->where('employee_id', $userId);
             })

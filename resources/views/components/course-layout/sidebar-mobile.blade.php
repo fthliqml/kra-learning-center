@@ -8,6 +8,9 @@
     'activeSectionId' => null,
     'completedModuleIds' => [],
     'hasPosttestAttempt' => false,
+    'canRetakePosttest' => false,
+    'canRetakePretest' => false,
+    'hasPassedPosttest' => false,
     'courseId' => null,
 ])
 
@@ -171,28 +174,83 @@
                             $thisIndex = array_search($s, $stageOrder, true);
                             $isCompletedStage =
                                 $thisIndex !== false && $currentIndex !== false && $thisIndex < $currentIndex;
-                            $isPosttestWithAttempt = $s === 'posttest' && $hasPosttestAttempt;
+                            $isPosttestWithAttempt = $s === 'posttest' && $hasPosttestAttempt && !$canRetakePosttest;
+                            $isPosttestAttemptLocked = $hasPosttestAttempt && !$canRetakePosttest;
                             $isPretestCompleted = $s === 'pretest' && $hasPosttestAttempt;
+                            $isResultCompleted = $s === 'result' && $hasPassedPosttest;
                         @endphp
                         <li class="group relative border border-transparent rounded-md bg-white transition-colors"
                             :class="stage === '{{ $s }}' ? 'border-primary/40 bg-primary/5 shadow-sm' :
                                 'hover:border-primary/20 hover:bg-gray-50'">
                             @if ($isPosttestWithAttempt)
-                                <div class="w-full flex items-center gap-2 pl-4 pr-3 py-2 text-left rounded-md cursor-not-allowed opacity-70"
-                                    title="Retry Post-Test melalui halaman Result">
-                                    <span class="flex-1 truncate capitalize text-gray-500">{{ ucfirst($s) }}</span>
+                                @if ($courseId)
+                                    <a href="{{ route('courses-posttest.index', ['course' => $courseId]) }}"
+                                        wire:navigate @click="mobileSidebar=false"
+                                        class="w-full flex items-center gap-2 pl-4 pr-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary"
+                                        title="Review Post-Test">
+                                        <span class="flex-1 truncate capitalize">{{ ucfirst($s) }}</span>
+                                        <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                            <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                        </span>
+                                    </a>
+                                @else
+                                    <div
+                                        class="w-full flex items-center gap-2 pl-4 pr-3 py-2 text-left rounded-md opacity-70">
+                                        <span
+                                            class="flex-1 truncate capitalize text-gray-500">{{ ucfirst($s) }}</span>
+                                        <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                            <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                        </span>
+                                    </div>
+                                @endif
+                            @elseif ($s === 'posttest' && $canRetakePosttest && $courseId)
+                                <a href="{{ route('courses-posttest.index', ['course' => $courseId]) }}" wire:navigate
+                                    @click="mobileSidebar=false"
+                                    class="w-full flex items-center gap-2 pl-4 pr-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary">
+                                    <span class="flex-1 truncate capitalize">{{ ucfirst($s) }}</span>
                                     <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
-                                        <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                        @if ($isStageActive)
+                                            <span class="absolute inset-0 rounded-full bg-primary"></span>
+                                            <span class="absolute rounded-full bg-white" style="inset:5px"></span>
+                                        @else
+                                            <span
+                                                class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
+                                        @endif
                                     </span>
-                                </div>
-                            @elseif ($isPretestCompleted && $courseId)
-                                {{-- Pretest completed in remedial mode: clickable to review --}}
+                                </a>
+                            @elseif ($isPretestCompleted && $courseId && ($canRetakePretest || $isPosttestAttemptLocked))
+                                {{-- Pretest review allowed: remedial retake OR course completed --}}
                                 <a href="{{ route('courses-pretest.index', ['course' => $courseId]) }}" wire:navigate
                                     @click="mobileSidebar=false"
                                     class="w-full flex items-center gap-2 pl-4 pr-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary">
                                     <span class="flex-1 truncate capitalize">{{ ucfirst($s) }}</span>
                                     <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
                                         <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                    </span>
+                                </a>
+                            @elseif ($isPretestCompleted && $courseId && !$canRetakePretest)
+                                <div class="w-full flex items-center gap-2 pl-4 pr-3 py-2 text-left rounded-md cursor-not-allowed opacity-70"
+                                    title="Pre-Test tidak bisa dibuka kembali">
+                                    <span class="flex-1 truncate capitalize text-gray-500">{{ ucfirst($s) }}</span>
+                                    <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                        <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                    </span>
+                                </div>
+                            @elseif ($s === 'result' && $courseId && ($hasPassedPosttest || $hasPosttestAttempt))
+                                <a href="{{ route('courses-result.index', ['course' => $courseId]) }}" wire:navigate
+                                    @click="mobileSidebar=false"
+                                    class="w-full flex items-center gap-2 pl-4 pr-3 py-2 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary">
+                                    <span class="flex-1 truncate capitalize">{{ ucfirst($s) }}</span>
+                                    <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                        @if ($isStageActive)
+                                            <span class="absolute inset-0 rounded-full bg-primary"></span>
+                                            <span class="absolute rounded-full bg-white" style="inset:5px"></span>
+                                        @elseif ($isResultCompleted)
+                                            <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                        @else
+                                            <span
+                                                class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
+                                        @endif
                                     </span>
                                 </a>
                             @else
@@ -202,7 +260,7 @@
                                         'font-medium text-gray-700'">
                                     <span class="flex-1 truncate capitalize">{{ ucfirst($s) }}</span>
                                     <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
-                                        @if ($isCompletedStage || $isPretestCompleted)
+                                        @if ($isCompletedStage || $isPretestCompleted || $isResultCompleted)
                                             <x-icon name="o-check-circle" class="size-5 text-green-500" />
                                         @elseif($isStageActive)
                                             <span class="absolute inset-0 rounded-full bg-primary"></span>

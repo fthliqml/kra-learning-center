@@ -8,6 +8,7 @@ use App\Models\SectionQuizAttempt;
 use App\Models\SectionQuizAttemptAnswer;
 use App\Models\SectionQuizQuestion;
 use App\Models\Test;
+use App\Models\TestAttempt;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Livewire\Component;
@@ -31,8 +32,22 @@ class SectionQuiz extends Component
             ->exists();
         if (!$assigned) abort(403);
 
-        // Gate: before schedule start, user can only view overview
+        // Gate: outside schedule window, course content is locked.
+        // If the user already passed, send them to Result (not Overview) for review.
         if ($userId && !$course->isAvailableForUser($userId)) {
+            $postRow = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
+            $hasPassedPosttest = false;
+            if ($postRow) {
+                $hasPassedPosttest = TestAttempt::where('test_id', $postRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+            }
+
+            if ($hasPassedPosttest) {
+                return redirect()->route('courses-result.index', ['course' => $course->id]);
+            }
+
             return redirect()->route('courses-overview.show', ['course' => $course->id]);
         }
 
@@ -125,6 +140,54 @@ class SectionQuiz extends Component
             if ($doneInTopic > 0 && $doneInTopic === $count) $completedModuleIds[] = $topic->id;
         }
 
+        $hasPosttestAttempt = false;
+        $canRetakePosttest = false;
+        $hasPassedPosttest = false;
+        $postRow = Test::where('course_id', $this->course->id)
+            ->where('type', 'posttest')
+            ->select(['id', 'max_attempts'])
+            ->first();
+        if ($postRow) {
+            $lastAttempt = \App\Models\TestAttempt::where('test_id', $postRow->id)
+                ->where('user_id', $userId)
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->first();
+            if ($lastAttempt) {
+                $hasPosttestAttempt = true;
+                $hasPassedPosttest = (bool) $lastAttempt->is_passed;
+                if (!$lastAttempt->is_passed && $lastAttempt->status !== \App\Models\TestAttempt::STATUS_UNDER_REVIEW) {
+                    $attemptCount = (int) \App\Models\TestAttempt::where('test_id', $postRow->id)
+                        ->where('user_id', $userId)
+                        ->whereIn('status', [
+                            \App\Models\TestAttempt::STATUS_SUBMITTED,
+                            \App\Models\TestAttempt::STATUS_UNDER_REVIEW,
+                            \App\Models\TestAttempt::STATUS_EXPIRED,
+                        ])
+                        ->count();
+                    if ($postRow->max_attempts === null) {
+                        $canRetakePosttest = true;
+                    } else {
+                        $maxAttempts = max(1, (int) $postRow->max_attempts);
+                        $canRetakePosttest = $attemptCount < $maxAttempts;
+                    }
+                }
+            }
+        }
+
+        $canRetakePretest = false;
+        $preRow = Test::where('course_id', $this->course->id)
+            ->where('type', 'pretest')
+            ->select(['id', 'max_attempts'])
+            ->first();
+        if ($preRow) {
+            if ($preRow->max_attempts === null) {
+                $canRetakePretest = true;
+            } else {
+                $maxAttempts = max(1, (int) $preRow->max_attempts);
+                $canRetakePretest = $maxAttempts > 1;
+            }
+        }
+
         /** @var \Illuminate\View\View&\App\Support\Ide\LivewireViewMacros $view */
         $view = view('pages.courses.section-quiz', [
             'course' => $this->course,
@@ -141,6 +204,11 @@ class SectionQuiz extends Component
             'activeModuleId' => $this->section->topic_id,
             'activeSectionId' => $this->section->id,
             'completedModuleIds' => $completedModuleIds,
+            'hasPosttestAttempt' => $hasPosttestAttempt,
+            'canRetakePosttest' => $canRetakePosttest,
+            'canRetakePretest' => $canRetakePretest,
+            'hasPassedPosttest' => $hasPassedPosttest,
+            'courseId' => $this->course->id,
         ]);
     }
 
@@ -148,6 +216,22 @@ class SectionQuiz extends Component
     {
         $userId = Auth::id();
         if (!$userId) abort(401);
+
+        // Gate: prevent quiz submit outside schedule window
+        if (!$this->course->isAvailableForUser($userId)) {
+            $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+            $hasPassedPosttest = false;
+            if ($postRow) {
+                $hasPassedPosttest = TestAttempt::where('test_id', $postRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+            }
+            if ($hasPassedPosttest) {
+                return redirect()->route('courses-result.index', ['course' => $this->course->id]);
+            }
+            return redirect()->route('courses-overview.show', ['course' => $this->course->id]);
+        }
 
         $questionRows = SectionQuizQuestion::with('options')
             ->where('section_id', $this->section->id)
