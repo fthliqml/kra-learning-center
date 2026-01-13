@@ -38,8 +38,8 @@
                             option-value="id" option-label="name" icon="o-book-open" single
                             class="focus-within:border-0" />
 
-                        <!-- Training Name / Course Select for LMS / Module Select for In-House -->
-                        @if ($training_type === 'LMS')
+                        {{-- Training Name / Course Select for LMS and BLENDED / Module Select for In-House --}}
+                        @if ($training_type === 'LMS' || $training_type === 'BLENDED')
                             <x-choices label="Course" wire:model.live="selected_module_id" :options="$courseOptions"
                                 option-value="id" option-label="title" placeholder="Select course"
                                 icon="o-rectangle-group" single searchable class="focus-within:border-0"
@@ -73,10 +73,10 @@
 
                         <!-- Group Comp -->
                         <div>
-                            @if ($training_type === 'LMS' || $training_type === 'IN')
+                            @if ($training_type === 'LMS' || $training_type === 'IN' || $training_type === 'BLENDED')
                                 <x-input label="Group Competency" wire:model="group_comp" readonly
                                     icon="o-clipboard-document" class="focus-within:border-0 bg-gray-50"
-                                    hint="{{ $training_type === 'LMS' ? 'Synced from selected Course' : 'Synced from selected Training Module' }}" />
+                                    hint="{{ in_array($training_type, ['LMS', 'BLENDED']) ? 'Synced from selected Course' : 'Synced from selected Training Module' }}" />
                             @elseif ($training_type === 'OUT')
                                 <x-input label="Group Competency" wire:model="group_comp" readonly
                                     icon="o-clipboard-document" class="focus-within:border-0 bg-gray-50"
