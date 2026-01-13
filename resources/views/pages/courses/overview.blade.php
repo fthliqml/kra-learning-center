@@ -10,9 +10,17 @@
         </nav>
 
         {{-- Title --}}
-        <h1 class="text-2xl md:text-3xl font-bold text-gray-900 mb-6 leading-tight">
-            {{ $course->title }}
-        </h1>
+        <div class="flex items-center gap-3 mb-6">
+            <h1 class="text-2xl md:text-3xl font-bold text-gray-900 leading-tight">
+                {{ $course->title }}
+            </h1>
+            @if ($blendedTraining)
+                <span class="inline-flex items-center gap-1 bg-purple-100 text-purple-700 border border-purple-200 text-xs px-2.5 py-1 rounded-full font-medium">
+                    <x-icon name="o-academic-cap" class="size-3.5" />
+                    Blended Training
+                </span>
+            @endif
+        </div>
 
         {{-- Thumbnail --}}
         <div class="w-full mb-8">
@@ -153,6 +161,43 @@
                         </x-accordion>
                     @endif
                 </section>
+
+                {{-- Jadwal Kelas Offline (BLENDED only) --}}
+                @if ($blendedTraining && $blendedTraining->sessions->isNotEmpty())
+                <section class="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                    <h2 class="text-base md:text-lg font-semibold mb-4 flex items-center gap-2">
+                        <x-icon name="o-calendar-days" class="size-5 text-purple-500" />
+                        Jadwal Kelas Offline
+                    </h2>
+                    <div class="space-y-3">
+                        @foreach ($blendedTraining->sessions->sortBy('day_number') as $session)
+                        <div class="border border-gray-200 rounded-lg p-4 hover:border-purple-200 transition">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="font-medium text-gray-900">Sesi {{ $session->day_number }}</span>
+                                <span class="text-xs text-gray-500">{{ $session->date?->format('d M Y') }}</span>
+                            </div>
+                            <div class="grid grid-cols-2 gap-2 text-sm text-gray-600">
+                                <div class="flex items-center gap-2">
+                                    <x-icon name="o-clock" class="size-4 text-gray-400" />
+                                    {{ $session->start_time ? \Carbon\Carbon::parse($session->start_time)->format('H:i') : '-' }} - 
+                                    {{ $session->end_time ? \Carbon\Carbon::parse($session->end_time)->format('H:i') : '-' }}
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <x-icon name="o-map-pin" class="size-4 text-gray-400" />
+                                    {{ $session->room_name ?: '-' }}{{ $session->room_location ? ', ' . $session->room_location : '' }}
+                                </div>
+                                @if ($session->trainer)
+                                <div class="flex items-center gap-2 col-span-2">
+                                    <x-icon name="o-user" class="size-4 text-gray-400" />
+                                    {{ $session->trainer->name ?? $session->trainer->user?->name ?? '-' }}
+                                </div>
+                                @endif
+                            </div>
+                        </div>
+                        @endforeach
+                    </div>
+                </section>
+                @endif
             </div>
 
             {{-- Sidebar --}}

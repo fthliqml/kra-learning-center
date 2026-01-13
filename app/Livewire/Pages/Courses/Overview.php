@@ -4,12 +4,14 @@ namespace App\Livewire\Pages\Courses;
 
 use Livewire\Component;
 use App\Models\Course;
+use App\Models\Training;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 
 class Overview extends Component
 {
     public Course $course;
+    public ?Training $blendedTraining = null;
     public $modules;
     public int $modulesCount = 0;
     public int $assignUsers = 0;
@@ -36,6 +38,9 @@ class Overview extends Component
         if (! $isAssigned) {
             abort(403, 'You are not assigned to this course.');
         }
+
+        // Load BLENDED training for this course (if any) to show offline schedule
+        $this->blendedTraining = $course->getBlendedTrainingForUser($userId);
 
         // Availability: before schedule start, user can view overview only
         $this->canStart = $userId ? $course->isAvailableForUser($userId) : false;

@@ -1,3 +1,11 @@
+@php
+    $userId = auth()->id();
+    // Check if this course has a BLENDED training for the user
+    $isBlended = $userId && $course->trainings()
+        ->where('type', 'BLENDED')
+        ->whereHas('assessments', fn($q) => $q->where('employee_id', $userId))
+        ->exists();
+@endphp
 <div wire:key="course-{{ $course->id }}"
     x-on:click="if(!$event.target.closest('[data-card-action]')) { (window.Livewire && Livewire.navigate) ? Livewire.navigate('{{ route('courses-overview.show', $course) }}') : window.location.assign('{{ route('courses-overview.show', $course) }}'); }"
     class="group cursor-pointer bg-white rounded-xl border border-gray-200/80 shadow-sm overflow-hidden hover:shadow-md hover:border-primary/20 focus-within:ring-2 ring-primary/20 transition">
@@ -23,6 +31,11 @@
                 class="inline-flex items-center gap-1 rounded-full bg-primary/5 text-primary px-2 py-0.5 text-[11px] font-medium">
                 {{ $course->competency->type ?? '—' }}
             </span>
+            @if ($isBlended)
+                <span class="inline-flex items-center gap-1 rounded-full bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 text-[10px] font-medium">
+                    Blended
+                </span>
+            @endif
         </div>
         <div class="font-semibold text-gray-900 line-clamp-2 min-h-[2.5rem]">
             {{ $course->title }}
