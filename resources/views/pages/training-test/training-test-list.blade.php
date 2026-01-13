@@ -44,7 +44,7 @@
                                 {{ $training->name }}
                             </h3>
                             <p class="text-sm text-base-content/60 mt-0.5 truncate">
-                                @if ($training->type === 'LMS')
+                                @if (in_array($training->type, ['LMS', 'BLENDED']))
                                     {{ $training->course?->title ?? 'No course assigned' }}
                                 @else
                                     {{ $training->module?->title ?? 'No module assigned' }}
@@ -62,7 +62,11 @@
                                 </div>
                                 <div class="flex items-center gap-1.5">
                                     <x-icon name="o-tag" class="size-4" />
-                                    <span class="badge badge-sm border {{ $training->type === 'LMS' ? 'bg-indigo-100 text-indigo-700 border-indigo-200' : 'bg-green-100 text-green-700 border-green-200' }}">
+                                    <span class="badge badge-sm border {{ match($training->type) {
+                                        'LMS' => 'bg-indigo-100 text-indigo-700 border-indigo-200',
+                                        'BLENDED' => 'bg-purple-100 text-purple-700 border-purple-200',
+                                        default => 'bg-green-100 text-green-700 border-green-200',
+                                    } }}">
                                         {{ $training->type }}
                                     </span>
                                 </div>
@@ -104,7 +108,7 @@
                                         </div>
                                     </div>
                                     @if ($training->testStatus['pretest'] === 'available')
-                                        @if ($training->type === 'LMS' && $training->course)
+                                        @if (in_array($training->type, ['LMS', 'BLENDED']) && $training->course)
                                             <a href="{{ route('courses-pretest.index', ['course' => $training->course_id]) }}"
                                                 wire:navigate class="btn btn-sm btn-primary">
                                                 Start
@@ -184,7 +188,7 @@
                                                     <span class="opacity-70">(Max attempts reached)</span>
                                                 </p>
                                             @elseif($training->testStatus['posttest'] === 'locked')
-                                                @if ($training->type === 'LMS')
+                                                @if (in_array($training->type, ['LMS', 'BLENDED']))
                                                     <p class="text-xs text-base-content/50">Complete learning modules first</p>
                                                 @else
                                                     <p class="text-xs text-base-content/50">Complete pre-test first</p>
@@ -195,7 +199,7 @@
                                         </div>
                                     </div>
                                     @if ($training->testStatus['posttest'] === 'available')
-                                        @if ($training->type === 'LMS' && $training->course)
+                                        @if (in_array($training->type, ['LMS', 'BLENDED']) && $training->course)
                                             <a href="{{ route('courses-posttest.index', ['course' => $training->course_id]) }}"
                                                 wire:navigate class="btn btn-sm btn-primary">
                                                 Start
@@ -207,7 +211,7 @@
                                             </a>
                                         @endif
                                     @elseif($training->testStatus['posttest'] === 'retake')
-                                        @if ($training->type === 'LMS' && $training->course)
+                                        @if (in_array($training->type, ['LMS', 'BLENDED']) && $training->course)
                                             <a href="{{ route('courses-posttest.index', ['course' => $training->course_id]) }}"
                                                 wire:navigate class="btn btn-sm btn-error btn-outline">
                                                 Retake
@@ -225,7 +229,7 @@
                                     @elseif($training->testStatus['posttest'] === 'failed')
                                         <span class="badge badge-error badge-sm">Failed</span>
                                     @elseif($training->testStatus['posttest'] === 'locked')
-                                        @if ($training->type === 'LMS' && $training->course)
+                                        @if (in_array($training->type, ['LMS', 'BLENDED']) && $training->course)
                                             <a href="{{ route('courses-modules.index', ['course' => $training->course_id]) }}"
                                                 wire:navigate
                                                 class="btn btn-sm btn-ghost gap-1 px-2 text-primary hover:bg-primary/10 font-normal">
