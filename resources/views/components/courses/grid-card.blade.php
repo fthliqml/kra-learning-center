@@ -32,7 +32,7 @@
                 {{ $course->competency->type ?? '—' }}
             </span>
             @if ($isBlended)
-                <span class="inline-flex items-center gap-1 rounded-full bg-purple-100 text-purple-700 border border-purple-200 px-2 py-0.5 text-[10px] font-medium">
+                <span class="inline-flex items-center gap-1 rounded-full bg-purple-100 text-purple-700 border border-purple-300 px-2 py-0.5 text-[10px] font-medium">
                     Blended
                 </span>
             @endif

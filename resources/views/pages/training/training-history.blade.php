@@ -58,6 +58,7 @@
                             'In-House' => 'border-green-500 bg-green-50 text-green-700',
                             'Out-House' => 'border-amber-500 bg-amber-50 text-amber-700',
                             'LMS' => 'border-indigo-500 bg-indigo-50 text-indigo-700',
+                            'Blended' => 'border-purple-500 bg-purple-50 text-purple-700',
                             default => 'border-primary bg-[#E4F3FF] text-primary',
                         };
                     @endphp

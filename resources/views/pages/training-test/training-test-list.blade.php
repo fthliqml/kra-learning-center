@@ -63,11 +63,19 @@
                                 <div class="flex items-center gap-1.5">
                                     <x-icon name="o-tag" class="size-4" />
                                     <span class="badge badge-sm border {{ match($training->type) {
-                                        'LMS' => 'bg-indigo-100 text-indigo-700 border-indigo-200',
-                                        'BLENDED' => 'bg-purple-100 text-purple-700 border-purple-200',
-                                        default => 'bg-green-100 text-green-700 border-green-200',
+                                        'IN' => 'bg-green-100 text-green-700 border-green-300',
+                                        'OUT' => 'bg-amber-100 text-amber-700 border-amber-300',
+                                        'LMS' => 'bg-indigo-100 text-indigo-700 border-indigo-300',
+                                        'BLENDED' => 'bg-purple-100 text-purple-700 border-purple-300',
+                                        default => 'bg-gray-100 text-gray-700 border-gray-300',
                                     } }}">
-                                        {{ $training->type }}
+                                        {{ match($training->type) {
+                                            'IN' => 'In-House',
+                                            'OUT' => 'Out-House',
+                                            'LMS' => 'LMS',
+                                            'BLENDED' => 'Blended',
+                                            default => $training->type,
+                                        } }}
                                     </span>
                                 </div>
                             </div>

@@ -143,15 +143,17 @@
                                 @if (!$isCertification && !empty($schedule['type']))
                                     @php
                                         $typeBadgeClass = match ($schedule['type']) {
-                                            'IN'
-                                                => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                                            'OUT'
-                                                => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                                            'IN' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                                            'OUT' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                                            'LMS' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+                                            'BLENDED' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
                                             default => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
                                         };
                                         $typeLabel = match ($schedule['type']) {
                                             'IN' => 'In-House',
                                             'OUT' => 'Out-House',
+                                            'LMS' => 'LMS',
+                                            'BLENDED' => 'Blended',
                                             default => $schedule['type'],
                                         };
                                     @endphp
@@ -214,17 +216,26 @@
                                 <div class="flex items-center gap-3 min-w-0">
                                     {{-- Training Type Badge --}}
                                     <div class="flex-shrink-0">
-                                        @if ($training['type'] === 'IN')
-                                            <span
-                                                class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold">
-                                                IN
-                                            </span>
-                                        @else
-                                            <span
-                                                class="inline-flex items-center justify-center w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 text-xs font-bold">
-                                                LMS
-                                            </span>
-                                        @endif
+                                        @php
+                                            $typeClass = match ($training['type']) {
+                                                'IN' => 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+                                                'OUT' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+                                                'LMS' => 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400',
+                                                'BLENDED' => 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+                                                default => 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+                                            };
+                                            $typeLabel = match ($training['type']) {
+                                                'IN' => 'IN',
+                                                'OUT' => 'OUT',
+                                                'LMS' => 'LMS',
+                                                'BLENDED' => 'BLD',
+                                                default => $training['type'],
+                                            };
+                                        @endphp
+                                        <span
+                                            class="inline-flex items-center justify-center w-10 h-10 rounded-lg {{ $typeClass }} text-xs font-bold">
+                                            {{ $typeLabel }}
+                                        </span>
                                     </div>
 
                                     <div class="min-w-0">
