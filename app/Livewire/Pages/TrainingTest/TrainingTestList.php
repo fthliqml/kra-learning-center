@@ -30,8 +30,8 @@ class TrainingTestList extends Component
         $posttest = null;
 
         // Determine test source based on training type
-        if ($training->type === 'LMS' && $training->course) {
-            // LMS: Tests are linked to Course
+        if (in_array($training->type, ['LMS', 'BLENDED']) && $training->course) {
+            // LMS and BLENDED: Tests are linked to Course
             $pretest = $training->course->tests->firstWhere('type', 'pretest');
             $posttest = $training->course->tests->firstWhere('type', 'posttest');
         } elseif ($training->type === 'IN' && $training->module) {
@@ -130,23 +130,23 @@ class TrainingTestList extends Component
     {
         $userId = Auth::id();
 
-        // Get IN and LMS trainings where user is assigned
+        // Get IN, LMS, and BLENDED trainings where user is assigned
         $trainings = Training::with([
             'module.pretest',
             'module.posttest',
             'course.tests',
             'competency'
         ])
-            ->whereIn('type', ['IN', 'LMS'])
+            ->whereIn('type', ['IN', 'LMS', 'BLENDED'])
             ->whereIn('status', ['in_progress'])
-            // Filter by start date: IN shows H-1 (day before), LMS shows on hari H (start_date)
+            // Filter by start date: IN/BLENDED shows H-1 (day before), LMS shows on hari H (start_date)
             ->where(function ($query) {
                 $today = now()->toDateString();
                 $tomorrow = now()->addDay()->toDateString();
                 
-                // IN type: show from H-1 (start_date <= tomorrow)
+                // IN and BLENDED type: show from H-1 (start_date <= tomorrow)
                 $query->where(function ($q) use ($tomorrow) {
-                    $q->where('type', 'IN')
+                    $q->whereIn('type', ['IN', 'BLENDED'])
                       ->where('start_date', '<=', $tomorrow);
                 })
                 // LMS type: show from hari H (start_date <= today)
