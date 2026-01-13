@@ -19,11 +19,6 @@
         <x-tab name="post-test" label="Post-Test" icon="m-check-badge" :disabled="!$courseId">
             <livewire:components.edit-course.post-test-questions :courseId="$course->id" lazy />
         </x-tab>
-
-        {{-- TAB: Test Config --}}
-        <x-tab name="test-config" label="Test Config" icon="m-cog-6-tooth" :disabled="!$courseId">
-            <livewire:components.edit-course.test-config :courseId="$course->id" lazy />
-        </x-tab>
     </x-tabs>
 
     <!-- Back To Top Button -->

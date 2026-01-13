@@ -20,19 +20,34 @@ window.ApexCharts = ApexCharts;
 import Plyr from "plyr";
 import "plyr/dist/plyr.css";
 
+function isVideoGateCompleted(storageKey, endId) {
+    try {
+        if (!storageKey || !endId) return false;
+        const raw = localStorage.getItem(String(storageKey));
+        if (!raw) return false;
+        const parsed = JSON.parse(raw);
+        return !!(parsed && parsed.ended && parsed.ended[endId]);
+    } catch (_) {
+        return false;
+    }
+}
+
 function initPlyr() {
     try {
         const els = document.querySelectorAll(".js-plyr");
         if (!els || !els.length) return;
         const players = Plyr.setup(els, {
-            hideControls: true,
+            // Controls are hidden until video ends via a CSS gate.
+            // After ended, we remove the gate class so timeline appears.
+            hideControls: false,
             seekTime: 10, // rewind/fast-forward step (we only show rewind)
-            // Hide timeline bar, but keep time labels and add a rewind button
+            // Timeline is included but hidden until ended (CSS gate).
             controls: [
                 "play-large",
                 "play",
                 "rewind",
                 "current-time",
+                "progress",
                 "duration",
                 "mute",
                 "volume",
@@ -55,6 +70,31 @@ function initPlyr() {
             try {
                 const host = p.elements?.original || hostEls[idx] || null;
                 const endId = host?.getAttribute?.("data-end-id") || null;
+
+                const gateKey =
+                    host?.getAttribute?.("data-video-gate-key") ||
+                    host?.closest?.("[data-video-gate-key]")?.getAttribute?.(
+                        "data-video-gate-key"
+                    ) ||
+                    null;
+
+                // Hide timeline until ended, but keep it visible after refresh
+                // if the video was already completed (persisted by modulePage.js).
+                try {
+                    const container = p?.elements?.container || null;
+                    if (container) {
+                        if (isVideoGateCompleted(gateKey, endId)) {
+                            container.classList.remove(
+                                "controls-hidden-until-ended"
+                            );
+                        } else {
+                            container.classList.add(
+                                "controls-hidden-until-ended"
+                            );
+                        }
+                    }
+                } catch (_) {}
+
                 p.on("ended", () => {
                     if (endId)
                         window.dispatchEvent(
@@ -62,6 +102,13 @@ function initPlyr() {
                                 detail: { id: endId },
                             })
                         );
+
+                    // Reveal controls/timeline after completion.
+                    try {
+                        const container = p?.elements?.container || null;
+                        if (container)
+                            container.classList.remove("controls-hidden-until-ended");
+                    } catch (_) {}
                 });
                 // Remove resolution menu: keep Plyr's default gear (speed); do not attach custom quality menu
                 // try { if (p?.provider === 'youtube') { p.on('ready', () => attachYoutubeQualityMenu(p, host)); } } catch(_){ }

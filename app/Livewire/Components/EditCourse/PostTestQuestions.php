@@ -8,6 +8,7 @@ use Livewire\WithFileUploads;
 use Mary\Traits\Toast;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\Course;
 use App\Models\Test;
 use App\Models\TestQuestion;
 use App\Models\TestQuestionOption;
@@ -274,8 +275,22 @@ class PostTestQuestions extends Component
 
   public function goNext(): void
   {
-    // Navigate to test configuration tab after post test
-    $this->dispatch('setTab', 'test-config');
+    $this->dispatch('setTab', 'course-info');
+  }
+
+  public function finish(): void
+  {
+    if ($this->courseId) {
+      $course = Course::find($this->courseId);
+      if ($course && $course->isComplete()) {
+        $course->update(['status' => 'inactive']);
+        $this->success('Course completed and ready to be assigned!', timeout: 4000, position: 'toast-top toast-center');
+      } elseif ($course && $course->status === 'draft') {
+        $this->warning('Course saved as draft. Complete all sections to make it ready.', timeout: 5000, position: 'toast-top toast-center');
+      }
+    }
+
+    $this->redirectRoute('courses-management.index', navigate: true);
   }
 
   public function saveDraft(): void

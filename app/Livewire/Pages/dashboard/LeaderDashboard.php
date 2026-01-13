@@ -9,6 +9,7 @@ use App\Models\TrainingPlan;
 use App\Models\SelfLearningPlan;
 use App\Models\MentoringPlan;
 use App\Models\ProjectPlan;
+use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -52,37 +53,23 @@ class leaderDashboard extends Component
         $userId = Auth::id();
         $user = Auth::user();
 
-        // Leader/Instructor sees trainings where they are the trainer
-        if (in_array($user->role ?? null, ['leader', 'instructor'], true)) {
-            // Get trainer record for current user
-            $trainer = \App\Models\Trainer::where('user_id', $userId)->first();
+        // Calendar should only show schedules that belong to the logged-in user:
+        // - trainings where they are a trainer OR a participant
+        // - certifications where they are a participant
+        if (!$userId || !$user) {
+            return;
+        }
 
-            if ($trainer) {
-                $trainings = Training::with(['sessions.trainer.user'])
-                    ->whereBetween('start_date', [$startDate, $endDate])
-                    ->whereHas('sessions', function ($q) use ($trainer) {
-                        $q->where('trainer_id', $trainer->id);
-                    })
-                    ->get();
-            } else {
-                $trainings = collect();
-            }
-        }
-        // Employee sees trainings where they are a participant
-        elseif (($user->role ?? null) === 'employee') {
-            $trainings = Training::with(['sessions.trainer.user'])
-                ->whereBetween('start_date', [$startDate, $endDate])
-                ->whereHas('assessments', function ($q) use ($userId) {
-                    $q->where('employee_id', $userId);
-                })
-                ->get();
-        }
-        // Fallback: show all trainings
-        else {
-            $trainings = Training::with(['sessions.trainer.user'])
-                ->whereBetween('start_date', [$startDate, $endDate])
-                ->get();
-        }
+        $trainings = Training::with(['sessions.trainer.user'])
+            ->whereBetween('start_date', [$startDate, $endDate])
+            ->where(function ($q) use ($userId) {
+                $q->whereHas('sessions.trainer', function ($tq) use ($userId) {
+                    $tq->where('user_id', $userId);
+                })->orWhereHas('assessments', function ($aq) use ($userId) {
+                    $aq->where('employee_id', $userId);
+                });
+            })
+            ->get();
 
         foreach ($trainings as $training) {
             $dateKey = $training->start_date->format('Y-m-d');
@@ -107,8 +94,11 @@ class leaderDashboard extends Component
             ];
         }
 
-        // Leader sees all certification schedules
+        // Only show certification schedules where the user is a participant
         $certifications = Certification::with(['sessions'])
+            ->whereHas('participants', function ($q) use ($userId) {
+                $q->where('employee_id', $userId);
+            })
             ->whereHas('sessions', function ($q) use ($startDate, $endDate) {
                 $q->whereBetween('date', [$startDate, $endDate]);
             })
@@ -176,24 +166,269 @@ class leaderDashboard extends Component
         $startOfYear = $now->copy()->startOfYear();
         $endOfYear = $now->copy()->endOfYear();
 
+        /** @var User|null $user */
+        $user = Auth::user();
+
         // Total training this year - all trainings in current year
         $this->totalTrainingThisYear = Training::whereBetween('start_date', [$startOfYear, $endOfYear])->count();
 
         // Upcoming schedules - trainings with start_date >= today
         $this->upcomingSchedules = Training::where('start_date', '>=', $now->startOfDay())->count();
 
-        // Pending approvals (combined: certification approval + training approval + training request + IDP approval)
-        $pendingCertifications = Certification::where('status', 'pending')->count();
-        $pendingTrainings = Training::where('status', 'pending')->count();
-        $pendingRequests = Request::where('status', 'pending')->count();
+        // Pending approvals (actionable for the logged-in user)
+        if (!$user) {
+            $this->pendingApprovals = 0;
+            return;
+        }
 
-        // IDP (Individual Development Plan) pending approvals for leaders
-        $pendingIdp = TrainingPlan::where('status', 'pending_lid')->count()
-            + SelfLearningPlan::where('status', 'pending_lid')->count()
-            + MentoringPlan::where('status', 'pending_lid')->count()
-            + ProjectPlan::where('status', 'pending_lid')->count();
+        $pendingCertifications = $this->countActionableCertifications($user);
+        $pendingTrainings = $this->countActionableTrainings($user);
+        $pendingRequests = $this->countActionableTrainingRequests($user);
+        $pendingIdp = $this->countActionableIdpPlans($user);
 
         $this->pendingApprovals = $pendingCertifications + $pendingTrainings + $pendingRequests + $pendingIdp;
+    }
+
+    private function isLidSectionHead(User $user): bool
+    {
+        return $user->hasPosition('section_head')
+            && strtolower(trim($user->section ?? '')) === 'lid';
+    }
+
+    private function isLidDeptHead(User $user): bool
+    {
+        return $user->hasPosition('department_head')
+            && trim((string) ($user->department ?? '')) === 'Human Capital, General Service, Security & LID';
+    }
+
+    private function countActionableTrainings(User $user): int
+    {
+        if ($this->isLidSectionHead($user)) {
+            return Training::query()
+                ->where('status', 'done')
+                ->whereNull('section_head_signed_at')
+                ->whereNull('dept_head_signed_at')
+                ->count();
+        }
+
+        if ($this->isLidDeptHead($user)) {
+            return Training::query()
+                ->where('status', 'done')
+                ->whereNotNull('section_head_signed_at')
+                ->whereNull('dept_head_signed_at')
+                ->count();
+        }
+
+        return 0;
+    }
+
+    private function countActionableCertifications(User $user): int
+    {
+        if (!$this->isLidSectionHead($user)) {
+            return 0;
+        }
+
+        // In certification approval page, status 'completed' is treated as pending.
+        return Certification::query()
+            ->where('status', 'completed')
+            ->count();
+    }
+
+    private function countActionableTrainingRequests(User $user): int
+    {
+        $base = Request::query()->where('status', 'pending');
+        $userDept = strtolower(trim((string) ($user->department ?? '')));
+        $userDiv = strtolower(trim((string) ($user->division ?? '')));
+
+        if ($user->hasPosition('department_head') && $userDept !== '') {
+            return $base
+                ->where('approval_stage', Request::STAGE_DEPT_HEAD)
+                ->whereHas('user', function ($q) use ($userDept) {
+                    $q->whereRaw('LOWER(TRIM(department)) = ?', [$userDept]);
+                })
+                ->count();
+        }
+
+        if ($user->hasPosition('division_head') && $userDiv !== '') {
+            $isLidDiv = $userDiv === 'human capital, finance & general support';
+
+            if ($isLidDiv) {
+                return $base
+                    ->where('approval_stage', Request::STAGE_LID_DIV_HEAD)
+                    ->count();
+            }
+
+            return $base
+                ->where('approval_stage', Request::STAGE_AREA_DIV_HEAD)
+                ->whereHas('user', function ($q) use ($userDiv) {
+                    $q->whereRaw('LOWER(TRIM(division)) = ?', [$userDiv]);
+                })
+                ->count();
+        }
+
+        return 0;
+    }
+
+    private function expectedIdpStatusForUser(User $user): string
+    {
+        $section = strtolower(trim((string) ($user->section ?? '')));
+
+        if ($user->hasPosition('section_head') && $section === 'lid') {
+            return 'pending_lid';
+        }
+
+        if ($user->hasPosition('supervisor')) {
+            return 'pending_spv';
+        }
+
+        if ($user->hasPosition('section_head') && $section !== 'lid') {
+            return 'pending_spv';
+        }
+
+        if ($user->hasPosition('department_head') && $section !== 'lid') {
+            return 'pending_dept_head';
+        }
+
+        return '';
+    }
+
+    private function isSupervisorArea(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        return $user ? $user->hasPosition('supervisor') : false;
+    }
+
+    private function isSectionHeadArea(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        $section = strtolower(trim($user->section ?? ''));
+        return $user->hasPosition('section_head') && $section !== 'lid';
+    }
+
+    private function isDeptHeadArea(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        $section = strtolower(trim($user->section ?? ''));
+        return $user->hasPosition('department_head') && $section !== 'lid';
+    }
+
+    private function isLidApprover(): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        return $user ? ($user->hasPosition('section_head') && strtolower(trim($user->section ?? '')) === 'lid') : false;
+    }
+
+    private function existsSupervisorInUserArea(User $target): bool
+    {
+        $section = (string) ($target->section ?? '');
+        $department = (string) ($target->department ?? '');
+
+        if ($section !== '') {
+            return User::query()
+                ->whereRaw('LOWER(TRIM(position)) = ?', ['supervisor'])
+                ->where('section', $section)
+                ->exists();
+        }
+
+        if ($department !== '') {
+            return User::query()
+                ->whereRaw('LOWER(TRIM(position)) = ?', ['supervisor'])
+                ->where('department', $department)
+                ->exists();
+        }
+
+        return false;
+    }
+
+    private function canApproveUserAtStatus(int $targetUserId, string $expectedStatus): bool
+    {
+        if ($expectedStatus === 'pending_lid') {
+            return $this->isLidApprover();
+        }
+
+        if ($expectedStatus === 'pending_dept_head') {
+            return $this->isDeptHeadArea();
+        }
+
+        if ($expectedStatus !== 'pending_spv') {
+            return false;
+        }
+
+        $target = User::find($targetUserId);
+        if (!$target) {
+            return false;
+        }
+
+        $targetPosition = strtolower(trim($target->position ?? ''));
+
+        if ($this->isSupervisorArea()) {
+            return $targetPosition !== 'supervisor';
+        }
+
+        if ($this->isSectionHeadArea()) {
+            if ($targetPosition === 'supervisor') {
+                return true;
+            }
+
+            return !$this->existsSupervisorInUserArea($target);
+        }
+
+        return false;
+    }
+
+    private function countActionableIdpPlans(User $user): int
+    {
+        $expectedStatus = $this->expectedIdpStatusForUser($user);
+        if ($expectedStatus === '') {
+            return 0;
+        }
+
+        // Fast-path: LID approver can approve all pending_lid.
+        if ($expectedStatus === 'pending_lid') {
+            return TrainingPlan::where('status', 'pending_lid')->count()
+                + SelfLearningPlan::where('status', 'pending_lid')->count()
+                + MentoringPlan::where('status', 'pending_lid')->count()
+                + ProjectPlan::where('status', 'pending_lid')->count();
+        }
+
+        // Otherwise, filter per-target rules.
+        $candidateUserIds = collect()
+            ->merge(TrainingPlan::where('status', $expectedStatus)->pluck('user_id'))
+            ->merge(SelfLearningPlan::where('status', $expectedStatus)->pluck('user_id'))
+            ->merge(MentoringPlan::where('status', $expectedStatus)->pluck('user_id'))
+            ->merge(ProjectPlan::where('status', $expectedStatus)->pluck('user_id'))
+            ->unique()
+            ->filter(fn($id) => (int) $id > 0)
+            ->values();
+
+        if ($candidateUserIds->isEmpty()) {
+            return 0;
+        }
+
+        $allowedUserIds = $candidateUserIds
+            ->filter(fn($id) => $this->canApproveUserAtStatus((int) $id, $expectedStatus))
+            ->values();
+
+        if ($allowedUserIds->isEmpty()) {
+            return 0;
+        }
+
+        return TrainingPlan::where('status', $expectedStatus)->whereIn('user_id', $allowedUserIds)->count()
+            + SelfLearningPlan::where('status', $expectedStatus)->whereIn('user_id', $allowedUserIds)->count()
+            + MentoringPlan::where('status', $expectedStatus)->whereIn('user_id', $allowedUserIds)->count()
+            + ProjectPlan::where('status', $expectedStatus)->whereIn('user_id', $allowedUserIds)->count();
     }
 
     public function selectMonth($monthIndex)

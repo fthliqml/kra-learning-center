@@ -33,7 +33,7 @@ class PretestQuestions extends Component
   public array $errorQuestionIndexes = [];
 
   // Test configuration
-  public int $passingScore = 0;
+  public int $passingScore = 75;
   public ?int $maxAttempts = null;
   public bool $randomizeQuestion = false;
 
@@ -80,7 +80,7 @@ class PretestQuestions extends Component
     }
 
     // Load test config
-    $this->passingScore = $existingTest->passing_score ?? 0;
+    $this->passingScore = $existingTest->passing_score ?? 75;
     $this->maxAttempts = $existingTest->max_attempts;
     $this->randomizeQuestion = $existingTest->randomize_question ?? false;
 

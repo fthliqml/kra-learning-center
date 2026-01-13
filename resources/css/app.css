@@ -198,3 +198,10 @@ input[type='number'] {
     appearance: textfield;
     -moz-appearance: textfield;
 }
+
+/* Course learning module video: hide timeline (seek bar) until video ends (Plyr) */
+.plyr.controls-hidden-until-ended .plyr__progress__container,
+.plyr.controls-hidden-until-ended .plyr__progress,
+.plyr.controls-hidden-until-ended .plyr__controls input[data-plyr="seek"] {
+    display: none !important;
+}
