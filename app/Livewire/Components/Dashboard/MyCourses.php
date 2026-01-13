@@ -37,6 +37,8 @@ class MyCourses extends Component
         // Get UserCourse record if exists
         $userCourse = $course->userCourses->first();
 
+        $activityAt = $userCourse?->updated_at ?? $userCourse?->created_at;
+
         // Calculate progress
         $progress = $course->progressForUser($user);
         $status = $userCourse?->status ?? 'not_started';
@@ -50,22 +52,15 @@ class MyCourses extends Component
           'progress' => $progress,
           'status' => $status,
           'is_completed' => $isCompleted,
-          'last_activity' => $userCourse ? optional($userCourse->updated_at)->diffForHumans() : null,
-          'last_activity_at' => $userCourse ? optional($userCourse->updated_at)->toIso8601String() : null,
+          'last_activity' => $activityAt ? $activityAt->diffForHumans() : null,
+          'last_activity_at' => $activityAt ? $activityAt->toIso8601String() : null,
         ];
       })
-      // Filter to show only courses that are NOT completed (for dashboard)
-      ->filter(fn($c) => !$c['is_completed'])
-      // Sort: in-progress first, then by last activity
+      // Dashboard history: show newest activity first
       ->sortByDesc(function ($c) {
-        if ($c['status'] === 'in_progress') {
-          return 2;
-        }
-        if ($c['status'] === 'not_started') {
-          return 1;
-        }
-        return 0;
+        return $c['last_activity_at'] ? strtotime($c['last_activity_at']) : 0;
       })
+      ->take(3)
       ->values()
       ->toArray();
   }

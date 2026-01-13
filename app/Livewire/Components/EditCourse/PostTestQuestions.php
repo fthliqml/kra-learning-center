@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Facades\Excel;
 use App\Models\Course;
 use App\Models\Test;
+use App\Models\TestAttempt;
 use App\Models\TestQuestion;
 use App\Models\TestQuestionOption;
 use App\Exports\TestQuestionsTemplateExport;
@@ -328,6 +329,58 @@ class PostTestQuestions extends Component
     }
     unset($q);
 
+    // IMPORTANT: If there are already attempts for this posttest, do NOT delete/recreate questions.
+    // Wiping questions cascades and deletes historical answers.
+    $existingTest = Test::where('course_id', $this->courseId)
+      ->where('type', 'posttest')
+      ->first();
+    if ($existingTest && TestAttempt::where('test_id', $existingTest->id)->exists()) {
+      $existingTest->load(['questions.options']);
+
+      $dbNormalized = $existingTest->questions->sortBy('order')->values()->map(function ($qModel) {
+        $options = $qModel->options->sortBy('order')->values();
+        $opts = $options->map(fn($o) => (string) ($o->text ?? ''))->all();
+        $answerIndex = null;
+        foreach ($options as $idx => $opt) {
+          if ($opt->is_correct) {
+            $answerIndex = $idx;
+            break;
+          }
+        }
+        return [
+          'type' => $qModel->question_type ?? 'multiple',
+          'question' => (string) ($qModel->text ?? ''),
+          'options' => ($qModel->question_type === 'multiple') ? $opts : [],
+          'answer' => ($qModel->question_type === 'multiple') ? $answerIndex : null,
+          'max_points' => ($qModel->question_type === 'essay') ? ($qModel->max_points ?? 10) : null,
+        ];
+      })->all();
+
+      $draftNormalized = collect($this->questions)->values()->map(function ($q) {
+        $type = in_array($q['type'] ?? '', ['multiple', 'essay']) ? $q['type'] : 'multiple';
+        $opts = [];
+        if ($type === 'multiple') {
+          $opts = array_values(array_map(fn($o) => (string) $o, $q['options'] ?? []));
+        }
+        return [
+          'type' => $type,
+          'question' => (string) ($q['question'] ?? ''),
+          'options' => $opts,
+          'answer' => ($type === 'multiple') ? ($q['answer'] ?? null) : null,
+          'max_points' => ($type === 'essay') ? ((int) ($q['max_points'] ?? 10)) : null,
+        ];
+      })->all();
+
+      if ($dbNormalized !== $draftNormalized) {
+        $this->error(
+          'Post-Test sudah pernah dikerjakan. Untuk menjaga histori jawaban, pertanyaan/opsi tidak boleh diubah. Anda masih bisa mengubah Passing Score, Max Attempts, dan Randomize.',
+          timeout: 9000,
+          position: 'toast-top toast-center'
+        );
+        return;
+      }
+    }
+
     DB::transaction(function () {
       $test = Test::updateOrCreate(
         ['course_id' => $this->courseId, 'type' => 'posttest'],
@@ -338,6 +391,13 @@ class PostTestQuestions extends Component
           'show_result_immediately' => true,
         ]
       );
+
+      // If attempts exist, do not modify questions/options (would delete answers via FK cascade)
+      $hasAttempts = TestAttempt::where('test_id', $test->id)->exists();
+      if ($hasAttempts) {
+        return;
+      }
+
       $test->questions()->delete();
 
       // Calculate points distribution

@@ -9,6 +9,9 @@
     'completedModuleIds' => [],
     'moduleRouteName' => null,
     'hasPosttestAttempt' => false,
+    'canRetakePosttest' => false,
+    'canRetakePretest' => false,
+    'hasPassedPosttest' => false,
     'courseId' => null,
 ])
 
@@ -194,11 +197,14 @@
                             $thisIndex = array_search($s, $stageOrder, true);
                             $isCompletedStage =
                                 $thisIndex !== false && $currentIndex !== false && $thisIndex < $currentIndex;
-                            
+
                             // Posttest logic: if hasPosttestAttempt, posttest shows as completed but not clickable
-                            $isPosttestWithAttempt = $s === 'posttest' && $hasPosttestAttempt;
+                            $isPosttestWithAttempt = $s === 'posttest' && $hasPosttestAttempt && !$canRetakePosttest;
+                            // Course completed/locked after a posttest attempt (e.g. passed or under_review)
+                            $isPosttestAttemptLocked = $hasPosttestAttempt && !$canRetakePosttest;
                             // Pretest should also show completed if we have posttest attempt
                             $isPretestCompleted = $s === 'pretest' && $hasPosttestAttempt;
+                            $isResultCompleted = $s === 'result' && $hasPassedPosttest;
                         @endphp
 
                         {{-- Stages --}}
@@ -206,25 +212,66 @@
                             :class="stage === '{{ $s }}' ? 'border-primary/40 bg-primary/5 shadow-sm' :
                                 'hover:border-primary/20 hover:bg-gray-50'">
                             @if ($isPosttestWithAttempt)
-                                {{-- Posttest with attempt: not clickable, just display with checkmark --}}
-                                <div
-                                    class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left rounded-md cursor-not-allowed opacity-70"
-                                    title="Retry Post-Test melalui halaman Result">
-                                    <span class="flex-1 truncate capitalize text-gray-500" x-show="openSidebar" x-transition.opacity>
+                                {{-- Posttest completed: clickable for review --}}
+                                @if ($courseId)
+                                    <a href="{{ route('courses-posttest.index', ['course' => $courseId]) }}"
+                                        wire:navigate
+                                        class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary"
+                                        title="Review Post-Test">
+                                        <span class="flex-1 truncate capitalize" x-show="openSidebar"
+                                            x-transition.opacity>
+                                            {{ ucfirst($s) }}
+                                        </span>
+                                        <span class="capitalize" x-show="!openSidebar" x-transition.opacity>
+                                            {{ strtoupper(substr($s, 0, 1)) }}
+                                        </span>
+                                        <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                            <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                        </span>
+                                    </a>
+                                @else
+                                    <div
+                                        class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left rounded-md opacity-70">
+                                        <span class="flex-1 truncate capitalize text-gray-500" x-show="openSidebar"
+                                            x-transition.opacity>
+                                            {{ ucfirst($s) }}
+                                        </span>
+                                        <span class="capitalize text-gray-500" x-show="!openSidebar"
+                                            x-transition.opacity>
+                                            {{ strtoupper(substr($s, 0, 1)) }}
+                                        </span>
+                                        <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                            <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                        </span>
+                                    </div>
+                                @endif
+                            @elseif ($s === 'posttest' && $canRetakePosttest && $courseId)
+                                {{-- Posttest retake allowed: clickable --}}
+                                <a href="{{ route('courses-posttest.index', ['course' => $courseId]) }}" wire:navigate
+                                    class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary">
+                                    <span class="flex-1 truncate capitalize" x-show="openSidebar"
+                                        x-transition.opacity>
                                         {{ ucfirst($s) }}
                                     </span>
-                                    <span class="capitalize text-gray-500" x-show="!openSidebar" x-transition.opacity>
+                                    <span class="capitalize" x-show="!openSidebar" x-transition.opacity>
                                         {{ strtoupper(substr($s, 0, 1)) }}
                                     </span>
                                     <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
-                                        <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                        @if ($isStageActive)
+                                            <span class="absolute inset-0 rounded-full bg-primary"></span>
+                                            <span class="absolute rounded-full bg-white" style="inset:5px"></span>
+                                        @else
+                                            <span
+                                                class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
+                                        @endif
                                     </span>
-                                </div>
-                            @elseif ($isPretestCompleted && $courseId)
-                                {{-- Pretest completed in remedial mode: clickable to review --}}
+                                </a>
+                            @elseif ($isPretestCompleted && $courseId && ($canRetakePretest || $isPosttestAttemptLocked))
+                                {{-- Pretest review allowed: remedial retake OR course completed --}}
                                 <a href="{{ route('courses-pretest.index', ['course' => $courseId]) }}" wire:navigate
                                     class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary">
-                                    <span class="flex-1 truncate capitalize" x-show="openSidebar" x-transition.opacity>
+                                    <span class="flex-1 truncate capitalize" x-show="openSidebar"
+                                        x-transition.opacity>
                                         {{ ucfirst($s) }}
                                     </span>
                                     <span class="capitalize" x-show="!openSidebar" x-transition.opacity>
@@ -234,6 +281,44 @@
                                         <x-icon name="o-check-circle" class="size-5 text-green-500" />
                                     </span>
                                 </a>
+                            @elseif ($isPretestCompleted && $courseId && !$canRetakePretest)
+                                {{-- Pretest completed but retake/review not allowed --}}
+                                <div class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left rounded-md cursor-not-allowed opacity-70"
+                                    title="Pre-Test tidak bisa dibuka kembali">
+                                    <span class="flex-1 truncate capitalize text-gray-500" x-show="openSidebar"
+                                        x-transition.opacity>
+                                        {{ ucfirst($s) }}
+                                    </span>
+                                    <span class="capitalize text-gray-500" x-show="!openSidebar" x-transition.opacity>
+                                        {{ strtoupper(substr($s, 0, 1)) }}
+                                    </span>
+                                    <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                        <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                    </span>
+                                </div>
+                            @elseif ($s === 'result' && $courseId && ($hasPassedPosttest || $hasPosttestAttempt))
+                                {{-- Result review allowed: user has a posttest attempt (passed/failed/under_review) --}}
+                                <a href="{{ route('courses-result.index', ['course' => $courseId]) }}" wire:navigate
+                                    class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary">
+                                    <span class="flex-1 truncate capitalize" x-show="openSidebar"
+                                        x-transition.opacity>
+                                        {{ ucfirst($s) }}
+                                    </span>
+                                    <span class="capitalize" x-show="!openSidebar" x-transition.opacity>
+                                        {{ strtoupper(substr($s, 0, 1)) }}
+                                    </span>
+                                    <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
+                                        @if ($isStageActive)
+                                            <span class="absolute inset-0 rounded-full bg-primary"></span>
+                                            <span class="absolute rounded-full bg-white" style="inset:5px"></span>
+                                        @elseif ($isResultCompleted)
+                                            <x-icon name="o-check-circle" class="size-5 text-green-500" />
+                                        @else
+                                            <span
+                                                class="absolute inset-0 rounded-full border border-gray-300 transition-colors group-hover:border-primary/40"></span>
+                                        @endif
+                                    </span>
+                                </a>
                             @else
                                 <button type="button"
                                     class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md"
@@ -241,7 +326,8 @@
                                         'font-medium text-gray-700'">
 
                                     {{-- Stage Name (Sidebar Open) --}}
-                                    <span class="flex-1 truncate capitalize" x-show="openSidebar" x-transition.opacity>
+                                    <span class="flex-1 truncate capitalize" x-show="openSidebar"
+                                        x-transition.opacity>
                                         {{ ucfirst($s) }}
                                     </span>
 
@@ -252,7 +338,7 @@
 
                                     {{-- Stage Indicator --}}
                                     <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
-                                        @if ($isCompletedStage || $isPretestCompleted)
+                                        @if ($isCompletedStage || $isPretestCompleted || $isResultCompleted)
                                             <x-icon name="o-check-circle" class="size-5 text-green-500" />
                                         @elseif($isStageActive)
                                             <span class="absolute inset-0 rounded-full bg-primary"></span>
