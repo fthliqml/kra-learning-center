@@ -39,10 +39,21 @@
                             </p>
 
                             {{-- Status --}}
-                            <span
-                                class="badge badge-outline {{ $course['is_completed'] ? 'badge-success' : 'badge-info' }}"
-                                title="{{ $course['is_completed'] ? 'Completed' : 'In Progress' }}">
-                                {{ $course['is_completed'] ? 'Completed' : 'In Progress' }}
+                            @php
+                                $status = $course['status'] ?? 'not_started';
+                                $label = $course['is_completed']
+                                    ? 'Completed'
+                                    : ($status === 'in_progress'
+                                        ? 'In Progress'
+                                        : 'Not Started');
+                                $badge = $course['is_completed']
+                                    ? 'badge-success'
+                                    : ($status === 'in_progress'
+                                        ? 'badge-info'
+                                        : 'badge-ghost');
+                            @endphp
+                            <span class="badge badge-outline {{ $badge }}" title="{{ $label }}">
+                                {{ $label }}
                             </span>
                         </div>
 
@@ -66,7 +77,7 @@
                             </div>
                             <div class="flex items-center justify-between">
                                 <p class="text-xs text-gray-600 dark:text-gray-400">
-                                    {{ $course['is_completed'] ? 'Completed' : 'Progress' }}
+                                    {{ $course['is_completed'] ? 'Completed' : (($course['status'] ?? 'not_started') === 'not_started' ? 'Not Started' : 'Progress') }}
                                 </p>
                                 <p class="text-xs text-gray-600 dark:text-gray-400">
                                     {{ $course['progress'] }}%

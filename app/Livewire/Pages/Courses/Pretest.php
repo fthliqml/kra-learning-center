@@ -23,18 +23,16 @@ class Pretest extends Component
     public ?TestAttempt $attempt = null;
     public array $attemptAnswers = [];
 
+    public bool $showRetakeChoice = false;
+
+    public bool $isRetakeFlow = false;
+
     public function mount(Course $course)
     {
         $userId = Auth::id();
         // Assigned via TrainingAssessment within the training schedule window
         $today = now()->startOfDay();
         $assigned = $course->trainings()
-            // ->where(function ($w) use ($today) {
-            //     $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
-            // })
-            // ->where(function ($w) use ($today) {
-            //     $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
-            // })
             ->whereHas('assessments', function ($a) use ($userId) {
                 $a->where('employee_id', $userId);
             })
@@ -43,8 +41,22 @@ class Pretest extends Component
             abort(403, 'You are not assigned to this course.');
         }
 
-        // Gate: before schedule start, user can only view overview
+        // Gate: outside schedule window, course content is locked.
+        // If the user already passed, send them to Result (not Overview) for review.
         if ($userId && !$course->isAvailableForUser($userId)) {
+            $postRow = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
+            $hasPassedPosttest = false;
+            if ($postRow) {
+                $hasPassedPosttest = TestAttempt::where('test_id', $postRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+            }
+
+            if ($hasPassedPosttest) {
+                return redirect()->route('courses-result.index', ['course' => $course->id]);
+            }
+
             return redirect()->route('courses-overview.show', ['course' => $course->id]);
         }
 
@@ -60,8 +72,12 @@ class Pretest extends Component
             }
         }
 
-        // Eager load learning modules for sidebar listing
-        $this->course = $course->load(['learningModules' => fn($q) => $q->orderBy('id')]);
+        // Eager load learning modules + sections for sidebar listing
+        $this->course = $course->load(['learningModules' => function ($q) {
+            $q->orderBy('id')->with(['sections' => function ($s) {
+                $s->select('id', 'topic_id', 'title')->orderBy('id');
+            }]);
+        }]);
 
         // Load pretest with minimal fields (questions & options) once
         $this->pretest = Test::with([
@@ -77,43 +93,147 @@ class Pretest extends Component
             ->first();
 
         if ($this->pretest) {
-            // Check if already submitted an attempt
-            $existingAttempt = TestAttempt::where('test_id', $this->pretest->id)
-                ->where('user_id', $userId)
-                ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-                ->orderByDesc('submitted_at')
+            $forceRetake = (string) request()->query('retake', '') === '1';
+
+            // Remedial rule: if user is repeating the course because they failed the Post-Test,
+            // do not show Pre-Test review (prevents memorizing correct answers). Force retake.
+            $isRemedial = false;
+            $posttest = Test::where('course_id', $course->id)
+                ->where('type', 'posttest')
+                ->select(['id'])
                 ->first();
-            
+            if ($posttest) {
+                $lastPosttestAttempt = TestAttempt::where('test_id', $posttest->id)
+                    ->where('user_id', $userId)
+                    ->orderByDesc('submitted_at')->orderByDesc('id')
+                    ->first();
+                if ($lastPosttestAttempt && !$lastPosttestAttempt->is_passed && $lastPosttestAttempt->status !== TestAttempt::STATUS_UNDER_REVIEW) {
+                    $isRemedial = true;
+                }
+            }
+
+            if ($isRemedial) {
+                $forceRetake = true;
+            }
+            $this->isRetakeFlow = $forceRetake;
+
+            $maxAttempts = null;
+            if ($this->pretest->max_attempts !== null) {
+                $maxAttempts = max(1, (int) $this->pretest->max_attempts);
+            }
+
+            // Attempts already submitted/under review
+            $attemptCount = (int) TestAttempt::where('test_id', $this->pretest->id)
+                ->where('user_id', $userId)
+                ->whereIn('status', [
+                    TestAttempt::STATUS_SUBMITTED,
+                    TestAttempt::STATUS_UNDER_REVIEW,
+                    TestAttempt::STATUS_EXPIRED,
+                ])
+                ->count();
+
+            $existingAttempt = null;
+            if ($attemptCount > 0) {
+                $existingAttempt = TestAttempt::where('test_id', $this->pretest->id)
+                    ->where('user_id', $userId)
+                    ->whereIn('status', [
+                        TestAttempt::STATUS_SUBMITTED,
+                        TestAttempt::STATUS_UNDER_REVIEW,
+                        TestAttempt::STATUS_EXPIRED,
+                    ])
+                    ->orderByDesc('submitted_at')
+                    ->first();
+            }
+
             // Check if user has posttest attempt (remedial mode)
             $posttest = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
             $hasPosttestAttempt = false;
+            $hasPassedPosttestAttempt = false;
             if ($posttest) {
                 $hasPosttestAttempt = TestAttempt::where('test_id', $posttest->id)
                     ->where('user_id', $userId)
                     ->exists();
+
+                $hasPassedPosttestAttempt = TestAttempt::where('test_id', $posttest->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
             }
-            
+
             if ($existingAttempt) {
-                if ($hasPosttestAttempt) {
-                    // Review mode: show pretest result with answers
+                // If course is completed (posttest passed), always allow review of pretest (read-only)
+                if ($hasPassedPosttestAttempt) {
+                    $this->showRetakeChoice = false;
                     $this->isReviewMode = true;
                     $this->attempt = $existingAttempt;
-                    
-                    // Load attempt answers with question and option details
                     $this->attemptAnswers = TestAttemptAnswer::where('attempt_id', $existingAttempt->id)
                         ->get()
                         ->keyBy('question_id')
                         ->toArray();
                 } else {
-                    // Normal mode: redirect to modules
-                    return redirect()->route('courses-modules.index', ['course' => $course->id]);
+                    // Pretest is only accessible again if configured for multiple attempts
+                    if ($maxAttempts !== null && $maxAttempts <= 1) {
+                        return redirect()->route('courses-modules.index', ['course' => $course->id]);
+                    }
+
+                    // Unlimited attempts (max_attempts NULL): default to review + ask user, unless forced retake via query
+                    if ($maxAttempts === null) {
+                        if (!$forceRetake) {
+                            $this->showRetakeChoice = true;
+                            $this->isReviewMode = true;
+                            $this->attempt = $existingAttempt;
+                            $this->attemptAnswers = TestAttemptAnswer::where('attempt_id', $existingAttempt->id)
+                                ->get()
+                                ->keyBy('question_id')
+                                ->toArray();
+                        }
+                    } else {
+                        // Finite attempts: show review when attempts are exhausted
+                        if ($attemptCount >= $maxAttempts) {
+                            $this->isReviewMode = true;
+                            $this->attempt = $existingAttempt;
+                            $this->attemptAnswers = TestAttemptAnswer::where('attempt_id', $existingAttempt->id)
+                                ->get()
+                                ->keyBy('question_id')
+                                ->toArray();
+                        }
+                    }
                 }
             }
 
             $collection = $this->pretest->questions->map(function ($q) {
                 $attemptAnswer = $this->attemptAnswers[$q->id] ?? null;
                 $correctOption = $q->options->first(fn($o) => $o->is_correct);
-                
+
+                $userSelectedOptionId = null;
+                $userEssayAnswer = null;
+                $isCorrect = null;
+                $earnedPoints = 0;
+
+                if (is_array($attemptAnswer)) {
+                    $userSelectedOptionId = $attemptAnswer['selected_option_id'] ?? null;
+                    $userEssayAnswer = $attemptAnswer['essay_answer'] ?? null;
+                    $isCorrect = $attemptAnswer['is_correct'] ?? null;
+                    $earnedPoints = (int) ($attemptAnswer['earned_points'] ?? 0);
+
+                    // Backward compatibility: some older attempts stored selected option in essay_answer
+                    if ($q->question_type === 'multiple' && !$userSelectedOptionId && $userEssayAnswer !== null) {
+                        $raw = trim((string) $userEssayAnswer);
+                        if ($raw !== '' && ctype_digit($raw)) {
+                            $userSelectedOptionId = (int) $raw;
+                        }
+                    }
+
+                    // Derive correctness if missing for multiple-choice (keeps review consistent with score)
+                    if ($q->question_type === 'multiple' && $userSelectedOptionId && $isCorrect === null) {
+                        $selected = $q->options->first(fn($o) => (string) $o->id === (string) $userSelectedOptionId);
+                        if ($selected) {
+                            $isCorrect = (bool) $selected->is_correct;
+                            $earnedPoints = $isCorrect ? (int) ($q->max_points ?? 1) : 0;
+                        }
+                    }
+                }
+
                 return [
                     'id' => 'q' . $q->id,
                     'db_id' => $q->id,
@@ -128,10 +248,10 @@ class Pretest extends Component
                         ])->values()->all()
                         : [],
                     // Review data
-                    'user_answer_id' => $attemptAnswer['selected_option_id'] ?? null,
-                    'user_essay_answer' => $attemptAnswer['essay_answer'] ?? null,
-                    'is_correct' => $attemptAnswer['is_correct'] ?? null,
-                    'earned_points' => $attemptAnswer['earned_points'] ?? 0,
+                    'user_answer_id' => $userSelectedOptionId,
+                    'user_essay_answer' => $userEssayAnswer,
+                    'is_correct' => $isCorrect,
+                    'earned_points' => $earnedPoints,
                     'correct_option_id' => $correctOption?->id,
                     'correct_option_text' => $correctOption?->text,
                 ];
@@ -146,19 +266,102 @@ class Pretest extends Component
         }
     }
 
+    public function chooseRetake(): mixed
+    {
+        return redirect()->route('courses-pretest.index', [
+            'course' => $this->course->id,
+            'retake' => 1,
+        ]);
+    }
+
+    public function dismissRetakeChoice(): void
+    {
+        $this->showRetakeChoice = false;
+    }
+
     public function render()
     {
         $userId = Auth::id();
-        
-        // Check if user has posttest attempt for sidebar navigation
-        $posttest = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
-        $hasPosttestAttempt = false;
-        if ($posttest) {
-            $hasPosttestAttempt = TestAttempt::where('test_id', $posttest->id)
-                ->where('user_id', $userId)
-                ->exists();
+
+        // Sidebar completion indicators (match Module/Posttest behavior)
+        $enrollment = $this->course->userCourses()
+            ->where('user_id', $userId)
+            ->select(['id', 'user_id', 'course_id', 'current_step'])
+            ->first();
+        $currentStep = (int) ($enrollment->current_step ?? 0);
+
+        $orderedSectionRefs = [];
+        foreach ($this->course->learningModules as $topic) {
+            foreach (($topic->sections ?? collect()) as $section) {
+                $orderedSectionRefs[] = $section;
+            }
         }
-        
+        $sectionsTotal = count($orderedSectionRefs);
+        $hasPretest = Test::where('course_id', $this->course->id)->where('type', 'pretest')->exists();
+        $preUnits = $hasPretest ? 1 : 0;
+        $completedCount = max(0, min($currentStep - $preUnits, $sectionsTotal));
+        for ($i = 0; $i < $completedCount; $i++) {
+            if (isset($orderedSectionRefs[$i])) {
+                $orderedSectionRefs[$i]->is_completed = true;
+            }
+        }
+
+        $completedModuleIds = [];
+        foreach ($this->course->learningModules as $topic) {
+            $secs = $topic->sections ?? collect();
+            $count = $secs->count();
+            if ($count === 0) continue;
+            $doneInTopic = $secs->filter(fn($s) => !empty($s->is_completed))->count();
+            if ($doneInTopic > 0 && $doneInTopic === $count) {
+                $completedModuleIds[] = $topic->id;
+            }
+        }
+
+        // Check if user has posttest attempt for sidebar navigation
+        $posttest = Test::where('course_id', $this->course->id)
+            ->where('type', 'posttest')
+            ->select(['id', 'max_attempts'])
+            ->first();
+        $hasPosttestAttempt = false;
+        $canRetakePosttest = false;
+        $hasPassedPosttest = false;
+        if ($posttest) {
+            $lastAttempt = TestAttempt::where('test_id', $posttest->id)
+                ->where('user_id', $userId)
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->first();
+            if ($lastAttempt) {
+                $hasPosttestAttempt = true;
+                $hasPassedPosttest = (bool) $lastAttempt->is_passed;
+                if (!$lastAttempt->is_passed && $lastAttempt->status !== TestAttempt::STATUS_UNDER_REVIEW) {
+                    $attemptCount = (int) TestAttempt::where('test_id', $posttest->id)
+                        ->where('user_id', $userId)
+                        ->whereIn('status', [
+                            TestAttempt::STATUS_SUBMITTED,
+                            TestAttempt::STATUS_UNDER_REVIEW,
+                            TestAttempt::STATUS_EXPIRED,
+                        ])
+                        ->count();
+                    if ($posttest->max_attempts === null) {
+                        $canRetakePosttest = true;
+                    } else {
+                        $maxAttempts = max(1, (int) $posttest->max_attempts);
+                        $canRetakePosttest = $attemptCount < $maxAttempts;
+                    }
+                }
+            }
+        }
+
+        $canRetakePretest = false;
+        if ($this->pretest) {
+            if ($this->pretest->max_attempts === null) {
+                $canRetakePretest = true;
+            } else {
+                $maxAttempts = max(1, (int) $this->pretest->max_attempts);
+                $canRetakePretest = $maxAttempts > 1;
+            }
+        }
+
         /** @var \Illuminate\View\View&\App\Support\Ide\LivewireViewMacros $view */
         $view = view('pages.courses.pretest', [
             'course' => $this->course,
@@ -168,6 +371,7 @@ class Pretest extends Component
             'userId' => $userId,
             'isReviewMode' => $this->isReviewMode,
             'attempt' => $this->attempt,
+            'showRetakeChoice' => $this->showRetakeChoice,
         ]);
 
         return $view->layout('layouts.livewire.course', [
@@ -176,7 +380,11 @@ class Pretest extends Component
             'progress' => $this->course->progressForUser(),
             'stages' => ['pretest', 'module', 'posttest', 'result'],
             'modules' => $this->course->learningModules,
+            'completedModuleIds' => $completedModuleIds,
             'hasPosttestAttempt' => $hasPosttestAttempt,
+            'canRetakePosttest' => $canRetakePosttest,
+            'canRetakePretest' => $canRetakePretest,
+            'hasPassedPosttest' => $hasPassedPosttest,
             'courseId' => $this->course->id,
         ]);
     }
@@ -191,17 +399,65 @@ class Pretest extends Component
         if (!$userId) abort(401);
         if (!$this->pretest) abort(400, 'Pretest not configured.');
 
+        // Gate: prevent submit outside schedule window
+        if (!$this->course->isAvailableForUser($userId)) {
+            $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+            $hasPassedPosttest = false;
+            if ($postRow) {
+                $hasPassedPosttest = TestAttempt::where('test_id', $postRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+            }
+            if ($hasPassedPosttest) {
+                return redirect()->route('courses-result.index', ['course' => $this->course->id]);
+            }
+            return redirect()->route('courses-overview.show', ['course' => $this->course->id]);
+        }
+
         // Verify enrollment
         $enrollment = $this->course->userCourses()->where('user_id', $userId)->first();
         if (!$enrollment) abort(403);
 
-        // Prevent duplicate submissions
-        $alreadySubmitted = TestAttempt::where('test_id', $this->pretest->id)
+        // If user is already past the pretest step, this submission is a retake action.
+        $isRetakeContext = ((int) ($enrollment->current_step ?? 0)) > 1;
+        if ($this->isRetakeFlow) {
+            $isRetakeContext = true;
+        }
+
+        // Remedial mode detection: failed last posttest attempt.
+        $isRemedial = false;
+        $posttest = Test::where('course_id', $this->course->id)
+            ->where('type', 'posttest')
+            ->select('id')
+            ->first();
+        if ($posttest) {
+            $lastPosttestAttempt = TestAttempt::where('test_id', $posttest->id)
+                ->where('user_id', $userId)
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->first();
+            if ($lastPosttestAttempt) {
+                $isRetakeContext = true;
+                if (!$lastPosttestAttempt->is_passed && $lastPosttestAttempt->status !== TestAttempt::STATUS_UNDER_REVIEW) {
+                    $isRemedial = true;
+                }
+            }
+        }
+
+        $attemptCount = (int) TestAttempt::where('test_id', $this->pretest->id)
             ->where('user_id', $userId)
-            ->whereIn('status', [TestAttempt::STATUS_SUBMITTED, TestAttempt::STATUS_UNDER_REVIEW])
-            ->exists();
-        if ($alreadySubmitted) {
-            return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
+            ->whereIn('status', [
+                TestAttempt::STATUS_SUBMITTED,
+                TestAttempt::STATUS_UNDER_REVIEW,
+                TestAttempt::STATUS_EXPIRED,
+            ])
+            ->count();
+
+        if ($this->pretest->max_attempts !== null) {
+            $maxAttempts = max(1, (int) $this->pretest->max_attempts);
+            if ($attemptCount >= $maxAttempts) {
+                return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
+            }
         }
 
         // Load questions fresh to validate and grade
@@ -355,6 +611,29 @@ class Pretest extends Component
             } catch (\Throwable $e) {
             }
         });
+
+        // Resolve first module section (explicit navigation prevents resume jumping)
+        $firstSectionId = null;
+        try {
+            $firstTopic = $this->course->learningModules->first();
+            $firstSectionId = $firstTopic?->sections?->first()?->id;
+        } catch (\Throwable $e) {
+            $firstSectionId = null;
+        }
+
+        // Redirect behavior:
+        // - Remedial (failed course): go straight to first module section
+        // - Non-remedial retake: return to Pre-Test (review)
+        // - First-time pretest: go to first module section
+        if ($isRetakeContext && !$isRemedial) {
+            return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
+        }
+
+        if ($firstSectionId) {
+            return redirect()->route('courses-modules.index', ['course' => $this->course->id, 'section' => $firstSectionId]);
+        }
+
+        return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
 
         // Redirect to learning modules page (SPA navigate)
         return redirect()->route('courses-modules.index', ['course' => $this->course->id]);

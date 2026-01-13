@@ -24,7 +24,7 @@ class Result extends Component
     {
         $userId = Auth::id();
         if (!$userId) abort(401);
-        
+
         $attemptId = request()->query('attemptId');
 
         // Ensure user is assigned to this course
@@ -90,7 +90,7 @@ class Result extends Component
         if ($post) {
             $query = TestAttempt::where('test_id', $post->id)
                 ->where('user_id', $userId);
-            
+
             if ($attemptId) {
                 $attempt = $query->find($attemptId);
                 // Ensure attempt belongs to user/test
@@ -110,20 +110,20 @@ class Result extends Component
             $essayCount = (int) TestQuestion::where('test_id', $post->id)
                 ->whereIn('question_type', ['essay', 'text'])
                 ->count();
-            
+
             if ($maxAuto === 0 && $maxManual === 0) {
-                 // Fallback if no points assigned
-                 $maxAuto = (int) TestQuestion::where('test_id', $post->id)->where('question_type', 'multiple')->count();
-                 $maxManual = $essayCount;
+                // Fallback if no points assigned
+                $maxAuto = (int) TestQuestion::where('test_id', $post->id)->where('question_type', 'multiple')->count();
+                $maxManual = $essayCount;
             }
-            
+
             $percent = null;
             $maxTotal = $maxAuto + $maxManual;
             if ($attempt && $maxTotal > 0) {
-                 // If under review, percent is provisional (based on what's graded + auto)
-                 // But typically specific score logic happens in render
-                 $currentTotal = $attempt->auto_score + $attempt->manual_score;
-                 $percent = (int) round(($currentTotal / $maxTotal) * 100);
+                // If under review, percent is provisional (based on what's graded + auto)
+                // But typically specific score logic happens in render
+                $currentTotal = $attempt->auto_score + $attempt->manual_score;
+                $percent = (int) round(($currentTotal / $maxTotal) * 100);
             }
 
             // Extra aggregates for donut chart and history
@@ -138,13 +138,16 @@ class Result extends Component
                     ->count();
             }
 
-            // Attempt history (latest first)
+            // Attempt history (oldest → newest) to match attempt numbering
             $attemptRows = TestAttempt::where('test_id', $post->id)
                 ->where('user_id', $userId)
-                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->orderBy('attempt_number')
+                ->orderBy('submitted_at')
+                ->orderBy('id')
                 ->get();
             $passingScore = (int) ($post->passing_score ?? 0);
-            $attempts = $attemptRows->map(function ($a) use ($maxAuto, $passingScore) {
+            $currentAttemptId = $attempt?->id;
+            $attempts = $attemptRows->map(function ($a) use ($maxAuto, $passingScore, $currentAttemptId) {
                 $pct = ($maxAuto > 0) ? (int) round(($a->auto_score / max(1, $maxAuto)) * 100) : null;
                 $isUnderReview = ($a->status === TestAttempt::STATUS_UNDER_REVIEW);
                 $derivedPass = false;
@@ -166,7 +169,8 @@ class Result extends Component
                     'percent' => $pct,
                     'status' => (string) $a->status,
                     'passed' => $derivedPass,
-                    'is_current' => (isset($this->posttest['attempt']->id) && $a->id === $this->posttest['attempt']->id),
+                    // Marks the attempt currently being viewed (query param attemptId or latest by default)
+                    'is_current' => ($currentAttemptId !== null && (int) $a->id === (int) $currentAttemptId),
                 ];
             })->values()->all();
 
@@ -175,7 +179,7 @@ class Result extends Component
                 ->where('user_id', $userId)
                 ->orderByDesc('submitted_at')->orderByDesc('id')
                 ->first();
-                
+
             $this->posttest = [
                 'test' => $post,
                 'attempt' => $attempt,
@@ -266,26 +270,26 @@ class Result extends Component
         // Get attempt details
         $topAttempt = $post['attempt'] ?? null;
         $topUnderReview = $topAttempt && $topAttempt->status === \App\Models\TestAttempt::STATUS_UNDER_REVIEW;
-        
+
         // Check if viewing historical attempt (not the latest)
         $isLatest = (bool) ($post['is_latest'] ?? true);
         $isHistorical = !$isLatest;
-        
+
         // Calculate MC-only percentage (for Pilihan Ganda section)
         $maxAuto = (int) ($post['max_auto'] ?? 0);
         $mcScore = (int) ($topAttempt->auto_score ?? 0);
         $mcPct = $maxAuto > 0 ? (int) round(($mcScore / $maxAuto) * 100) : 0;
-        
+
         // Calculate total percentage (MC + Essay)
         $maxManual = (int) ($post['max_manual'] ?? 0);
         $essayScore = (int) ($topAttempt->manual_score ?? 0);
         $maxTotal = $maxAuto + $maxManual;
         $totalScore = $mcScore + $essayScore;
         $totalPct = $maxTotal > 0 ? (int) round(($totalScore / $maxTotal) * 100) : 0;
-        
+
         // Pre-test percentage
         $prePct = (int) ($pre['percent'] ?? 0 ?: 0);
-        
+
         // For comparison chart: use MC-only if essay pending, else total
         $postPct = $topUnderReview ? $mcPct : $totalPct;
         $delta = $postPct - $prePct;
@@ -331,7 +335,7 @@ class Result extends Component
         $incorrect = max(0, $mcTotal - $correct);
         $attempts = $post['attempts'] ?? [];
         $currentAttemptNum = (int) ($topAttempt->attempt_number ?? 0);
-        
+
         // Essay details
         $essayCount = (int) ($post['essay_count'] ?? 0);
         $essayPending = $topUnderReview && $essayCount > 0;
@@ -373,6 +377,7 @@ class Result extends Component
             'preMcTotal' => $preMcTotal,
             'preCorrect' => $preCorrect,
             'preIncorrect' => $preIncorrect,
+            // @intelephense-ignore-next-line -- Livewire registers the "layout" view macro at runtime.
         ])->layout('layouts.livewire.course', [
             'courseTitle' => $this->course->title,
             'stage' => 'result',

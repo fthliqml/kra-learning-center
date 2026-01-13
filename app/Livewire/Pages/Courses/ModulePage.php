@@ -31,12 +31,6 @@ class ModulePage extends Component
         // Assigned via TrainingAssessment within the training schedule window
         $today = now()->startOfDay();
         $assigned = $course->trainings()
-            // ->where(function ($w) use ($today) {
-            //     $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
-            // })
-            // ->where(function ($w) use ($today) {
-            //     $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
-            // })
             ->whereHas('assessments', function ($a) use ($userId) {
                 $a->where('employee_id', $userId);
             })
@@ -45,8 +39,20 @@ class ModulePage extends Component
             abort(403, 'You are not assigned to this course.');
         }
 
-        // Gate: before schedule start, user can only view overview
+        // Gate: outside schedule window, course content is locked.
+        // If the user already passed, send them to Result (not Overview) for review.
         if ($userId && !$course->isAvailableForUser($userId)) {
+            $postRow = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
+            $hasPassedPosttest = false;
+            if ($postRow) {
+                $hasPassedPosttest = TestAttempt::where('test_id', $postRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+            }
+            if ($hasPassedPosttest) {
+                return redirect()->route('courses-result.index', ['course' => $course->id]);
+            }
             return redirect()->route('courses-overview.show', ['course' => $course->id]);
         }
 
@@ -64,27 +70,8 @@ class ModulePage extends Component
             }
         }
 
-        // If course already completed (e.g., passed posttest), redirect to result
-        if ($enrollment) {
-            $totalUnits = (int) $course->progressUnitsCount();
-            $current = (int) ($enrollment->current_step ?? 0);
-            if ($current >= $totalUnits || strtolower($enrollment->status ?? '') === 'completed') {
-                return redirect()->route('courses-result.index', ['course' => $course->id]);
-            }
-        }
-
-        // If user has PASSED posttest, redirect to result (course completed)
-        // Failed/under_review attempts should allow remedial access to modules
-        $posttest = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
-        if ($posttest) {
-            $passedAttempt = TestAttempt::where('test_id', $posttest->id)
-                ->where('user_id', $userId)
-                ->where('is_passed', true)
-                ->exists();
-            if ($passedAttempt) {
-                return redirect()->route('courses-result.index', ['course' => $course->id]);
-            }
-        }
+        // NOTE: After passing, users are allowed to re-open learning materials in review mode.
+        // Do not redirect completed/passed users away from modules.
 
         // Gate: require pretest submitted before accessing modules (if pretest exists)
         $pretest = Test::where('course_id', $course->id)->where('type', 'pretest')->select('id')->first();
@@ -218,6 +205,66 @@ class ModulePage extends Component
         $this->activeSectionId = $sectionId;
     }
 
+    public function goBackStep(): mixed
+    {
+        $userId = Auth::id();
+        if (!$userId) return null;
+
+        // Compute ordered sections across topics with topic mapping
+        $ordered = [];
+        foreach ($this->course->learningModules as $topic) {
+            foreach ($topic->sections as $sec) {
+                $ordered[] = ['topic_id' => (int) $topic->id, 'section_id' => (int) $sec->id];
+            }
+        }
+        if (!$ordered) return null;
+
+        $idx = null;
+        foreach ($ordered as $i => $pair) {
+            if ((int) $pair['section_id'] === (int) $this->activeSectionId) {
+                $idx = $i;
+                break;
+            }
+        }
+        if ($idx === null) return null;
+
+        // Normal case: go to previous section
+        if ($idx > 0) {
+            $prev = $ordered[$idx - 1];
+            return redirect()->route('courses-modules.index', [
+                'course' => $this->course->id,
+                'section' => $prev['section_id'],
+            ]);
+        }
+
+        // At the first section: allow going back to Pretest if it's retakable OR the user has passed (review mode)
+        $hasPassedPosttest = false;
+        $postRow = Test::where('course_id', $this->course->id)
+            ->where('type', 'posttest')
+            ->select(['id'])
+            ->first();
+        if ($postRow) {
+            $lastAttempt = TestAttempt::where('test_id', $postRow->id)
+                ->where('user_id', $userId)
+                ->orderByDesc('submitted_at')->orderByDesc('id')
+                ->first();
+            $hasPassedPosttest = (bool) ($lastAttempt?->is_passed);
+        }
+
+        $pretest = Test::where('course_id', $this->course->id)
+            ->where('type', 'pretest')
+            ->select(['id', 'max_attempts'])
+            ->first();
+        if (!$pretest) return null;
+
+        if (!$hasPassedPosttest && $pretest->max_attempts !== null) {
+            $maxAttempts = max(1, (int) $pretest->max_attempts);
+            if ($maxAttempts <= 1) return null;
+        }
+
+        return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
+    }
+
     /**
      * Increment progress by one sub-topic (Section) unit, bounded by total units.
      */
@@ -228,6 +275,22 @@ class ModulePage extends Component
 
         $totalUnits = $this->computeTotalUnits();
         if ($totalUnits <= 0) return null;
+
+        // Gate: prevent progress outside schedule window
+        if (!$this->course->isAvailableForUser($userId)) {
+            $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+            $hasPassedPosttest = false;
+            if ($postRow) {
+                $hasPassedPosttest = TestAttempt::where('test_id', $postRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+            }
+            if ($hasPassedPosttest) {
+                return redirect()->route('courses-result.index', ['course' => $this->course->id]);
+            }
+            return redirect()->route('courses-overview.show', ['course' => $this->course->id]);
+        }
 
         // Determine if current position is the very last section/topic before posttest
         $isLastBeforePosttest = false;
@@ -277,6 +340,13 @@ class ModulePage extends Component
 
         // Otherwise, advance to next section/topic and return to modules
         $this->goToNextSection();
+        if ($this->activeSectionId) {
+            return redirect()->route('courses-modules.index', [
+                'course' => $this->course->id,
+                'section' => $this->activeSectionId,
+            ]);
+        }
+
         return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
     }
 
@@ -316,6 +386,25 @@ class ModulePage extends Component
         $userId = Auth::id();
         if (!$userId) return;
         if (!$this->quizSectionId) return;
+
+        // Gate: prevent quiz submit outside schedule window
+        if (!$this->course->isAvailableForUser($userId)) {
+            $this->closeQuizModalOnly();
+            $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+            $hasPassedPosttest = false;
+            if ($postRow) {
+                $hasPassedPosttest = TestAttempt::where('test_id', $postRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+            }
+            if ($hasPassedPosttest) {
+                redirect()->route('courses-result.index', ['course' => $this->course->id])->send();
+                return;
+            }
+            redirect()->route('courses-overview.show', ['course' => $this->course->id])->send();
+            return;
+        }
 
         $questionRows = SectionQuizQuestion::with('options')
             ->where('section_id', $this->quizSectionId)
@@ -451,18 +540,35 @@ class ModulePage extends Component
     {
         $userId = Auth::id();
         $sectionId = $this->quizSectionId ?? $this->activeSectionId;
-        
+
+        // Gate: prevent progress outside schedule window
+        if ($userId && !$this->course->isAvailableForUser($userId)) {
+            $this->closeQuizModalOnly();
+            $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+            $hasPassedPosttest = false;
+            if ($postRow) {
+                $hasPassedPosttest = TestAttempt::where('test_id', $postRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+            }
+            if ($hasPassedPosttest) {
+                return redirect()->route('courses-result.index', ['course' => $this->course->id]);
+            }
+            return redirect()->route('courses-overview.show', ['course' => $this->course->id]);
+        }
+
         // Check if quiz was actually submitted before advancing
         $hasQuizAttempt = SectionQuizAttempt::where('section_id', $sectionId)
             ->where('user_id', $userId)
             ->exists();
-        
+
         if (!$hasQuizAttempt) {
             // Quiz not submitted - just close modal without advancing
             $this->closeQuizModalOnly();
             return null;
         }
-        
+
         $this->showQuizModal = false;
         $this->quizQuestions = [];
         $this->quizResult = null;
@@ -648,9 +754,13 @@ class ModulePage extends Component
         $eligibleForPosttest = $currentStep >= max(0, $totalUnits - 1);
 
         // Check if user has ANY posttest attempt (enables remedial navigation)
-        $postRow = Test::where('course_id', $this->course->id)->where('type', 'posttest')->select('id')->first();
+        $postRow = Test::where('course_id', $this->course->id)
+            ->where('type', 'posttest')
+            ->select(['id', 'max_attempts'])
+            ->first();
         $hasPosttestAttempt = false;
         $canRetakePosttest = false;
+        $hasPassedPosttest = false;
         if ($postRow) {
             $lastAttempt = TestAttempt::where('test_id', $postRow->id)
                 ->where('user_id', $userId)
@@ -658,9 +768,64 @@ class ModulePage extends Component
                 ->first();
             if ($lastAttempt) {
                 $hasPosttestAttempt = true;
-                if (!$lastAttempt->is_passed) {
-                    $canRetakePosttest = true;
+                $hasPassedPosttest = (bool) $lastAttempt->is_passed;
+                if (!$lastAttempt->is_passed && $lastAttempt->status !== TestAttempt::STATUS_UNDER_REVIEW) {
+                    $attemptCount = (int) TestAttempt::where('test_id', $postRow->id)
+                        ->where('user_id', $userId)
+                        ->whereIn('status', [
+                            TestAttempt::STATUS_SUBMITTED,
+                            TestAttempt::STATUS_UNDER_REVIEW,
+                            TestAttempt::STATUS_EXPIRED,
+                        ])
+                        ->count();
+                    if ($postRow->max_attempts === null) {
+                        $canRetakePosttest = true;
+                    } else {
+                        $maxAttempts = max(1, (int) $postRow->max_attempts);
+                        $canRetakePosttest = $attemptCount < $maxAttempts;
+                    }
                 }
+            }
+        }
+
+        // Back button enablement: can go to previous section, or to pretest (if retakable OR passed/review mode)
+        $canGoBackStep = false;
+        $orderedIds = array_map(fn($s) => (int) $s->id, $orderedSectionRefs);
+        if ($this->activeSectionId && $orderedIds) {
+            $pos = array_search((int) $this->activeSectionId, $orderedIds, true);
+            if ($pos !== false && $pos > 0) {
+                $canGoBackStep = true;
+            } elseif ($pos === 0) {
+                if ($hasPassedPosttest) {
+                    $canGoBackStep = true;
+                } else {
+                    $pretestRow = Test::where('course_id', $this->course->id)
+                        ->where('type', 'pretest')
+                        ->select(['id', 'max_attempts'])
+                        ->first();
+                    if ($pretestRow) {
+                        if ($pretestRow->max_attempts === null) {
+                            $canGoBackStep = true;
+                        } else {
+                            $maxAttempts = max(1, (int) $pretestRow->max_attempts);
+                            $canGoBackStep = $maxAttempts > 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        $canRetakePretest = false;
+        $pretestRow = Test::where('course_id', $this->course->id)
+            ->where('type', 'pretest')
+            ->select(['id', 'max_attempts'])
+            ->first();
+        if ($pretestRow) {
+            if ($pretestRow->max_attempts === null) {
+                $canRetakePretest = true;
+            } else {
+                $maxAttempts = max(1, (int) $pretestRow->max_attempts);
+                $canRetakePretest = $maxAttempts > 1;
             }
         }
 
@@ -694,9 +859,11 @@ class ModulePage extends Component
             'isLastSection' => $isLastSection,
             'canRetakePosttest' => $canRetakePosttest,
             'hasPosttestAttempt' => $hasPosttestAttempt,
+            'hasPassedPosttest' => $hasPassedPosttest,
             'hasSectionQuiz' => $hasSectionQuiz,
             'quizQuestions' => $this->quizQuestions,
             'quizResult' => $this->quizResult,
+            'canGoBackStep' => $canGoBackStep,
         ]);
 
         return $view->layout('layouts.livewire.course', [
@@ -709,6 +876,9 @@ class ModulePage extends Component
             'activeSectionId' => $this->activeSectionId,
             'completedModuleIds' => $completedModuleIds,
             'hasPosttestAttempt' => $hasPosttestAttempt,
+            'canRetakePosttest' => $canRetakePosttest,
+            'canRetakePretest' => $canRetakePretest,
+            'hasPassedPosttest' => $hasPassedPosttest,
             'courseId' => $this->course->id,
         ]);
     }

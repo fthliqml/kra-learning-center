@@ -88,25 +88,22 @@ class Course extends Model
             // If no user, return empty result intentionally
             return $query->whereRaw('1 = 0');
         }
-        $today = Carbon::today();
-        return $query->whereHas('trainings', function ($t) use ($userId, $today) {
-            $t
-                // ->where(function ($w) use ($today) {
-                //     $w->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
-                // })
-                // ->where(function ($w) use ($today) {
-                //     $w->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
-                // })
-                ->whereHas('assessments', function ($a) use ($userId) {
-                    $a->where('employee_id', $userId);
-                });
+        // NOTE: This scope is used for course listing (discoverability).
+        // Keep it assignment-only so courses don't disappear after schedule ends.
+        // Availability (can start/continue) is enforced by `isAvailableForUser()` and page/action guards.
+        return $query->whereHas('trainings', function ($t) use ($userId) {
+            $t->whereHas('assessments', function ($a) use ($userId) {
+                $a->where('employee_id', $userId);
+            });
         });
     }
 
     /**
      * Determine whether the user can start/continue this course now.
      * Rule: user must be assigned via TrainingAssessment, and at least one related training
-     * (for this course + user) has start_date <= today (or start_date is NULL).
+     * (for this course + user) is currently within schedule window:
+     * - start_date is NULL or start_date <= today
+     * - end_date is NULL or end_date >= today
      */
     public function isAvailableForUser(int $userId): bool
     {
@@ -119,6 +116,9 @@ class Course extends Model
             ->whereHas('assessments', fn($a) => $a->where('employee_id', $userId))
             ->where(function ($q) use ($today) {
                 $q->whereNull('start_date')->orWhereDate('start_date', '<=', $today);
+            })
+            ->where(function ($q) use ($today) {
+                $q->whereNull('end_date')->orWhereDate('end_date', '>=', $today);
             })
             ->exists();
     }

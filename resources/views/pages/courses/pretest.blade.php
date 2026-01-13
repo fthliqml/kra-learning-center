@@ -5,6 +5,14 @@
     // Count questions
     $qCount = $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions);
     $isReviewMode = $isReviewMode ?? false;
+
+    $firstSectionId = null;
+    try {
+        $firstTopic = $course?->learningModules?->first();
+        $firstSectionId = $firstTopic?->sections?->first()?->id;
+    } catch (\Throwable $e) {
+        $firstSectionId = null;
+    }
 @endphp
 
 <div x-data="pretestForm($wire, {{ $isReviewMode ? 'true' : 'false' }})" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
@@ -13,16 +21,28 @@
         <div>
             <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
                 Pre-Test
-                @if($isReviewMode)
-                    <span class="ml-2 text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">Review Mode</span>
+                @if ($isReviewMode)
+                    <span class="ml-2 text-sm font-medium text-primary bg-primary/10 px-2 py-1 rounded-md">Review
+                        Mode</span>
                 @endif
             </h1>
         </div>
+
+        @if ($isReviewMode)
+            <div class="hidden md:flex items-center gap-2">
+                <a wire:navigate
+                    href="{{ route('courses-modules.index', ['course' => $course->id, 'section' => $firstSectionId]) }}"
+                    class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <x-icon name="o-arrow-right" class="size-4" />
+                    <span>Next</span>
+                </a>
+            </div>
+        @endif
     </div>
 
     {{-- Instructions / Review Summary --}}
     <div class="rounded-xl border border-gray-200 bg-white p-4 md:p-6 shadow-sm mb-5 md:mb-6" x-data="{ open: true }">
-        @if($isReviewMode && $attempt)
+        @if ($isReviewMode && $attempt)
             {{-- Review Summary --}}
             <div class="flex items-start gap-4">
                 <div class="flex items-center justify-center w-10 h-10 rounded-lg bg-green-100 text-green-600">
@@ -31,14 +51,28 @@
                 <div class="flex-1">
                     <h2 class="text-base font-semibold text-gray-900">Hasil Pre-Test Anda</h2>
                     <p class="text-sm text-gray-600 mt-1 leading-relaxed">
-                        Berikut adalah jawaban Anda pada pre-test. Anda dapat mereview kembali jawaban yang benar dan salah.
+                        Berikut adalah jawaban Anda pada pre-test. Anda dapat mereview kembali jawaban yang benar dan
+                        salah.
                     </p>
                     <div class="mt-3 flex flex-wrap gap-3">
-                        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
+                        <span
+                            class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
+                            @if (!empty($showRetakeChoice))
+                                <div class="flex items-center gap-2">
+                                    <button type="button" wire:click="chooseRetake" class="btn btn-primary btn-sm">
+                                        Ulangi Pre-Test
+                                    </button>
+                                    <button type="button" wire:click="dismissRetakeChoice"
+                                        class="btn btn-ghost btn-sm">
+                                        Tidak, review saja
+                                    </button>
+                                </div>
+                            @endif
                             <x-icon name="o-document-text" class="size-4" />
                             Skor: {{ $attempt->auto_score ?? 0 }}
                         </span>
-                        <span class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
+                        <span
+                            class="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 bg-gray-100 px-3 py-1.5 rounded-full">
                             <x-icon name="o-calendar" class="size-4" />
                             Disubmit: {{ $attempt->submitted_at?->format('d M Y H:i') ?? '-' }}
                         </span>
@@ -80,7 +114,7 @@
     </div>
 
     {{-- Questions --}}
-    @if($isReviewMode)
+    @if ($isReviewMode)
         {{-- Review Mode: Read-only with answers --}}
         <div class="space-y-4 md:space-y-5">
             @forelse ($questions as $index => $q)
@@ -92,12 +126,14 @@
                     $earnedPoints = $q['earned_points'] ?? 0;
                     $maxPoints = $q['max_points'] ?? 1;
                 @endphp
-                <div class="rounded-xl border-2 overflow-hidden {{ $isCorrect === true ? 'border-green-200 bg-green-50/30' : ($isCorrect === false ? 'border-red-200 bg-red-50/30' : 'border-gray-200 bg-white') }}">
+                <div
+                    class="rounded-xl border-2 overflow-hidden {{ $isCorrect === true ? 'border-green-200 bg-green-50/30' : ($isCorrect === false ? 'border-red-200 bg-red-50/30' : 'border-gray-200 bg-white') }}">
                     {{-- Question Header --}}
-                    <div class="px-4 py-3 flex items-start gap-3 {{ $isCorrect === true ? 'bg-green-100/50' : ($isCorrect === false ? 'bg-red-100/50' : 'bg-gray-50') }}">
+                    <div
+                        class="px-4 py-3 flex items-start gap-3 {{ $isCorrect === true ? 'bg-green-100/50' : ($isCorrect === false ? 'bg-red-100/50' : 'bg-gray-50') }}">
                         {{-- Status Icon --}}
                         <div class="flex-shrink-0 mt-0.5">
-                            @if($isCorrect === true)
+                            @if ($isCorrect === true)
                                 <div class="w-6 h-6 rounded-full bg-green-500 flex items-center justify-center">
                                     <x-icon name="o-check" class="size-4 text-white" />
                                 </div>
@@ -114,31 +150,34 @@
                         {{-- Question Number & Text --}}
                         <div class="flex-1 min-w-0">
                             <div class="flex items-center gap-2 mb-1">
-                                <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $isCorrect === true ? 'bg-green-200 text-green-800' : ($isCorrect === false ? 'bg-red-200 text-red-800' : 'bg-amber-200 text-amber-800') }}">
+                                <span
+                                    class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $isCorrect === true ? 'bg-green-200 text-green-800' : ($isCorrect === false ? 'bg-red-200 text-red-800' : 'bg-amber-200 text-amber-800') }}">
                                     Soal {{ $index + 1 }}
                                 </span>
-                                @if($isCorrect === true)
+                                @if ($isCorrect === true)
                                     <span class="text-xs font-medium text-green-700">Benar</span>
                                 @elseif($isCorrect === false)
                                     <span class="text-xs font-medium text-red-700">Salah</span>
                                 @else
-                                    <span class="text-xs font-medium text-amber-700">Menunggu Review ({{ $earnedPoints }}/{{ $maxPoints }} poin)</span>
+                                    <span class="text-xs font-medium text-amber-700">Menunggu Review
+                                        ({{ $earnedPoints }}/{{ $maxPoints }} poin)
+                                    </span>
                                 @endif
                             </div>
                             <p class="text-sm font-medium text-gray-900 leading-relaxed">{{ $q['text'] }}</p>
                         </div>
                     </div>
-                    
+
                     {{-- Answers --}}
                     <div class="px-4 py-3 space-y-2 bg-white/50">
-                        @if($q['type'] === 'essay')
+                        @if ($q['type'] === 'essay')
                             {{-- Essay Answer --}}
                             <div class="space-y-2">
                                 <div class="text-xs font-medium text-gray-500">Jawaban Anda:</div>
                                 <div class="p-3 rounded-lg bg-gray-100 text-sm text-gray-700">
                                     {{ $userEssayAnswer ?: '-' }}
                                 </div>
-                                @if($isCorrect === null)
+                                @if ($isCorrect === null)
                                     <div class="text-xs text-amber-600 flex items-center gap-1">
                                         <x-icon name="o-clock" class="size-4" />
                                         Menunggu penilaian manual
@@ -152,12 +191,13 @@
                                     @php
                                         $optId = is_array($opt) ? $opt['id'] : $opt;
                                         $optText = is_array($opt) ? $opt['text'] : $opt;
-                                        $optIsCorrect = is_array($opt) ? ($opt['is_correct'] ?? false) : false;
-                                        $isUserAnswer = (string)$optId === (string)$userAnswerId;
+                                        $optIsCorrect = is_array($opt) ? $opt['is_correct'] ?? false : false;
+                                        $isUserAnswer = (string) $optId === (string) $userAnswerId;
                                     @endphp
-                                    <div class="flex items-start gap-2 p-2 rounded-lg {{ $optIsCorrect ? 'bg-green-100 border border-green-300' : ($isUserAnswer && !$optIsCorrect ? 'bg-red-100 border border-red-300' : 'bg-gray-50 border border-transparent') }}">
+                                    <div
+                                        class="flex items-start gap-2 p-2 rounded-lg {{ $optIsCorrect ? 'bg-green-100 border border-green-300' : ($isUserAnswer && !$optIsCorrect ? 'bg-red-100 border border-red-300' : 'bg-gray-50 border border-transparent') }}">
                                         <div class="flex-shrink-0 mt-0.5">
-                                            @if($optIsCorrect)
+                                            @if ($optIsCorrect)
                                                 <x-icon name="o-check-circle" class="size-4 text-green-600" />
                                             @elseif($isUserAnswer && !$optIsCorrect)
                                                 <x-icon name="o-x-circle" class="size-4 text-red-600" />
@@ -165,12 +205,13 @@
                                                 <div class="w-4 h-4 rounded-full border border-gray-300"></div>
                                             @endif
                                         </div>
-                                        <span class="text-sm {{ $optIsCorrect ? 'text-green-800 font-medium' : ($isUserAnswer && !$optIsCorrect ? 'text-red-800' : 'text-gray-600') }}">
+                                        <span
+                                            class="text-sm {{ $optIsCorrect ? 'text-green-800 font-medium' : ($isUserAnswer && !$optIsCorrect ? 'text-red-800' : 'text-gray-600') }}">
                                             {{ $optText }}
-                                            @if($isUserAnswer)
+                                            @if ($isUserAnswer)
                                                 <span class="ml-1 text-xs font-medium">(Jawaban Anda)</span>
                                             @endif
-                                            @if($optIsCorrect)
+                                            @if ($optIsCorrect)
                                                 <span class="ml-1 text-xs font-medium text-green-600">✓ Benar</span>
                                             @endif
                                         </span>
@@ -185,13 +226,14 @@
                     Belum ada soal pretest untuk course ini.
                 </div>
             @endforelse
-            
-            {{-- Back Button --}}
-            <div class="pt-4 flex justify-center">
-                <a href="{{ route('courses-result.index', ['course' => $course->id]) }}" wire:navigate
-                    class="inline-flex items-center justify-center gap-2 rounded-md bg-primary text-white px-5 py-2.5 text-sm font-medium shadow hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 transition">
-                    <x-icon name="o-arrow-left" class="size-4" />
-                    <span>Kembali ke Hasil</span>
+
+            {{-- Bottom Action (mobile) --}}
+            <div class="mt-6 flex items-center justify-end md:hidden">
+                <a wire:navigate
+                    href="{{ route('courses-modules.index', ['course' => $course->id, 'section' => $firstSectionId]) }}"
+                    class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
+                    <x-icon name="o-arrow-right" class="size-5" />
+                    <span>Next</span>
                 </a>
             </div>
         </div>
@@ -336,4 +378,3 @@
         }
     }
 </script>
-
