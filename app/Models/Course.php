@@ -283,4 +283,17 @@ class Course extends Model
 
         return $userCourse->current_step >= $requiredStep;
     }
+
+    /**
+     * Get the BLENDED training associated with this course for a user.
+     * Returns the training if type is BLENDED, null otherwise.
+     */
+    public function getBlendedTrainingForUser(int $userId): ?Training
+    {
+        return $this->trainings()
+            ->where('type', 'BLENDED')
+            ->whereHas('assessments', fn($q) => $q->where('employee_id', $userId))
+            ->with('sessions.trainer')
+            ->first();
+    }
 }

@@ -103,7 +103,7 @@ class Training extends Model
                     $group = $this->module?->competency?->type;
                 }
 
-                if (!$group && ($this->type === 'LMS' || $this->type === null)) {
+                if (!$group && in_array($this->type, ['LMS', 'BLENDED'])) {
                     $group = $this->course?->competency?->type;
                 }
 
