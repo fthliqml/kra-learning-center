@@ -4,6 +4,10 @@ namespace App\Livewire\Pages\Survey;
 
 use Livewire\Component;
 use App\Models\TrainingSurvey;
+use Illuminate\Support\Facades\Auth;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Exports\SurveyInstructorAssessmentExport;
+use App\Models\User;
 
 class SurveyManagementDetail extends Component
 {
@@ -23,6 +27,39 @@ class SurveyManagementDetail extends Component
         return redirect()->route('survey-management.index', ['level' => $this->surveyLevel]);
     }
 
+    /**
+     * Export survey answers (only Survey Level 1 & 3) to Excel.
+     * Restricted to admin and LID Section Head.
+     */
+    public function exportAnswers()
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return null;
+        }
+
+        $isAdmin = method_exists($user, 'hasRole') && $user->hasRole('admin');
+        $isLidSectionHead = $user->hasPosition('section_head') && strtoupper($user->section ?? '') === 'LID';
+
+        if (!$isAdmin && !$isLidSectionHead) {
+            $this->dispatch('toast', type: 'error', title: 'Forbidden', message: 'Only admin or LID Section Head can export survey answers.');
+            return null;
+        }
+
+        if (!in_array((int) $this->surveyLevel, [1, 3], true)) {
+            $this->dispatch('toast', type: 'error', title: 'Not Available', message: 'Export is only available for Survey Level 1 and 3.');
+            return null;
+        }
+
+        $fileName = 'survey_level_' . (int) $this->surveyLevel . '_answers_' . (int) $this->surveyId . '_' . now()->format('Y-m-d') . '.xlsx';
+
+        return Excel::download(
+            new SurveyInstructorAssessmentExport((int) $this->surveyId),
+            $fileName
+        );
+    }
+
     public function mount($level, $surveyId)
     {
         $this->surveyLevel = (int) $level;
@@ -34,7 +71,6 @@ class SurveyManagementDetail extends Component
 
     public function render()
     {
-        return view('pages.survey.survey-management-detail', [
-        ]);
+        return view('pages.survey.survey-management-detail', []);
     }
 }
