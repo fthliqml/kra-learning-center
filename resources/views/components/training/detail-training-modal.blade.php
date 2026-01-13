@@ -65,6 +65,9 @@
                             case 'LMS':
                                 $badge = 'bg-indigo-100 text-indigo-700 border border-indigo-300';
                                 break;
+                            case 'BLENDED':
+                                $badge = 'bg-purple-100 text-purple-700 border border-purple-300';
+                                break;
                             default:
                                 $badge = 'bg-blue-100 text-blue-700 border border-blue-300';
                         }
