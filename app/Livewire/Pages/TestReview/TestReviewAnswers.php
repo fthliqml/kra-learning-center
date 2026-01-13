@@ -41,7 +41,7 @@ class TestReviewAnswers extends Component
     public function mount(Training $training, User $user)
     {
         // Load appropriate relationships based on training type
-        if ($training->type === 'LMS') {
+        if (in_array($training->type, ['LMS', 'BLENDED'])) {
             $this->training = $training->load(['course.tests.questions.options']);
         } else {
             $this->training = $training->load(['module.pretest.questions.options', 'module.posttest.questions.options']);
@@ -63,7 +63,7 @@ class TestReviewAnswers extends Component
         $user = Auth::user();
         $trainerId = Trainer::where('user_id', $user->id)->value('id');
 
-        if ($this->training->type === 'IN') {
+        if (in_array($this->training->type, ['IN', 'BLENDED'])) {
             $hasAccess = $this->training->sessions()
                 ->where('trainer_id', $trainerId)
                 ->exists();
@@ -151,7 +151,7 @@ class TestReviewAnswers extends Component
      */
     private function getPretest(): ?Test
     {
-        if ($this->training->type === 'LMS' && $this->training->course) {
+        if (in_array($this->training->type, ['LMS', 'BLENDED']) && $this->training->course) {
             return $this->training->course->tests->firstWhere('type', 'pretest');
         }
         return $this->training->module?->pretest;
@@ -162,7 +162,7 @@ class TestReviewAnswers extends Component
      */
     private function getPosttest(): ?Test
     {
-        if ($this->training->type === 'LMS' && $this->training->course) {
+        if (in_array($this->training->type, ['LMS', 'BLENDED']) && $this->training->course) {
             return $this->training->course->tests->firstWhere('type', 'posttest');
         }
         return $this->training->module?->posttest;
@@ -338,7 +338,40 @@ class TestReviewAnswers extends Component
             $attempt->is_passed = $totalScore >= $test->passing_score;
             $attempt->status = TestAttempt::STATUS_SUBMITTED;
             $attempt->save();
+
+            // Update course progress for LMS/BLENDED if this is a post-test
+            if (in_array($this->training->type, ['LMS', 'BLENDED']) && $this->training->course && $test->type === 'posttest') {
+                $enrollment = $this->training->course->userCourses()->where('user_id', $this->participant->id)->first();
+                if ($enrollment) {
+                    $totalUnits = (int) $this->training->course->progressUnitsCount();
+                    
+                    if ($attempt->is_passed) {
+                         // PASSED: Mark as fully completed (100%)
+                        $enrollment->current_step = $totalUnits;
+                        $enrollment->status = 'completed';
+                    } else {
+                        // FAILED: Set to posttest-attempted level (totalUnits - 1)
+                        // This shows ~95% progress
+                        $posttestAttemptedStep = max(0, $totalUnits - 1);
+                        if (($enrollment->current_step ?? 0) < $posttestAttemptedStep) {
+                            $enrollment->current_step = $posttestAttemptedStep;
+                        }
+                        // Ensure status is in_progress (not completed) for failed
+                        if (strtolower($enrollment->status ?? '') === 'completed') {
+                            $enrollment->status = 'in_progress';
+                        }
+                    }
+                    $enrollment->save();
+                }
+            }
         });
+
+        // After transaction: check if all participants passed and mark training done
+        // This works for LMS, BLENDED, and IN types (OUT is manual)
+        if ($this->selectedTest === 'posttest') {
+            $this->training->refresh(); // Refresh to get latest data
+            $this->training->checkAndMarkAsDone();
+        }
 
         $this->closeConfirmModal();
         $this->success('Review submitted successfully.', position: 'toast-top toast-center');

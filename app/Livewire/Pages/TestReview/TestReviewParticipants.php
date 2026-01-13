@@ -22,7 +22,7 @@ class TestReviewParticipants extends Component
   public function mount(Training $training)
   {
     // Load appropriate relationships based on training type
-    if ($training->type === 'LMS') {
+    if (in_array($training->type, ['LMS', 'BLENDED'])) {
       $this->training = $training->load(['course.tests']);
     } else {
       $this->training = $training->load(['module.pretest', 'module.posttest']);
@@ -37,8 +37,8 @@ class TestReviewParticipants extends Component
     $user = Auth::user();
     $trainerId = Trainer::where('user_id', $user->id)->value('id');
 
-    if ($this->training->type === 'IN') {
-      // For IN type, trainer must be assigned to at least one session
+    if (in_array($this->training->type, ['IN', 'BLENDED'])) {
+      // For IN and BLENDED type, trainer must be assigned to at least one session
       $hasAccess = $this->training->sessions()
         ->where('trainer_id', $trainerId)
         ->exists();
@@ -63,7 +63,7 @@ class TestReviewParticipants extends Component
   public function render()
   {
     // Get pretest/posttest based on training type
-    if ($this->training->type === 'LMS' && $this->training->course) {
+    if (in_array($this->training->type, ['LMS', 'BLENDED']) && $this->training->course) {
       $pretest = $this->training->course->tests->firstWhere('type', 'pretest');
       $posttest = $this->training->course->tests->firstWhere('type', 'posttest');
     } else {

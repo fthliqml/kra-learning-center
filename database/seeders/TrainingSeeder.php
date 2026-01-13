@@ -135,5 +135,65 @@ class TrainingSeeder extends Seeder
                 }
             }
         }
+
+        // 4. Create BLENDED trainings (Course + offline sessions)
+        $courses = \App\Models\Course::with('competency')->get();
+        if ($courses->isNotEmpty()) {
+            // Create 2 BLENDED trainings
+            foreach ($courses->take(2) as $index => $course) {
+                $start = Carbon::now()->addDays(50 + ($index * 14)); // stagger by 2 weeks
+                $end = $start->copy()->addDays(2); // 3 days of offline sessions
+
+                $blendedTraining = Training::create([
+                    'name' => $course->title, // BLENDED uses course title
+                    'type' => 'BLENDED',
+                    'course_id' => $course->id,
+                    'module_id' => null,
+                    'start_date' => $start->toDateString(),
+                    'end_date' => $end->toDateString(),
+                    'status' => 'in_progress',
+                ]);
+
+                // Create offline sessions for BLENDED training
+                $blendedSessions = [];
+                $blendedDayNumber = 1;
+                $availableTrainers = [$trainer, $trainer2, $trainer3];
+                
+                foreach (CarbonPeriod::create($blendedTraining->start_date, $blendedTraining->end_date) as $date) {
+                    $blendedSessions[] = TrainingSession::create([
+                        'training_id' => $blendedTraining->id,
+                        'trainer_id' => $availableTrainers[array_rand($availableTrainers)]->id,
+                        'room_name' => 'Ruang Blended Learning',
+                        'date' => $date->toDateString(),
+                        'room_location' => 'Gedung Training Lt. 2',
+                        'start_time' => '13:00:00',
+                        'end_time' => '16:00:00',
+                        'day_number' => $blendedDayNumber,
+                        'status' => 'in_progress',
+                    ]);
+                    $blendedDayNumber++;
+                }
+
+                // Assessments for BLENDED training (assign same employees)
+                foreach ($employees->take(5) as $employee) {
+                    TrainingAssessment::create([
+                        'training_id' => $blendedTraining->id,
+                        'employee_id' => $employee->id,
+                    ]);
+                }
+
+                // Attendances for BLENDED sessions
+                foreach ($blendedSessions as $session) {
+                    foreach ($employees->take(5) as $employee) {
+                        TrainingAttendance::create([
+                            'session_id' => $session->id,
+                            'employee_id' => $employee->id,
+                            'notes' => null,
+                            'recorded_at' => Carbon::now(),
+                        ]);
+                    }
+                }
+            }
+        }
     }
 }

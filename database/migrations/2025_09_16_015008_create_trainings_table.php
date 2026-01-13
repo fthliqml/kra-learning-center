@@ -21,7 +21,7 @@ return new class extends Migration
 
             // Details
             $table->string('name');
-            $table->enum('type', ['IN', 'OUT', 'LMS']);
+            $table->enum('type', ['IN', 'OUT', 'LMS', 'BLENDED']);
             $table->date('start_date');
             $table->date('end_date')->nullable();
             $table->enum('status', ['canceled', 'in_progress', 'done', 'approved', 'rejected'])->default('in_progress');

@@ -36,7 +36,7 @@
                                 {{ $survey->date ?? '-' }}
                             </p>
                         </div>
-                        <x-badge :value="$survey->badge_label" class="{{ $survey->badge_class }} badge-xs sm:badge-sm" />
+                        <x-badge :value="$survey->badge_label" class="{{ $survey->badge_class }} badge-xs sm:badge-sm whitespace-nowrap" />
                     </div>
 
                     @php
@@ -53,13 +53,13 @@
                         <div class="flex items-center gap-2 flex-wrap">
                             @if ($type)
                                 <span
-                                    class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] bg-white/70 border {{ $colorClasses['badge'] }}">
+                                    class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] bg-white/70 border {{ $colorClasses['badge'] }} whitespace-nowrap">
                                     {{ $type }}
                                 </span>
                             @endif
                             @if ($groupComp)
                                 <span
-                                    class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] border border-primary bg-primary/10">
+                                    class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] border border-primary bg-primary/10 whitespace-nowrap">
                                     {{ $groupComp }}
                                 </span>
                             @endif

@@ -283,7 +283,7 @@ class ScheduleView extends Component
                 $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
             });
         // Apply filters
-        if ($this->filterType && in_array($this->filterType, ['LMS', 'IN', 'OUT'])) {
+        if ($this->filterType && in_array($this->filterType, ['LMS', 'IN', 'OUT', 'BLENDED'])) {
             $query->where('type', $this->filterType);
         }
         if ($this->filterTrainerId) {
@@ -316,7 +316,7 @@ class ScheduleView extends Component
                 $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
             });
         if ($this->filterType) {
-            if ($this->filterType && in_array($this->filterType, ['LMS', 'IN', 'OUT'])) {
+            if ($this->filterType && in_array($this->filterType, ['LMS', 'IN', 'OUT', 'BLENDED'])) {
                 $query->where('type', $this->filterType);
             }
         }

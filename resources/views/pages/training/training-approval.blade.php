@@ -194,7 +194,7 @@
                             [$classes, $statusLabel] = $map[$status] ?? ['bg-gray-100 text-gray-700', ucfirst($status)];
                         }
                     @endphp
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }} whitespace-nowrap">
                         {{ $statusLabel }}
                     </span>
                 @endscope
@@ -306,7 +306,7 @@
                         @endphp
                         <div class="text-xs font-semibold">Status</div>
                         <span
-                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
+                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }} whitespace-nowrap">
                             {{ $statusLabel }}
                         </span>
                     </div>
@@ -392,7 +392,7 @@
                                     @endphp
                                     @if ($participantStatus === 'passed')
                                         <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700 gap-1">
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700 gap-1 whitespace-nowrap">
                                             <svg class="w-4 h-4 text-emerald-500" fill="none" stroke="currentColor"
                                                 stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
@@ -401,7 +401,7 @@
                                         </span>
                                     @elseif ($participantStatus === 'failed')
                                         <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-rose-600 text-white border border-rose-700 gap-1 shadow-sm">
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-bold bg-rose-600 text-white border border-rose-700 gap-1 shadow-sm whitespace-nowrap">
                                             <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor"
                                                 stroke-width="2" viewBox="0 0 24 24">
                                                 <path stroke-linecap="round" stroke-linejoin="round"
@@ -411,12 +411,12 @@
                                         </span>
                                     @elseif ($participantStatus === 'in_progress')
                                         <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700">
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700 whitespace-nowrap">
                                             In Progress
                                         </span>
                                     @else
                                         <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700">
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-gray-100 text-gray-700 whitespace-nowrap">
                                             {{ ucfirst(str_replace('_', ' ', $participant->status)) }}
                                         </span>
                                     @endif

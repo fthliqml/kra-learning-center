@@ -33,7 +33,7 @@
                         default => 'badge-ghost',
                     };
                 @endphp
-                <x-badge :value="$label" :class="$badgeClass" />
+                <x-badge :value="$label" :class="$badgeClass . ' whitespace-nowrap'" />
             @endscope
 
             @scope('cell_action', $survey)

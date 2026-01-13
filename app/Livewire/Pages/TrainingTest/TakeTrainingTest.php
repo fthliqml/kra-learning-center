@@ -302,6 +302,15 @@ class TakeTrainingTest extends Component
         timeout: 5000,
         position: 'toast-top toast-center'
       );
+
+      // For auto-graded posttest: check if training should be marked done
+      if ($this->testType === 'posttest') {
+        $isPassed = ($totalScore >= ($this->test->passing_score ?? 75));
+        if ($isPassed) {
+          $this->training->refresh();
+          $this->training->checkAndMarkAsDone();
+        }
+      }
     }
 
     return redirect()->route('training-test.index');

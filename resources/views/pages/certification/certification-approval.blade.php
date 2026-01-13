@@ -72,7 +72,7 @@
                                 'rejected' => 'bg-rose-100 text-rose-700',
                             ][$status] ?? 'bg-gray-100 text-gray-700';
                     @endphp
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }} whitespace-nowrap">
                         {{ ucfirst($status) }}
                     </span>
                 @endscope
@@ -116,7 +116,7 @@
                         @endphp
                         <div class="text-xs font-semibold">Status</div>
                         <span
-                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }}">
+                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }} whitespace-nowrap">
                             {{ ucfirst($status) }}
                         </span>
                     </div>
@@ -177,12 +177,12 @@
                                 <div class="flex justify-center">
                                     @if ($participant->status === 'passed')
                                         <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700 whitespace-nowrap">
                                             Passed
                                         </span>
                                     @else
                                         <span
-                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-700">
+                                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-rose-100 text-rose-700 whitespace-nowrap">
                                             Failed
                                         </span>
                                     @endif

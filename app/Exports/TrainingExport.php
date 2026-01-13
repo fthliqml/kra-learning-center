@@ -36,17 +36,23 @@ class TrainingExport implements FromCollection, WithHeadings, WithStyles
 
             $rows[] = [
                 'no' => $counter++,
-                'training_name' => $training->type === 'LMS' ? '' : $training->name,
+                // BLENDED and LMS: use course title as training name
+                'training_name' => in_array($training->type, ['LMS', 'BLENDED']) 
+                    ? ($training->course?->title ?? $training->name) 
+                    : $training->name,
                 'type' => $training->type,
                 'group_comp' => $training->group_comp,
                 'start_date' => optional($training->start_date)->format('Y-m-d'),
                 'end_date' => optional($training->end_date)->format('Y-m-d'),
+                // LMS has no trainer; BLENDED and IN/OUT have trainer
                 'trainer_name' => $training->type === 'LMS' ? '' : ($firstSession?->trainer?->name ?? $firstSession?->trainer?->user?->name ?? ''),
                 'room_name' => $firstSession?->room_name ?? '',
                 'room_location' => $firstSession?->room_location ?? '',
+                // LMS has no times; BLENDED and IN/OUT have times
                 'start_time' => $training->type === 'LMS' ? '' : ($firstSession?->start_time ? date('H:i', strtotime($firstSession->start_time)) : ''),
                 'end_time' => $training->type === 'LMS' ? '' : ($firstSession?->end_time ? date('H:i', strtotime($firstSession->end_time)) : ''),
-                'course_title' => $training->type === 'LMS' ? ($training->course?->title ?? '') : '',
+                // LMS and BLENDED have course title
+                'course_title' => in_array($training->type, ['LMS', 'BLENDED']) ? ($training->course?->title ?? '') : '',
                 'participants' => $participants,
             ];
         }

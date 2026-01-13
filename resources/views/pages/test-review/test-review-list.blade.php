@@ -78,8 +78,20 @@
                                 </td>
                                 <td class="whitespace-nowrap">
                                     <span
-                                        class="badge badge-sm {{ $training->type === 'IN' ? 'badge-success' : 'badge-info' }}">
-                                        {{ $training->type === 'IN' ? 'In-House' : 'LMS' }}
+                                        class="badge badge-sm border {{ match($training->type) {
+                                            'IN' => 'bg-green-100 text-green-700 border-green-300',
+                                            'OUT' => 'bg-amber-100 text-amber-700 border-amber-300',
+                                            'LMS' => 'bg-indigo-100 text-indigo-700 border-indigo-300',
+                                            'BLENDED' => 'bg-purple-100 text-purple-700 border-purple-300',
+                                            default => 'bg-gray-100 text-gray-700 border-gray-300',
+                                        } }}">
+                                        {{ match($training->type) {
+                                            'IN' => 'In-House',
+                                            'OUT' => 'Out-House',
+                                            'LMS' => 'LMS',
+                                            'BLENDED' => 'Blended',
+                                            default => $training->type,
+                                        } }}
                                     </span>
                                 </td>
                                 <td class="whitespace-nowrap">

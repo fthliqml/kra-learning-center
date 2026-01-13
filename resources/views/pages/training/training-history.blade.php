@@ -58,11 +58,12 @@
                             'In-House' => 'border-green-500 bg-green-50 text-green-700',
                             'Out-House' => 'border-amber-500 bg-amber-50 text-amber-700',
                             'LMS' => 'border-indigo-500 bg-indigo-50 text-indigo-700',
+                            'Blended' => 'border-purple-500 bg-purple-50 text-purple-700',
                             default => 'border-primary bg-[#E4F3FF] text-primary',
                         };
                     @endphp
                     <div class="flex justify-center">
-                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs border {{ $badgeClass }}">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-xs border {{ $badgeClass }} whitespace-nowrap">
                             {{ $history->type }}
                         </span>
                     </div>
@@ -72,13 +73,13 @@
                 @scope('cell_status', $history)
                     <div class="flex justify-center">
                         @if ($history->status === null)
-                            <span class="badge badge-ghost badge-sm">Not Assessed</span>
+                            <span class="badge badge-ghost badge-sm whitespace-nowrap">Not Assessed</span>
                         @elseif($history->status === 'passed')
-                            <span class="badge badge-success badge-sm">Passed</span>
+                            <span class="badge badge-success badge-sm whitespace-nowrap">Passed</span>
                         @elseif($history->status === 'failed')
-                            <span class="badge badge-error badge-sm">Failed</span>
+                            <span class="badge badge-error badge-sm whitespace-nowrap">Failed</span>
                         @else
-                            <span class="badge badge-warning badge-sm">In Progress</span>
+                            <span class="badge badge-warning badge-sm whitespace-nowrap">In Progress</span>
                         @endif
                     </div>
                 @endscope
