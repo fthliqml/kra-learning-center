@@ -1,30 +1,19 @@
 <div x-data="{ 
     modalLoading: false,
     
-    openModalInstant() {
+    openModalInstant(payload = null) {
         this.modalLoading = true;
-        // Show modal immediately
-        $wire.set('showModal', true);
-        // Then load data
+        // First load data, then show modal (to avoid flicker)
         $wire.loadDropdownData().then(() => {
-            this.modalLoading = false;
-        });
-    },
-    
-    openEditInstant(id) {
-        this.modalLoading = true;
-        $wire.set('showModal', true);
-        // Dispatch edit event which will load data
-        $wire.call('openEdit', { id: id }).then(() => {
             this.modalLoading = false;
         });
     }
 }"
-@open-training-form.window="openModalInstant()"
-@open-training-edit.window="openEditInstant($event.detail.id)">
+@open-add-training-modal.window="modalLoading = true; $wire.openModalWithDate($event.detail).then(() => { modalLoading = false; })"
+@open-training-form-edit.window="modalLoading = true; $wire.openEdit($event.detail).then(() => { modalLoading = false; })">
 
     <!-- Trigger Button -->
-    <x-ui.button @click="openModalInstant()" variant="primary">
+    <x-ui.button wire:click="openModal" variant="primary" wire:loading.attr="disabled">
         <x-icon name="o-plus" class="w-5 h-5" />
         Add <span class="hidden sm:block">New Training</span>
     </x-ui.button>
