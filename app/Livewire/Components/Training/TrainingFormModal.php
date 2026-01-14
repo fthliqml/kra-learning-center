@@ -96,15 +96,34 @@ class TrainingFormModal extends Component
         'confirm-delete-training-form' => 'onConfirmDelete'
     ];
 
+    // Performance: Track if dropdown data has been loaded
+    private bool $dataLoaded = false;
+
     public function mount()
     {
+        // PERFORMANCE: Don't load anything on mount!
+        // Data will be loaded lazily when modal opens
         $this->usersSearchable = collect([]);
-        $this->userSearch();
         $this->trainersSearchable = collect([]);
-        $this->trainerSearch();
+    }
+
+    /**
+     * Lazy load all dropdown data - called only when modal opens
+     * PUBLIC: Called from Alpine.js via $wire.loadDropdownData()
+     */
+    public function loadDropdownData(): void
+    {
+        if ($this->dataLoaded) {
+            return; // Already loaded, skip
+        }
+
         $this->loadCourseOptions();
         $this->loadTrainingModuleOptions();
         $this->loadCompetencyOptions();
+        $this->userSearch();
+        $this->trainerSearch();
+        
+        $this->dataLoaded = true;
     }
 
     public array $courseOptions = [];
@@ -121,10 +140,20 @@ class TrainingFormModal extends Component
             ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->competency->type ?? null])->toArray();
     }
 
+    // PERFORMANCE: In-memory cache for group lookups
+    private array $courseGroupCache = [];
+    private array $competencyGroupCache = [];
+    private array $competencyNameCache = [];
+
     private function getCourseGroupComp(?int $courseId): ?string
     {
         if (!$courseId) {
             return null;
+        }
+
+        // Check cache first
+        if (isset($this->courseGroupCache[$courseId])) {
+            return $this->courseGroupCache[$courseId];
         }
 
         $course = Course::with('competency:id,type')
@@ -132,7 +161,12 @@ class TrainingFormModal extends Component
             ->find($courseId);
 
         $group = trim((string) ($course?->competency?->type ?? ''));
-        return $group !== '' ? $group : null;
+        $result = $group !== '' ? $group : null;
+        
+        // Cache the result
+        $this->courseGroupCache[$courseId] = $result;
+        
+        return $result;
     }
 
     private function loadCompetencyOptions(?int $ensureCompetencyId = null): void
@@ -170,12 +204,22 @@ class TrainingFormModal extends Component
             return null;
         }
 
+        // Check cache first
+        if (isset($this->competencyGroupCache[$competencyId])) {
+            return $this->competencyGroupCache[$competencyId];
+        }
+
         $competency = Competency::query()
             ->select('id', 'type')
             ->find($competencyId);
 
         $group = trim((string) ($competency?->type ?? ''));
-        return $group !== '' ? $group : null;
+        $result = $group !== '' ? $group : null;
+        
+        // Cache the result
+        $this->competencyGroupCache[$competencyId] = $result;
+        
+        return $result;
     }
 
     private function getCompetencyTrainingName(?int $competencyId): ?string
@@ -184,12 +228,22 @@ class TrainingFormModal extends Component
             return null;
         }
 
+        // Check cache first
+        if (isset($this->competencyNameCache[$competencyId])) {
+            return $this->competencyNameCache[$competencyId];
+        }
+
         $competency = Competency::query()
             ->select('id', 'name')
             ->find($competencyId);
 
         $name = trim((string) ($competency?->name ?? ''));
-        return $name !== '' ? $name : null;
+        $result = $name !== '' ? $name : null;
+        
+        // Cache the result
+        $this->competencyNameCache[$competencyId] = $result;
+        
+        return $result;
     }
 
     private function parseCompetencyIdFromValue(mixed $value): ?int
@@ -499,6 +553,9 @@ class TrainingFormModal extends Component
 
     public function openModalWithDate($data)
     {
+        // PERFORMANCE: Load dropdown data lazily
+        $this->loadDropdownData();
+        
         $this->resetForm();
         $this->isEdit = false;
         $this->trainingId = null;
@@ -526,6 +583,9 @@ class TrainingFormModal extends Component
 
     public function openModal()
     {
+        // PERFORMANCE: Load dropdown data lazily
+        $this->loadDropdownData();
+        
         // Reset form; do NOT set any default date to force explicit user selection
         $this->resetForm();
         $this->isEdit = false;
@@ -641,6 +701,9 @@ class TrainingFormModal extends Component
 
     public function openEdit($payload): void
     {
+        // PERFORMANCE: Load dropdown data lazily
+        $this->loadDropdownData();
+        
         // Payload may be an ID (int/string) or an array containing ['id'=>...] from action-choice modal
         $id = null;
         if (is_array($payload)) {
@@ -1446,47 +1509,51 @@ class TrainingFormModal extends Component
 
     public function render()
     {
-        // Defensive sync: ensure UI always reflects DB group for LMS selection
-        if ($this->training_type === 'LMS' && !empty($this->course_id)) {
-            $dbGroup = $this->getCourseGroupComp((int) $this->course_id);
-            if ($dbGroup !== null) {
-                $trimmed = trim((string) $dbGroup);
-                if ($this->group_comp !== $trimmed) {
-                    $this->group_comp = $trimmed;
-                }
-            }
-        }
-
-        // Defensive sync: OUT-house competency should auto-fill group + name
-        // (robust to select components that send option objects or label strings)
-        if ($this->training_type === 'OUT' && !empty($this->competency_id)) {
-            $shouldAutofillName = trim((string) $this->training_name) === ''
-                || $this->trainingNameWasAutoFilled
-                || !$this->trainingNameManuallyEdited;
-
-            $shouldSyncGroup = trim((string) $this->group_comp) === '' || $this->group_comp === 'BMC';
-
-            if ($shouldAutofillName || $shouldSyncGroup) {
-                $id = $this->parseCompetencyIdFromValue($this->competency_id);
-
-                if ($id) {
-                    $dbGroup = $this->getCompetencyGroupComp($id);
-                    if ($dbGroup !== null && $this->group_comp !== $dbGroup) {
-                        $this->group_comp = $dbGroup;
-                    }
-                }
-
-                if ($shouldAutofillName) {
-                    $name = $id ? $this->getCompetencyTrainingName($id) : null;
-                    if ($name === null) {
-                        $name = $this->parseCompetencyNameFromValue($this->competency_id);
-                    }
-                    if ($name !== null && $this->training_name !== $name) {
-                        $this->setTrainingNameProgrammatically($name, autoFilled: true);
+        // PERFORMANCE: Only sync data when modal is visible
+        // Cache ensures no duplicate queries even if sync runs
+        if ($this->showModal) {
+            // Defensive sync: ensure UI always reflects DB group for LMS selection
+            if ($this->training_type === 'LMS' && !empty($this->course_id)) {
+                $dbGroup = $this->getCourseGroupComp((int) $this->course_id);
+                if ($dbGroup !== null) {
+                    $trimmed = trim((string) $dbGroup);
+                    if ($this->group_comp !== $trimmed) {
+                        $this->group_comp = $trimmed;
                     }
                 }
             }
+
+            // Defensive sync: OUT-house competency should auto-fill group + name
+            if ($this->training_type === 'OUT' && !empty($this->competency_id)) {
+                $shouldAutofillName = trim((string) $this->training_name) === ''
+                    || $this->trainingNameWasAutoFilled
+                    || !$this->trainingNameManuallyEdited;
+
+                $shouldSyncGroup = trim((string) $this->group_comp) === '' || $this->group_comp === 'BMC';
+
+                if ($shouldAutofillName || $shouldSyncGroup) {
+                    $id = $this->parseCompetencyIdFromValue($this->competency_id);
+
+                    if ($id) {
+                        $dbGroup = $this->getCompetencyGroupComp($id);
+                        if ($dbGroup !== null && $this->group_comp !== $dbGroup) {
+                            $this->group_comp = $dbGroup;
+                        }
+                    }
+
+                    if ($shouldAutofillName) {
+                        $name = $id ? $this->getCompetencyTrainingName($id) : null;
+                        if ($name === null) {
+                            $name = $this->parseCompetencyNameFromValue($this->competency_id);
+                        }
+                        if ($name !== null && $this->training_name !== $name) {
+                            $this->setTrainingNameProgrammatically($name, autoFilled: true);
+                        }
+                    }
+                }
+            }
         }
+        
         return view('components.training.training-form-modal');
     }
 }

@@ -69,13 +69,8 @@
             <div class="flex flex-wrap items-center gap-2 text-xs">
                 <span class="text-gray-500 mr-1">Filters:</span>
                 @if ($filterTrainerId)
-                    @php
-                        $trainerModel = \App\Models\Trainer::with('user')->find($filterTrainerId);
-                        $trainerDisplayName =
-                            $trainerModel?->name ?: $trainerModel?->user?->name ?? 'ID ' . $filterTrainerId;
-                    @endphp
                     <span class="inline-flex items-center gap-1 bg-primary/10 text-primary px-2 py-1 rounded-full">
-                        <span>Trainer: {{ $trainerDisplayName }}</span>
+                        <span>Trainer: {{ $filterTrainerName }}</span>
                         <button class="hover:text-red-500" wire:click="onFiltersUpdated(null, '{{ $filterType }}')"
                             x-on:click="$dispatch('schedule-clear-trainer')"
                             aria-label="Clear trainer filter">&times;</button>

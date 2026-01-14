@@ -32,6 +32,8 @@ class ScheduleView extends Component
     // Filters
     public $filterTrainerId = null;
     public $filterType = null;
+    // PERFORMANCE: Store trainer name to avoid query in Blade
+    public ?string $filterTrainerName = null;
 
     protected $listeners = [
         'training-created' => 'refreshTrainings',
@@ -45,6 +47,10 @@ class ScheduleView extends Component
     ];
 
     private array $trainingDetails = [];
+    
+    // PERFORMANCE: Cache for year/month counts to avoid repeated queries
+    private array $yearCountsCache = [];
+    private array $monthCountsCache = [];
 
     public function mount(): void
     {
@@ -100,6 +106,11 @@ class ScheduleView extends Component
 
     public function refreshTrainings(): void
     {
+        // PERFORMANCE: Clear counts cache when trainings change
+        // This ensures fresh data after create/update/delete
+        $this->yearCountsCache = [];
+        $this->monthCountsCache = [];
+        
         // Pilih query sesuai view
         $this->trainings = $this->activeView === 'agenda'
             ? $this->fetchAgendaTrainings()
@@ -278,7 +289,13 @@ class ScheduleView extends Component
     private function fetchMonthTrainings()
     {
         [$start, $end] = $this->calendarRange();
-        $query = Training::with('sessions')
+        // PERFORMANCE: Eager load all relations needed in calendar view to avoid N+1
+        $query = Training::with([
+            'sessions.trainer.user',
+            'competency:id,type',
+            'module.competency:id,type',
+            'course.competency:id,type'
+        ])
             ->where(function ($q) use ($start, $end) {
                 $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
             });
@@ -311,7 +328,13 @@ class ScheduleView extends Component
     private function fetchAgendaTrainings()
     {
         [$start, $end] = $this->strictMonthRange();
-        $query = Training::with('sessions')
+        // PERFORMANCE: Eager load all relations needed in agenda view to avoid N+1
+        $query = Training::with([
+            'sessions.trainer.user',
+            'competency:id,type',
+            'module.competency:id,type',
+            'course.competency:id,type'
+        ])
             ->where(function ($q) use ($start, $end) {
                 $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
             });
@@ -363,9 +386,15 @@ class ScheduleView extends Component
 
     /**
      * Count trainings per month for a given year. Each training counts once per overlapped month.
+     * PERFORMANCE: Results are cached per year.
      */
     private function buildYearCounts(int $year): array
     {
+        // Check cache first
+        if (isset($this->yearCountsCache[$year])) {
+            return $this->yearCountsCache[$year];
+        }
+
         /** @var \App\Models\User|null $user */
         $counts = array_fill(1, 12, 0);
         $yearStart = Carbon::createFromDate($year, 1, 1)->startOfDay();
@@ -396,14 +425,26 @@ class ScheduleView extends Component
                 $counts[$m]++;
             }
         }
+        
+        // Cache the result
+        $this->yearCountsCache[$year] = $counts;
+        
         return $counts;
     }
 
     /**
      * Count trainings that overlap a specific month/year. Each training counted once if overlapping.
+     * PERFORMANCE: Results are cached per year-month.
      */
     private function countForMonth(int $year, int $month): int
     {
+        $cacheKey = "{$year}-{$month}";
+        
+        // Check cache first
+        if (isset($this->monthCountsCache[$cacheKey])) {
+            return $this->monthCountsCache[$cacheKey];
+        }
+
         $start = Carbon::createFromDate($year, $month, 1)->startOfDay();
         $end = (clone $start)->endOfMonth()->endOfDay();
         $query = Training::whereDate('start_date', '<=', $end)
@@ -419,7 +460,12 @@ class ScheduleView extends Component
                 });
             });
         }
-        return $query->distinct('id')->count('id');
+        $count = $query->distinct('id')->count('id');
+        
+        // Cache the result
+        $this->monthCountsCache[$cacheKey] = $count;
+        
+        return $count;
     }
 
     private function trainingsForDate(string $iso): array
@@ -577,6 +623,15 @@ class ScheduleView extends Component
         // normalize incoming event (Livewire passes named args as separate parameters)
         $this->filterTrainerId = $trainerId ?: null;
         $this->filterType = $type ?: null;
+        
+        // PERFORMANCE: Resolve trainer name once here, not in Blade
+        if ($this->filterTrainerId) {
+            $trainer = Trainer::with('user')->find($this->filterTrainerId);
+            $this->filterTrainerName = $trainer?->name ?: $trainer?->user?->name ?? 'ID ' . $this->filterTrainerId;
+        } else {
+            $this->filterTrainerName = null;
+        }
+        
         $this->refreshTrainings();
     }
 }

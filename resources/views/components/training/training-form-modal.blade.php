@@ -1,13 +1,61 @@
-<div>
+<div x-data="{ 
+    modalLoading: false,
+    
+    openModalInstant() {
+        this.modalLoading = true;
+        // Show modal immediately
+        $wire.set('showModal', true);
+        // Then load data
+        $wire.loadDropdownData().then(() => {
+            this.modalLoading = false;
+        });
+    },
+    
+    openEditInstant(id) {
+        this.modalLoading = true;
+        $wire.set('showModal', true);
+        // Dispatch edit event which will load data
+        $wire.call('openEdit', { id: id }).then(() => {
+            this.modalLoading = false;
+        });
+    }
+}"
+@open-training-form.window="openModalInstant()"
+@open-training-edit.window="openEditInstant($event.detail.id)">
+
     <!-- Trigger Button -->
-    <x-ui.button wire:click="openModal" variant="primary">
+    <x-ui.button @click="openModalInstant()" variant="primary">
         <x-icon name="o-plus" class="w-5 h-5" />
         Add <span class="hidden sm:block">New Training</span>
     </x-ui.button>
 
     <!-- Modal -->
     <x-modal wire:model="showModal" :title="$isEdit ? 'Edit Training' : 'New Training'" :subtitle="$isEdit ? 'Modify existing training' : 'Creating a new training'" box-class="backdrop-blur max-w-4xl">
-        <div class="space-y-6">
+        
+        <!-- Loading Skeleton - shown while data loads -->
+        <template x-if="modalLoading">
+            <div class="space-y-4 animate-pulse">
+                <div class="h-4 bg-gray-200 rounded w-1/4 mb-2"></div>
+                <div class="h-10 bg-gray-200 rounded"></div>
+                
+                <div class="h-4 bg-gray-200 rounded w-1/3 mb-2 mt-6"></div>
+                <div class="h-10 bg-gray-200 rounded"></div>
+                
+                <div class="h-4 bg-gray-200 rounded w-1/4 mb-2 mt-6"></div>
+                <div class="h-10 bg-gray-200 rounded"></div>
+                
+                <div class="h-4 bg-gray-200 rounded w-1/3 mb-2 mt-6"></div>
+                <div class="h-10 bg-gray-200 rounded"></div>
+                
+                <div class="flex gap-4 mt-6">
+                    <div class="h-10 bg-gray-200 rounded w-1/2"></div>
+                    <div class="h-10 bg-gray-200 rounded w-1/2"></div>
+                </div>
+            </div>
+        </template>
+        
+        <!-- Actual Content - hidden while loading -->
+        <div x-show="!modalLoading" x-cloak class="space-y-6">
             @if (session('info_module'))
                 <div class="p-4 bg-amber-50 border border-amber-200 rounded-lg">
                     <p class="text-sm text-amber-700">
@@ -153,7 +201,7 @@
 
         <!-- Modal Actions -->
         <x-slot:actions>
-            <div class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 w-full">
+            <div x-show="!modalLoading" class="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 w-full">
                 <x-button label="Cancel" wire:click="closeModal" class="btn-ghost" />
                 <div class="flex gap-2 justify-end">
                     @if ($isEdit)
