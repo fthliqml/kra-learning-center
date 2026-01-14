@@ -569,6 +569,9 @@ class TrainingFormModal extends Component
             $this->date = $data['date'];
         }
         $this->showModal = true;
+        
+        // Dispatch event for calendar to hide loading overlay
+        $this->dispatch('training-modal-opened');
     }
 
     // Hold last known schedule context

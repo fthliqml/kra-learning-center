@@ -1,5 +1,5 @@
 <div class="{{ $typeColor }} border-l-4 rounded-sm sm:rounded-md p-1 sm:py-1.5 sm:px-2 text-[10px] sm:text-xs flex flex-col gap-0.5 shadow-sm cursor-pointer"
-    x-on:click="$dispatch('detail-loading-start')"
+    x-on:click.stop="$dispatch('detail-loading-start')"
     wire:click.stop="openTraining({{ $training['id'] }}, '{{ $isoDate }}')">
     <div class="font-semibold leading-tight truncate flex items-center gap-1">
         @if ($typeLabel)
