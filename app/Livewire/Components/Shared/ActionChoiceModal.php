@@ -41,9 +41,15 @@ class ActionChoiceModal extends Component
             $this->error('Invalid action');
             return;
         }
-        // Forward the payload with selected action
-        $this->dispatch($event, $this->payload);
+        
+        // Close modal first
         $this->show = false;
+        
+        // Dispatch loading start event (will be picked up by schedule-view)
+        $this->dispatch('calendar-loading-start');
+        
+        // Then forward the payload with selected action
+        $this->dispatch($event, $this->payload);
     }
 
     public function close(): void

@@ -1,12 +1,37 @@
 <div x-data="{
     mobile: window.matchMedia('(max-width:640px)').matches,
     activeView: @entangle('activeView'),
+    // Global loading state for modal operations
+    modalLoading: false,
     init() {
         const mq = window.matchMedia('(max-width:640px)');
         mq.addEventListener('change', e => this.mobile = e.matches);
         if (this.mobile && this.activeView === 'month') this.activeView = 'agenda';
     }
-}" class="relative">
+}"
+x-on:calendar-loading-start.window="modalLoading = true"
+x-on:training-modal-opened.window="modalLoading = false"
+x-on:training-detail-ready.window="modalLoading = false"
+x-on:open-action-choice.window="modalLoading = false"
+class="relative">
+
+    <!-- Global Loading Overlay - z-40 agar di bawah modal (z-50+) tapi di atas calendar -->
+    <div x-show="modalLoading" x-cloak x-transition:enter="transition ease-out duration-100"
+         x-on:click.stop.prevent
+         x-init="$watch('modalLoading', value => {
+             if (value) {
+                 document.body.style.overflow = 'hidden';
+             } else {
+                 document.body.style.overflow = '';
+             }
+         })"
+         class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-center justify-center cursor-wait">
+        <div class="bg-white rounded-xl shadow-2xl p-6 flex flex-col items-center gap-3">
+            <span class="loading loading-spinner loading-lg text-primary"></span>
+            <span class="text-sm text-gray-600 font-medium">Loading...</span>
+        </div>
+    </div>
+
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 my-4">
         <div class="flex items-center gap-2 w-full sm:w-auto">
             <button wire:click="previousMonth"

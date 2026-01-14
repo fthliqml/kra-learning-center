@@ -704,9 +704,6 @@ class TrainingFormModal extends Component
 
     public function openEdit($payload): void
     {
-        // PERFORMANCE: Load dropdown data lazily
-        $this->loadDropdownData();
-        
         // Payload may be an ID (int/string) or an array containing ['id'=>...] from action-choice modal
         $id = null;
         if (is_array($payload)) {
@@ -719,10 +716,12 @@ class TrainingFormModal extends Component
             return;
         }
 
-        $this->resetForm();
+        // PERFORMANCE: Reset form fields without calling userSearch/trainerSearch
+        $this->resetFormFieldsOnly();
         $this->isEdit = true;
         $this->trainingId = (int) $id;
 
+        // Load training with relations
         $training = Training::with([
             'sessions' => function ($q) {
                 $q->orderBy('day_number');
@@ -744,10 +743,11 @@ class TrainingFormModal extends Component
             return;
         }
 
-        // Reload options FIRST to ensure selected module/course/competency is included
+        // PERFORMANCE: Load dropdown options ONCE (with competency_id for OUT type)
         $this->loadCourseOptions();
         $this->loadTrainingModuleOptions();
         $this->loadCompetencyOptions($training->competency_id);
+        $this->dataLoaded = true; // Mark as loaded to prevent loadDropdownData() from reloading
 
         // Populate base fields
         // Set competency_id before training_type so the training_type watcher can keep the selection in OUT-house.
@@ -804,15 +804,48 @@ class TrainingFormModal extends Component
         // Participants via TrainingAssessment
         $this->participants = $training->assessments->pluck('employee_id')->map(fn($id) => (int) $id)->toArray();
 
-        // Refresh searchable lists so that selected participants/trainers appear
+        // PERFORMANCE: Load searchable lists ONCE with selected values
         $this->userSearch();
         $this->trainerSearch();
 
         $this->activeTab = 'training';
         $this->showModal = true;
 
-        // Force component to refresh after data is loaded
-        $this->dispatch('training-edit-loaded');
+        // Dispatch event for loading overlay to hide
+        $this->dispatch('training-modal-opened');
+    }
+    
+    /**
+     * Reset form fields only without loading searchable data
+     * Used by openEdit to avoid duplicate queries
+     */
+    private function resetFormFieldsOnly(): void
+    {
+        $this->training_name = '';
+        $this->trainingNameManuallyEdited = false;
+        $this->trainingNameWasAutoFilled = false;
+        $this->training_type = 'IN';
+        $this->group_comp = 'BMC';
+        $this->selected_module_id = null;
+        $this->date = '';
+        $this->start_time = '';
+        $this->end_time = '';
+        $this->course_id = null;
+        $this->competency_id = null;
+        $this->activeTab = 'training';
+        $this->trainerId = null;
+        $this->room = [
+            "name" => "",
+            "location" => "",
+        ];
+        $this->participants = [];
+        $this->originalTrainingType = null;
+        $this->showTypeChangeConfirm = false;
+        $this->pendingTrainingType = null;
+        $this->usersSearchable = collect([]);
+        $this->trainersSearchable = collect([]);
+        $this->resetErrorBag();
+        $this->resetValidation();
     }
 
     public function userSearch(string $value = '')
