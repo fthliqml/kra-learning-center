@@ -1,0 +1,69 @@
+---
+title: Database Schema Changes - Before & After
+---
+erDiagram
+    %% BEFORE: Current State
+    users_before {
+        bigint id PK "AUTO_INCREMENT"
+        varchar name "NOT NULL"
+        int nrp "NOT NULL"
+        varchar email UK "NOT NULL"
+        varchar password "NOT NULL - Local Auth"
+        varchar section "NULLABLE"
+        varchar department "NULLABLE"
+        varchar division "NULLABLE"
+        enum position "DEFAULT employee"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% AFTER: Target State
+    users_after {
+        bigint id PK "Same as External API ID"
+        bigint external_id "INDEX - Backup mapping"
+        varchar name "NOT NULL"
+        varchar nrp "NOT NULL - String for NIK"
+        varchar email UK "NOT NULL"
+        varchar password "NULLABLE - NULL for API auth"
+        varchar section "NULLABLE"
+        varchar department "NULLABLE"
+        varchar division "NULLABLE"
+        enum position "DEFAULT employee"
+        boolean is_active "DEFAULT true - Soft disable"
+        timestamp last_synced "Track sync time"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    user_roles {
+        bigint id PK
+        bigint user_id FK
+        enum role "instructor|certificator|admin|multimedia"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    training_requests {
+        bigint id PK
+        bigint user_id FK "Target user"
+        bigint created_by FK "Creator SPV"
+        bigint competency_id FK
+        text reason
+        enum status
+        timestamp created_at
+    }
+
+    training_assessments {
+        bigint id PK
+        bigint training_id FK
+        bigint employee_id FK "References users"
+        float pretest_score
+        float posttest_score
+        float practical_score
+        enum status
+    }
+
+    %% Relationships showing FK preserved
+    users_after ||--o{ user_roles : "has roles"
+    users_after ||--o{ training_requests : "requests"
+    users_after ||--o{ training_assessments : "assessments"
