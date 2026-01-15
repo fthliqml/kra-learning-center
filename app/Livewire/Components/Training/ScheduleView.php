@@ -26,9 +26,9 @@ class ScheduleView extends Component
     public int $nextMonthCount = 0;
     public int $currentMonthCount = 0;
 
-    /** @var \Illuminate\Support\Collection<int,\App\Models\Training> */
-    public $trainings;
-    public array $days = [];
+    // OPTIMIZATION: Remove public $trainings and $days to reduce hydration payload
+    // public $trainings; 
+    // public array $days = [];
     // Filters
     public $filterTrainerId = null;
     public $filterType = null;
@@ -69,7 +69,7 @@ class ScheduleView extends Component
             return; // no change
         }
         $this->activeView = $view;
-        $this->refreshTrainings(); // refetch sesuai view baru
+        // No manual refresh needed, render() handles it
     }
 
     public function previousMonth(): void
@@ -106,20 +106,14 @@ class ScheduleView extends Component
 
     public function refreshTrainings(): void
     {
-        // PERFORMANCE: Clear counts cache when trainings change
-        // This ensures fresh data after create/update/delete
+        // Simply clear caches.
+        // The render() method will automatically call computeDays() which queries fresh data.
         $this->yearCountsCache = [];
         $this->monthCountsCache = [];
-        
-        // Pilih query sesuai view
-        $this->trainings = $this->activeView === 'agenda'
-            ? $this->fetchAgendaTrainings()
-            : $this->fetchMonthTrainings();
-        $this->recomputeDays();
-        $this->computeMonthNavCounts();
         $this->trainingDetails = []; // reset cache
         $this->calendarVersion++;
-        // Broadcast current month context so other components (e.g., TrainingFormModal) can align default datepicker month
+        
+        // Broadcast current month context
         if (method_exists($this, 'dispatch')) {
             $this->dispatch('schedule-month-context', year: $this->currentYear, month: $this->currentMonth);
         }
@@ -127,238 +121,24 @@ class ScheduleView extends Component
 
     public function applyTrainingUpdate($payload): void
     {
-        if (!isset($payload['id']))
-            return;
-        foreach ($this->trainings as $t) {
-            if ($t->id == $payload['id']) {
-                // If date range changed, perform a full refresh to pull newly created sessions
-                $dateChanged = false;
-                $origStart = $t->start_date;
-                $origEnd = $t->end_date;
-                foreach (['name', 'start_date', 'end_date'] as $f)
-                    if (isset($payload[$f]))
-                        $t->$f = $payload[$f];
-                if (isset($payload['start_date']) && $payload['start_date'] !== $origStart)
-                    $dateChanged = true;
-                if (isset($payload['end_date']) && $payload['end_date'] !== $origEnd)
-                    $dateChanged = true;
-                if ($dateChanged) {
-                    // Recompute and re-query trainings so sessions include new days
-                    $this->refreshTrainings();
-                    return;
-                }
-                if (isset($payload['session']) && $t->relationLoaded('sessions')) {
-                    $diff = $payload['session'];
-                    foreach ($t->sessions as $sess) {
-                        if ($sess->id == ($diff['id'] ?? null)) {
-                            foreach (['room_name', 'room_location', 'start_time', 'end_time'] as $sf)
-                                if (array_key_exists($sf, $diff))
-                                    $sess->$sf = $diff[$sf];
-                            // Update in-memory trainer relation so UI reflects instantly
-                            if (array_key_exists('trainer', $diff)) {
-                                $newTrainer = $diff['trainer'];
-                                if ($newTrainer && isset($newTrainer['id'])) {
-                                    $trainerModel = new Trainer([
-                                        'id' => $newTrainer['id'],
-                                        'name' => $newTrainer['name'] ?? null,
-                                    ]);
-                                    $sess->setRelation('trainer', $trainerModel);
-                                } else {
-                                    $sess->unsetRelation('trainer');
-                                }
-                            }
-                            break;
-                        }
-                    }
-                }
-                break;
-            }
-        }
-        $this->recomputeDays();
-        // patch cache detail
-        $id = $payload['id'];
-        if (isset($this->trainingDetails[$id])) {
-            $cache = &$this->trainingDetails[$id];
-            foreach (['name', 'start_date', 'end_date'] as $f)
-                if (isset($payload[$f]))
-                    $cache[$f] = $payload[$f];
-            if (isset($payload['session']) && isset($cache['sessions']) && is_array($cache['sessions'])) {
-                foreach ($cache['sessions'] as &$cs) {
-                    if (($cs['id'] ?? null) == ($payload['session']['id'] ?? null)) {
-                        foreach (['room_name', 'room_location', 'start_time', 'end_time'] as $sf) {
-                            if (array_key_exists($sf, $payload['session'])) {
-                                $cs[$sf] = $payload['session'][$sf];
-                            }
-                        }
-                        if (array_key_exists('trainer', $payload['session'])) {
-                            $cs['trainer'] = $payload['session']['trainer'] ?? null;
-                        }
-                        break;
-                    }
-                }
-                unset($cs);
-            }
-        }
-        $this->calendarVersion++;
+        if (!isset($payload['id'])) return;
+        
+        // Just invalidate caches and force re-render.
+        // We don't need complex in-memory updates anymore because fetch is on-demand during render.
+        $this->refreshTrainings();
     }
 
     public function onTrainingInfoUpdated(...$args): void
     {
         $payload = $args[0] ?? [];
-        if (!is_array($payload) || !isset($payload['id'])) {
-            return;
-        }
-        // If date range changed we rely on existing logic in applyTrainingUpdate
+        if (!is_array($payload) || !isset($payload['id'])) return;
         $this->applyTrainingUpdate($payload);
     }
 
     public function onTrainingClosed($payload = null): void
     {
-        if (!$payload || !isset($payload['id'])) {
-            return;
-        }
-
-        // Update training status in memory
-        $id = $payload['id'];
-        $newStatus = $payload['status'] ?? 'done'; // Allow status to be passed, default to 'done'
-
-        foreach ($this->trainings as $t) {
-            if ($t->id == $id) {
-                $t->status = $newStatus;
-                break;
-            }
-        }
-
-        // Update cached detail if exists
-        if (isset($this->trainingDetails[$id])) {
-            $this->trainingDetails[$id]['status'] = $newStatus;
-        }
-
-        // Recompute days to reflect status change in UI
-        $this->recomputeDays();
-        $this->calendarVersion++;
-    }
-
-    private function calendarRange(): array
-    {
-        $startOfMonth = Carbon::createFromDate($this->currentYear, $this->currentMonth, 1);
-        $endOfMonth = $startOfMonth->copy()->endOfMonth();
-        return [
-            $startOfMonth->copy()->startOfWeek(Carbon::MONDAY)->toDateString(),
-            $endOfMonth->copy()->endOfWeek(Carbon::SUNDAY)->toDateString()
-        ];
-    }
-
-    private function recomputeDays(): void
-    {
-        if ($this->activeView === 'agenda') {
-            [$s, $e] = $this->strictMonthRange();
-        } else {
-            [$s, $e] = $this->calendarRange();
-        }
-        $start = Carbon::parse($s);
-        $end = Carbon::parse($e);
-        $days = [];
-        $cur = $start->copy();
-        while ($cur <= $end) {
-            $iso = $cur->format('Y-m-d');
-            $days[] = [
-                'date' => $cur->copy(),
-                'isCurrentMonth' => $cur->month === $this->currentMonth,
-                'isToday' => $cur->isToday(),
-                'trainings' => $this->trainingsForDate($iso),
-            ];
-            $cur->addDay();
-        }
-        $this->days = $days;
-    }
-
-    /**
-     * Strict range hanya tanggal di dalam bulan aktif (tanpa padding minggu).
-     */
-    private function strictMonthRange(): array
-    {
-        $start = Carbon::createFromDate($this->currentYear, $this->currentMonth, 1)->startOfDay();
-        $end = $start->copy()->endOfMonth();
-        return [$start->toDateString(), $end->toDateString()];
-    }
-
-    /**
-     * Query data untuk month view (menggunakan calendarRange extended full weeks)
-     */
-    private function fetchMonthTrainings()
-    {
-        [$start, $end] = $this->calendarRange();
-        // PERFORMANCE: Eager load all relations needed in calendar view to avoid N+1
-        $query = Training::with([
-            'sessions.trainer.user',
-            'competency:id,type',
-            'module.competency:id,type',
-            'course.competency:id,type'
-        ])
-            ->where(function ($q) use ($start, $end) {
-                $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
-            });
-        // Apply filters
-        if ($this->filterType && in_array($this->filterType, ['LMS', 'IN', 'OUT', 'BLENDED'])) {
-            $query->where('type', $this->filterType);
-        }
-        if ($this->filterTrainerId) {
-            $query->whereHas('sessions', function ($q) {
-                $q->where('trainer_id', $this->filterTrainerId);
-            });
-        }
-        /** @var User|null $user */
-        $user = Auth::user();
-        if ($user && !$user->hasRole('admin')) {
-            $query->where(function ($q) use ($user) {
-                $q->whereHas('assessments', function ($qq) use ($user) {
-                    $qq->where('employee_id', $user->id);
-                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
-                    $qq->where('users.id', $user->id);
-                });
-            });
-        }
-        return $query->get();
-    }
-
-    /**
-     * Query data untuk agenda view (strict bulan saja)
-     */
-    private function fetchAgendaTrainings()
-    {
-        [$start, $end] = $this->strictMonthRange();
-        // PERFORMANCE: Eager load all relations needed in agenda view to avoid N+1
-        $query = Training::with([
-            'sessions.trainer.user',
-            'competency:id,type',
-            'module.competency:id,type',
-            'course.competency:id,type'
-        ])
-            ->where(function ($q) use ($start, $end) {
-                $q->whereDate('start_date', '<=', $end)->whereDate('end_date', '>=', $start);
-            });
-        if ($this->filterType) {
-            if ($this->filterType && in_array($this->filterType, ['LMS', 'IN', 'OUT', 'BLENDED'])) {
-                $query->where('type', $this->filterType);
-            }
-        }
-        if ($this->filterTrainerId) {
-            $query->whereHas('sessions', function ($q) {
-                $q->where('trainer_id', $this->filterTrainerId);
-            });
-        }
-        /** @var User|null $user */    $user = Auth::user();
-        if ($user && !$user->hasRole('admin')) {
-            $query->where(function ($q) use ($user) {
-                $q->whereHas('assessments', function ($qq) use ($user) {
-                    $qq->where('employee_id', $user->id);
-                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
-                    $qq->where('users.id', $user->id);
-                });
-            });
-        }
-        return $query->get();
+        if (!$payload || !isset($payload['id'])) return;
+        $this->refreshTrainings();
     }
 
     /**
@@ -433,6 +213,43 @@ class ScheduleView extends Component
     }
 
     /**
+     * Query trainings for a specific date range.
+     * Used by computeDays() in render().
+     */
+    private function queryTrainingsForRange(Carbon $start, Carbon $end)
+    {
+        // ... (Using logic from old refreshTrainings) ...
+        $query = Training::with(['sessions.trainer.user', 'competency', 'module.competency', 'course.competency'])
+            ->whereDate('start_date', '<=', $end)
+            ->whereDate('end_date', '>=', $start)
+            ->orderBy('start_date');
+
+        if ($this->filterTrainerId) {
+            $query->whereHas('sessions', fn($q) => $q->where('trainer_id', $this->filterTrainerId));
+        }
+
+        if ($this->filterType) {
+            $query->where('type', $this->filterType);
+        }
+
+        /** @var User|null $user */
+        $user = Auth::user();
+        if ($user && !$user->hasRole('admin')) {
+            $query->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            });
+        }
+        
+        return $query->get();
+    }
+    
+
+
+    /**
      * Count trainings that overlap a specific month/year. Each training counted once if overlapping.
      * PERFORMANCE: Results are cached per year-month.
      */
@@ -468,31 +285,31 @@ class ScheduleView extends Component
         return $count;
     }
 
-    private function trainingsForDate(string $iso): array
-    {
-        $c = Carbon::parse($iso);
-        return $this->trainings->filter(fn($t) => $c->between(Carbon::parse($t->start_date), Carbon::parse($t->end_date)))
-            ->values()->map(function ($t) use ($iso) {
-                $status = strtolower($t->status ?? '');
-                $isClosed = in_array($status, ['done', 'approved', 'rejected']);
-                $isPast = Carbon::parse($iso)->endOfDay()->isPast();
+    // private function trainingsForDate(string $iso): array // This method is replaced by getTrainingsForDate
+    // {
+    //     $c = Carbon::parse($iso);
+    //     return $this->trainings->filter(fn($t) => $c->between(Carbon::parse($t->start_date), Carbon::parse($t->end_date)))
+    //         ->values()->map(function ($t) use ($iso) {
+    //             $status = strtolower($t->status ?? '');
+    //             $isClosed = in_array($status, ['done', 'approved', 'rejected']);
+    //             $isPast = Carbon::parse($iso)->endOfDay()->isPast();
 
-                return [
-                    'id' => $t->id,
-                    'name' => $t->name,
-                    'group_comp' => $t->group_comp,
-                    'type' => $t->type ?? null,
-                    'status' => $t->status ?? null,
-                    'start_date' => $t->start_date,
-                    'end_date' => $t->end_date,
-                    'sessions' => $t->sessions,
-                    'is_closed' => $isClosed,
-                    'is_past' => $isPast,
-                    // Fade only when training is closed; do not fade merely because date has passed.
-                    'is_faded' => $isClosed,
-                ];
-            })->toArray();
-    }
+    //             return [
+    //                 'id' => $t->id,
+    //                 'name' => $t->name,
+    //                 'group_comp' => $t->group_comp,
+    //                 'type' => $t->type ?? null,
+    //                 'status' => $t->status ?? null,
+    //                 'start_date' => $t->start_date,
+    //                 'end_date' => $t->end_date,
+    //                 'sessions' => $t->sessions,
+    //                 'is_closed' => $isClosed,
+    //                 'is_past' => $isPast,
+    //                 // Fade only when training is closed; do not fade merely because date has passed.
+    //                 'is_faded' => $isClosed,
+    //             ];
+    //         })->toArray();
+    // }
 
     public function openAdd(string $date): void
     {
@@ -608,6 +425,67 @@ class ScheduleView extends Component
         return $payload;
     }
 
+    /**
+     * Compute days structure for the current month
+     */
+    private function computeDays(): array
+    {
+        $startOfMonth = Carbon::createFromDate($this->currentYear, $this->currentMonth, 1)->startOfWeek(Carbon::MONDAY);
+        $endOfMonth = Carbon::createFromDate($this->currentYear, $this->currentMonth, 1)->endOfMonth()->endOfWeek(Carbon::SUNDAY);
+
+        // Fetch trainings for the visible range
+        $trainings = $this->queryTrainingsForRange($startOfMonth, $endOfMonth);
+        
+        // Cache trainings locally for this request
+        $this->_trainingsCache = $trainings;
+
+        $days = [];
+        $current = $startOfMonth->copy();
+
+        while ($current <= $endOfMonth) {
+            $iso = $current->toDateString();
+            $dayTrainings = $this->getTrainingsForDate($trainings, $iso);
+            
+            $days[] = [
+                'date' => $current->copy(),
+                'isCurrentMonth' => $current->month === $this->currentMonth,
+                'isToday' => $current->isToday(),
+                'trainings' => $dayTrainings,
+            ];
+            $current->addDay();
+        }
+        
+        return $days;
+    }
+    
+    /**
+     * Helper to filter trainings/sessions for a specific date from the collection
+     */
+    private function getTrainingsForDate($trainings, string $iso): array
+    {
+        $c = Carbon::parse($iso);
+        return $trainings->filter(fn($t) => $c->between(Carbon::parse($t->start_date), Carbon::parse($t->end_date)))
+            ->values()->map(function ($t) use ($iso) {
+                $status = strtolower($t->status ?? '');
+                $isClosed = in_array($status, ['done', 'approved', 'rejected']);
+                $isPast = Carbon::parse($iso)->endOfDay()->isPast();
+
+                return [
+                    'id' => $t->id,
+                    'name' => $t->name,
+                    'group_comp' => $t->group_comp,
+                    'type' => $t->type ?? null,
+                    'status' => $t->status ?? null,
+                    'start_date' => $t->start_date,
+                    'end_date' => $t->end_date,
+                    'sessions' => $t->sessions, // sessions are already eager loaded and filtered if possible (though we eager loaded all)
+                    'is_closed' => $isClosed,
+                    'is_past' => $isPast,
+                    'is_faded' => $isClosed,
+                ];
+            })->toArray();
+    }
+
     public function getMonthNameProperty(): string
     {
         return Carbon::createFromDate($this->currentYear, $this->currentMonth, 1)->format('F Y');
@@ -615,8 +493,17 @@ class ScheduleView extends Component
 
     public function render()
     {
-        return view('components.training.schedule-view');
+        // Re-compute counts and days on every render to ensure freshness without bloated state
+        $this->computeMonthNavCounts();
+        $days = $this->computeDays();
+        
+        return view('components.training.schedule-view', [
+            'days' => $days
+        ]);
     }
+    
+    // Internal cache for the current request cycle
+    protected $_trainingsCache;
 
     public function onFiltersUpdated($trainerId = null, $type = null): void
     {

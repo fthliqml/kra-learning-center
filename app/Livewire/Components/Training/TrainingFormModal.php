@@ -130,14 +130,20 @@ class TrainingFormModal extends Component
     public array $trainingModuleOptions = [];
     public array $competencyOptions = [];
 
+    /**
+     * PERFORMANCE: Cache dropdown options for 1 hour to avoid repeated queries
+     */
     private function loadCourseOptions(): void
     {
-        // Include group_comp so we can auto-sync training group_comp for LMS
-        $this->courseOptions = Course::with('competency:id,type')
-            ->select('id', 'title', 'competency_id')
-            ->orderBy('title')
-            ->get()
-            ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->competency->type ?? null])->toArray();
+        // Use cache to avoid query every time modal opens
+        $this->courseOptions = cache()->remember('training_form_course_options', 3600, function () {
+            return Course::with('competency:id,type')
+                ->select('id', 'title', 'competency_id')
+                ->orderBy('title')
+                ->get()
+                ->map(fn($c) => ['id' => $c->id, 'title' => $c->title, 'group_comp' => $c->competency->type ?? null])
+                ->toArray();
+        });
     }
 
     // PERFORMANCE: In-memory cache for group lookups
@@ -171,14 +177,18 @@ class TrainingFormModal extends Component
 
     private function loadCompetencyOptions(?int $ensureCompetencyId = null): void
     {
-        $options = Competency::query()
-            ->select('id', 'code', 'name')
-            ->orderBy('name')
-            ->limit(50)
-            ->get()
-            ->map(fn($c) => ['id' => $c->id, 'name' => trim($c->code . ' - ' . $c->name)])
-            ->toArray();
+        // Use cache for base competency options
+        $options = cache()->remember('training_form_competency_options', 3600, function () {
+            return Competency::query()
+                ->select('id', 'code', 'name')
+                ->orderBy('name')
+                ->limit(50)
+                ->get()
+                ->map(fn($c) => ['id' => $c->id, 'name' => trim($c->code . ' - ' . $c->name)])
+                ->toArray();
+        });
 
+        // Ensure selected competency is in list (for edit mode)
         if ($ensureCompetencyId) {
             $existingIds = array_column($options, 'id');
             if (!in_array($ensureCompetencyId, $existingIds, true)) {
@@ -330,14 +340,17 @@ class TrainingFormModal extends Component
 
     private function loadTrainingModuleOptions(): void
     {
-        $this->trainingModuleOptions = TrainingModule::with('competency')
-            ->orderBy('title')
-            ->get()
-            ->map(fn($m) => [
-                'id' => $m->id,
-                'title' => $m->title,
-                'group_comp' => $m->competency?->type ?? null
-            ])->toArray();
+        // Use cache to avoid query every time modal opens
+        $this->trainingModuleOptions = cache()->remember('training_form_module_options', 3600, function () {
+            return TrainingModule::with('competency')
+                ->orderBy('title')
+                ->get()
+                ->map(fn($m) => [
+                    'id' => $m->id,
+                    'title' => $m->title,
+                    'group_comp' => $m->competency?->type ?? null
+                ])->toArray();
+        });
     }
 
     public function updatedSelectedModuleId($value): void
@@ -882,15 +895,32 @@ class TrainingFormModal extends Component
                 ->get();
         }
 
-        // If no search value, load all trainers
+        // PERFORMANCE: If no search value, load limited trainers (not ALL)
         if (empty($value)) {
-            $results = Trainer::with('user')->get();
-            $this->trainersSearchable = $results->map(function ($trainer) {
-                return [
-                    'id' => $trainer->id,
-                    'name' => $trainer->name ?: ($trainer->user?->name ?? 'Unknown'),
-                ];
+            // Use cache for initial trainer list
+            $results = cache()->remember('training_form_trainers_list', 3600, function () {
+                return Trainer::with('user')
+                    ->limit(20) // Only load 20 trainers initially, user can search for more
+                    ->get()
+                    ->map(function ($trainer) {
+                        return [
+                            'id' => $trainer->id,
+                            'name' => $trainer->name ?: ($trainer->user?->name ?? 'Unknown'),
+                        ];
+                    })->toArray();
             });
+            
+            // Merge with selected trainer if not in list
+            $merged = collect($results);
+            if ($selected->isNotEmpty()) {
+                $selectedMapped = $selected->map(fn($t) => [
+                    'id' => $t->id,
+                    'name' => $t->name ?: ($t->user?->name ?? 'Unknown'),
+                ]);
+                $merged = $merged->concat($selectedMapped)->unique('id');
+            }
+            
+            $this->trainersSearchable = $merged;
             return;
         }
 

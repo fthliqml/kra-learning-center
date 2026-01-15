@@ -25,7 +25,7 @@ class="relative">
                  document.body.style.overflow = '';
              }
          })"
-         class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-center justify-center cursor-wait">
+         class="fixed inset-0 bg-black/30 backdrop-blur-sm z-[100] flex items-center justify-center">
         <div class="bg-white rounded-xl shadow-2xl p-6 flex flex-col items-center gap-3">
             <span class="loading loading-spinner loading-lg text-primary"></span>
             <span class="text-sm text-gray-600 font-medium">Loading...</span>
