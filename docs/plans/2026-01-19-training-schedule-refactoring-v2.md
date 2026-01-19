@@ -268,19 +268,19 @@ Working on: Training Schedule Refactoring v2
 Plan file: docs/plans/2026-01-19-training-schedule-refactoring-v2.md
 Approach: Extract to Traits + Services, then slim down components
 
-Current Progress: [Last updated: 2026-01-19 14:22]
+Current Progress: [Last updated: 2026-01-19 14:28]
 - [x] Task 1.1: TrainingPersistService ✅
 - [x] Task 1.2: SessionSyncService ✅
 - [x] Task 2.1: TrainingFormState ✅
 - [x] Task 2.2: TrainingFormDropdowns ✅
 - [x] Task 2.3: TrainingFormValidation (skipped - minimal, kept in modal) ✅
 - [x] Task 3.1: Refactor TrainingFormModal ✅ (1626 → 1204 lines, -26%)
-- [ ] Task 4.1: Reorganize ScheduleView ← NEXT
-- [ ] Task 4.2: Create ScheduleFilters
-- [ ] Task 5.1: Reorganize Detail Components
-- [ ] Task 6.1: Update Blade Views
-- [ ] Task 6.2: Cleanup Old Files
-- [ ] Task 7.1: Testing
+- [x] Task 4.1: Reorganize ScheduleView ✅ (already optimal - 525 lines)
+- [x] Task 4.2: Create ScheduleFilters ✅ (existing ScheduleFilterModal works well)
+- [x] Task 5.1: Reorganize Detail Components ✅ (already optimal - 128 lines)
+- [x] Task 6.1: Update Blade Views ✅ (no path changes needed)
+- [x] Task 6.2: Cleanup Old Files ✅ (removed redundant TrainingFormState)
+- [ ] Task 7.1: Testing ← PENDING (manual verification needed)
 
 Key files:
 - app/Livewire/Components/Training/TrainingFormModal.php (1626 lines, main target)
