@@ -1028,16 +1028,16 @@ class TrainingFormModal extends Component
 
     public function saveTraining()
     {
-        // Validasi menggunakan FormRequest
+        // Validation using FormRequest
         $request = new TrainingFormRequest();
         $request->merge($this->getValidationData());
-
 
         $validator = Validator::make(
             $request->all(),
             $request->rules(),
             $request->messages()
         );
+        
         if ($validator->fails()) {
             $all = collect($validator->errors()->all());
             if ($all->isNotEmpty()) {
@@ -1050,10 +1050,12 @@ class TrainingFormModal extends Component
             throw new \Illuminate\Validation\ValidationException($validator);
         }
 
+        // Parse date range
         $range = $this->parseDateRange($this->date);
         $startDate = $range['start'];
         $endDate = $range['end'];
 
+        // Validate time range
         if ($this->start_time && $this->end_time) {
             $startTime = Carbon::createFromFormat('H:i', $this->start_time);
             $endTime = Carbon::createFromFormat('H:i', $this->end_time);
@@ -1064,81 +1066,62 @@ class TrainingFormModal extends Component
             }
         }
 
-        $courseTitle = null;
+        // Sync course_id for LMS/BLENDED (form binds to selected_module_id)
         if (in_array($this->training_type, ['LMS', 'BLENDED'])) {
-            // Form binds course selection to selected_module_id for LMS/BLENDED
-            // Sync to course_id for consistency
             $this->course_id = $this->selected_module_id;
-            $course = Course::find($this->course_id);
-            $courseTitle = $course?->title;
         }
 
-        if ($this->isEdit && $this->trainingId) {
-            $this->updateTraining($courseTitle, $startDate, $endDate);
-            return;
-        }
-
-        // group_comp is no longer persisted on trainings; keep it as UI-only display value.
-        if (in_array($this->training_type, ['LMS', 'BLENDED']) && $this->course_id) {
-            $syncedGroup = $this->getCourseGroupComp((int) $this->course_id);
-            if ($syncedGroup) {
-                $this->group_comp = $syncedGroup;
-            }
-        }
-
-        if ($this->training_type === 'OUT' && $this->competency_id) {
-            $syncedGroup = $this->getCompetencyGroupComp((int) $this->competency_id);
-            if ($syncedGroup) {
-                $this->group_comp = $syncedGroup;
-            }
-        }
-
-        $finalName = $this->training_name;
-        if ($this->training_type === 'OUT' && trim((string) $finalName) === '' && $this->competency_id) {
-            $fallback = $this->getCompetencyTrainingName((int) $this->competency_id);
-            if ($fallback !== null) {
-                $finalName = $fallback;
-            }
-        }
-
-        $training = Training::create([
-            'name' => in_array($this->training_type, ['LMS', 'BLENDED']) ? ($courseTitle ?? $this->training_type) : $finalName,
-            'type' => $this->training_type,
+        // Prepare data for service
+        $formData = [
+            'training_name' => $this->training_name,
+            'training_type' => $this->training_type,
+            'course_id' => $this->course_id,
+            'module_id' => $this->selected_module_id,
+            'competency_id' => $this->competency_id,
             'start_date' => $startDate,
             'end_date' => $endDate,
-            'course_id' => in_array($this->training_type, ['LMS', 'BLENDED']) ? $this->course_id : null,
-            'module_id' => $this->training_type === 'IN' ? $this->selected_module_id : null,
-            'competency_id' => $this->training_type === 'OUT' ? $this->competency_id : null,
-        ]);
+            'trainer_id' => $this->trainerId,
+            'room' => $this->room,
+            'start_time' => $this->start_time,
+            'end_time' => $this->end_time,
+        ];
 
-        // LMS trainings don't have surveys - skip survey creation for LMS type
-        if ($this->training_type !== 'LMS') {
-            $surveys = $this->createSurveysForTraining($training);
-            $this->createSurveyResponsesForParticipants($surveys, $this->participants);
-        }
+        $persistService = app(TrainingPersistService::class);
+        $sessionService = app(SessionSyncService::class);
 
-        $sessions = $this->createSessionsForTraining($training, $startDate, $endDate);
-
-        foreach ($this->participants as $participantId) {
-            TrainingAssessment::create(["training_id" => $training->id, "employee_id" => $participantId]);
-        }
-
-        if ($this->training_type !== 'LMS') {
-            foreach ($sessions as $session) {
-                foreach ($this->participants as $participantId) {
-                    TrainingAttendance::create([
-                        'session_id' => $session->id,
-                        'employee_id' => $participantId,
-                        'notes' => null,
-                        'recorded_at' => Carbon::now(),
-                    ]);
+        try {
+            if ($this->isEdit && $this->trainingId) {
+                // Update existing training
+                $training = $persistService->update(
+                    $this->trainingId,
+                    $formData,
+                    $this->participants,
+                    $sessionService
+                );
+                
+                if (!$training) {
+                    $this->error('Training not found', position: 'toast-top toast-center');
+                    return;
                 }
+                
+                $this->success('Training updated successfully!', position: 'toast-top toast-center');
+                $this->dispatch('training-updated', id: $training->id);
+            } else {
+                // Create new training
+                $training = $persistService->create(
+                    $formData,
+                    $this->participants,
+                    $sessionService
+                );
+                
+                $this->success('Training data created successfully!', position: 'toast-top toast-center');
+                $this->dispatch('training-created');
             }
+            
+            $this->closeModal();
+        } catch (\Throwable $e) {
+            $this->error('Failed to save training: ' . $e->getMessage(), position: 'toast-top toast-center');
         }
-
-        $this->success('Training data created successfully!', position: 'toast-top toast-center');
-        $this->dispatch('training-created');
-        $this->closeModal();
     }
 
     /**
@@ -1160,411 +1143,14 @@ class TrainingFormModal extends Component
         ];
     }
 
-    /**
-     * Update existing training (edit mode)
-     */
-    private function updateTraining($courseTitle, $startDate, $endDate): void
-    {
-        DB::transaction(function () use ($courseTitle, $startDate, $endDate) {
-            $training = Training::with('sessions')->find($this->trainingId);
-            if (!$training) {
-                $this->error('Training not found');
-                DB::rollBack();
-                return;
-            }
-
-            $originalType = $training->type;
-            $originalStart = $training->start_date ? Carbon::parse($training->start_date)->toDateString() : null;
-            $originalEnd = $training->end_date ? Carbon::parse($training->end_date)->toDateString() : null;
-
-            // Update main training fields
-            $this->updateTrainingFields($training, $courseTitle, $startDate, $endDate);
-
-            // Update sessions if needed
-            $dateChanged = ($originalStart !== $startDate) || ($originalEnd !== $endDate);
-            $typeChanged = $originalType !== $this->training_type;
-            if ($dateChanged || $typeChanged) {
-                $this->rebuildSessions($training, $startDate, $endDate, $originalType);
-            } else {
-                $this->updateSessionFields($training);
-            }
-
-            // Update participants and survey responses
-            $this->updateParticipantsAndSurveyResponses($training);
-
-            // Update attendance
-            $this->updateAttendance($training);
-
-            $this->success('Training updated successfully!', position: 'toast-top toast-center');
-            $this->dispatch('training-updated', id: $training->id);
-        });
-        $this->closeModal();
-    }
-
-    /**
-     * Update main training fields (type, name, group, dates)
-     */
-    private function updateTrainingFields($training, $courseTitle, $startDate, $endDate): void
-    {
-        $training->type = $this->training_type;
-        if (in_array($this->training_type, ['LMS', 'BLENDED'])) {
-            // LMS and BLENDED use course
-            $training->course_id = $this->course_id;
-            $training->module_id = null;
-            $training->competency_id = null;
-            $training->name = $courseTitle ?? $training->name;
-        } elseif ($this->training_type === 'IN') {
-            $training->course_id = null;
-            $training->module_id = $this->selected_module_id;
-            $training->competency_id = null;
-            $training->name = $this->training_name;
-        } else {
-            // OUT type
-            $training->course_id = null;
-            $training->module_id = null;
-            $training->competency_id = $this->competency_id;
-            $name = $this->training_name;
-            if (trim((string) $name) === '' && $this->competency_id) {
-                $fallback = $this->getCompetencyTrainingName((int) $this->competency_id);
-                if ($fallback !== null) {
-                    $name = $fallback;
-                }
-            }
-            $training->name = $name;
-        }
-
-        // group_comp is no longer persisted on trainings; keep it as UI-only display value.
-        if (in_array($this->training_type, ['LMS', 'BLENDED']) && $this->course_id) {
-            $syncedGroup = $this->getCourseGroupComp((int) $this->course_id);
-            if ($syncedGroup) {
-                $this->group_comp = $syncedGroup;
-            }
-        } elseif ($this->training_type === 'OUT' && $this->competency_id) {
-            $syncedGroup = $this->getCompetencyGroupComp((int) $this->competency_id);
-            if ($syncedGroup) {
-                $this->group_comp = $syncedGroup;
-            }
-        }
-        $training->start_date = $startDate;
-        $training->end_date = $endDate;
-        $training->save();
-    }
-
-    /**
-     * Update session fields if not rebuilding sessions
-     */
-    private function updateSessionFields($training): void
-    {
-        foreach ($training->sessions as $session) {
-            if ($training->type === 'LMS') {
-                $session->room_name = $this->room['name'] ?: null;
-                $session->room_location = $this->room['location'] ?: null;
-                $session->trainer_id = null;
-                $session->start_time = null;
-                $session->end_time = null;
-            } else {
-                $session->trainer_id = $this->trainerId;
-                $session->room_name = $this->room['name'];
-                $session->room_location = $this->room['location'];
-                $session->start_time = $this->start_time;
-                $session->end_time = $this->end_time;
-            }
-            $session->save();
-        }
-    }
-
-    /**
-     * Update participants (assessments) and survey responses for this training
-     */
-    private function updateParticipantsAndSurveyResponses($training): void
-    {
-        $existingParticipantIds = $training->assessments()->pluck('employee_id')->map(fn($id) => (int) $id)->toArray();
-        $newParticipantIds = array_map('intval', $this->participants);
-        $toAdd = array_diff($newParticipantIds, $existingParticipantIds);
-        $toRemove = array_diff($existingParticipantIds, $newParticipantIds);
-
-        foreach ($toAdd as $empId) {
-            TrainingAssessment::create(["training_id" => $training->id, "employee_id" => $empId]);
-        }
-        if (!empty($toRemove)) {
-            TrainingAssessment::where('training_id', $training->id)
-                ->whereIn('employee_id', $toRemove)
-                ->delete();
-        }
-
-        // Update SurveyResponse for all surveys of this training
-        $surveys = TrainingSurvey::where('training_id', $training->id)->get();
-
-        // Level 1 & 2: responses belong to participants.
-        foreach ($toAdd as $empId) {
-            foreach ($surveys as $survey) {
-                if ((int) ($survey->level ?? 0) === 3) {
-                    continue;
-                }
-                SurveyResponse::firstOrCreate([
-                    'survey_id' => $survey->id,
-                    'employee_id' => $empId,
-                ]);
-            }
-        }
-
-        if (!empty($toRemove)) {
-            foreach ($surveys as $survey) {
-                if ((int) ($survey->level ?? 0) === 3) {
-                    continue;
-                }
-                SurveyResponse::where('survey_id', $survey->id)
-                    ->whereIn('employee_id', $toRemove)
-                    ->delete();
-            }
-        }
-
-        // Level 3: responses belong to the expected approvers of current participants.
-        $level3Survey = $surveys->firstWhere('level', 3);
-        if ($level3Survey) {
-            $desiredApproverIds = $this->resolveLevel3ApproverIds($newParticipantIds);
-
-            $existingResponderIds = SurveyResponse::where('survey_id', $level3Survey->id)
-                ->pluck('employee_id')
-                ->map(fn($id) => (int) $id)
-                ->toArray();
-
-            $toAddApprovers = array_diff($desiredApproverIds, $existingResponderIds);
-            $toRemoveApprovers = array_diff($existingResponderIds, $desiredApproverIds);
-
-            foreach ($toAddApprovers as $approverId) {
-                SurveyResponse::firstOrCreate([
-                    'survey_id' => $level3Survey->id,
-                    'employee_id' => (int) $approverId,
-                ]);
-            }
-
-            if (!empty($toRemoveApprovers)) {
-                SurveyResponse::where('survey_id', $level3Survey->id)
-                    ->whereIn('employee_id', $toRemoveApprovers)
-                    ->delete();
-            }
-        }
-    }
-
-    /**
-     * Update attendance for all sessions and participants
-     */
-    private function updateAttendance($training): void
-    {
-        $newParticipantIds = array_map('intval', $this->participants);
-        $sessionIds = $training->sessions()->pluck('id');
-        TrainingAttendance::whereIn('session_id', $sessionIds)->delete();
-        if ($training->type !== 'LMS') {
-            foreach ($training->sessions as $session) {
-                foreach ($newParticipantIds as $pid) {
-                    TrainingAttendance::create([
-                        'session_id' => $session->id,
-                        'employee_id' => $pid,
-                        'notes' => null,
-                        'recorded_at' => Carbon::now(),
-                    ]);
-                }
-            }
-        }
-    }
-
-    /**
-     * Create surveys for each level (1,2,3) for a training
-     */
-    private function createSurveysForTraining($training): array
-    {
-        $surveys = [];
-        for ($level = 1; $level <= 3; $level++) {
-            $surveys[$level] = TrainingSurvey::create([
-                'training_id' => $training->id,
-                'level' => $level,
-                'status' => TrainingSurvey::STATUS_DRAFT,
-            ]);
-        }
-        return $surveys;
-    }
-
-    /**
-     * Create survey responses for each participant for each survey
-     */
-    private function createSurveyResponsesForParticipants(array $surveys, array $participants): void
-    {
-        if (empty($participants) || empty($surveys)) {
-            return;
-        }
-
-        // Level 1 & 2: responses belong to training participants.
-        foreach ($participants as $participantId) {
-            foreach ($surveys as $survey) {
-                if ((int) ($survey->level ?? 0) === 3) {
-                    continue;
-                }
-                SurveyResponse::firstOrCreate([
-                    'survey_id' => $survey->id,
-                    'employee_id' => $participantId,
-                ]);
-            }
-        }
-
-        // Level 3: responses belong to the participant's approver (SPV/Section Head/Dept Head).
-        $level3Survey = $surveys[3] ?? null;
-        if ($level3Survey && (int) ($level3Survey->level ?? 0) === 3) {
-            $approverIds = $this->resolveLevel3ApproverIds(array_map('intval', $participants));
-            foreach ($approverIds as $approverId) {
-                SurveyResponse::firstOrCreate([
-                    'survey_id' => $level3Survey->id,
-                    'employee_id' => $approverId,
-                ]);
-            }
-        }
-    }
-
-    private function resolveLevel3ApproverIds(array $participantIds): array
-    {
-        if (empty($participantIds)) {
-            return [];
-        }
-
-        $participants = User::query()
-            ->whereIn('id', $participantIds)
-            ->get(['id', 'section', 'department', 'position']);
-
-        $approverIds = [];
-        foreach ($participants as $participant) {
-            $approverId = $this->resolveLevel3ApproverIdForParticipant($participant);
-            if ($approverId) {
-                $approverIds[] = $approverId;
-            }
-        }
-
-        return array_values(array_unique(array_filter($approverIds)));
-    }
-
-    /**
-     * Level 3 approver priority by participant area:
-     * - employee submits: SPV -> Section Head -> Dept Head
-     * - supervisor submits: Section Head -> Dept Head
-     * - section head submits: Dept Head
-     */
-    private function resolveLevel3ApproverIdForParticipant(User $participant): ?int
-    {
-        $position = strtolower(trim($participant->position ?? ''));
-        $section = (string) ($participant->section ?? '');
-        $department = (string) ($participant->department ?? '');
-
-        if ($position === 'supervisor') {
-            $sectionHead = User::query()
-                ->whereRaw('LOWER(TRIM(position)) = ?', ['section_head'])
-                ->when($section !== '', fn($q) => $q->where('section', $section))
-                ->when($section === '' && $department !== '', fn($q) => $q->where('department', $department))
-                ->first();
-            if ($sectionHead) {
-                return (int) $sectionHead->id;
-            }
-
-            $deptHead = User::query()
-                ->whereRaw('LOWER(TRIM(position)) = ?', ['department_head'])
-                ->when($department !== '', fn($q) => $q->where('department', $department))
-                ->whereRaw('LOWER(TRIM(COALESCE(section, ""))) != ?', ['lid'])
-                ->first();
-
-            return $deptHead ? (int) $deptHead->id : null;
-        }
-
-        if ($position === 'section_head') {
-            $deptHead = User::query()
-                ->whereRaw('LOWER(TRIM(position)) = ?', ['department_head'])
-                ->when($department !== '', fn($q) => $q->where('department', $department))
-                ->whereRaw('LOWER(TRIM(COALESCE(section, ""))) != ?', ['lid'])
-                ->first();
-
-            return $deptHead ? (int) $deptHead->id : null;
-        }
-
-        $spv = User::query()
-            ->whereRaw('LOWER(TRIM(position)) = ?', ['supervisor'])
-            ->when($section !== '', fn($q) => $q->where('section', $section))
-            ->when($section === '' && $department !== '', fn($q) => $q->where('department', $department))
-            ->first();
-        if ($spv) {
-            return (int) $spv->id;
-        }
-
-        $sectionHead = User::query()
-            ->whereRaw('LOWER(TRIM(position)) = ?', ['section_head'])
-            ->when($section !== '', fn($q) => $q->where('section', $section))
-            ->when($section === '' && $department !== '', fn($q) => $q->where('department', $department))
-            ->first();
-        if ($sectionHead) {
-            return (int) $sectionHead->id;
-        }
-
-        $deptHead = User::query()
-            ->whereRaw('LOWER(TRIM(position)) = ?', ['department_head'])
-            ->when($department !== '', fn($q) => $q->where('department', $department))
-            ->whereRaw('LOWER(TRIM(COALESCE(section, ""))) != ?', ['lid'])
-            ->first();
-
-        return $deptHead ? (int) $deptHead->id : null;
-    }
-
-    /**
-     * Create sessions for a training between start and end date
-     */
-    private function createSessionsForTraining($training, $startDate, $endDate): array
-    {
-        $sessions = [];
-        if ($startDate && $endDate) {
-            $period = CarbonPeriod::create($startDate, $endDate);
-            $day = 1;
-            foreach ($period as $dateObj) {
-                $sessions[] = TrainingSession::create([
-                    'training_id' => $training->id,
-                    'day_number' => $day,
-                    'date' => $dateObj->format('Y-m-d'),
-                    'trainer_id' => $this->training_type === 'LMS' ? null : $this->trainerId,
-                    'room_name' => $this->training_type === 'LMS' ? ($this->room['name'] ?: null) : $this->room['name'],
-                    'room_location' => $this->training_type === 'LMS' ? ($this->room['location'] ?: null) : $this->room['location'],
-                    'start_time' => $this->training_type === 'LMS' ? null : $this->start_time,
-                    'end_time' => $this->training_type === 'LMS' ? null : $this->end_time,
-                ]);
-                $day++;
-            }
-        }
-        return $sessions;
-    }
-
-    /**
-     * Rebuild sessions when date range or type changes. Removes old sessions and recreates sequential days.
-     * Keeps semantics:
-     *  - LMS: no trainer / times (null), optional room.
-     *  - Non LMS: apply trainer/time/room values from form.
-     */
-    private function rebuildSessions(Training $training, ?string $startDate, ?string $endDate, string $previousType): void
-    {
-        // Delete all old sessions (cascade attendances already handled outside)
-        $training->sessions()->delete();
-        if (!$startDate || !$endDate)
-            return;
-        $period = CarbonPeriod::create($startDate, $endDate);
-        $day = 1;
-        foreach ($period as $dateObj) {
-            TrainingSession::create([
-                'training_id' => $training->id,
-                'day_number' => $day,
-                'date' => $dateObj->format('Y-m-d'),
-                'trainer_id' => $training->type === 'LMS' ? null : $this->trainerId,
-                'room_name' => $training->type === 'LMS' ? ($this->room['name'] ?: null) : $this->room['name'],
-                'room_location' => $training->type === 'LMS' ? ($this->room['location'] ?: null) : $this->room['location'],
-                'start_time' => $training->type === 'LMS' ? null : $this->start_time,
-                'end_time' => $training->type === 'LMS' ? null : $this->end_time,
-            ]);
-            $day++;
-        }
-        // Reload relation for subsequent logic
-        $training->load('sessions');
-    }
+    // =====================================================================
+    // NOTE: The following methods have been extracted to services:
+    // - updateTraining, updateTrainingFields, updateSessionFields -> TrainingPersistService
+    // - updateParticipantsAndSurveyResponses, updateAttendance -> SessionSyncService
+    // - createSurveysForTraining, createSurveyResponsesForParticipants -> SessionSyncService
+    // - resolveLevel3ApproverIds, resolveLevel3ApproverIdForParticipant -> SessionSyncService
+    // - createSessionsForTraining, rebuildSessions -> SessionSyncService
+    // =====================================================================
 
     public function render()
     {
