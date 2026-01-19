@@ -42,6 +42,7 @@ trait TrainingFormState
     
     // Pending type change for confirmation modal
     public ?string $pendingTypeChange = null;
+    public bool $showTypeChangeConfirm = false;
     
     // Default month context from calendar
     public int $defaultYear;
@@ -84,6 +85,7 @@ trait TrainingFormState
         $this->trainingNameManuallyEdited = false;
         $this->trainingNameWasAutoFilled = false;
         $this->pendingTypeChange = null;
+        $this->showTypeChangeConfirm = false;
     }
 
     /**
@@ -110,6 +112,7 @@ trait TrainingFormState
         $this->trainingNameManuallyEdited = false;
         $this->trainingNameWasAutoFilled = false;
         $this->pendingTypeChange = null;
+        $this->showTypeChangeConfirm = false;
         
         $this->resetErrorBag();
         $this->resetValidation();
