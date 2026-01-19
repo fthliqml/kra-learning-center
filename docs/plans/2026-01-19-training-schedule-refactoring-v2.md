@@ -268,13 +268,13 @@ Working on: Training Schedule Refactoring v2
 Plan file: docs/plans/2026-01-19-training-schedule-refactoring-v2.md
 Approach: Extract to Traits + Services, then slim down components
 
-Current Progress: [Update this as you go]
-- [ ] Task 1.1: TrainingPersistService
-- [ ] Task 1.2: SessionSyncService
-- [ ] Task 2.1: TrainingFormState (partial exists)
-- [ ] Task 2.2: TrainingFormDropdowns
-- [ ] Task 2.3: TrainingFormValidation
-- [ ] Task 3.1: Refactor TrainingFormModal
+Current Progress: [Last updated: 2026-01-19 13:55]
+- [x] Task 1.1: TrainingPersistService ✅
+- [x] Task 1.2: SessionSyncService ✅
+- [x] Task 2.1: TrainingFormState ✅
+- [x] Task 2.2: TrainingFormDropdowns ✅
+- [ ] Task 2.3: TrainingFormValidation (skipped - minimal, kept in modal)
+- [ ] Task 3.1: Refactor TrainingFormModal ← NEXT
 - [ ] Task 4.1: Reorganize ScheduleView
 - [ ] Task 4.2: Create ScheduleFilters
 - [ ] Task 5.1: Reorganize Detail Components
