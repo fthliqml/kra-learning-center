@@ -74,12 +74,13 @@ trait TrainingFormInteractions
         $this->isEdit = true;
         $this->trainingId = (int) $id;
 
-        // Load training with relations
+        // Load training with relations (include assessments for participants)
         $training = Training::with([
             'sessions' => fn($q) => $q->orderBy('day_number'),
             'course',
             'module', 
-            'competency'
+            'competency',
+            'assessments' // For loading participants
         ])->find($this->trainingId);
 
         if (!$training) {
@@ -147,13 +148,23 @@ trait TrainingFormInteractions
                 $this->trainerSearch(); 
             }
         }
+        // Load participants from assessments relation
+        $this->participants = $training->assessments
+            ->pluck('employee_id')
+            ->filter()
+            ->unique()
+            ->values()
+            ->toArray();
         
-        // Note: Participants loading logic moved to persist service, 
-        // but for editing form we might need existing participants IDs.
-        // Assuming participants are loaded separately or via relation if needed.
-        // For now, let's just dispatch opened event.
+        // Pre-populate users searchable with existing participants for display
+        if (!empty($this->participants)) {
+            $this->userSearch('');
+        }
         
         $this->showModal = true;
+        
+        // Dispatch event for parent components to hide loading overlay
+        $this->dispatch('training-modal-opened');
     }
 
     // ===== DELETE LOGIC =====
