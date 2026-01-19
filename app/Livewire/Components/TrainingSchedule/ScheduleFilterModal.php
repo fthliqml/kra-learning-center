@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training;
+namespace App\Livewire\Components\TrainingSchedule;
 
 use App\Models\Trainer;
 use Livewire\Component;
@@ -92,6 +92,6 @@ class ScheduleFilterModal extends Component
 
   public function render()
   {
-    return view('components.training.schedule-filter-modal');
+    return view('components.training-schedule.schedule-filter-modal');
   }
 }

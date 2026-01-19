@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training\Tabs;
+namespace App\Livewire\Components\TrainingSchedule\Tabs;
 
 use App\Models\Training;
 use App\Models\TrainingSession;
@@ -138,6 +138,6 @@ class TrainingAttendanceTab extends Component
 
     public function render()
     {
-        return view('components.training.tabs.training-attendance-tab');
+        return view('components.training-schedule.tabs.training-attendance-tab');
     }
 }

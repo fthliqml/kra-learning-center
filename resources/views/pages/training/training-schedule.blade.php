@@ -5,18 +5,18 @@
             <div class="flex flex-wrap gap-2 items-center justify-center lg:justify-end">
                 <x-button icon="o-funnel" label="Filter" class="btn-ghost border border-primary"
                     wire:click="$dispatch('open-schedule-filter')" />
-                <livewire:components.training.schedule-excel-actions />
-                <livewire:components.training.training-form-modal />
+                <livewire:components.training-schedule.schedule-excel-actions />
+                <livewire:components.training-schedule.training-form-modal />
             </div>
         @endrole
     </div>
 
-    <livewire:components.training.schedule-view />
+    <livewire:components.training-schedule.schedule-view />
     @role('admin')
-        <livewire:components.training.schedule-filter-modal />
-        <livewire:components.training.training-import-modal />
+        <livewire:components.training-schedule.schedule-filter-modal />
+        <livewire:components.training-schedule.training-import-modal />
     @endrole
-    <livewire:components.training.detail-training-modal />
+    <livewire:components.training-schedule.detail-training-modal />
     <livewire:components.confirm-dialog />
 
 </div>

@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training\Tabs;
+namespace App\Livewire\Components\TrainingSchedule\Tabs;
 
 use App\Models\Training;
 use App\Models\TrainingAssessment;
@@ -879,7 +879,7 @@ class TrainingCloseTab extends Component
 
   public function render()
   {
-    return view('components.training.tabs.training-close-tab', [
+    return view('components.training-schedule.tabs.training-close-tab', [
       'assessments' => $this->assessments(),
       'headers' => $this->headers(),
       'training' => $this->training,

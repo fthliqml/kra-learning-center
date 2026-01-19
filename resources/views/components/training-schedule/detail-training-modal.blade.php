@@ -87,20 +87,20 @@
             </div>
 
             @if ($activeTab === 'information')
-                <livewire:components.training.tabs.training-information-tab :training-id="$selectedEvent['id']" :day-number="$dayNumber"
+                <livewire:components.training-schedule.tabs.training-information-tab :training-id="$selectedEvent['id']" :day-number="$dayNumber"
                     :key="'info-' . $selectedEvent['id'] . '-' . $dayNumber" />
             @endif
 
             @anyrole('admin', 'instructor', 'certificator')
                 {{-- Attendance Section --}}
                 @if (!$isLms && $activeTab === 'attendance')
-                    <livewire:components.training.tabs.training-attendance-tab :training-id="$selectedEvent['id']" :day-number="$dayNumber"
+                    <livewire:components.training-schedule.tabs.training-attendance-tab :training-id="$selectedEvent['id']" :day-number="$dayNumber"
                         :key="'att-' . $selectedEvent['id'] . '-' . $dayNumber" lazy />
                 @endif
 
                 {{-- Close Training Section --}}
                 @if ($activeTab === 'close-training')
-                    <livewire:components.training.tabs.training-close-tab :training-id="$selectedEvent['id']" :key="'close-' . $selectedEvent['id']" lazy />
+                    <livewire:components.training-schedule.tabs.training-close-tab :training-id="$selectedEvent['id']" :key="'close-' . $selectedEvent['id']" lazy />
                 @endif
             @endanyrole
 

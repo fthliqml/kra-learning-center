@@ -59,7 +59,7 @@
                                 };
                                 $typeLabel = $type ?: '';
                             @endphp
-                            @include('components.training.partials.calendar-training-card', [
+                            @include('components.training-schedule.partials.calendar-training-card', [
                                 'training' => $training,
                                 'isoDate' => $isoDate,
                                 'sessionForDay' => $sessionForDay,

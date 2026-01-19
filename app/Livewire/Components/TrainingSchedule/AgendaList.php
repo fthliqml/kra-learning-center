@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training;
+namespace App\Livewire\Components\TrainingSchedule;
 
 use Livewire\Component;
 use Illuminate\Support\Collection;
@@ -87,7 +87,7 @@ class AgendaList extends Component
 
     public function render()
     {
-        return view('components.training.agenda-list');
+        return view('components.training-schedule.agenda-list');
     }
 }
 

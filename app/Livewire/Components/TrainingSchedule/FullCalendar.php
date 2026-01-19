@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training;
+namespace App\Livewire\Components\TrainingSchedule;
 
 use Livewire\Component;
 
@@ -28,7 +28,7 @@ class FullCalendar extends Component
 
     public function render()
     {
-        return view('components.training.full-calendar');
+        return view('components.training-schedule.full-calendar');
     }
 }
 

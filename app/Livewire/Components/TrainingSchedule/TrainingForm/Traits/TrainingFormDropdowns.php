@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training\TrainingForm\Traits;
+namespace App\Livewire\Components\TrainingSchedule\TrainingForm\Traits;
 
 use App\Models\Competency;
 use App\Models\Course;

@@ -115,10 +115,10 @@ class="relative">
             </div>
         @endif
         <div x-show="!mobile && activeView==='month'" x-cloak>
-            <livewire:components.training.full-calendar :days="$days" :monthName="$this->monthName" :key="'cal-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" lazy />
+            <livewire:components.training-schedule.full-calendar :days="$days" :monthName="$this->monthName" :key="'cal-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" lazy />
         </div>
         <div x-show="mobile || activeView==='agenda'" x-cloak>
-            <livewire:components.training.agenda-list :days="$days" :key="'agenda-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" lazy />
+            <livewire:components.training-schedule.agenda-list :days="$days" :key="'agenda-' . $currentYear . '-' . $currentMonth . '-' . $calendarVersion" lazy />
         </div>
     </div>
 

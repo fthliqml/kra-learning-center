@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training;
+namespace App\Livewire\Components\TrainingSchedule;
 
 use Livewire\Component;
 use Mary\Traits\Toast;
@@ -35,6 +35,6 @@ class ScheduleExcelActions extends Component
 
     public function render()
     {
-        return view('components.training.schedule-excel-actions');
+        return view('components.training-schedule.schedule-excel-actions');
     }
 }

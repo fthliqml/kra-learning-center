@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training;
+namespace App\Livewire\Components\TrainingSchedule;
 
 use App\Models\Training;
 use App\Models\TrainingSession;
@@ -120,7 +120,7 @@ class DetailTrainingModal extends Component
 
     public function render()
     {
-        return view('components.training.detail-training-modal', [
+        return view('components.training-schedule.detail-training-modal', [
             'trainingDates' => $this->trainingDates(),
         ]);
     }

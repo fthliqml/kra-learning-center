@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training;
+namespace App\Livewire\Components\TrainingSchedule;
 
 use App\Models\Training;
 use App\Models\Trainer;
@@ -497,7 +497,7 @@ class ScheduleView extends Component
         $this->computeMonthNavCounts();
         $days = $this->computeDays();
         
-        return view('components.training.schedule-view', [
+        return view('components.training-schedule.schedule-view', [
             'days' => $days
         ]);
     }

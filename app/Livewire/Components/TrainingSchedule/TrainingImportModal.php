@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Components\Training;
+namespace App\Livewire\Components\TrainingSchedule;
 
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -109,6 +109,6 @@ class TrainingImportModal extends Component
 
     public function render()
     {
-        return view('components.training.training-import-modal');
+        return view('components.training-schedule.training-import-modal');
     }
 }

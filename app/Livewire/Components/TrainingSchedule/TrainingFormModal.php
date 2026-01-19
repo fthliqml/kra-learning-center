@@ -1,7 +1,7 @@
 <?php
 
 
-namespace App\Livewire\Components\Training;
+namespace App\Livewire\Components\TrainingSchedule;
 
 use App\Models\Course;
 use App\Http\Requests\TrainingFormRequest;
@@ -1199,6 +1199,6 @@ class TrainingFormModal extends Component
             }
         }
         
-        return view('components.training.training-form-modal');
+        return view('components.training-schedule.training-form-modal');
     }
 }
