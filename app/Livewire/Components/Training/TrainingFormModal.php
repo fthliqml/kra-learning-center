@@ -15,6 +15,8 @@ use App\Models\TrainingModule;
 use App\Models\TrainingSession;
 use App\Models\TrainingSurvey;
 use App\Models\User;
+use App\Services\Training\TrainingPersistService;
+use App\Services\Training\SessionSyncService;
 use Illuminate\Support\Facades\Validator;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
@@ -681,33 +683,24 @@ class TrainingFormModal extends Component
         if (!$this->trainingId) {
             return;
         }
+        
         $id = $this->trainingId;
+        
         try {
-            DB::transaction(function () use ($id) {
-                // Load training with sessions to collect session IDs
-                $training = Training::with('sessions')->find($id);
-                if (!$training)
-                    return;
-
-                $sessionIds = $training->sessions->pluck('id')->all();
-                if (!empty($sessionIds)) {
-                    // Delete attendances under sessions
-                    TrainingAttendance::whereIn('session_id', $sessionIds)->delete();
-                }
-                // Delete sessions
-                TrainingSession::where('training_id', $id)->delete();
-                // Delete assessments
-                TrainingAssessment::where('training_id', $id)->delete();
-                // Finally delete training
-                $training->delete();
-            });
+            $service = app(TrainingPersistService::class);
+            $deleted = $service->delete($id);
+            
+            if (!$deleted) {
+                $this->error('Training not found.');
+                $this->dispatch('confirm-done');
+                return;
+            }
 
             // Notify parent and close
             $this->dispatch('training-deleted', ['id' => $id]);
             $this->success('Training deleted.', position: 'toast-top toast-center');
             $this->showModal = false;
             $this->resetForm();
-            // Close confirm dialog and stop spinner
             $this->dispatch('confirm-done');
         } catch (\Throwable $e) {
             $this->error('Failed to delete training.');
