@@ -1,0 +1,73 @@
+---
+title: Webhook Event Handling - State Diagram
+---
+stateDiagram-v2
+    [*] --> Received: Webhook Received
+
+    state "🔐 Validation" as Validation {
+        Received --> CheckSecret: Validate X-Webhook-Secret
+        CheckSecret --> CheckSignature: Secret Valid
+        CheckSecret --> Rejected: Invalid Secret
+        CheckSignature --> ParsePayload: Signature Valid
+        CheckSignature --> Rejected: Invalid Signature
+    }
+
+    state "📋 Event Routing" as Routing {
+        ParsePayload --> UserCreated: event = user.created
+        ParsePayload --> UserUpdated: event = user.updated
+        ParsePayload --> UserDeleted: event = user.deleted
+        ParsePayload --> OrgUpdated: event = organization.updated
+    }
+
+    state "⚙️ Processing" as Processing {
+        state "user.created" as UserCreated {
+            UC1: Check if user exists
+            UC2: Create new local user
+            UC3: Set default role
+            UC1 --> UC2
+            UC2 --> UC3
+        }
+
+        state "user.updated" as UserUpdated {
+            UU1: Find local user by ID
+            UU2: Update profile fields
+            UU3: Preserve LMS role
+            UU1 --> UU2
+            UU2 --> UU3
+        }
+
+        state "user.deleted" as UserDeleted {
+            UD1: Find local user by ID
+            UD2: Set is_active = false
+            UD3: Log deactivation
+            UD1 --> UD2
+            UD2 --> UD3
+        }
+
+        state "organization.updated" as OrgUpdated {
+            OU1: Get affected users
+            OU2: Bulk update org names
+            OU1 --> OU2
+        }
+    }
+
+    UserCreated --> Success
+    UserUpdated --> Success
+    UserDeleted --> Success
+    OrgUpdated --> Success
+
+    Success --> [*]: Return 200 OK
+    Rejected --> [*]: Return 401 Unauthorized
+
+    note right of Validation
+        Security First:
+        Always validate webhook
+        authenticity before
+        processing
+    end note
+
+    note right of Processing
+        Idempotent Operations:
+        Safe to receive same
+        webhook multiple times
+    end note

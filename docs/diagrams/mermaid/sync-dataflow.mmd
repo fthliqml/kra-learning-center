@@ -1,0 +1,67 @@
+---
+title: User Synchronization - Data Flow
+---
+flowchart LR
+    subgraph TRIGGERS["🎯 Sync Triggers"]
+        T1["User Login"]
+        T2["Webhook Event"]
+        T3["Scheduled Job<br/>(Optional)"]
+    end
+
+    subgraph EXTERNAL["🌐 External API"]
+        API_LOGIN["POST /auth/login"]
+        API_ME["GET /auth/me"]
+        API_USERS["GET /users"]
+        WEBHOOK_OUT["Webhook Sender"]
+    end
+
+    subgraph LMS_SERVICES["⚙️ LMS Services"]
+        EAS["ExternalAuthService"]
+        SUS["SyncUserService"]
+        WHC["WebhookController"]
+    end
+
+    subgraph SYNC_LOGIC["🔄 Sync Logic"]
+        CHECK{"User Exists<br/>in Local DB?"}
+        CREATE["Create User<br/>role = 'employee'"]
+        UPDATE["Update User<br/>Keep LMS role"]
+        DEACTIVATE["Set is_active = false"]
+    end
+
+    subgraph LOCAL_DB["💾 Local Database"]
+        USERS[("users table")]
+        ROLES[("user_roles table")]
+    end
+
+    %% Trigger 1: Login
+    T1 --> EAS
+    EAS -->|"POST"| API_LOGIN
+    API_LOGIN -->|"JWT + UserData"| EAS
+    EAS --> SUS
+
+    %% Trigger 2: Webhook
+    WEBHOOK_OUT -->|"user.created<br/>user.updated<br/>user.deleted"| WHC
+    T2 --> WHC
+    WHC --> SUS
+
+    %% Trigger 3: Scheduled
+    T3 --> API_USERS
+    API_USERS -->|"All Users"| SUS
+
+    %% Sync Logic
+    SUS --> CHECK
+    CHECK -->|"No"| CREATE
+    CHECK -->|"Yes"| UPDATE
+    CHECK -->|"Deleted Event"| DEACTIVATE
+
+    CREATE --> USERS
+    UPDATE --> USERS
+    DEACTIVATE --> USERS
+    USERS -.->|"FK Preserved"| ROLES
+
+    %% Styling
+    style TRIGGERS fill:#e3f2fd,stroke:#1565c0
+    style EXTERNAL fill:#fce4ec,stroke:#c2185b
+    style LMS_SERVICES fill:#fff3e0,stroke:#ef6c00
+    style SYNC_LOGIC fill:#f3e5f5,stroke:#7b1fa2
+    style LOCAL_DB fill:#e8f5e9,stroke:#2e7d32

@@ -1,0 +1,171 @@
+erDiagram
+    %% Core User Tables
+    user {
+        int id PK
+        string email UK
+        string password
+        enum role "user, superadmin"
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    user_profile {
+        int id PK
+        int id_user FK
+        string avatar
+        string nik UK
+        string name
+        enum gender "male, female"
+        int id_master_organization FK
+        int id_employment FK
+        int id_family_status FK
+        int id_group FK
+        string gl_account
+        string bank_name
+        string bank_account
+        timestamp first_login_at
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    user_family {
+        int id PK
+        int id_user FK
+        enum type "partner, child"
+        string name
+        boolean has_glasses_quota
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    user_fcm_token {
+        int id PK
+        int id_user FK
+        string token
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% Organization Structure
+    master_organization {
+        int id PK
+        int id_division FK
+        int id_department FK
+        int id_section FK
+        int id_position FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    division {
+        int id PK
+        string name
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    department {
+        int id PK
+        string name
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    section {
+        int id PK
+        string name
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    position {
+        int id PK
+        string name
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% Reference Tables (Employment, Family Status)
+    employment {
+        int id PK
+        string name
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    family_status {
+        int id PK
+        string name
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    %% Grouping & Quotas
+    group {
+        int id PK
+        int id_level FK
+        int id_grade FK
+        int id_quota_allocation FK
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    level {
+        int id PK
+        string name
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    grade {
+        int id PK
+        string name
+        timestamp created_at
+        timestamp updated_at
+    }
+
+    quota_allocation {
+        int id PK
+        string name
+        string slug UK
+        float plafon_quota_amount
+        float glasses_frame_lense_personal_quota_amount
+        float glasses_lense_personal_quota_amount
+        float glasses_frame_lense_family_quota_amount
+        float glasses_lense_family_quota_amount
+        timestamp created_at
+        timestamp updated_at
+    }
+    
+    %% Audit Log (Optional but included in schema)
+    master_organization_audit {
+        int id PK
+        int id_division FK
+        int id_department FK
+        int id_section FK
+        int id_position FK
+        timestamp created_at
+    }
+
+    %% RELATIONSHIPS
+    %% User Relations
+    user ||--o| user_profile : "has details"
+    user ||--o{ user_family : "has family members"
+    user ||--o{ user_fcm_token : "has tokens"
+
+    %% Profile -> Organization & Meta
+    user_profile }|--|| master_organization : "belongs to org"
+    user_profile }|--|| employment : "employment type"
+    user_profile }|--|| family_status : "status"
+    user_profile }|--|| group : "belongs to group"
+
+    %% Master Organization Structure
+    master_organization }|--|| division : "in division"
+    master_organization }|--|| department : "in department"
+    master_organization }|--|| section : "in section"
+    master_organization }|--|| position : "has position"
+
+    %% Group Definitions
+    group }|--|| level : "has level"
+    group }|--|| grade : "has grade"
+    group }|--|| quota_allocation : "has quota"

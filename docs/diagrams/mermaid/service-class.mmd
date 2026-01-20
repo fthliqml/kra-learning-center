@@ -1,0 +1,115 @@
+---
+title: Service Layer - Class Diagram
+---
+classDiagram
+    direction TB
+
+    class ExternalApiClient {
+        -string baseUrl
+        -int timeout
+        -string? token
+        +get(endpoint, params) Response
+        +post(endpoint, data) Response
+        +withToken(token) self
+        -buildHeaders() array
+        -handleResponse(response) mixed
+    }
+
+    class ExternalAuthService {
+        -ExternalApiClient client
+        +login(email, password) AuthResult
+        +fetchProfile(token) UserData
+        +logout(token) bool
+        -parseLoginResponse(response) AuthResult
+    }
+
+    class AuthResult {
+        +bool success
+        +string? token
+        +string? tokenType
+        +int? expiresIn
+        +UserData? user
+        +string? error
+    }
+
+    class UserData {
+        +int id
+        +string email
+        +ProfileData profile
+        +OrganizationData organization
+    }
+
+    class ProfileData {
+        +string nik
+        +string name
+        +string? avatar
+        +string gender
+    }
+
+    class OrganizationData {
+        +EntityData division
+        +EntityData department
+        +EntityData section
+        +EntityData position
+    }
+
+    class EntityData {
+        +int id
+        +string name
+    }
+
+    class SyncUserService {
+        +syncFromLogin(userData) User
+        +syncFromWebhook(payload) User
+        +deactivateUser(userId) bool
+        +bulkSync(users) int
+        -mapExternalToLocal(data) array
+        -shouldUpdateRole(user) bool
+    }
+
+    class WebhookController {
+        -SyncUserService syncService
+        +handleUserSync(request) JsonResponse
+        -validateSecret(request) bool
+        -validateSignature(request) bool
+        -routeEvent(event, data) void
+    }
+
+    class LoginController {
+        -ExternalAuthService authService
+        -SyncUserService syncService
+        +showLoginForm() View
+        +login(request) RedirectResponse
+        +logout() RedirectResponse
+    }
+
+    class User {
+        <<Eloquent Model>>
+        +int id
+        +string email
+        +string name
+        +string nrp
+        +string? section
+        +string? department
+        +string? division
+        +string position
+        +bool is_active
+        +DateTime? last_synced
+        +userRoles() HasMany
+        +hasRole(role) bool
+        +hasPosition(position) bool
+    }
+
+    %% Relationships
+    ExternalAuthService --> ExternalApiClient : uses
+    ExternalAuthService --> AuthResult : returns
+    AuthResult --> UserData : contains
+    UserData --> ProfileData : contains
+    UserData --> OrganizationData : contains
+    OrganizationData --> EntityData : contains
+
+    SyncUserService --> User : creates/updates
+    WebhookController --> SyncUserService : uses
+    LoginController --> ExternalAuthService : uses
+    LoginController --> SyncUserService : uses
+    LoginController --> User : authenticates

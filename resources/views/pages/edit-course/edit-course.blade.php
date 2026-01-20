@@ -1,5 +1,26 @@
 <div class="space-y-6">
-    <x-tabs wire:model="activeTab" class="bg-base-100 p-3 rounded-box shadow-sm pt-0 mt-5">
+    {{-- Header with Back Button and Course Title --}}
+    <div class="flex items-center gap-4 bg-base-100 p-4 rounded-box shadow-sm">
+        <a href="{{ route('courses-management.index') }}" 
+           class="btn btn-ghost btn-sm btn-circle hover:bg-base-200" 
+           title="Back to Course Management">
+            <x-icon name="o-arrow-left" class="w-5 h-5" />
+        </a>
+        <div class="flex-1">
+            <h1 class="text-xl font-semibold text-gray-800">
+                {{ $course->title ?? 'New Course' }}
+            </h1>
+            <p class="text-sm text-gray-500">
+                @if($isCreating)
+                    Creating new course
+                @else
+                    Editing course details
+                @endif
+            </p>
+        </div>
+    </div>
+
+    <x-tabs wire:model="activeTab" class="bg-base-100 p-3 rounded-box shadow-sm pt-0">
         {{-- TAB: Course Info --}}
         <x-tab name="course-info" label="Course Info" icon="m-document-text">
             <livewire:components.edit-course.course-info :courseId="$course->id" lazy />

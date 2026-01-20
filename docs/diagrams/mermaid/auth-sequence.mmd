@@ -1,0 +1,56 @@
+---
+title: Authentication Flow - Sequence Diagram
+---
+sequenceDiagram
+    autonumber
+    
+    actor User as 👤 User
+    participant FE as 🖥️ LMS Frontend
+    participant LC as LoginController
+    participant EAS as ExternalAuthService
+    participant SUS as SyncUserService
+    participant DB as 💾 Local DB
+    participant API as 🌐 External API
+
+    User->>FE: Enter email & password
+    FE->>LC: POST /login
+    
+    rect rgb(230, 245, 255)
+        Note over LC,API: External Authentication
+        LC->>EAS: login(email, password)
+        EAS->>API: POST /api/auth/login
+        
+        alt Credentials Valid
+            API-->>EAS: 200 OK + JWT Token + User Data
+            EAS-->>LC: AuthResult (success)
+        else Invalid Credentials
+            API-->>EAS: 401 Unauthorized
+            EAS-->>LC: AuthResult (failed)
+            LC-->>FE: Redirect with error
+            FE-->>User: Show error message
+        end
+    end
+
+    rect rgb(255, 243, 224)
+        Note over LC,DB: User Synchronization
+        LC->>SUS: syncFromLogin(userData)
+        SUS->>DB: Check if user exists
+        
+        alt User Exists
+            SUS->>DB: UPDATE user profile<br/>(name, section, dept, position)
+            Note right of SUS: Keep LMS role unchanged
+        else New User
+            SUS->>DB: INSERT new user<br/>role = 'employee' (default)
+        end
+        
+        SUS-->>LC: User model
+    end
+
+    rect rgb(232, 245, 233)
+        Note over LC,FE: Laravel Session
+        LC->>LC: Auth::login($user)
+        LC->>LC: session(['api_token' => $jwt])
+        LC-->>FE: Redirect to Dashboard
+    end
+
+    FE-->>User: Show Dashboard

@@ -18,10 +18,6 @@ class Posttest extends Component
     public Course $course;
     public ?Test $posttest = null;
     public array $questions = [];
-    public bool $isReviewMode = false;
-    public ?TestAttempt $attempt = null;
-    /** @var array<int, array{selected_option_id?: int|null, essay_answer?: string|null, is_correct?: bool|null, earned_points?: int|null}> */
-    protected array $attemptAnswers = [];
 
     public function mount(Course $course)
     {
@@ -75,7 +71,51 @@ class Posttest extends Component
             }]);
         }]);
 
-        // Gate: allow access after finishing modules, OR if last posttest attempt failed (remedial)
+        // Gate 1: Check pretest requirement (must pass OR exhaust attempts)
+        if ($userId && $enrollment) {
+            $pretestRow = Test::where('course_id', $course->id)
+                ->where('type', 'pretest')
+                ->select(['id', 'max_attempts'])
+                ->first();
+            
+            if ($pretestRow) {
+                // Check if user has passed pretest
+                $hasPassedPretest = TestAttempt::where('test_id', $pretestRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+                
+                if (!$hasPassedPretest) {
+                    // User has NOT passed pretest - check if they can still retake
+                    $attemptCount = (int) TestAttempt::where('test_id', $pretestRow->id)
+                        ->where('user_id', $userId)
+                        ->whereIn('status', [
+                            TestAttempt::STATUS_SUBMITTED,
+                            TestAttempt::STATUS_UNDER_REVIEW,
+                            TestAttempt::STATUS_EXPIRED,
+                        ])
+                        ->count();
+                    
+                    $canStillRetake = false;
+                    if ($pretestRow->max_attempts === null) {
+                        // Pretest should NOT be unlimited - treat as single attempt (attempts exhausted)
+                        // User can proceed after 1 attempt even if not passed
+                        $canStillRetake = false;
+                    } else {
+                        $maxAttempts = max(1, (int) $pretestRow->max_attempts);
+                        $canStillRetake = $attemptCount < $maxAttempts;
+                    }
+                    
+                    if ($canStillRetake) {
+                        // Block posttest: user must pass pretest or exhaust attempts first
+                        return redirect()->route('courses-pretest.index', ['course' => $course->id]);
+                    }
+                    // If attempts exhausted but not passed, allow to proceed to posttest
+                }
+            }
+        }
+
+        // Gate 2: allow access after finishing modules, OR if last posttest attempt failed (remedial)
         if ($userId && $enrollment) {
             $allowRemedial = false;
             $postRow = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
@@ -114,93 +154,51 @@ class Posttest extends Component
             ->first();
 
         if ($this->posttest) {
-            // Determine latest attempt (for review mode after passing)
+            // Determine latest attempt
             $latestAttempt = TestAttempt::where('test_id', $this->posttest->id)
                 ->where('user_id', $userId)
                 ->orderByDesc('submitted_at')->orderByDesc('id')
                 ->first();
 
-            // Under review: do not reveal answers here (go to result)
+            // Under review: go to result page
             if ($latestAttempt && $latestAttempt->status === TestAttempt::STATUS_UNDER_REVIEW) {
                 return redirect()->route('courses-result.index', ['course' => $course->id]);
             }
 
-            // Passed: enter review mode (read-only)
+            // Passed: redirect to result page (no review mode)
             if ($latestAttempt && $latestAttempt->is_passed) {
-                $this->isReviewMode = true;
-                $this->attempt = $latestAttempt;
-
-                $this->attemptAnswers = TestAttemptAnswer::query()
-                    ->where('attempt_id', $latestAttempt->id)
-                    ->select(['question_id', 'selected_option_id', 'essay_answer', 'is_correct', 'earned_points'])
-                    ->get()
-                    ->keyBy('question_id')
-                    ->map(fn($a) => [
-                        'selected_option_id' => $a->selected_option_id,
-                        'essay_answer' => $a->essay_answer,
-                        'is_correct' => $a->is_correct,
-                        'earned_points' => $a->earned_points,
+                return redirect()->route('courses-result.index', ['course' => $course->id]);
+            }
+            
+            // Failed but has attempts exhausted? Redirect to result page
+            if ($latestAttempt && !$latestAttempt->is_passed) {
+                $attemptCount = (int) TestAttempt::where('test_id', $this->posttest->id)
+                    ->where('user_id', $userId)
+                    ->whereIn('status', [
+                        TestAttempt::STATUS_SUBMITTED,
+                        TestAttempt::STATUS_UNDER_REVIEW,
+                        TestAttempt::STATUS_EXPIRED,
                     ])
-                    ->toArray();
+                    ->count();
+                
+                $canStillRetake = false;
+                if ($this->posttest->max_attempts === null) {
+                    // Unlimited - can always retake
+                    $canStillRetake = true;
+                } else {
+                    $maxAttempts = max(1, (int) $this->posttest->max_attempts);
+                    $canStillRetake = $attemptCount < $maxAttempts;
+                }
+                
+                if (!$canStillRetake) {
+                    // Attempts exhausted - go to result page
+                    return redirect()->route('courses-result.index', ['course' => $course->id]);
+                }
+                // Can still retake - show form
             }
 
             $collection = $this->posttest->questions->map(function ($q) {
-                if ($this->isReviewMode) {
-                    $attemptAnswer = $this->attemptAnswers[$q->id] ?? null;
-                    $correctOption = $q->options->first(fn($o) => $o->is_correct);
-
-                    $userSelectedOptionId = null;
-                    $userEssayAnswer = null;
-                    $isCorrect = null;
-                    $earnedPoints = 0;
-
-                    if (is_array($attemptAnswer)) {
-                        $userSelectedOptionId = $attemptAnswer['selected_option_id'] ?? null;
-                        $userEssayAnswer = $attemptAnswer['essay_answer'] ?? null;
-                        $isCorrect = $attemptAnswer['is_correct'] ?? null;
-                        $earnedPoints = (int) ($attemptAnswer['earned_points'] ?? 0);
-
-                        // Backward compatibility: some older attempts stored selected option in essay_answer
-                        if ($q->question_type === 'multiple' && !$userSelectedOptionId && $userEssayAnswer !== null) {
-                            $raw = trim((string) $userEssayAnswer);
-                            if ($raw !== '' && ctype_digit($raw)) {
-                                $userSelectedOptionId = (int) $raw;
-                            }
-                        }
-
-                        // Derive correctness if missing for multiple-choice
-                        if ($q->question_type === 'multiple' && $userSelectedOptionId && $isCorrect === null) {
-                            $selected = $q->options->first(fn($o) => (string) $o->id === (string) $userSelectedOptionId);
-                            if ($selected) {
-                                $isCorrect = (bool) $selected->is_correct;
-                                $earnedPoints = $isCorrect ? (int) ($q->max_points ?? 1) : 0;
-                            }
-                        }
-                    }
-
-                    return [
-                        'id' => 'q' . $q->id,
-                        'db_id' => $q->id,
-                        'type' => $q->question_type,
-                        'text' => $q->text,
-                        'max_points' => $q->max_points ?? 1,
-                        'options' => $q->question_type === 'multiple'
-                            ? $q->options->map(fn($o) => [
-                                'id' => $o->id,
-                                'text' => $o->text,
-                                'is_correct' => $o->is_correct,
-                            ])->values()->all()
-                            : [],
-                        'user_answer_id' => $userSelectedOptionId,
-                        'user_essay_answer' => $userEssayAnswer,
-                        'is_correct' => $isCorrect,
-                        'earned_points' => $earnedPoints,
-                        'correct_option_id' => $correctOption?->id,
-                        'correct_option_text' => $correctOption?->text,
-                    ];
-                }
-
-                // Form mode: do NOT include correctness fields (avoid leaking answers)
+                // Form mode only: do NOT include correctness fields (avoid leaking answers)
                 return [
                     'id' => 'q' . $q->id,
                     'db_id' => $q->id,
@@ -215,8 +213,8 @@ class Posttest extends Component
                 ];
             });
 
-            // Randomize only in form mode
-            if (!$this->isReviewMode && $this->posttest->randomize_question) {
+            // Randomize if configured
+            if ($this->posttest->randomize_question) {
                 $collection = $collection->shuffle();
             }
 
@@ -338,8 +336,6 @@ class Posttest extends Component
             'questions' => $this->questions,
             'posttestId' => $this->posttest?->id,
             'userId' => $userId,
-            'isReviewMode' => $this->isReviewMode,
-            'attempt' => $this->attempt,
             'sectionsList' => $sectionsList,
             'showMaterialPicker' => $showMaterialPicker,
             'lastSectionId' => $lastSectionId,

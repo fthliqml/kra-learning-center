@@ -1,0 +1,61 @@
+---
+title: User Management Integration - Architecture Overview
+---
+flowchart TB
+    subgraph EXTERNAL["🌐 External System (Master)"]
+        API["External API<br/>───────────<br/>User Management<br/>Authentication<br/>Master Data"]
+        MASTER_DB[("Master Database<br/>Source of Truth")]
+        API --> MASTER_DB
+    end
+
+    subgraph LMS["📚 LMS - Learning Center (Consumer)"]
+        subgraph AUTH_LAYER["Authentication Layer"]
+            LOGIN["Login Controller"]
+            EXT_AUTH["ExternalAuthService"]
+        end
+        
+        subgraph SYNC_LAYER["Synchronization Layer"]
+            SYNC["SyncUserService"]
+            WEBHOOK["WebhookController"]
+        end
+        
+        subgraph DATA_LAYER["Data Layer"]
+            LOCAL_USER[("Local Users Table<br/>Synchronized Mirror")]
+            USER_ROLES[("User Roles<br/>LMS-Specific")]
+        end
+        
+        subgraph BUSINESS["Business Modules"]
+            TRAINING["Training Module"]
+            SURVEY["Survey Module"]
+            REPORT["Reporting Module"]
+        end
+        
+        LOGIN --> EXT_AUTH
+        EXT_AUTH --> SYNC
+        WEBHOOK --> SYNC
+        SYNC --> LOCAL_USER
+        LOCAL_USER --> USER_ROLES
+        LOCAL_USER --> TRAINING
+        LOCAL_USER --> SURVEY
+        LOCAL_USER --> REPORT
+    end
+
+    %% Connections between systems
+    EXT_AUTH <-->|"REST API<br/>JWT Auth"| API
+    API -->|"Webhook<br/>user.created/updated/deleted"| WEBHOOK
+    
+    %% User interaction
+    USER((👤 User)) -->|"1. Login"| LOGIN
+    LOGIN -->|"5. Dashboard"| USER
+
+    %% Styling
+    classDef external fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef lms fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    classDef service fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef db fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    classDef user fill:#fce4ec,stroke:#c2185b,stroke-width:2px
+
+    class API,MASTER_DB external
+    class LOGIN,EXT_AUTH,SYNC,WEBHOOK service
+    class LOCAL_USER,USER_ROLES db
+    class USER user

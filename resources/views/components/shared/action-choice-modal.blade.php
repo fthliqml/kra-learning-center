@@ -4,7 +4,10 @@
             <p class="text-sm text-gray-600">{{ $message }}</p>
             <div class="flex flex-col space-y-2">
                 @foreach ($actions as $action)
-                    <x-button :label="$action['label']" :class="'btn-' . ($action['variant'] ?? 'outline')" wire:click="choose('{{ $action['event'] }}')" />
+                    <x-button 
+                        :label="$action['label']" 
+                        :class="'btn-' . ($action['variant'] ?? 'outline')" 
+                        wire:click="choose('{{ $action['event'] }}')" />
                 @endforeach
             </div>
         </div>
