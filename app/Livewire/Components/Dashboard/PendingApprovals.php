@@ -233,7 +233,7 @@ class PendingApprovals extends Component
         }
 
         if ($user->hasPosition('section_head') && $section !== 'lid') {
-            return 'pending_spv';
+            return 'pending_section_head';
         }
 
         if ($user->hasPosition('department_head') && $section !== 'lid') {
@@ -313,7 +313,7 @@ class PendingApprovals extends Component
             return $this->isDeptHeadArea();
         }
 
-        if ($expectedStatus !== 'pending_spv') {
+        if (!in_array($expectedStatus, ['pending_spv', 'pending_section_head'], true)) {
             return false;
         }
 
@@ -324,15 +324,15 @@ class PendingApprovals extends Component
 
         $targetPosition = strtolower(trim($target->position ?? ''));
 
-        // Supervisor can only approve employee submissions (not supervisors).
-        if ($this->isSupervisorArea()) {
-            return $targetPosition !== 'supervisor';
+        if ($expectedStatus === 'pending_spv') {
+            // Supervisor can only approve employee submissions (not supervisors).
+            return $this->isSupervisorArea() && $targetPosition !== 'supervisor';
         }
 
         // Section Head approves:
         // - supervisor submissions always
         // - employee submissions only when no supervisor exists in that area
-        if ($this->isSectionHeadArea()) {
+        if ($expectedStatus === 'pending_section_head' && $this->isSectionHeadArea()) {
             if ($targetPosition === 'supervisor') {
                 return true;
             }

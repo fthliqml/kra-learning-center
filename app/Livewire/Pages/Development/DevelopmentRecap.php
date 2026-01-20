@@ -18,6 +18,9 @@ class DevelopmentRecap extends Component
     public string $selectedYear;
     public string $search = '';
 
+    /** @var array<int> */
+    public array $selectedEmployeeIds = [];
+
     public function mount(): void
     {
         $this->selectedYear = (string) now()->year;
@@ -28,6 +31,35 @@ class DevelopmentRecap extends Component
         if (!is_array($property) && $property !== '') {
             $this->resetPage();
         }
+
+        // Defensive: changing filters/search should reset selections.
+        if (in_array((string) $property, ['selectedYear', 'search'], true)) {
+            $this->selectedEmployeeIds = [];
+        }
+    }
+
+    public function createTrainingSchedule()
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user || !$user->hasRole('admin')) {
+            abort(403);
+        }
+
+        $ids = collect($this->selectedEmployeeIds)
+            ->map(fn($id) => (int) $id)
+            ->filter(fn($id) => $id > 0)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            $this->addError('selectedEmployeeIds', 'Please select at least one employee.');
+            return;
+        }
+
+        return redirect()->route('training-schedule.index', [
+            'participants' => $ids->implode(','),
+        ]);
     }
 
     public function export()
@@ -40,7 +72,15 @@ class DevelopmentRecap extends Component
 
     public function headers(): array
     {
-        return [
+        $headers = [];
+
+        /** @var User|null $user */
+        $user = Auth::user();
+        if ($user && $user->hasRole('admin')) {
+            $headers[] = ['key' => 'select', 'label' => '', 'class' => '!text-center w-12'];
+        }
+
+        return array_merge($headers, [
             ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-12'],
             ['key' => 'nrp', 'label' => 'NRP', 'class' => '!text-center w-24'],
             ['key' => 'name', 'label' => 'Employee Name', 'class' => 'min-w-[200px]'],
@@ -49,7 +89,7 @@ class DevelopmentRecap extends Component
             ['key' => 'plan2', 'label' => 'Plan 2', 'class' => 'min-w-[200px]'],
             ['key' => 'plan3', 'label' => 'Plan 3', 'class' => 'min-w-[200px]'],
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center w-32'],
-        ];
+        ]);
     }
 
     protected function getRows()
@@ -115,6 +155,7 @@ class DevelopmentRecap extends Component
             $statusLabel = $hasScheduledTraining ? 'scheduled' : 'waiting';
 
             return (object) [
+                'user_id' => $user->id,
                 'no' => $start + $index,
                 'nrp' => $user->nrp,
                 'name' => $user->name,

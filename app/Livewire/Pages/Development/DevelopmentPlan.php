@@ -936,11 +936,11 @@ class DevelopmentPlan extends Component
      * - Level 1 approver routing (non-LID):
      *   - employee submits:
      *     - if any SPV exists in area -> pending_spv
-     *     - else if any Section Head exists in area -> pending_spv
+    *     - else if any Section Head exists in area -> pending_section_head
      *     - else if any Dept Head exists in area -> pending_dept_head
      *     - else -> pending_lid
      *   - SPV submits:
-     *     - if any Section Head exists in area -> pending_spv
+    *     - if any Section Head exists in area -> pending_section_head
      *     - else if any Dept Head exists in area -> pending_dept_head
      *     - else -> pending_lid
      *   - Section Head submits:
@@ -1001,7 +1001,7 @@ class DevelopmentPlan extends Component
         // SPV submits: Section Head (area) if exists, else Dept Head
         if ($position === 'supervisor') {
             if ($hasSectionHeadInArea) {
-                return 'pending_spv';
+                return 'pending_section_head';
             }
             if ($hasDeptHeadInArea) {
                 return 'pending_dept_head';
@@ -1014,7 +1014,7 @@ class DevelopmentPlan extends Component
             return 'pending_spv';
         }
         if ($hasSectionHeadInArea) {
-            return 'pending_spv';
+            return 'pending_section_head';
         }
         if ($hasDeptHeadInArea) {
             return 'pending_dept_head';

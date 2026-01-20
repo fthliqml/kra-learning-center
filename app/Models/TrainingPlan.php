@@ -16,6 +16,7 @@ class TrainingPlan extends Model
      * Status Flow:
      * - draft: Initial state, not submitted
      * - pending_spv: Submitted, waiting for Supervisor approval
+     * - pending_section_head: Submitted, waiting for Section Head approval (no SPV in area)
      * - rejected_spv: Rejected by Supervisor, needs revision
      * - pending_dept_head: Submitted, waiting for Dept Head approval (no SPV in area)
      * - rejected_dept_head: Rejected by Dept Head, needs revision
@@ -25,6 +26,7 @@ class TrainingPlan extends Model
      */
     const STATUS_DRAFT = 'draft';
     const STATUS_PENDING_SPV = 'pending_spv';
+    const STATUS_PENDING_SECTION_HEAD = 'pending_section_head';
     const STATUS_REJECTED_SPV = 'rejected_spv';
     const STATUS_PENDING_DEPT_HEAD = 'pending_dept_head';
     const STATUS_REJECTED_DEPT_HEAD = 'rejected_dept_head';
@@ -66,6 +68,7 @@ class TrainingPlan extends Model
         return in_array($this->status, [
             self::STATUS_DRAFT,
             self::STATUS_PENDING_SPV,
+            self::STATUS_PENDING_SECTION_HEAD,
             self::STATUS_REJECTED_SPV,
             self::STATUS_PENDING_DEPT_HEAD,
             self::STATUS_REJECTED_DEPT_HEAD,
@@ -80,6 +83,7 @@ class TrainingPlan extends Model
     {
         return in_array($this->status, [
             self::STATUS_PENDING_SPV,
+            self::STATUS_PENDING_SECTION_HEAD,
             self::STATUS_PENDING_DEPT_HEAD,
         ]);
     }
@@ -99,6 +103,7 @@ class TrainingPlan extends Model
     {
         return in_array($this->status, [
             self::STATUS_PENDING_SPV,
+            self::STATUS_PENDING_SECTION_HEAD,
             self::STATUS_PENDING_DEPT_HEAD,
             self::STATUS_PENDING_LID,
         ]);
