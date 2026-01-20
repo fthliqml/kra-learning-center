@@ -3,6 +3,8 @@
 namespace App\Livewire\Pages\Development;
 
 use App\Models\Competency;
+use App\Models\TrainingModule;
+use App\Models\TrainingPlanRecom;
 use App\Models\MentoringPlan;
 use App\Models\ProjectPlan;
 use App\Models\SelfLearningPlan;
@@ -18,6 +20,15 @@ class DevelopmentPlan extends Component
 {
     use Toast;
 
+    private ?array $recommendedCompetencyIdsCache = null;
+    private ?array $recommendedCompetencyIdsByTypeCache = null;
+
+    public function updatedSelectedYear(): void
+    {
+        $this->recommendedCompetencyIdsCache = null;
+        $this->recommendedCompetencyIdsByTypeCache = null;
+    }
+
     // Modal states
     public $addModal = false;
     public $activeTab = 'training';
@@ -31,9 +42,12 @@ class DevelopmentPlan extends Component
 
     // Training Plan form (multiple rows)
     public $trainingPlans = [
-        ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
-        ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
-        ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
+        ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null],
+    ];
+
+    public $trainingPlanKindOptions = [
+        ['value' => 'competency', 'label' => 'Competency'],
+        ['value' => 'module', 'label' => 'Training Module'],
     ];
 
     // Self Learning Plans (multiple)
@@ -113,6 +127,11 @@ class DevelopmentPlan extends Component
 
     public function openAddModal($category = 'training')
     {
+        if ($category === 'training' && !$this->hasCompetencyRecommendations()) {
+            $this->error('Training Plan belum bisa diisi karena belum ada rekomendasi untuk tahun ' . $this->selectedYear . '.', position: 'toast-top toast-center');
+            return;
+        }
+
         $this->resetForm();
         $this->isEdit = false;
         $this->editingCategory = $category; // Set editing category for add mode
@@ -128,6 +147,11 @@ class DevelopmentPlan extends Component
 
     public function openEditModal($category = 'training')
     {
+        if ($category === 'training' && !$this->hasCompetencyRecommendations()) {
+            $this->error('Training Plan belum bisa diedit karena belum ada rekomendasi untuk tahun ' . $this->selectedYear . '.', position: 'toast-top toast-center');
+            return;
+        }
+
         $this->resetForm();
         $this->isEdit = true;
         $this->editingCategory = $category; // Track which category is being edited
@@ -148,23 +172,34 @@ class DevelopmentPlan extends Component
         $year = (int) $this->selectedYear;
 
         // Load Training Plans
-        $trainingPlans = TrainingPlan::with('competency')
+        $trainingPlans = TrainingPlan::with(['competency', 'trainingModule.competency', 'approver'])
             ->where('user_id', $userId)
             ->where('year', $year)
             ->get();
 
         $this->trainingPlans = [];
         foreach ($trainingPlans as $plan) {
+            $competencyType = (string) ($plan->trainingModule?->competency?->type ?? $plan->competency?->type ?? '');
+            // Build plan_id: "competency:X" or "module:X"
+            $planId = $plan->training_module_id
+                ? 'module:' . $plan->training_module_id
+                : 'competency:' . $plan->competency_id;
+
             $this->trainingPlans[] = [
                 'id' => $plan->id,
-                'group' => $plan->competency->type ?? '',
-                'competency_id' => $plan->competency_id,
+                'group' => $competencyType,
+                'plan_id' => $planId,
                 'status' => $plan->status,
             ];
         }
-        // Add empty rows if less than 3
-        while (count($this->trainingPlans) < 3) {
-            $this->trainingPlans[] = ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null];
+        // Ensure at least 1 row for UI
+        if (count($this->trainingPlans) === 0) {
+            $this->trainingPlans[] = ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null];
+        }
+
+        // Cap to 3 rows in UI
+        if (count($this->trainingPlans) > 3) {
+            $this->trainingPlans = array_slice($this->trainingPlans, 0, 3);
         }
 
         // Load Self Learning Plans
@@ -267,7 +302,17 @@ class DevelopmentPlan extends Component
     // Add new row methods
     public function addTrainingRow()
     {
-        $this->trainingPlans[] = ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null];
+        if (count($this->trainingPlans) >= 3) {
+            $this->error('Maksimal 3 Training Plan.', position: 'toast-top toast-center');
+            return;
+        }
+
+        $this->trainingPlans[] = [
+            'id' => null,
+            'group' => '',
+            'plan_id' => '',
+            'status' => null,
+        ];
     }
 
     public function addSelfLearningRow()
@@ -422,9 +467,7 @@ class DevelopmentPlan extends Component
         $this->activeTab = 'training';
         $this->isEdit = false;
         $this->trainingPlans = [
-            ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
-            ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
-            ['id' => null, 'group' => '', 'competency_id' => '', 'status' => null],
+            ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null],
         ];
         $this->selfLearningPlans = [
             ['id' => null, 'title' => '', 'objective' => '', 'start_date' => '', 'end_date' => '', 'status' => null],
@@ -465,6 +508,198 @@ class DevelopmentPlan extends Component
             'start_date' => '',
             'end_date' => '',
         ];
+    }
+
+    public function updatedTrainingPlans($value, $name)
+    {
+        // $name examples: "0.group", "1.plan_id" (Livewire strips property name prefix)
+        if (!is_string($name)) {
+            return;
+        }
+
+        $parts = explode('.', $name);
+        if (count($parts) < 2) {
+            return;
+        }
+
+        $index = (int) $parts[0];
+        $field = (string) $parts[1];
+
+        if (!isset($this->trainingPlans[$index])) {
+            return;
+        }
+
+        if ($field === 'group') {
+            // Changing group should reset plan selection.
+            $this->trainingPlans[$index]['plan_id'] = '';
+        }
+    }
+
+    public function getRecommendedTrainingModulesOptions(): array
+    {
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+
+        if (!$userId || !$year) {
+            return [];
+        }
+
+        $moduleIds = TrainingPlanRecom::query()
+            ->where('user_id', $userId)
+            ->where('year', $year)
+            ->where('is_active', true)
+            ->whereNotNull('training_module_id')
+            ->pluck('training_module_id')
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($moduleIds)) {
+            return [];
+        }
+
+        return TrainingModule::query()
+            ->with('competency')
+            ->whereIn('id', $moduleIds)
+            ->orderBy('title')
+            ->get()
+            ->map(function (TrainingModule $module) {
+                $type = trim((string) ($module->competency?->type ?? ''));
+                $label = trim(($type ? $type . ' - ' : '') . (string) $module->title);
+
+                return [
+                    'value' => (int) $module->id,
+                    'label' => $label !== '' ? $label : ('Module #' . $module->id),
+                ];
+            })
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Get recommended group options (only groups that have recommendations from admin).
+     */
+    public function getRecommendedGroupOptions(): array
+    {
+        $byType = $this->getRecommendedCompetencyIdsByTypeForSelectedYear();
+        $moduleGroups = $this->getRecommendedModuleGroupsForSelectedYear();
+
+        // Merge competency groups and module groups
+        $allGroups = array_unique(array_merge(array_keys($byType), $moduleGroups));
+
+        if (empty($allGroups)) {
+            return [];
+        }
+
+        sort($allGroups);
+
+        return collect($allGroups)
+            ->map(fn($group) => ['value' => $group, 'label' => $group])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Get groups from recommended training modules.
+     */
+    private function getRecommendedModuleGroupsForSelectedYear(): array
+    {
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+
+        if (!$userId || !$year) {
+            return [];
+        }
+
+        $moduleIds = TrainingPlanRecom::query()
+            ->where('user_id', $userId)
+            ->where('year', $year)
+            ->where('is_active', true)
+            ->whereNotNull('training_module_id')
+            ->pluck('training_module_id')
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($moduleIds)) {
+            return [];
+        }
+
+        return TrainingModule::query()
+            ->with('competency')
+            ->whereIn('id', $moduleIds)
+            ->get()
+            ->map(fn($m) => trim((string) ($m->competency?->type ?? '')))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * Get combined training plan options (competencies + modules) for a group.
+     */
+    public function getTrainingPlanOptions(string $group): array
+    {
+        if (empty($group)) {
+            return [];
+        }
+
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+        $options = [];
+
+        // Get recommended competencies for this group
+        $recommendedCompetencyIds = $this->getRecommendedCompetencyIdsForType($group);
+        if (!empty($recommendedCompetencyIds)) {
+            $competencies = Competency::query()
+                ->whereIn('id', $recommendedCompetencyIds)
+                ->where('type', $group)
+                ->orderBy('name')
+                ->get();
+
+            foreach ($competencies as $comp) {
+                $options[] = [
+                    'value' => 'competency:' . $comp->id,
+                    'label' => $comp->name,
+                ];
+            }
+        }
+
+        // Get recommended training modules for this group
+        $moduleIds = TrainingPlanRecom::query()
+            ->where('user_id', $userId)
+            ->where('year', $year)
+            ->where('is_active', true)
+            ->whereNotNull('training_module_id')
+            ->pluck('training_module_id')
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if (!empty($moduleIds)) {
+            $modules = TrainingModule::query()
+                ->with('competency')
+                ->whereIn('id', $moduleIds)
+                ->whereHas('competency', fn($q) => $q->where('type', $group))
+                ->orderBy('title')
+                ->get();
+
+            foreach ($modules as $module) {
+                $options[] = [
+                    'value' => 'module:' . $module->id,
+                    'label' => '[Module] ' . $module->title,
+                ];
+            }
+        }
+
+        return $options;
     }
 
     public function updatedMentoringPlans($value, $name)
@@ -513,11 +748,128 @@ class DevelopmentPlan extends Component
             return [];
         }
 
-        return Competency::where('type', $type)
+        // Hard-block: if there are no recommendations at all for the selected year,
+        // user cannot pick any competency for Training Plan.
+        if (!$this->hasCompetencyRecommendations()) {
+            return [];
+        }
+
+        $query = Competency::query()->where('type', $type);
+
+        $recommendedIdsForType = $this->getRecommendedCompetencyIdsForType((string) $type);
+        if (!empty($recommendedIdsForType)) {
+            $query->whereIn('id', $recommendedIdsForType);
+        }
+
+        return $query
             ->orderBy('name')
             ->get()
             ->map(fn($c) => ['value' => $c->id, 'label' => $c->name])
             ->toArray();
+    }
+
+    public function hasCompetencyRecommendations(): bool
+    {
+        return !empty($this->getRecommendedCompetencyIdsForSelectedYear());
+    }
+
+    private function getRecommendedCompetencyIdsForType(string $type): array
+    {
+        $byType = $this->getRecommendedCompetencyIdsByTypeForSelectedYear();
+
+        $type = trim((string) $type);
+        if ($type === '') {
+            return [];
+        }
+
+        return $byType[$type] ?? [];
+    }
+
+    private function getRecommendedCompetencyIdsByTypeForSelectedYear(): array
+    {
+        if ($this->recommendedCompetencyIdsByTypeCache !== null) {
+            return $this->recommendedCompetencyIdsByTypeCache;
+        }
+
+        $ids = $this->getRecommendedCompetencyIdsForSelectedYear();
+        if (empty($ids)) {
+            $this->recommendedCompetencyIdsByTypeCache = [];
+            return $this->recommendedCompetencyIdsByTypeCache;
+        }
+
+        $map = [];
+        $rows = Competency::query()
+            ->whereIn('id', $ids)
+            ->get(['id', 'type']);
+
+        foreach ($rows as $row) {
+            $type = trim((string) ($row->type ?? ''));
+            if ($type === '') {
+                continue;
+            }
+
+            $map[$type] ??= [];
+            $map[$type][] = (int) $row->id;
+        }
+
+        foreach ($map as $t => $typeIds) {
+            $map[$t] = array_values(array_unique(array_filter(array_map('intval', $typeIds))));
+        }
+
+        $this->recommendedCompetencyIdsByTypeCache = $map;
+        return $this->recommendedCompetencyIdsByTypeCache;
+    }
+
+    private function getRecommendedCompetencyIdsForSelectedYear(): array
+    {
+        if ($this->recommendedCompetencyIdsCache !== null) {
+            return $this->recommendedCompetencyIdsCache;
+        }
+
+        $userId = Auth::id();
+        $year = (int) $this->selectedYear;
+
+        if (!$userId || !$year) {
+            $this->recommendedCompetencyIdsCache = [];
+            return $this->recommendedCompetencyIdsCache;
+        }
+
+        $baseQuery = TrainingPlanRecom::query()
+            ->where('user_id', $userId)
+            ->where('year', $year)
+            ->where('is_active', true);
+
+        $directCompetencyIds = (clone $baseQuery)
+            ->whereNotNull('competency_id')
+            ->pluck('competency_id')
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->all();
+
+        $recommendedModuleIds = (clone $baseQuery)
+            ->whereNotNull('training_module_id')
+            ->pluck('training_module_id')
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        $moduleCompetencyIds = empty($recommendedModuleIds)
+            ? []
+            : TrainingModule::query()
+            ->whereIn('id', $recommendedModuleIds)
+            ->pluck('competency_id')
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->all();
+
+        $this->recommendedCompetencyIdsCache = collect(array_merge($directCompetencyIds, $moduleCompetencyIds))
+            ->unique()
+            ->values()
+            ->all();
+
+        return $this->recommendedCompetencyIdsCache;
     }
 
     public function save()
@@ -675,27 +1027,89 @@ class DevelopmentPlan extends Component
     {
         $status = $this->determineInitialStatus($user, $isDraft);
 
+        // Hard-block: if no recommendations exist for the selected year, Training Plan cannot be filled.
+        if (!$this->hasCompetencyRecommendations()) {
+            throw new \Exception('Training Plan belum bisa diisi karena belum ada rekomendasi untuk tahun ' . $this->selectedYear . '.');
+        }
+
+        $recommendedModuleIds = TrainingPlanRecom::query()
+            ->where('user_id', $user->id)
+            ->where('year', (int) $this->selectedYear)
+            ->where('is_active', true)
+            ->whereNotNull('training_module_id')
+            ->pluck('training_module_id')
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
         foreach ($this->trainingPlans as $plan) {
-            if (!empty($plan['competency_id'])) {
-                if (!empty($plan['id'])) {
-                    // Update existing plan
-                    $existingPlan = TrainingPlan::find($plan['id']);
-                    if ($existingPlan && $existingPlan->canEdit()) {
-                        $existingPlan->update([
-                            'competency_id' => $plan['competency_id'],
-                            'status' => $status,
-                            'year' => (int) $this->selectedYear,
-                        ]);
-                    }
-                } else {
-                    // Create new plan
-                    TrainingPlan::create([
-                        'user_id' => $user->id,
-                        'competency_id' => $plan['competency_id'],
+            // Skip empty rows
+            if (empty($plan['plan_id'])) {
+                continue;
+            }
+
+            // Parse plan_id format: "competency:123" or "module:456"
+            $planId = (string) $plan['plan_id'];
+            $parts = explode(':', $planId, 2);
+            $kind = $parts[0] ?? '';
+            $id = isset($parts[1]) ? (int) $parts[1] : 0;
+
+            if (!in_array($kind, ['competency', 'module'], true) || $id <= 0) {
+                continue;
+            }
+
+            $competencyId = null;
+            $moduleId = null;
+
+            // Module-based plan
+            if ($kind === 'module') {
+                if (!in_array($id, $recommendedModuleIds, true)) {
+                    throw new \Exception('Selected training module is not in the recommended list for this year.');
+                }
+
+                $module = TrainingModule::query()->whereKey($id)->first(['id', 'competency_id']);
+                if (!$module || !$module->competency_id) {
+                    throw new \Exception('Invalid training module selected.');
+                }
+
+                $competencyId = (int) $module->competency_id;
+                $moduleId = $id;
+            }
+
+            // Competency-based plan
+            if ($kind === 'competency') {
+                $competencyId = $id;
+
+                $competencyType = (string) (Competency::query()->whereKey($competencyId)->value('type') ?? '');
+                $recommendedIdsForType = $this->getRecommendedCompetencyIdsForType($competencyType);
+                if (!empty($recommendedIdsForType) && !in_array($competencyId, $recommendedIdsForType, true)) {
+                    throw new \Exception('Selected competency is not in the recommended list for this group/year.');
+                }
+
+                $moduleId = null;
+            }
+
+            // Save or update
+            if (!empty($plan['id'])) {
+                $existingPlan = TrainingPlan::find($plan['id']);
+                if ($existingPlan && $existingPlan->canEdit()) {
+                    $existingPlan->update([
+                        'competency_id' => $competencyId,
+                        'training_module_id' => $moduleId,
                         'status' => $status,
                         'year' => (int) $this->selectedYear,
                     ]);
                 }
+            } else {
+                TrainingPlan::create([
+                    'user_id' => $user->id,
+                    'competency_id' => $competencyId,
+                    'training_module_id' => $moduleId,
+                    'status' => $status,
+                    'year' => (int) $this->selectedYear,
+                ]);
             }
         }
     }
@@ -994,7 +1408,7 @@ class DevelopmentPlan extends Component
         $selectedYearInt = (int) $this->selectedYear;
 
         // Get user's development plans for selected year
-        $trainingPlansData = TrainingPlan::with(['competency', 'approver'])
+        $trainingPlansData = TrainingPlan::with(['competency', 'trainingModule.competency', 'approver'])
             ->where('user_id', $user->id)
             ->where('year', $selectedYearInt)
             ->get();
@@ -1012,6 +1426,13 @@ class DevelopmentPlan extends Component
         $projectData = ProjectPlan::with(['mentor', 'approver'])
             ->where('user_id', $user->id)
             ->where('year', $selectedYearInt)
+            ->get();
+
+        $recommendedCompetencies = TrainingPlanRecom::query()
+            ->with('competency')
+            ->where('user_id', $user->id)
+            ->where('year', $selectedYearInt)
+            ->where('is_active', true)
             ->get();
 
         // Statistics for selected year
@@ -1047,6 +1468,7 @@ class DevelopmentPlan extends Component
         return view('pages.development.development-plan', [
             'user' => $user,
             'mentors' => $mentors,
+            'recommendedCompetencies' => $recommendedCompetencies,
             'trainingPlanCount' => $trainingPlanCount,
             'selfLearningCount' => $selfLearningCount,
             'mentoringCount' => $mentoringCount,

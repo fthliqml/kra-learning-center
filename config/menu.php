@@ -48,6 +48,11 @@ return [
             'href' => '/development',
             'submenu' => [
                 [
+                    'label' => 'Recommendation',
+                    'href' => '/development/recommendation',
+                    'roles' => ['admin'],
+                ],
+                [
                     'label' => 'Development Plan',
                     'href' => '/development/plan',
                 ],

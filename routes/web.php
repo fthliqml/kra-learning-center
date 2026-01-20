@@ -28,6 +28,7 @@ use App\Livewire\Pages\Development\CompetencyMatrix;
 use App\Livewire\Pages\Development\CompetencyValue;
 use App\Livewire\Pages\Development\DevelopmentApproval;
 use App\Livewire\Pages\Development\DevelopmentPlan;
+use App\Livewire\Pages\Development\TrainingPlanRecommendation;
 use App\Livewire\Pages\Development\DevelopmentRecap;
 use App\Livewire\Pages\Training\Approval;
 use App\Livewire\Pages\Training\DataTrainer;
@@ -132,5 +133,6 @@ Route::middleware('auth')->group(function () {
   // Development
   Route::get('/development/plan', DevelopmentPlan::class)->name('development-plan.index');
   Route::get('/development/approval', DevelopmentApproval::class)->name('development-approval.index');
+  Route::get('/development/recommendation', TrainingPlanRecommendation::class)->name('development-recommendation.index');
   Route::get('/development/recap', DevelopmentRecap::class)->name('development-recap.index');
 });

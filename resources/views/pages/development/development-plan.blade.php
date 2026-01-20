@@ -223,7 +223,7 @@
                             Training Plans
                         </h3>
                         <div class="flex items-center gap-2">
-                            @if ($isCurrentYear && $trainingPlansData->count() == 0)
+                            @if ($isCurrentYear && $trainingPlansData->count() == 0 && $this->hasCompetencyRecommendations())
                                 <x-ui.button variant="primary" size="sm" wire:click="openAddModal('training')"
                                     wire:loading.attr="disabled" class="h-8">
                                     <span wire:loading.remove wire:target="openAddModal('training')"
@@ -236,7 +236,7 @@
                                     </span>
                                 </x-ui.button>
                             @endif
-                            @if ($canEditTraining && $trainingPlansData->count() > 0)
+                            @if ($canEditTraining && $trainingPlansData->count() > 0 && $this->hasCompetencyRecommendations())
                                 <x-ui.button variant="ghost" size="sm" wire:click="openEditModal('training')"
                                     wire:loading.attr="disabled" class="h-8">
                                     <span wire:loading.remove wire:target="openEditModal('training')"
@@ -251,6 +251,16 @@
                             @endif
                         </div>
                     </div>
+
+                    @if ($isCurrentYear && !$this->hasCompetencyRecommendations())
+                        <div class="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
+                            <div class="font-semibold">Training Plan belum tersedia</div>
+                            <div class="text-xs text-amber-800 mt-1">
+                                Anda belum bisa mengisi Training Plan untuk tahun {{ $selectedYear }} sebelum admin/LID
+                                memberikan rekomendasi.
+                            </div>
+                        </div>
+                    @endif
                     @if ($trainingPlansData->count() > 0)
                         <div class="space-y-3">
                             @foreach ($trainingPlansData as $plan)
@@ -258,7 +268,7 @@
                                     <div class="flex items-start justify-between gap-3">
                                         <div class="flex-1 min-w-0">
                                             <p class="text-base font-semibold text-gray-800 truncate">
-                                                {{ $plan->competency->name ?? 'N/A' }}
+                                                {{ $plan->trainingModule?->title ?? ($plan->competency->name ?? 'N/A') }}
                                             </p>
                                         </div>
                                         <div class="flex flex-wrap items-center justify-end gap-1 shrink-0">
@@ -278,7 +288,7 @@
                                         class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs text-gray-700">
                                         <div>
                                             <p class="text-[11px] uppercase tracking-wide text-gray-500">Group</p>
-                                            <p class="font-medium text-gray-800">{{ $plan->competency->type ?? '-' }}
+                                            <p class="font-medium text-gray-800">{{ $plan->trainingModule?->competency?->type ?? ($plan->competency->type ?? '-') }}
                                             </p>
                                         </div>
                                     </div>
@@ -619,26 +629,39 @@
 
                 {{-- Training Tab --}}
                 @if ($activeTab === 'training')
+                    @if ($this->hasCompetencyRecommendations())
+                        <div class="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                            <div class="font-semibold">Recommended Competencies Active</div>
+                            <div class="text-xs text-blue-700 mt-1">
+                                For year {{ $selectedYear }}, competency choices may be limited for groups that have
+                                admin/LID recommendations.
+                            </div>
+                        </div>
+                    @endif
                     <div class="space-y-4">
                         @foreach ($trainingPlans as $index => $plan)
-                            <div class="grid grid-cols-12 gap-4 items-end relative">
-                                <div class="col-span-4 relative overflow-visible">
-                                    <x-choices label="{{ $index === 0 ? 'Group Competency' : '' }}"
-                                        wire:model.live="trainingPlans.{{ $index }}.group" :options="$typeOptions"
-                                        option-value="value" option-label="label" placeholder="Select group"
-                                        class="focus-within:border-0 [&_.choices__list--dropdown]:absolute [&_.choices__list--dropdown]:z-[9999] [&_.choices__list--dropdown]:!max-h-60"
-                                        single />
+                            <div class="flex flex-col md:flex-row md:items-end gap-3" wire:key="training-row-{{ $index }}-{{ $plan['group'] ?? 'empty' }}">
+                                {{-- Group Competency --}}
+                                <div class="w-full md:w-1/4">
+                                    <x-choices label="{{ $index === 0 ? 'Group' : '' }}"
+                                        wire:model.live="trainingPlans.{{ $index }}.group"
+                                        :options="$this->getRecommendedGroupOptions()"
+                                        option-value="value" option-label="label"
+                                        placeholder="Group" single />
                                 </div>
-                                <div
-                                    class="{{ count($trainingPlans) > 1 ? 'col-span-7' : 'col-span-8' }} relative overflow-visible">
-                                    <x-choices label="{{ $index === 0 ? 'Competency' : '' }}"
-                                        wire:model="trainingPlans.{{ $index }}.competency_id" :options="$this->getCompetenciesByType($trainingPlans[$index]['group'] ?? '')"
-                                        option-value="value" option-label="label" placeholder="Select competency"
-                                        class="focus-within:border-0 [&_.choices__list--dropdown]:absolute [&_.choices__list--dropdown]:z-[9999] [&_.choices__list--dropdown]:!max-h-60"
-                                        single />
+
+                                {{-- Training Plan - Combined Competency & Module --}}
+                                <div class="w-full md:flex-1">
+                                    <x-choices label="{{ $index === 0 ? 'Training Plan' : '' }}"
+                                        wire:model="trainingPlans.{{ $index }}.plan_id"
+                                        :options="$this->getTrainingPlanOptions($plan['group'] ?? '')"
+                                        option-value="value" option-label="label"
+                                        placeholder="Select training plan" single />
                                 </div>
+
+                                {{-- Delete button --}}
                                 @if (count($trainingPlans) > 1)
-                                    <div class="col-span-1">
+                                    <div class="flex justify-end md:pb-1">
                                         <button type="button" wire:click="removeTrainingRow({{ $index }})"
                                             class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
                                             <x-icon name="o-trash" class="size-4" />
@@ -647,11 +670,14 @@
                                 @endif
                             </div>
                         @endforeach
-                        <button type="button" wire:click="addTrainingRow"
-                            class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                            <x-icon name="o-plus" class="size-4" />
-                            Add Training
-                        </button>
+
+                        @if (count($trainingPlans) < 3)
+                            <button type="button" wire:click="addTrainingRow"
+                                class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                                <x-icon name="o-plus" class="size-4" />
+                                Add Training
+                            </button>
+                        @endif
                     </div>
                 @endif
 
@@ -705,6 +731,7 @@
                                     </button>
                                 @endif
                                 <x-choices label="Mentor/Superior"
+                                    id="mentoring-mentor-{{ $index }}"
                                     wire:model="mentoringPlans.{{ $index }}.mentor_id" :options="$mentors"
                                     option-value="value" option-label="label" placeholder="Select mentor"
                                     class="focus-within:border-0" single />
@@ -715,6 +742,7 @@
 
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <x-choices label="Method" wire:model="mentoringPlans.{{ $index }}.method"
+                                        id="mentoring-method-{{ $index }}"
                                         :options="$methodOptions" option-value="value" option-label="label"
                                         placeholder="Select method" class="focus-within:border-0" single />
 
@@ -800,6 +828,7 @@
                                     placeholder="Enter objective" class="focus-within:border-0" rows="2" />
 
                                 <x-choices label="Mentor/Superior"
+                                    id="project-mentor-{{ $index }}"
                                     wire:model="projectPlans.{{ $index }}.mentor_id" :options="$mentors"
                                     option-value="value" option-label="label" placeholder="Select mentor"
                                     class="focus-within:border-0" single />

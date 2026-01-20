@@ -35,6 +35,7 @@ class TrainingPlan extends Model
     protected $fillable = [
         'user_id',
         'competency_id',
+        'training_module_id',
         'status',
         'year',
         'approved_by',
@@ -163,6 +164,11 @@ class TrainingPlan extends Model
         return $this->belongsTo(Competency::class);
     }
 
+    public function trainingModule(): BelongsTo
+    {
+        return $this->belongsTo(TrainingModule::class, 'training_module_id');
+    }
+
     /**
      * Check if this training plan has been realized.
      * A plan is realized if the employee has completed (passed) a training
@@ -174,13 +180,18 @@ class TrainingPlan extends Model
             return false;
         }
 
-        // Query trainings yang done dengan module yang memiliki competency_id yang sama
         $query = \App\Models\Training::query()
             ->where('status', 'done')
             ->whereYear('start_date', $this->year)
-            ->whereNotNull('module_id') // Pastikan ada module_id
-            ->whereHas('module', function ($q) {
-                $q->where('competency_id', $this->competency_id);
+            ->whereNotNull('module_id')
+            ->when($this->training_module_id, function ($q) {
+                // If a specific module was chosen, match it exactly.
+                $q->where('module_id', $this->training_module_id);
+            }, function ($q) {
+                // Otherwise match by competency.
+                $q->whereHas('module', function ($qq) {
+                    $qq->where('competency_id', $this->competency_id);
+                });
             })
             ->whereHas('assessments', function ($q) {
                 $q->where('employee_id', $this->user_id)
