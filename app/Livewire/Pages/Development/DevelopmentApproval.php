@@ -38,7 +38,9 @@ class DevelopmentApproval extends Component
 
     public $filterOptions = [
         ['value' => 'all', 'label' => 'All'],
-        ['value' => 'pending_spv', 'label' => 'Pending SPV'],
+        ['value' => 'pending_spv', 'label' => 'Pending Supervisor'],
+        ['value' => 'pending_section_head', 'label' => 'Pending Section Head'],
+        ['value' => 'pending_dept_head', 'label' => 'Pending Dept Head'],
         ['value' => 'pending_lid', 'label' => 'Pending LID'],
         ['value' => 'approved', 'label' => 'Approved'],
         ['value' => 'rejected', 'label' => 'Rejected'],
@@ -142,10 +144,6 @@ class DevelopmentApproval extends Component
             return $this->isDeptHeadArea();
         }
 
-        if ($expectedStatus !== 'pending_spv') {
-            return false;
-        }
-
         $target = User::find($targetUserId);
         if (!$target) {
             return false;
@@ -153,15 +151,19 @@ class DevelopmentApproval extends Component
 
         $targetPosition = strtolower(trim($target->position ?? ''));
 
-        // Supervisor can only approve employee submissions (not supervisors).
-        if ($this->isSupervisorArea()) {
-            return $targetPosition !== 'supervisor';
+        if ($expectedStatus === 'pending_spv') {
+            // Supervisor can only approve employee submissions (not supervisors).
+            return $this->isSupervisorArea() && $targetPosition !== 'supervisor';
         }
 
-        // Section Head approves:
-        // - supervisor submissions always
-        // - employee submissions only when no supervisor exists in that area
-        if ($this->isSectionHeadArea()) {
+        if ($expectedStatus === 'pending_section_head') {
+            if (!$this->isSectionHeadArea()) {
+                return false;
+            }
+
+            // Section Head approves:
+            // - supervisor submissions always
+            // - employee submissions only when no supervisor exists in that area
             if ($targetPosition === 'supervisor') {
                 return true;
             }
@@ -367,7 +369,7 @@ class DevelopmentApproval extends Component
                 $query->where(function ($q) use ($year, $status) {
                     // For 'pending_spv' filter, include both supervisor and dept head pending
                     if ($status === 'pending_spv') {
-                        $statuses = ['pending_spv', 'pending_dept_head'];
+                        $statuses = ['pending_spv'];
 
                         $q->whereHas('trainingPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $statuses))
                             ->orWhereHas('selfLearningPlans', fn($sq) => $sq->where('year', $year)->whereIn('status', $statuses))
@@ -421,6 +423,8 @@ class DevelopmentApproval extends Component
             return 'pending_lid';
         } elseif ($statuses->contains('pending_dept_head')) {
             return 'pending_dept_head';
+        } elseif ($statuses->contains('pending_section_head')) {
+            return 'pending_section_head';
         } elseif ($statuses->contains('pending_spv')) {
             return 'pending_spv';
         } elseif ($statuses->every(fn($s) => $s === 'approved')) {
@@ -500,8 +504,12 @@ class DevelopmentApproval extends Component
             return 'pending_lid';
         }
 
-        if ($this->isSupervisorArea() || $this->isSectionHeadArea()) {
+        if ($this->isSupervisorArea()) {
             return 'pending_spv';
+        }
+
+        if ($this->isSectionHeadArea()) {
+            return 'pending_section_head';
         }
 
         if ($this->isDeptHeadArea()) {

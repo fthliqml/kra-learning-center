@@ -282,7 +282,7 @@ class leaderDashboard extends Component
         }
 
         if ($user->hasPosition('section_head') && $section !== 'lid') {
-            return 'pending_spv';
+            return 'pending_section_head';
         }
 
         if ($user->hasPosition('department_head') && $section !== 'lid') {
@@ -362,7 +362,7 @@ class leaderDashboard extends Component
             return $this->isDeptHeadArea();
         }
 
-        if ($expectedStatus !== 'pending_spv') {
+        if (!in_array($expectedStatus, ['pending_spv', 'pending_section_head'], true)) {
             return false;
         }
 
@@ -373,11 +373,11 @@ class leaderDashboard extends Component
 
         $targetPosition = strtolower(trim($target->position ?? ''));
 
-        if ($this->isSupervisorArea()) {
-            return $targetPosition !== 'supervisor';
+        if ($expectedStatus === 'pending_spv') {
+            return $this->isSupervisorArea() && $targetPosition !== 'supervisor';
         }
 
-        if ($this->isSectionHeadArea()) {
+        if ($expectedStatus === 'pending_section_head' && $this->isSectionHeadArea()) {
             if ($targetPosition === 'supervisor') {
                 return true;
             }

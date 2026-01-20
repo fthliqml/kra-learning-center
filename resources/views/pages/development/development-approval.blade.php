@@ -80,7 +80,7 @@
                     @php
                         $status = $this->getUserStatus($user);
                         $classes = match ($status) {
-                            'pending_spv', 'pending_dept_head' => 'bg-amber-100 text-amber-700',
+                            'pending_spv', 'pending_section_head', 'pending_dept_head' => 'bg-amber-100 text-amber-700',
                             'pending_lid' => 'bg-blue-100 text-blue-700',
                             'approved' => 'bg-emerald-100 text-emerald-700',
                             'rejected_spv', 'rejected_dept_head', 'rejected_lid' => 'bg-rose-100 text-rose-700',
@@ -88,6 +88,7 @@
                         };
                         $label = match ($status) {
                             'pending_spv' => 'Pending Supervisor Approval',
+                            'pending_section_head' => 'Pending Section Head Approval',
                             'pending_dept_head' => 'Pending Dept Head Approval',
                             'pending_lid' => 'Pending LID Approval',
                             'rejected_spv' => 'Rejected by Supervisor',
