@@ -16,6 +16,16 @@
 @endphp
 
 <div x-data="pretestForm($wire, {{ $isReviewMode ? 'true' : 'false' }})" x-init="init()" class="p-2 md:px-8 md:py-4 mx-auto max-w-5xl relative">
+    {{-- Flash Message for Failed Pretest --}}
+    @if (session('pretest_failed'))
+        <div class="mb-4 p-4 rounded-lg bg-amber-50 border border-amber-200 flex items-start gap-3">
+            <x-icon name="o-exclamation-triangle" class="size-5 text-amber-500 flex-shrink-0 mt-0.5" />
+            <div>
+                <p class="text-sm font-medium text-amber-800">{{ session('pretest_failed') }}</p>
+                <p class="text-xs text-amber-600 mt-1">Silakan jawab semua pertanyaan dengan benar untuk melanjutkan.</p>
+            </div>
+        </div>
+    @endif
     {{-- Header --}}
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-5 md:mb-6">
         <div>

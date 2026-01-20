@@ -19,12 +19,6 @@ class Pretest extends Component
     public ?Test $pretest = null;
     public array $questions = [];
 
-    public bool $isReviewMode = false;
-    public ?TestAttempt $attempt = null;
-    public array $attemptAnswers = [];
-
-    public bool $showRetakeChoice = false;
-
     public bool $isRetakeFlow = false;
 
     public function mount(Course $course)
@@ -161,122 +155,67 @@ class Pretest extends Component
             }
 
             if ($existingAttempt) {
-                // If course is completed (posttest passed), always allow review of pretest (read-only)
+                // No review mode - check if user should proceed or retake
+                
+                // If course is completed (posttest passed), redirect to result page
                 if ($hasPassedPosttestAttempt) {
-                    $this->showRetakeChoice = false;
-                    $this->isReviewMode = true;
-                    $this->attempt = $existingAttempt;
-                    $this->attemptAnswers = TestAttemptAnswer::where('attempt_id', $existingAttempt->id)
-                        ->get()
-                        ->keyBy('question_id')
-                        ->toArray();
-                } else {
-                    // Pretest is only accessible again if configured for multiple attempts
-                    if ($maxAttempts !== null && $maxAttempts <= 1) {
-                        return redirect()->route('courses-modules.index', ['course' => $course->id]);
-                    }
-
-                    // Unlimited attempts (max_attempts NULL): default to review + ask user, unless forced retake via query
-                    if ($maxAttempts === null) {
-                        if (!$forceRetake) {
-                            $this->showRetakeChoice = true;
-                            $this->isReviewMode = true;
-                            $this->attempt = $existingAttempt;
-                            $this->attemptAnswers = TestAttemptAnswer::where('attempt_id', $existingAttempt->id)
-                                ->get()
-                                ->keyBy('question_id')
-                                ->toArray();
-                        }
-                    } else {
-                        // Finite attempts: show review when attempts are exhausted
-                        if ($attemptCount >= $maxAttempts) {
-                            $this->isReviewMode = true;
-                            $this->attempt = $existingAttempt;
-                            $this->attemptAnswers = TestAttemptAnswer::where('attempt_id', $existingAttempt->id)
-                                ->get()
-                                ->keyBy('question_id')
-                                ->toArray();
-                        }
-                    }
+                    return redirect()->route('courses-result.index', ['course' => $course->id]);
                 }
+                
+                // Check if user passed pretest
+                $hasPassed = TestAttempt::where('test_id', $this->pretest->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+                
+                if ($hasPassed) {
+                    // Passed - go to modules
+                    return redirect()->route('courses-modules.index', ['course' => $course->id]);
+                }
+                
+                // Not passed - check if can retake
+                $canStillRetake = false;
+                if ($maxAttempts === null) {
+                    // Pretest should not be unlimited - treat as exhausted
+                    $canStillRetake = false;
+                } elseif ($maxAttempts <= 1) {
+                    // Single attempt only
+                    $canStillRetake = false;
+                } else {
+                    // Multiple attempts allowed
+                    $canStillRetake = $attemptCount < $maxAttempts;
+                }
+                
+                if (!$canStillRetake) {
+                    // Attempts exhausted - go to modules even though failed
+                    return redirect()->route('courses-modules.index', ['course' => $course->id]);
+                }
+                // Can still retake - continue to show form (no review mode)
             }
 
             $collection = $this->pretest->questions->map(function ($q) {
-                $attemptAnswer = $this->attemptAnswers[$q->id] ?? null;
-                $correctOption = $q->options->first(fn($o) => $o->is_correct);
-
-                $userSelectedOptionId = null;
-                $userEssayAnswer = null;
-                $isCorrect = null;
-                $earnedPoints = 0;
-
-                if (is_array($attemptAnswer)) {
-                    $userSelectedOptionId = $attemptAnswer['selected_option_id'] ?? null;
-                    $userEssayAnswer = $attemptAnswer['essay_answer'] ?? null;
-                    $isCorrect = $attemptAnswer['is_correct'] ?? null;
-                    $earnedPoints = (int) ($attemptAnswer['earned_points'] ?? 0);
-
-                    // Backward compatibility: some older attempts stored selected option in essay_answer
-                    if ($q->question_type === 'multiple' && !$userSelectedOptionId && $userEssayAnswer !== null) {
-                        $raw = trim((string) $userEssayAnswer);
-                        if ($raw !== '' && ctype_digit($raw)) {
-                            $userSelectedOptionId = (int) $raw;
-                        }
-                    }
-
-                    // Derive correctness if missing for multiple-choice (keeps review consistent with score)
-                    if ($q->question_type === 'multiple' && $userSelectedOptionId && $isCorrect === null) {
-                        $selected = $q->options->first(fn($o) => (string) $o->id === (string) $userSelectedOptionId);
-                        if ($selected) {
-                            $isCorrect = (bool) $selected->is_correct;
-                            $earnedPoints = $isCorrect ? (int) ($q->max_points ?? 1) : 0;
-                        }
-                    }
-                }
-
+                // Form mode only: do NOT include correctness fields (avoid leaking answers)
                 return [
                     'id' => 'q' . $q->id,
                     'db_id' => $q->id,
                     'type' => $q->question_type,
                     'text' => $q->text,
-                    'max_points' => $q->max_points ?? 1,
                     'options' => $q->question_type === 'multiple'
                         ? $q->options->map(fn($o) => [
                             'id' => $o->id,
                             'text' => $o->text,
-                            'is_correct' => $o->is_correct,
                         ])->values()->all()
                         : [],
-                    // Review data
-                    'user_answer_id' => $userSelectedOptionId,
-                    'user_essay_answer' => $userEssayAnswer,
-                    'is_correct' => $isCorrect,
-                    'earned_points' => $earnedPoints,
-                    'correct_option_id' => $correctOption?->id,
-                    'correct_option_text' => $correctOption?->text,
                 ];
             });
 
-            // Randomize once if flag set (only in non-review mode)
-            if (!$this->isReviewMode && $this->pretest->randomize_question) {
+            // Randomize if configured
+            if ($this->pretest->randomize_question) {
                 $collection = $collection->shuffle();
             }
 
             $this->questions = $collection->values()->all();
         }
-    }
-
-    public function chooseRetake(): mixed
-    {
-        return redirect()->route('courses-pretest.index', [
-            'course' => $this->course->id,
-            'retake' => 1,
-        ]);
-    }
-
-    public function dismissRetakeChoice(): void
-    {
-        $this->showRetakeChoice = false;
     }
 
     public function render()
@@ -612,6 +551,44 @@ class Pretest extends Component
             }
         });
 
+        // Check the latest attempt result to determine redirect
+        $latestAttempt = TestAttempt::where('test_id', $this->pretest->id)
+            ->where('user_id', $userId)
+            ->orderByDesc('submitted_at')->orderByDesc('id')
+            ->first();
+        
+        $isPassed = $latestAttempt?->is_passed ?? false;
+        
+        // If not passed, check if user can still retake
+        if (!$isPassed) {
+            $attemptCount = (int) TestAttempt::where('test_id', $this->pretest->id)
+                ->where('user_id', $userId)
+                ->whereIn('status', [
+                    TestAttempt::STATUS_SUBMITTED,
+                    TestAttempt::STATUS_UNDER_REVIEW,
+                    TestAttempt::STATUS_EXPIRED,
+                ])
+                ->count();
+            
+            $maxAttempts = $this->pretest->max_attempts;
+            $canStillRetake = false;
+            
+            if ($maxAttempts === null) {
+                // Pretest should not be unlimited - treat as exhausted
+                $canStillRetake = false;
+            } else {
+                $maxAttempts = max(1, (int) $maxAttempts);
+                $canStillRetake = $attemptCount < $maxAttempts;
+            }
+            
+            if ($canStillRetake) {
+                // Failed but can retake - redirect to pretest to try again
+                session()->flash('pretest_failed', 'Anda belum lulus Pre-Test. Silakan coba lagi. Sisa kesempatan: ' . ($maxAttempts - $attemptCount));
+                return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
+            }
+            // Attempts exhausted - proceed to modules even though failed
+        }
+
         // Resolve first module section (explicit navigation prevents resume jumping)
         $firstSectionId = null;
         try {
@@ -622,9 +599,8 @@ class Pretest extends Component
         }
 
         // Redirect behavior:
+        // - Passed or attempts exhausted: go to first module section
         // - Remedial (failed course): go straight to first module section
-        // - Non-remedial retake: return to Pre-Test (review)
-        // - First-time pretest: go to first module section
         if ($isRetakeContext && !$isRemedial) {
             return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
         }
@@ -633,9 +609,6 @@ class Pretest extends Component
             return redirect()->route('courses-modules.index', ['course' => $this->course->id, 'section' => $firstSectionId]);
         }
 
-        return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
-
-        // Redirect to learning modules page (SPA navigate)
         return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
     }
 }
