@@ -191,16 +191,25 @@ trait TrainingFormInteractions
             $deleted = $service->delete($this->trainingId);
             
             if (!$deleted) {
+                $this->dispatch('confirm-done'); // Close confirmation first
                 $this->error('Training not found.', position: 'toast-top toast-center');
             } else {
-                $this->dispatch('training-deleted', ['id' => $this->trainingId]);
+                // 1. Close confirmation dialog first
+                $this->dispatch('confirm-done');
+                
+                // 2. Show success message
                 $this->success('Training deleted.', position: 'toast-top toast-center');
+                
+                // 3. Close form modal
                 $this->closeModal();
+                
+                // 4. Finally refresh calendar
+                $this->dispatch('training-deleted', ['id' => $this->trainingId]);
             }
         } catch (\Throwable $e) {
+            $this->dispatch('confirm-done'); // Close confirmation first
             $this->error('Failed to delete training.', position: 'toast-top toast-center');
         }
-        $this->dispatch('confirm-done');
     }
 
     // ===== UPDATED HANDLERS =====
