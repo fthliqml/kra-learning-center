@@ -2,7 +2,7 @@
     <table class="w-full table-auto border-collapse">
         <thead>
             <tr>
-                @foreach (['No', 'NRP', 'Name', 'Section', 'Competency', 'Theory', 'Practical', 'Remarks', 'Earned Pt', 'Total Pt', 'Note', 'Date'] as $col)
+                @foreach (['No', 'NRP', 'Name', 'Section', 'Theory', 'Practical', 'Remarks', 'Note', 'Date'] as $col)
                     <th class="py-3 px-2 text-sm font-semibold text-gray-400">
                         <div class="h-5 bg-gray-300 rounded w-full animate-pulse"></div>
                     </th>
@@ -12,7 +12,7 @@
         <tbody>
             @foreach (range(1, 10) as $i)
                 <tr class="border-b border-gray-200">
-                    @foreach (range(1, 12) as $j)
+                    @foreach (range(1, 9) as $j)
                         <td class="py-4 px-2">
                             <div class="h-6 bg-gray-300 rounded animate-pulse w-full"></div>
                         </td>

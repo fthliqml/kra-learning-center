@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class CertificationModule extends Model
@@ -63,5 +64,13 @@ class CertificationModule extends Model
     public function certifications(): HasMany
     {
         return $this->hasMany(Certification::class, 'module_id');
+    }
+
+    /**
+     * Get the competency associated with this certification module.
+     */
+    public function competency(): BelongsTo
+    {
+        return $this->belongsTo(Competency::class, 'competency_id');
     }
 }

@@ -13,7 +13,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="5" :rows="10" targets="search" />
+    <x-skeletons.table :columns="4" :rows="10" targets="search" />
 
     {{-- No Data State --}}
     @if ($histories->isEmpty())
@@ -42,11 +42,6 @@
                 {{-- Custom cell untuk kolom Certification Name --}}
                 @scope('cell_certification_name', $history)
                     <div class="truncate max-w-[40ch] xl:max-w-[50ch]">{{ $history->certification_name }}</div>
-                @endscope
-
-                {{-- Custom cell untuk kolom Competency --}}
-                @scope('cell_competency', $history)
-                    <div class="text-center">{{ $history->competency }}</div>
                 @endscope
 
                 {{-- Custom cell untuk kolom Approved Date --}}

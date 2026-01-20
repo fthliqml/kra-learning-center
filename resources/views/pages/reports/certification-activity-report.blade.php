@@ -45,7 +45,7 @@
                 @endif
             </div>
 
-            <x-search-input placeholder="Search name, competency..." class="max-w-72"
+            <x-search-input placeholder="Search name, certification..." class="max-w-72"
                 wire:model.live.debounce.300ms="search" />
         </div>
     </div>
@@ -95,13 +95,6 @@
                     <div class="text-center text-sm">{{ $report->section }}</div>
                 @endscope
 
-                {{-- Competency --}}
-                @scope('cell_competency', $report)
-                    <div class="truncate max-w-[200px]" title="{{ $report->competency }}">
-                        {{ $report->competency }}
-                    </div>
-                @endscope
-
                 {{-- Theory Score --}}
                 @scope('cell_theory_score', $report)
                     @php
@@ -139,14 +132,6 @@
                                 Failed
                             </span>
                         @endif
-                    </div>
-                @endscope
-
-                {{-- Earned Point --}}
-                @scope('cell_earned_point', $report)
-                    <div
-                        class="text-center font-semibold {{ $report->earned_point > 0 ? 'text-emerald-600' : 'text-gray-400' }}">
-                        {{ $report->earned_point }}
                     </div>
                 @endscope
 

@@ -3,13 +3,13 @@
 namespace App\Livewire\Pages\Reports;
 
 use App\Exports\CertificationActivityReportExport;
-use App\Models\Certification;
 use App\Models\CertificationParticipant;
 use Carbon\Carbon;
 use Livewire\Component;
 use Livewire\WithPagination;
 use Maatwebsite\Excel\Facades\Excel;
 use Mary\Traits\Toast;
+use App\Models\Certification;
 
 class CertificationActivityReport extends Component
 {
@@ -63,120 +63,98 @@ class CertificationActivityReport extends Component
             ['key' => 'nrp', 'label' => 'NRP', 'class' => '!text-center w-[110px]'],
             ['key' => 'name', 'label' => 'Name', 'class' => 'w-[220px]'],
             ['key' => 'section', 'label' => 'Section', 'class' => '!text-center w-[110px]'],
-            ['key' => 'competency', 'label' => 'Competency', 'class' => 'w-[260px]'],
             ['key' => 'theory_score', 'label' => 'Theory Score', 'class' => '!text-center w-[110px]'],
             ['key' => 'practical_score', 'label' => 'Practical Score', 'class' => '!text-center w-[130px]'],
             ['key' => 'remarks', 'label' => 'Remarks', 'class' => '!text-center w-[100px]'],
-            ['key' => 'earned_point', 'label' => 'Earned Point', 'class' => '!text-center w-[110px]'],
             ['key' => 'note', 'label' => 'Note', 'class' => 'w-[200px]'],
             ['key' => 'date', 'label' => 'Date', 'class' => '!text-center w-[130px]'],
         ];
     }
 
-    public function getReportsProperty()
+    public function reports()
     {
         [$dateFrom, $dateTo] = $this->parseDateRange();
 
-        // Get all certification participants with completed certifications
-        $query = CertificationParticipant::with([
-            'certification.certificationModule.competency',
-            'employee',
-            'scores.session',
-        ])
+        $query = CertificationParticipant::query()
+            ->with([
+                'certification.certificationModule',
+                'employee',
+                'scores.session',
+            ])
             ->whereHas('certification', function ($q) use ($dateFrom, $dateTo) {
                 $q->where('status', 'completed')
                     ->when($dateFrom, fn($query) => $query->whereDate('approved_at', '>=', $dateFrom))
                     ->when($dateTo, fn($query) => $query->whereDate('approved_at', '<=', $dateTo));
             })
             ->when($this->search, function ($q) {
-                $q->whereHas('employee', fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
-                    ->orWhereHas('certification', fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
-                    ->orWhereHas('certification.certificationModule.competency', function ($query) {
-                        $term = '%' . $this->search . '%';
-                        $query->where('code', 'like', $term)->orWhere('name', 'like', $term);
-                    });
-            });
+                $term = '%' . $this->search . '%';
 
-        $participants = $query->get();
+                $q->where(function ($inner) use ($term) {
+                    $inner
+                        ->whereHas('employee', function ($query) use ($term) {
+                            $query->where('name', 'like', $term)->orWhere('nrp', 'like', $term);
+                        })
+                        ->orWhereHas('certification', fn($query) => $query->where('name', 'like', $term))
+                        ->orWhereHas('certification.certificationModule', fn($query) => $query->where('module_title', 'like', $term));
+                });
+            })
+            // Ensure consistent sorting (fixes jumbled numbering)
+            ->orderByDesc(
+                Certification::select('approved_at')
+                    ->whereColumn('certifications.id', 'certification_participants.certification_id')
+                    ->limit(1)
+            )
+            ->orderByDesc('certification_participants.id');
 
-        // Build report data
-        $reports = collect();
-        $no = 1;
+        $paginator = $query->paginate(10);
+        $startNo = (int) ($paginator->firstItem() ?? 0);
 
-        foreach ($participants as $participant) {
-            $certification = $participant->certification;
-            $module = $certification?->certificationModule;
-            $employee = $participant->employee;
+        $paginator->setCollection(
+            $paginator->getCollection()->values()->map(function ($participant, $index) use ($startNo) {
+                $certification = $participant->certification;
+                $module = $certification?->certificationModule;
+                $employee = $participant->employee;
 
-            // Get theory and practical scores from certification_scores
-            $theoryScore = null;
-            $practicalScore = null;
+                $theoryScore = null;
+                $practicalScore = null;
 
-            foreach ($participant->scores as $score) {
-                $sessionType = $score->session?->type;
-                if ($sessionType === 'theory') {
-                    $theoryScore = $score->score;
-                } elseif ($sessionType === 'practical') {
-                    $practicalScore = $score->score;
+                foreach ($participant->scores as $score) {
+                    $sessionType = $score->session?->type;
+                    if ($sessionType === 'theory') {
+                        $theoryScore = $score->score;
+                    } elseif ($sessionType === 'practical') {
+                        $practicalScore = $score->score;
+                    }
                 }
-            }
 
-            // Get passing scores from module
-            $theoryPassingScore = $module?->theory_passing_score ?? 70;
-            $practicalPassingScore = $module?->practical_passing_score ?? 70;
+                $theoryPassingScore = $module?->theory_passing_score ?? 70;
+                $practicalPassingScore = $module?->practical_passing_score ?? 70;
+                $remarks = $participant->final_status ?? 'pending';
 
-            // Remarks from final_status
-            $remarks = $participant->final_status ?? 'pending';
+                $completionDate = $certification?->approved_at
+                    ? Carbon::parse($certification->approved_at)->format('d-m-Y')
+                    : '-';
 
-            // Earned points: get directly from participant
-            $earnedPoint = $participant->earned_points ?? 0;
-
-            // Completion date - use approved_at from certification
-            $completionDate = $certification?->approved_at
-                ? Carbon::parse($certification->approved_at)->format('d-m-Y')
-                : '-';
-
-            $reports->push((object) [
-                'id' => $participant->id,
-                'no' => $no++,
-                'nrp' => $employee?->nrp ?? '-',
-                'name' => $employee?->name ?? '-',
-                'section' => $employee?->section ?? '-',
-                'competency' => $module?->competency?->name ?? '-',
-                'theory_score' => $theoryScore !== null ? number_format($theoryScore, 1) : '-',
-                'practical_score' => $practicalScore !== null ? number_format($practicalScore, 1) : '-',
-                'theory_raw' => $theoryScore,
-                'practical_raw' => $practicalScore,
-                'theory_passing' => $theoryPassingScore,
-                'practical_passing' => $practicalPassingScore,
-                'remarks' => $remarks,
-                'earned_point' => $earnedPoint,
-                'note' => '-',
-                'date' => $completionDate,
-            ]);
-        }
-
-        // Sort by date descending
-        return $reports->sortByDesc('date')->values();
-    }
-
-    public function reports()
-    {
-        $reportsData = $this->reports;
-        $perPage = 10;
-        $currentPage = $this->getPage();
-        $total = $reportsData->count();
-
-        // Paginate manually
-        $items = $reportsData->slice(($currentPage - 1) * $perPage, $perPage)->values();
-
-        return new \Illuminate\Pagination\LengthAwarePaginator(
-            $items,
-            $total,
-            $perPage,
-            $currentPage,
-            ['path' => request()->url()]
+                return (object) [
+                    'id' => $participant->id,
+                    'no' => $startNo + $index,
+                    'nrp' => $employee?->nrp ?? '-',
+                    'name' => $employee?->name ?? '-',
+                    'section' => $employee?->section ?? '-',
+                    'theory_score' => $theoryScore !== null ? number_format($theoryScore, 1) : '-',
+                    'practical_score' => $practicalScore !== null ? number_format($practicalScore, 1) : '-',
+                    'theory_raw' => $theoryScore,
+                    'practical_raw' => $practicalScore,
+                    'theory_passing' => $theoryPassingScore,
+                    'practical_passing' => $practicalPassingScore,
+                    'remarks' => $remarks,
+                    'note' => '-',
+                    'date' => $completionDate,
+                ];
+            })
         );
+
+        return $paginator;
     }
 
     public function export()

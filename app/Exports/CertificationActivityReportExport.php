@@ -2,6 +2,7 @@
 
 namespace App\Exports;
 
+use App\Models\Certification;
 use App\Models\CertificationParticipant;
 use Carbon\Carbon;
 use Maatwebsite\Excel\Concerns\FromCollection;
@@ -27,7 +28,7 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
     public function collection()
     {
         $query = CertificationParticipant::with([
-            'certification.certificationModule.competency',
+            'certification.certificationModule',
             'employee',
             'scores.session',
         ])
@@ -37,15 +38,26 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
                     ->when($this->dateTo, fn($query) => $query->whereDate('approved_at', '<=', $this->dateTo));
             })
             ->when($this->search, function ($q) {
-                $q->whereHas('employee', fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
-                    ->orWhereHas('certification', fn($query) => $query->where('name', 'like', '%' . $this->search . '%'))
-                    ->orWhereHas('certification.certificationModule.competency', function ($query) {
-                        $term = '%' . $this->search . '%';
-                        $query->where('code', 'like', $term)->orWhere('name', 'like', $term);
-                    });
+                $term = '%' . $this->search . '%';
+
+                $q->where(function ($inner) use ($term) {
+                    $inner
+                        ->whereHas('employee', function ($query) use ($term) {
+                            $query->where('name', 'like', $term)->orWhere('nrp', 'like', $term);
+                        })
+                        ->orWhereHas('certification', fn($query) => $query->where('name', 'like', $term))
+                        ->orWhereHas('certification.certificationModule', fn($query) => $query->where('module_title', 'like', $term));
+                });
             });
 
-        return $query->get();
+        return $query
+            ->orderByDesc(
+                Certification::select('approved_at')
+                    ->whereColumn('certifications.id', 'certification_participants.certification_id')
+                    ->limit(1)
+            )
+            ->orderByDesc('certification_participants.id')
+            ->get();
     }
 
     public function map($participant): array
@@ -54,10 +66,6 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
         $certification = $participant->certification;
         $module = $certification?->certificationModule;
         $employee = $participant->employee;
-
-        $competencyLabel = $module?->competency
-            ? trim((string) $module->competency->code . ' - ' . (string) $module->competency->name)
-            : '-';
 
         // Get theory and practical scores from certification_scores
         $theoryScore = null;
@@ -75,9 +83,6 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
         // Remarks from final_status
         $remarks = $participant->final_status ?? 'pending';
 
-        // Earned points: get directly from participant
-        $earnedPoint = $participant->earned_points ?? 0;
-
         // Completion date
         $completionDate = $certification?->approved_at
             ? Carbon::parse($certification->approved_at)->format('d-m-Y')
@@ -88,11 +93,9 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
             $employee?->nrp ?? ($employee?->NRP ?? '-'),
             $employee?->name ?? '-',
             $employee?->section ?? '-',
-            $competencyLabel,
             $theoryScore !== null ? number_format($theoryScore, 1) : '-',
             $practicalScore !== null ? number_format($practicalScore, 1) : '-',
             ucfirst($remarks),
-            $earnedPoint,
             '-', // Note
             $completionDate,
         ];
@@ -105,11 +108,9 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
             'NRP',
             'Name',
             'Section',
-            'Competency',
             'Theory Score',
             'Practical Score',
             'Remarks',
-            'Earned Point',
             'Note',
             'Date',
         ];
@@ -117,8 +118,8 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
 
     public function styles(Worksheet $sheet)
     {
-        // Style header (row 1) - 11 columns (A-K)
-        $sheet->getStyle('A1:K1')->applyFromArray([
+        // Style header (row 1) - 9 columns (A-I)
+        $sheet->getStyle('A1:I1')->applyFromArray([
             'font' => ['bold' => true],
             'fill' => [
                 'fillType' => \PhpOffice\PhpSpreadsheet\Style\Fill::FILL_SOLID,
@@ -134,13 +135,11 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
         $sheet->getColumnDimension('B')->setWidth(12);  // NRP
         $sheet->getColumnDimension('C')->setWidth(25);  // Name
         $sheet->getColumnDimension('D')->setWidth(12);  // Section
-        $sheet->getColumnDimension('E')->setWidth(30);  // Competency
-        $sheet->getColumnDimension('F')->setWidth(14);  // Theory Score
-        $sheet->getColumnDimension('G')->setWidth(14);  // Practical Score
-        $sheet->getColumnDimension('H')->setWidth(12);  // Remarks
-        $sheet->getColumnDimension('I')->setWidth(12);  // Earned Point
-        $sheet->getColumnDimension('J')->setWidth(20);  // Note
-        $sheet->getColumnDimension('K')->setWidth(14);  // Date
+        $sheet->getColumnDimension('E')->setWidth(14);  // Theory Score
+        $sheet->getColumnDimension('F')->setWidth(14);  // Practical Score
+        $sheet->getColumnDimension('G')->setWidth(12);  // Remarks
+        $sheet->getColumnDimension('H')->setWidth(20);  // Note
+        $sheet->getColumnDimension('I')->setWidth(14);  // Date
 
         // Style all cells
         $sheet->getStyle($sheet->calculateWorksheetDimension())->applyFromArray([
@@ -160,7 +159,6 @@ class CertificationActivityReportExport implements FromCollection, WithHeadings,
         // Left align text columns
         $lastRow = $sheet->getHighestRow();
         $sheet->getStyle('C2:C' . $lastRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle('E2:E' . $lastRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
-        $sheet->getStyle('J2:J' . $lastRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
+        $sheet->getStyle('H2:H' . $lastRow)->getAlignment()->setHorizontal(\PhpOffice\PhpSpreadsheet\Style\Alignment::HORIZONTAL_LEFT);
     }
 }
