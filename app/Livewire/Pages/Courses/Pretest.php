@@ -20,6 +20,12 @@ class Pretest extends Component
     public array $questions = [];
 
     public bool $isRetakeFlow = false;
+    
+    // Stats mode: show result stats without revealing answers
+    public bool $isStatsMode = false;
+    public ?TestAttempt $lastAttempt = null;
+    public bool $canRetake = false;
+    public int $remainingAttempts = 0;
 
     public function mount(Course $course)
     {
@@ -155,7 +161,8 @@ class Pretest extends Component
             }
 
             if ($existingAttempt) {
-                // No review mode - check if user should proceed or retake
+                // Check if force retake via query param
+                $forceRetake = (string) request()->query('retake', '') === '1';
                 
                 // If course is completed (posttest passed), redirect to result page
                 if ($hasPassedPosttestAttempt) {
@@ -173,24 +180,39 @@ class Pretest extends Component
                     return redirect()->route('courses-modules.index', ['course' => $course->id]);
                 }
                 
-                // Not passed - check if can retake
+                // Not passed - calculate retake eligibility
                 $canStillRetake = false;
+                $remaining = 0;
                 if ($maxAttempts === null) {
                     // Pretest should not be unlimited - treat as exhausted
                     $canStillRetake = false;
+                    $remaining = 0;
                 } elseif ($maxAttempts <= 1) {
                     // Single attempt only
                     $canStillRetake = false;
+                    $remaining = 0;
                 } else {
                     // Multiple attempts allowed
                     $canStillRetake = $attemptCount < $maxAttempts;
+                    $remaining = max(0, $maxAttempts - $attemptCount);
                 }
                 
-                if (!$canStillRetake) {
-                    // Attempts exhausted - go to modules even though failed
-                    return redirect()->route('courses-modules.index', ['course' => $course->id]);
+                // If force retake AND can retake, show form
+                if ($forceRetake && $canStillRetake) {
+                    // Continue to form mode below
+                } else {
+                    // Show stats mode
+                    $this->isStatsMode = true;
+                    $this->lastAttempt = $existingAttempt;
+                    $this->canRetake = $canStillRetake;
+                    $this->remainingAttempts = $remaining;
+                    
+                    if (!$canStillRetake) {
+                        // Attempts exhausted - still show stats but without retake button
+                        // User can proceed via "Lanjut ke Materi" button
+                    }
+                    return; // Don't load questions for stats mode
                 }
-                // Can still retake - continue to show form (no review mode)
             }
 
             $collection = $this->pretest->questions->map(function ($q) {
@@ -216,6 +238,17 @@ class Pretest extends Component
 
             $this->questions = $collection->values()->all();
         }
+    }
+
+    /**
+     * Start retake - redirect to pretest with retake flag
+     */
+    public function startRetake(): mixed
+    {
+        return redirect()->route('courses-pretest.index', [
+            'course' => $this->course->id,
+            'retake' => 1,
+        ]);
     }
 
     public function render()
@@ -308,9 +341,10 @@ class Pretest extends Component
             'questions' => $this->questions,
             'pretestId' => $this->pretest?->id,
             'userId' => $userId,
-            'isReviewMode' => $this->isReviewMode,
-            'attempt' => $this->attempt,
-            'showRetakeChoice' => $this->showRetakeChoice,
+            'isStatsMode' => $this->isStatsMode,
+            'lastAttempt' => $this->lastAttempt,
+            'canRetake' => $this->canRetake,
+            'remainingAttempts' => $this->remainingAttempts,
         ]);
 
         return $view->layout('layouts.livewire.course', [
