@@ -191,14 +191,14 @@ trait TrainingFormInteractions
             $deleted = $service->delete($this->trainingId);
             
             if (!$deleted) {
-                $this->error('Training not found.');
+                $this->error('Training not found.', position: 'toast-top toast-center');
             } else {
                 $this->dispatch('training-deleted', ['id' => $this->trainingId]);
-                $this->success('Training deleted.');
+                $this->success('Training deleted.', position: 'toast-top toast-center');
                 $this->closeModal();
             }
         } catch (\Throwable $e) {
-            $this->error('Failed to delete training.');
+            $this->error('Failed to delete training.', position: 'toast-top toast-center');
         }
         $this->dispatch('confirm-done');
     }

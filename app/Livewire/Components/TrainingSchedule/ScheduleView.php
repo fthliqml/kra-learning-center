@@ -369,13 +369,12 @@ class ScheduleView extends Component
         if (!isset($payload['id']))
             return;
         $id = $payload['id'];
-        if ($this->trainings) {
-            $this->trainings = $this->trainings->reject(fn($t) => $t->id == $id)->values();
-        }
-        // clear cached detail
+        
+        // Clear cached detail
         unset($this->trainingDetails[$id]);
-        $this->recomputeDays();
-        $this->calendarVersion++;
+        
+        // Refresh trainings data
+        $this->refreshTrainings();
     }
 
     private function loadTrainingDetail(int $id): ?array
