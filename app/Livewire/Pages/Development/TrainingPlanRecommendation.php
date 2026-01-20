@@ -13,20 +13,12 @@ use Mary\Traits\Toast;
 class TrainingPlanRecommendation extends Component
 {
     use Toast;
-
-    public $search = '';
     public $selectedYear;
 
     public $filterDepartment = '';
     public $filterSection = '';
-    public $filterPosition = '';
 
     public $filterKey = 0;
-
-    public $departmentSearch = '';
-    public $sectionSearch = '';
-    public $positionSearch = '';
-    public $employeeChoicesSearch = '';
 
     public $selectedUserId = '';
     public $selectedUser = null;
@@ -86,7 +78,6 @@ class TrainingPlanRecommendation extends Component
     public function updatedFilterDepartment(): void
     {
         $this->filterSection = '';
-        $this->sectionSearch = '';
         $this->filterKey++;
         $this->resetSelectedEmployee();
     }
@@ -94,18 +85,6 @@ class TrainingPlanRecommendation extends Component
     public function updatedFilterSection(): void
     {
         $this->filterKey++;
-        $this->resetSelectedEmployee();
-    }
-
-    public function updatedFilterPosition(): void
-    {
-        $this->filterKey++;
-        $this->resetSelectedEmployee();
-    }
-
-    public function updatedSearch(): void
-    {
-        // Search affects employee options; if the current selection is filtered out, allow re-select.
         $this->resetSelectedEmployee();
     }
 
@@ -118,7 +97,6 @@ class TrainingPlanRecommendation extends Component
     public function updatedSelectedUserId($value): void
     {
         $this->selectedUserId = (string) $value;
-        $this->employeeChoicesSearch = '';
         $this->loadSelectedEmployee();
     }
 
@@ -137,66 +115,6 @@ class TrainingPlanRecommendation extends Component
         return $v === '' ? '' : mb_strtolower($v);
     }
 
-    /**
-     * Build normalized-key => list(original distinct values) for a column.
-     * This avoids DB-driver-specific TRIM/REGEXP differences.
-     */
-    private function buildKeyToOriginalsMap(string $column, ?\Closure $scope = null): array
-    {
-        $query = User::query()
-            ->whereNotNull($column)
-            ->where($column, '!=', '');
-
-        if ($scope) {
-            $scope($query);
-        }
-
-        // Keep raw DB values for filtering (whereIn must match exactly).
-        // We normalize only for grouping and trim only for display.
-        $values = $query
-            ->distinct()
-            ->orderBy($column)
-            ->pluck($column)
-            ->map(fn($v) => (string) $v)
-            ->values();
-
-        $map = [];
-        foreach ($values as $value) {
-            $key = $this->normalizeKey($value);
-            if ($key === '') {
-                continue;
-            }
-            $map[$key] ??= [];
-            $map[$key][] = $value;
-        }
-
-        // Ensure each key has unique raw originals
-        foreach ($map as $key => $list) {
-            $map[$key] = array_values(array_unique($list));
-        }
-
-        return $map;
-    }
-
-    public function searchDepartments($value): void
-    {
-        $this->departmentSearch = trim((string) $value);
-    }
-
-    public function searchSections($value): void
-    {
-        $this->sectionSearch = trim((string) $value);
-    }
-
-    public function searchPositions($value): void
-    {
-        $this->positionSearch = trim((string) $value);
-    }
-
-    public function searchEmployees($value): void
-    {
-        $this->employeeChoicesSearch = trim((string) $value);
-    }
 
     public function clearSelectedEmployee(): void
     {
@@ -208,8 +126,6 @@ class TrainingPlanRecommendation extends Component
         $this->selectedUserId = '';
         $this->selectedUser = null;
         $this->recommendations = [];
-
-        $this->employeeChoicesSearch = '';
 
         $this->recommendationType = 'competency';
         $this->group = '';
@@ -234,15 +150,11 @@ class TrainingPlanRecommendation extends Component
         $this->loadRecommendations();
     }
 
-    public function getDepartmentsProperty()
+    public function getDepartmentsProperty(): array
     {
         $query = User::query()
             ->whereNotNull('department')
-            ->where('department', '!=', '')
-            ->when($this->departmentSearch, function ($q) {
-                $term = trim((string) $this->departmentSearch);
-                $q->where('department', 'like', "%{$term}%");
-            });
+            ->where('department', '!=', '');
 
         $values = $query
             ->distinct()
@@ -256,10 +168,11 @@ class TrainingPlanRecommendation extends Component
 
         return $grouped
             ->map(fn($items, $key) => ['id' => (string) $key, 'name' => trim((string) $items->first())])
-            ->values();
+            ->values()
+            ->toArray();
     }
 
-    public function getSectionsProperty()
+    public function getSectionsProperty(): array
     {
         $deptKey = (string) $this->filterDepartment;
 
@@ -279,14 +192,6 @@ class TrainingPlanRecommendation extends Component
             return $this->normalizeKey((string) ($row->department ?? '')) === $deptKey;
         });
 
-        if ($this->sectionSearch) {
-            $term = mb_strtolower(trim((string) $this->sectionSearch));
-            $filtered = $filtered->filter(function ($row) use ($term) {
-                $section = mb_strtolower(trim((string) ($row->section ?? '')));
-                return $term === '' || str_contains($section, $term);
-            });
-        }
-
         $sections = $filtered
             ->pluck('section')
             ->map(fn($section) => (string) $section)
@@ -296,77 +201,28 @@ class TrainingPlanRecommendation extends Component
             ->groupBy(fn($section) => $this->normalizeKey($section))
             ->filter(fn($items, $key) => (string) $key !== '')
             ->map(fn($items, $key) => ['id' => (string) $key, 'name' => trim((string) $items->first())])
-            ->values();
-    }
-
-    public function getPositionsProperty()
-    {
-        $query = User::query()
-            ->whereNotNull('position')
-            ->where('position', '!=', '')
-            ->when($this->positionSearch, function ($q) {
-                $term = trim((string) $this->positionSearch);
-                $q->where('position', 'like', "%{$term}%");
-            });
-
-        $values = $query
-            ->distinct()
-            ->orderBy('position')
-            ->pluck('position')
-            ->map(fn($pos) => (string) $pos)
-            ->values();
-
-        $grouped = $values->groupBy(fn($pos) => $this->normalizeKey($pos))
-            ->filter(fn($items, $key) => (string) $key !== '');
-
-        return $grouped
-            ->map(function ($items, $key) {
-                $raw = trim((string) $items->first());
-                $label = ucfirst(str_replace('_', ' ', $raw));
-                return ['id' => (string) $key, 'name' => $label];
-            })
-            ->values();
-    }
-
-    public function getHasFiltersProperty(): bool
-    {
-        return (string) $this->filterDepartment !== ''
-            || (string) $this->filterSection !== ''
-            || (string) $this->filterPosition !== '';
+            ->values()
+            ->toArray();
     }
 
     public function getEmployeeOptionsProperty(): array
     {
-        $term = trim((string) ($this->employeeChoicesSearch !== '' ? $this->employeeChoicesSearch : $this->search));
-
         $deptKey = (string) $this->filterDepartment;
         $sectionKey = (string) $this->filterSection;
-        $positionKey = (string) $this->filterPosition;
 
         $query = User::query()->select(['id', 'name', 'nrp', 'email', 'department', 'section', 'position']);
-
-        if ($term !== '') {
-            $query->where(function ($qq) use ($term) {
-                $qq->where('name', 'like', "%{$term}%")
-                    ->orWhere('nrp', 'like', "%{$term}%")
-                    ->orWhere('email', 'like', "%{$term}%");
-            });
-        }
 
         // Pull more than 200 then filter in PHP to keep dropdown responsive.
         $rows = $query
             ->orderBy('name')
-            ->limit($term !== '' ? 1000 : 3000)
+            ->limit(3000)
             ->get();
 
-        $filtered = $rows->filter(function (User $u) use ($deptKey, $sectionKey, $positionKey) {
+        $filtered = $rows->filter(function (User $u) use ($deptKey, $sectionKey) {
             if ($deptKey !== '' && $this->normalizeKey((string) ($u->department ?? '')) !== $deptKey) {
                 return false;
             }
             if ($sectionKey !== '' && $this->normalizeKey((string) ($u->section ?? '')) !== $sectionKey) {
-                return false;
-            }
-            if ($positionKey !== '' && $this->normalizeKey((string) ($u->position ?? '')) !== $positionKey) {
                 return false;
             }
             return true;
@@ -594,7 +450,7 @@ class TrainingPlanRecommendation extends Component
         return view('pages.development.training-plan-recommendation', [
             'departments' => $this->departments,
             'sections' => $this->sections,
-            'positions' => $this->positions,
+            'employeeOptions' => $this->employeeOptions,
         ]);
     }
 }
