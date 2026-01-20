@@ -75,7 +75,51 @@ class Posttest extends Component
             }]);
         }]);
 
-        // Gate: allow access after finishing modules, OR if last posttest attempt failed (remedial)
+        // Gate 1: Check pretest requirement (must pass OR exhaust attempts)
+        if ($userId && $enrollment) {
+            $pretestRow = Test::where('course_id', $course->id)
+                ->where('type', 'pretest')
+                ->select(['id', 'max_attempts'])
+                ->first();
+            
+            if ($pretestRow) {
+                // Check if user has passed pretest
+                $hasPassedPretest = TestAttempt::where('test_id', $pretestRow->id)
+                    ->where('user_id', $userId)
+                    ->where('is_passed', true)
+                    ->exists();
+                
+                if (!$hasPassedPretest) {
+                    // User has NOT passed pretest - check if they can still retake
+                    $attemptCount = (int) TestAttempt::where('test_id', $pretestRow->id)
+                        ->where('user_id', $userId)
+                        ->whereIn('status', [
+                            TestAttempt::STATUS_SUBMITTED,
+                            TestAttempt::STATUS_UNDER_REVIEW,
+                            TestAttempt::STATUS_EXPIRED,
+                        ])
+                        ->count();
+                    
+                    $canStillRetake = false;
+                    if ($pretestRow->max_attempts === null) {
+                        // Pretest should NOT be unlimited - treat as single attempt (attempts exhausted)
+                        // User can proceed after 1 attempt even if not passed
+                        $canStillRetake = false;
+                    } else {
+                        $maxAttempts = max(1, (int) $pretestRow->max_attempts);
+                        $canStillRetake = $attemptCount < $maxAttempts;
+                    }
+                    
+                    if ($canStillRetake) {
+                        // Block posttest: user must pass pretest or exhaust attempts first
+                        return redirect()->route('courses-pretest.index', ['course' => $course->id]);
+                    }
+                    // If attempts exhausted but not passed, allow to proceed to posttest
+                }
+            }
+        }
+
+        // Gate 2: allow access after finishing modules, OR if last posttest attempt failed (remedial)
         if ($userId && $enrollment) {
             $allowRemedial = false;
             $postRow = Test::where('course_id', $course->id)->where('type', 'posttest')->select('id')->first();
