@@ -336,8 +336,6 @@ class Posttest extends Component
             'questions' => $this->questions,
             'posttestId' => $this->posttest?->id,
             'userId' => $userId,
-            'isReviewMode' => $this->isReviewMode,
-            'attempt' => $this->attempt,
             'sectionsList' => $sectionsList,
             'showMaterialPicker' => $showMaterialPicker,
             'lastSectionId' => $lastSectionId,
