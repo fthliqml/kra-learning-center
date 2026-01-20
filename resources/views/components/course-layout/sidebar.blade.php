@@ -266,8 +266,8 @@
                                         @endif
                                     </span>
                                 </a>
-                            @elseif ($isPretestCompleted && $courseId && ($canRetakePretest || $isPosttestAttemptLocked))
-                                {{-- Pretest review allowed: remedial retake OR course completed --}}
+                            @elseif (($isPretestCompleted || ($s === 'pretest' && $isCompletedStage)) && $courseId)
+                                {{-- Pretest review allowed: always clickable for status check --}}
                                 <a href="{{ route('courses-pretest.index', ['course' => $courseId]) }}" wire:navigate
                                     class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary">
                                     <span class="flex-1 truncate capitalize" x-show="openSidebar"
@@ -281,21 +281,6 @@
                                         <x-icon name="o-check-circle" class="size-5 text-green-500" />
                                     </span>
                                 </a>
-                            @elseif ($isPretestCompleted && $courseId && !$canRetakePretest)
-                                {{-- Pretest completed but retake/review not allowed --}}
-                                <div class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left rounded-md cursor-not-allowed opacity-70"
-                                    title="Pre-Test tidak bisa dibuka kembali">
-                                    <span class="flex-1 truncate capitalize text-gray-500" x-show="openSidebar"
-                                        x-transition.opacity>
-                                        {{ ucfirst($s) }}
-                                    </span>
-                                    <span class="capitalize text-gray-500" x-show="!openSidebar" x-transition.opacity>
-                                        {{ strtoupper(substr($s, 0, 1)) }}
-                                    </span>
-                                    <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
-                                        <x-icon name="o-check-circle" class="size-5 text-green-500" />
-                                    </span>
-                                </div>
                             @elseif ($s === 'result' && $courseId && ($hasPassedPosttest || $hasPosttestAttempt))
                                 {{-- Result review allowed: user has a posttest attempt (passed/failed/under_review) --}}
                                 <a href="{{ route('courses-result.index', ['course' => $courseId]) }}" wire:navigate

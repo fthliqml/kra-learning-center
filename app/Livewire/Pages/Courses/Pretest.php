@@ -164,9 +164,13 @@ class Pretest extends Component
                 // Check if force retake via query param
                 $forceRetake = (string) request()->query('retake', '') === '1';
                 
-                // If course is completed (posttest passed), redirect to result page
+                // If course is completed (posttest passed), show stats mode (read only)
                 if ($hasPassedPosttestAttempt) {
-                    return redirect()->route('courses-result.index', ['course' => $course->id]);
+                    $this->isStatsMode = true;
+                    $this->lastAttempt = $existingAttempt;
+                    $this->canRetake = false; // Course completed, no more retakes
+                    $this->remainingAttempts = 0;
+                    return;
                 }
                 
                 // Check if user passed pretest
@@ -176,8 +180,12 @@ class Pretest extends Component
                     ->exists();
                 
                 if ($hasPassed) {
-                    // Passed - go to modules
-                    return redirect()->route('courses-modules.index', ['course' => $course->id]);
+                    // Passed - show stats mode (user can proceed next via button)
+                    $this->isStatsMode = true;
+                    $this->lastAttempt = $existingAttempt;
+                    $this->canRetake = false; // Already passed, no need to retake
+                    $this->remainingAttempts = 0;
+                    return; // Render stats
                 }
                 
                 // Not passed - calculate retake eligibility
@@ -207,10 +215,6 @@ class Pretest extends Component
                     $this->canRetake = $canStillRetake;
                     $this->remainingAttempts = $remaining;
                     
-                    if (!$canStillRetake) {
-                        // Attempts exhausted - still show stats but without retake button
-                        // User can proceed via "Lanjut ke Materi" button
-                    }
                     return; // Don't load questions for stats mode
                 }
             }
@@ -623,26 +627,8 @@ class Pretest extends Component
             // Attempts exhausted - proceed to modules even though failed
         }
 
-        // Resolve first module section (explicit navigation prevents resume jumping)
-        $firstSectionId = null;
-        try {
-            $firstTopic = $this->course->learningModules->first();
-            $firstSectionId = $firstTopic?->sections?->first()?->id;
-        } catch (\Throwable $e) {
-            $firstSectionId = null;
-        }
-
-        // Redirect behavior:
-        // - Passed or attempts exhausted: go to first module section
-        // - Remedial (failed course): go straight to first module section
-        if ($isRetakeContext && !$isRemedial) {
-            return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
-        }
-
-        if ($firstSectionId) {
-            return redirect()->route('courses-modules.index', ['course' => $this->course->id, 'section' => $firstSectionId]);
-        }
-
-        return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
+        // Always redirect back to Pretest page to show stats (Passed/Failed)
+        // From there, user can click "Lanjut ke Materi"
+        return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
     }
 }

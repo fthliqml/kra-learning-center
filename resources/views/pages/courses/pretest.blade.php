@@ -25,7 +25,7 @@
             <x-icon name="o-exclamation-triangle" class="size-5 text-amber-500 flex-shrink-0 mt-0.5" />
             <div>
                 <p class="text-sm font-medium text-amber-800">{{ session('pretest_failed') }}</p>
-                <p class="text-xs text-amber-600 mt-1">Silakan jawab semua pertanyaan dengan benar untuk melanjutkan.</p>
+                <p class="text-xs text-amber-600 mt-1">Please answer all questions correctly to proceed.</p>
             </div>
         </div>
     @endif
@@ -36,7 +36,7 @@
             <h1 class="text-2xl font-bold text-gray-900 tracking-tight">
                 Pre-Test
                 @if ($isStatsMode)
-                    <span class="ml-2 text-sm font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded-md">Hasil</span>
+                    <span class="ml-2 text-sm font-medium text-blue-700 bg-blue-100 px-2 py-1 rounded-md">Result</span>
                 @endif
             </h1>
         </div>
@@ -47,7 +47,7 @@
                     href="{{ route('courses-modules.index', ['course' => $course->id, 'section' => $firstSectionId]) }}"
                     class="inline-flex items-center gap-2 rounded-md bg-primary px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
                     <x-icon name="o-arrow-right" class="size-4" />
-                    <span>Lanjut ke Materi</span>
+                    <span>Proceed to Module</span>
                 </a>
             </div>
         @endif
@@ -62,18 +62,18 @@
                     <div class="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center mb-4">
                         <x-icon name="o-check-circle" class="size-10 text-green-600" />
                     </div>
-                    <h2 class="text-xl font-bold text-gray-900">Selamat! Anda Lulus Pre-Test</h2>
-                    <p class="text-sm text-gray-600 mt-2">Anda telah berhasil menyelesaikan pre-test dengan baik.</p>
+                    <h2 class="text-xl font-bold text-gray-900">Congratulations! You Passed the Pre-Test</h2>
+                    <p class="text-sm text-gray-600 mt-2">You have successfully completed the pre-test.</p>
                 @else
                     <div class="w-20 h-20 rounded-full bg-amber-100 flex items-center justify-center mb-4">
                         <x-icon name="o-exclamation-triangle" class="size-10 text-amber-600" />
                     </div>
-                    <h2 class="text-xl font-bold text-gray-900">Pre-Test Belum Lulus</h2>
+                    <h2 class="text-xl font-bold text-gray-900">Pre-Test Not Passed</h2>
                     <p class="text-sm text-gray-600 mt-2">
                         @if ($canRetake)
-                            Anda dapat mencoba lagi. Sisa kesempatan: <strong>{{ $remainingAttempts }}</strong>
+                            You can try again. Remaining attempts: <strong>{{ $remainingAttempts }}</strong>
                         @else
-                            Kesempatan Anda telah habis. Silakan lanjutkan ke materi pembelajaran.
+                            Your attempts are exhausted. Please proceed to the learning modules.
                         @endif
                     </p>
                 @endif
@@ -82,7 +82,7 @@
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mt-6 w-full max-w-md">
                     <div class="bg-gray-50 rounded-lg p-4 text-center">
                         <div class="text-2xl font-bold text-gray-900">{{ $lastAttempt?->auto_score ?? 0 }}</div>
-                        <div class="text-xs text-gray-500 mt-1">Skor Anda</div>
+                        <div class="text-xs text-gray-500 mt-1">Your Score</div>
                     </div>
                     <div class="bg-gray-50 rounded-lg p-4 text-center">
                         <div class="text-2xl font-bold text-gray-900">{{ $pretest?->passing_score ?? 0 }}%</div>
@@ -90,7 +90,7 @@
                     </div>
                     <div class="bg-gray-50 rounded-lg p-4 text-center col-span-2 md:col-span-1">
                         <div class="text-2xl font-bold {{ $lastAttempt?->is_passed ? 'text-green-600' : 'text-amber-600' }}">
-                            {{ $lastAttempt?->is_passed ? 'LULUS' : 'BELUM LULUS' }}
+                            {{ $lastAttempt?->is_passed ? 'PASSED' : 'NOT PASSED' }}
                         </div>
                         <div class="text-xs text-gray-500 mt-1">Status</div>
                     </div>
@@ -98,7 +98,7 @@
 
                 {{-- Attempt Info --}}
                 <div class="mt-4 text-xs text-gray-500">
-                    Disubmit: {{ $lastAttempt?->submitted_at?->format('d M Y H:i') ?? '-' }}
+                    Submitted: {{ $lastAttempt?->submitted_at?->format('d M Y H:i') ?? '-' }}
                 </div>
 
                 {{-- Action Buttons --}}
@@ -107,14 +107,14 @@
                         <button type="button" wire:click="startRetake"
                             class="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 transition">
                             <x-icon name="o-arrow-path" class="size-4" />
-                            <span>Coba Lagi ({{ $remainingAttempts }} sisa)</span>
+                            <span>Try Again ({{ $remainingAttempts }} remaining)</span>
                         </button>
                     @endif
                     <a wire:navigate
                         href="{{ route('courses-modules.index', ['course' => $course->id, 'section' => $firstSectionId]) }}"
                         class="inline-flex items-center gap-2 rounded-md {{ $canRetake ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-primary text-white hover:bg-primary/90' }} px-5 py-2.5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-primary/40 transition">
                         <x-icon name="o-arrow-right" class="size-4" />
-                        <span>Lanjut ke Materi</span>
+                        <span>Proceed to Module</span>
                     </a>
                 </div>
             </div>
@@ -127,7 +127,7 @@
                 <button type="button"
                     class="md:hidden inline-flex items-center gap-2 text-xs font-medium text-gray-600 transition"
                     @click="open = !open">
-                    <span x-text="open ? 'Sembunyikan Instruksi' : 'Tampilkan Instruksi'"></span>
+                    <span x-text="open ? 'Hide Instructions' : 'Show Instructions'"></span>
                     <svg class="w-3.5 h-3.5 transition-transform duration-200" :class="open ? 'rotate-180' : ''"
                         viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2">
                         <path d="M6 8l4 4 4-4" stroke-linecap="round" stroke-linejoin="round" />
@@ -138,16 +138,15 @@
                         <x-icon name="o-clipboard-document-check" class="size-5" />
                     </div>
                     <div class="flex-1">
-                        <h2 class="text-base font-semibold text-gray-900">Sebelum Memulai</h2>
+                        <h2 class="text-base font-semibold text-gray-900">Before Starting</h2>
                         <p class="text-sm text-gray-600 mt-1 leading-relaxed">
-                            Pre-test ini membantu kami memahami titik awal pengetahuan Anda sehingga pembelajaran bisa lebih
-                            relevan.
-                            Jawablah sejujur mungkin. Hasil Pre-test tidak menurunkan progres Anda.
+                            This pre-test helps us understand your starting knowledge level so that learning can be more relevant.
+                            Please answer as honestly as possible. Pre-test results do not decrease your progress.
                         </p>
                         <ul class="mt-3 text-xs text-gray-500 grid gap-1 grid-cols-1">
                             <li class="inline-flex items-center gap-1">
                                 <span class="w-1.5 h-1.5 rounded-full bg-primary/60"></span>
-                                Jumlah Soal:
+                                Total Questions:
                                 <strong>{{ $questions instanceof \Illuminate\Support\Collection ? $questions->count() : count($questions) }}</strong>
                             </li>
                         </ul>
@@ -161,7 +160,7 @@
                 @forelse ($questions as $index => $q)
                     <fieldset class="rounded-lg border border-gray-200 bg-white p-4 md:p-5 shadow-sm relative"
                         :class="errors['{{ $q['id'] }}'] ? 'border-red-300 ring-1 ring-red-200' : ''">
-                        <legend class="sr-only">Soal {{ $index + 1 }}</legend>
+                        <legend class="sr-only">Question {{ $index + 1 }}</legend>
                         <div
                             class="absolute top-4 left-4 md:top-5 md:left-5 inline-flex items-center justify-center rounded-md bg-primary/10 text-primary text-[11px] font-semibold px-2 py-0.5 h-5 min-w-[28px]">
                             {{ $index + 1 }}
@@ -172,13 +171,13 @@
                         @if ($q['type'] === 'essay')
                             <div class="space-y-2">
                                 <textarea name="{{ $q['id'] }}" x-ref="txt_{{ $q['id'] }}" rows="4"
-                                    placeholder="Tulis jawaban Anda di sini..."
+                                    placeholder="Write your answer here..."
                                     class="w-full rounded-md border border-gray-300 focus:border-primary focus:ring-primary/30 text-sm text-gray-800 placeholder:text-gray-400 resize-y p-3"
                                     :aria-invalid="errors['{{ $q['id'] }}'] ? 'true' : 'false'"
                                     @input="answers['{{ $q['id'] }}']=$event.target.value; if($event.target.value.trim().length){ delete errors['{{ $q['id'] }}'] }"></textarea>
                                 <div class="flex justify-between text-[11px] text-gray-400" x-data="{ limit: 2000 }">
-                                    <span x-text="(answers['{{ $q['id'] }}']||'').length + ' karakter'"></span>
-                                    <span>Batas saran 2000</span>
+                                    <span x-text="(answers['{{ $q['id'] }}']||'').length + ' chars'"></span>
+                                    <span>Limit 2000 chars</span>
                                 </div>
                             </div>
                         @else
@@ -207,7 +206,7 @@
                     </fieldset>
                 @empty
                     <div class="p-6 border border-dashed rounded-lg text-center text-sm text-gray-500 bg-white">
-                        Belum ada soal pretest untuk course ini.
+                        No pre-test questions available for this course.
                     </div>
                 @endforelse
 
@@ -259,7 +258,7 @@
                     )->values());
                 required.forEach(id => {
                     if (!this.answers[id]) {
-                        this.errors[id] = 'Harus dipilih.';
+                        this.errors[id] = 'Required.';
                     }
                 });
                 return Object.keys(this.errors).length === 0;
