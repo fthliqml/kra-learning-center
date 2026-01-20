@@ -26,21 +26,21 @@ class ScheduleView extends Component
     public int $nextMonthCount = 0;
     public int $currentMonthCount = 0;
 
-    // OPTIMIZATION: Remove public $trainings and $days to reduce hydration payload
-    // public $trainings; 
-    // public array $days = [];
+
     // Filters
     public $filterTrainerId = null;
     public $filterType = null;
-    // PERFORMANCE: Store trainer name to avoid query in Blade
+
     public ?string $filterTrainerName = null;
 
     protected $listeners = [
+        // Refresh trainings when create/update/delete happens to ensure UI consistency
         'training-created' => 'refreshTrainings',
-        // Unified: any update triggers full refresh to keep sessions & counts consistent
         'training-updated' => 'refreshTrainings',
         'training-deleted' => 'removeTraining',
         'training-closed' => 'onTrainingClosed',
+        
+        // Modal interactions
         'fullcalendar-open-event' => 'openEventModal',
         'training-info-updated' => 'onTrainingInfoUpdated',
         'schedule-filters-updated' => 'onFiltersUpdated',
@@ -48,7 +48,8 @@ class ScheduleView extends Component
 
     private array $trainingDetails = [];
     
-    // PERFORMANCE: Cache for year/month counts to avoid repeated queries
+
+    // In-memory cache for count queries to prevent redundant DB calls during a single request cycle
     private array $yearCountsCache = [];
     private array $monthCountsCache = [];
 
@@ -106,14 +107,14 @@ class ScheduleView extends Component
 
     public function refreshTrainings(): void
     {
-        // Simply clear caches.
-        // The render() method will automatically call computeDays() which queries fresh data.
+        // Indicate that data is stale by clearing internal caches.
+        // The actual fresh data fetching happens on-demand within the render() -> computeDays() flow.
         $this->yearCountsCache = [];
         $this->monthCountsCache = [];
-        $this->trainingDetails = []; // reset cache
+        $this->trainingDetails = []; // reset detail cache
         $this->calendarVersion++;
         
-        // Broadcast current month context
+        // Broadcast context update to other components (e.g. Navigation)
         if (method_exists($this, 'dispatch')) {
             $this->dispatch('schedule-month-context', year: $this->currentYear, month: $this->currentMonth);
         }
@@ -166,7 +167,6 @@ class ScheduleView extends Component
 
     /**
      * Count trainings per month for a given year. Each training counts once per overlapped month.
-     * PERFORMANCE: Results are cached per year.
      */
     private function buildYearCounts(int $year): array
     {
@@ -186,6 +186,8 @@ class ScheduleView extends Component
         /** @var User|null $user */
         $user = Auth::user();
         if ($user && !$user->hasRole('admin')) {
+            // Apply role-based visibility: generic users only see trainings they are involved in
+            // either as an attendee (assessment) or as a trainer.
             $trainingsQuery->where(function ($q) use ($user) {
                 $q->whereHas('assessments', function ($qq) use ($user) {
                     $qq->where('employee_id', $user->id);
@@ -251,7 +253,6 @@ class ScheduleView extends Component
 
     /**
      * Count trainings that overlap a specific month/year. Each training counted once if overlapping.
-     * PERFORMANCE: Results are cached per year-month.
      */
     private function countForMonth(int $year, int $month): int
     {
@@ -285,31 +286,11 @@ class ScheduleView extends Component
         return $count;
     }
 
-    // private function trainingsForDate(string $iso): array // This method is replaced by getTrainingsForDate
-    // {
-    //     $c = Carbon::parse($iso);
-    //     return $this->trainings->filter(fn($t) => $c->between(Carbon::parse($t->start_date), Carbon::parse($t->end_date)))
-    //         ->values()->map(function ($t) use ($iso) {
-    //             $status = strtolower($t->status ?? '');
-    //             $isClosed = in_array($status, ['done', 'approved', 'rejected']);
-    //             $isPast = Carbon::parse($iso)->endOfDay()->isPast();
 
-    //             return [
-    //                 'id' => $t->id,
-    //                 'name' => $t->name,
-    //                 'group_comp' => $t->group_comp,
-    //                 'type' => $t->type ?? null,
-    //                 'status' => $t->status ?? null,
-    //                 'start_date' => $t->start_date,
-    //                 'end_date' => $t->end_date,
-    //                 'sessions' => $t->sessions,
-    //                 'is_closed' => $isClosed,
-    //                 'is_past' => $isPast,
-    //                 // Fade only when training is closed; do not fade merely because date has passed.
-    //                 'is_faded' => $isClosed,
-    //             ];
-    //         })->toArray();
-    // }
+
+
+
+
 
     public function openAdd(string $date): void
     {
@@ -506,11 +487,11 @@ class ScheduleView extends Component
 
     public function onFiltersUpdated($trainerId = null, $type = null): void
     {
-        // normalize incoming event (Livewire passes named args as separate parameters)
+        // Normalize incoming filter values from Livewire event
         $this->filterTrainerId = $trainerId ?: null;
         $this->filterType = $type ?: null;
         
-        // PERFORMANCE: Resolve trainer name once here, not in Blade
+        // Pre-fetch trainer name for display purposes (avoids N+1 in view)
         if ($this->filterTrainerId) {
             $trainer = Trainer::with('user')->find($this->filterTrainerId);
             $this->filterTrainerName = $trainer?->name ?: $trainer?->user?->name ?? 'ID ' . $this->filterTrainerId;
