@@ -17,13 +17,13 @@ return Application::configure(basePath: dirname(__DIR__))
         // honors X-Forwarded-* headers and recognizes HTTPS correctly.
         // Without this, signed URLs (like Livewire upload endpoints)
         // may be considered HTTP and fail validation with 401.
-        // $middleware->trustProxies(
-        //     at: '*',
-        //     headers: Request::HEADER_X_FORWARDED_FOR
-        //         | Request::HEADER_X_FORWARDED_HOST
-        //         | Request::HEADER_X_FORWARDED_PORT
-        //         | Request::HEADER_X_FORWARDED_PROTO
-        // );
+        $middleware->trustProxies(
+            at: '*',
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO
+        );
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
