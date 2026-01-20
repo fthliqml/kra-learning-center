@@ -10,30 +10,46 @@ use Carbon\Carbon;
 
 /**
  * Trait TrainingFormInteractions
- * 
+ *
  * Handles interactive form logic, event handlers, and modal management.
  */
 trait TrainingFormInteractions
 {
     // ===== LISTENERS =====
     // Note: defined in component, but handled here
-    
+
     // ===== MODAL OPEN/CLOSE & RESET =====
 
     public function openModalWithDate($data)
     {
         // PERFORMANCE: Load dropdown data lazily via Trait
         $this->loadDropdownData();
-        
+
         $this->resetFormState(); // from TrainingFormState
         $this->isEdit = false;
-        
+
         // Only set date if explicitly provided
         if (!empty($data['date'])) {
             $this->date = $data['date'];
         }
+
+        // Optional: prefill participants (e.g. coming from Development Recap selection)
+        if (!empty($data['participants']) && is_array($data['participants'])) {
+            $this->participants = collect($data['participants'])
+                ->map(fn($id) => (int) $id)
+                ->filter(fn($id) => $id > 0)
+                ->unique()
+                ->values()
+                ->toArray();
+
+            if (!empty($this->participants)) {
+                // Ensure selected users appear in the searchable list (for Choices display)
+                $this->userSearch('');
+                $this->activeTab = 'session';
+            }
+        }
         $this->showModal = true;
-        
+
         // Dispatch event for calendar to hide loading overlay
         $this->dispatch('training-modal-opened');
     }
@@ -50,7 +66,7 @@ trait TrainingFormInteractions
         $this->showModal = false;
         $this->resetFormState();
     }
-    
+
     // Hold last known schedule context
     public function setDefaultMonth(int $year, int $month): void
     {
@@ -63,14 +79,14 @@ trait TrainingFormInteractions
     public function openEdit($payload): void
     {
         $id = is_array($payload) ? ($payload['id'] ?? null) : (is_numeric($payload) ? (int) $payload : null);
-        
+
         if (!$id) {
             $this->error('Invalid training reference.');
             return;
         }
 
         // Reset form without triggering search queries
-        $this->resetFormFieldsOnly(); 
+        $this->resetFormFieldsOnly();
         $this->isEdit = true;
         $this->trainingId = (int) $id;
 
@@ -78,7 +94,7 @@ trait TrainingFormInteractions
         $training = Training::with([
             'sessions' => fn($q) => $q->orderBy('day_number'),
             'course',
-            'module', 
+            'module',
             'competency',
             'assessments' // For loading participants
         ])->find($this->trainingId);
@@ -116,10 +132,10 @@ trait TrainingFormInteractions
         }
 
         // Training Name
-        $name = in_array($training->type, ['LMS', 'BLENDED']) 
+        $name = in_array($training->type, ['LMS', 'BLENDED'])
             ? ($training->course?->title ?? $training->name)
             : $training->name;
-        
+
         $this->setTrainingNameProgrammatically($name, autoFilled: false);
         $this->trainingNameManuallyEdited = true; // Existing record -> treat as manual
 
@@ -135,17 +151,17 @@ trait TrainingFormInteractions
         if ($firstSession) {
             $this->start_time = $firstSession->start_time ? Carbon::parse($firstSession->start_time)->format('H:i') : '';
             $this->end_time = $firstSession->end_time ? Carbon::parse($firstSession->end_time)->format('H:i') : '';
-            
+
             $this->room = [
                 'name' => $firstSession->room ?? '',
                 'location' => $firstSession->location ?? ''
             ];
-            
+
             // Trainer from first session
             if ($firstSession->trainer_id) {
                 $this->trainerId = $firstSession->trainer_id;
                 // Ensure trainer is searchable
-                $this->trainerSearch(); 
+                $this->trainerSearch();
             }
         }
         // Load participants from assessments relation
@@ -155,54 +171,55 @@ trait TrainingFormInteractions
             ->unique()
             ->values()
             ->toArray();
-        
+
         // Pre-populate users searchable with existing participants for display
         if (!empty($this->participants)) {
             $this->userSearch('');
         }
-        
+
         $this->showModal = true;
-        
+
         // Dispatch event for parent components to hide loading overlay
         $this->dispatch('training-modal-opened');
     }
 
     // ===== DELETE LOGIC =====
-    
+
     public function requestDeleteConfirm(): void
     {
         if (!$this->trainingId) return;
-        $this->dispatch('confirm', 
-            'Delete Confirmation', 
-            'Are you sure you want to delete this training along with all sessions and attendance?', 
-            'confirm-delete-training-form', 
+        $this->dispatch(
+            'confirm',
+            'Delete Confirmation',
+            'Are you sure you want to delete this training along with all sessions and attendance?',
+            'confirm-delete-training-form',
             $this->trainingId
         );
     }
-    
+
     public function onConfirmDelete($id = null): void
     {
         if ($id && $this->trainingId && (int) $id !== (int) $this->trainingId) return;
-        
+
         if (!$this->trainingId) return;
-        
+
         try {
             $service = app(TrainingPersistService::class);
             $deleted = $service->delete($this->trainingId);
-            
+
             if (!$deleted) {
                 $this->dispatch('confirm-done'); // Close confirmation first
                 $this->error('Training not found.', position: 'toast-top toast-center');
             } else {
                 // 1. Close confirmation dialog first
                 $this->dispatch('confirm-done');
-                
+
                 // 2. Show success message
                 $this->success('Training deleted.', position: 'toast-top toast-center');
-                
+
                 // 3. Close form modal
                 $this->closeModal();
-                
+
                 // 4. Finally refresh calendar
                 $this->dispatch('training-deleted', ['id' => $this->trainingId]);
             }
@@ -297,7 +314,7 @@ trait TrainingFormInteractions
         // Assuming parseCompetencyIdFromValue is moved to Dropdowns trait or redefined here.
         // It was in Modal proper. Let's assume it should be in Dropdowns trait.
         // For now, I'll rely on it being available (I'll check later).
-        
+
         $this->competency_id = $id;
 
         // Group sync logic using cache from Dropdowns trait
@@ -316,8 +333,8 @@ trait TrainingFormInteractions
             if ($shouldAutofill) {
                 $name = $id ? $this->getCompetencyTrainingName($id) : null;
                 if ($name === null) {
-                     // Need parseCompetencyNameFromValue
-                     $name = $this->parseCompetencyNameFromValue($value);
+                    // Need parseCompetencyNameFromValue
+                    $name = $this->parseCompetencyNameFromValue($value);
                 }
                 if ($name !== null) {
                     $this->setTrainingNameProgrammatically($name, autoFilled: true);
@@ -335,7 +352,7 @@ trait TrainingFormInteractions
         if (!in_array($value, ['LMS', 'BLENDED']) || empty($this->course_id)) {
             $this->group_comp = 'BMC';
         }
-        
+
         $this->training_name = '';
         $this->trainingNameManuallyEdited = false;
         $this->trainingNameWasAutoFilled = false;
@@ -381,7 +398,7 @@ trait TrainingFormInteractions
         $this->end_time = '';
         $this->loadCourseOptions();
     }
-    
+
     // Type change confirmation handlers
     public function confirmTypeChange(): void
     {
@@ -400,6 +417,4 @@ trait TrainingFormInteractions
             $this->training_type = $this->originalTrainingType;
         }
     }
-    
-
 }

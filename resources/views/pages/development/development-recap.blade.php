@@ -5,8 +5,23 @@
             Development Recap
         </h1>
 
-        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
-            <div class="flex items-center justify-center gap-2">
+        <div
+            class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row md:flex-wrap">
+            <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2">
+                @role('admin')
+                    <x-button class="btn-primary h-10 text-white shadow-sm" wire:click="createTrainingSchedule"
+                        wire:loading.attr="disabled" spinner="createTrainingSchedule">
+                        <x-icon name="o-calendar-days" class="size-4 mr-2" />
+                        Create Schedule
+                        @if (!empty($this->selectedEmployeeIds))
+                            <span
+                                class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-white/20">
+                                {{ count($this->selectedEmployeeIds) }} selected
+                            </span>
+                        @endif
+                    </x-button>
+                @endrole
+
                 {{-- Export to Excel (align style with Training Request) --}}
                 <x-button class="btn-success h-10 text-white shadow-sm" wire:click="export" wire:loading.attr="disabled"
                     spinner="export">
@@ -27,7 +42,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="7" :rows="10" targets="selectedYear,search" />
+    <x-skeletons.table :columns="9" :rows="10" targets="selectedYear,search" />
 
     {{-- No Data State --}}
     @if ($rows->isEmpty())
@@ -50,6 +65,15 @@
             class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$rows" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
+                @role('admin')
+                    @scope('cell_select', $row)
+                        <div class="flex justify-center">
+                            <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                                wire:model.live="selectedEmployeeIds" value="{{ $row->user_id }}" />
+                        </div>
+                    @endscope
+                @endrole
+
                 @scope('cell_no', $row)
                     <div class="text-center">{{ $row->no }}</div>
                 @endscope
