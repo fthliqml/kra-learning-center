@@ -249,8 +249,6 @@ class ScheduleView extends Component
         return $query->get();
     }
     
-
-
     /**
      * Count trainings that overlap a specific month/year. Each training counted once if overlapping.
      */
@@ -285,12 +283,6 @@ class ScheduleView extends Component
         
         return $count;
     }
-
-
-
-
-
-
 
     public function openAdd(string $date): void
     {
