@@ -12,6 +12,10 @@ class CourseInfo extends Component
 {
     use WithFileUploads, Toast;
 
+    protected $listeners = [
+        'save-all-drafts' => 'saveIfDirty',
+    ];
+
     public array $course = [
         'title' => '',
         'about' => '', // maps to description
@@ -73,8 +77,13 @@ class CourseInfo extends Component
             'competency_id' => $this->course['competency_id'] ?: null,
             'group_comp' => $this->course['group_comp'],
             'thumbnail_url' => $this->course['thumbnail_url'] ?: '',
-            'status' => 'draft',
         ];
+
+        // Only set status to 'draft' when creating a NEW course.
+        // For existing courses, preserve the current status (don't reset 'inactive' to 'draft')
+        if (!$this->courseId) {
+            $payload['status'] = 'draft';
+        }
 
         $course = Course::updateOrCreate(
             ['id' => $this->courseId],
@@ -96,6 +105,17 @@ class CourseInfo extends Component
         if ($this->courseId) {
             // Dispatch with positional argument so listener method signature (int $newCourseId) receives it correctly
             $this->dispatch('courseCreated', $this->courseId);
+        }
+    }
+
+    /**
+     * Save only if there are unsaved changes.
+     * Called by 'save-all-drafts' event before finishing course.
+     */
+    public function saveIfDirty(): void
+    {
+        if ($this->isDirty) {
+            $this->saveDraft();
         }
     }
 

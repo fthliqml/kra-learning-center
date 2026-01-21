@@ -21,6 +21,7 @@ class LearningModules extends Component
   // Listen for courseCreated so this tab can be opened before initial save
   protected $listeners = [
     'courseCreated' => 'onCourseCreated',
+    'save-all-drafts' => 'saveIfDirty',
   ];
 
   public array $topics = [];
@@ -739,6 +740,17 @@ class LearningModules extends Component
     $this->hasEverSaved = true;
     $this->persisted = true;
     $this->snapshot(); // Take snapshot after save
+  }
+
+  /**
+   * Save only if there are unsaved changes.
+   * Called by 'save-all-drafts' event before finishing course.
+   */
+  public function saveIfDirty(): void
+  {
+    if ($this->isDirty && $this->courseId) {
+      $this->saveDraft();
+    }
   }
 
   public function goNext(): void
