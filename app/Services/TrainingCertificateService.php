@@ -31,9 +31,20 @@ class TrainingCertificateService
             // Template paths (PNG)
             $template1Path = storage_path('app/private/template/Template-Certificate-1.png');
             $template2Path = storage_path('app/private/template/Template-Certificate-2.png');
+            $template3Path = storage_path('app/private/template/Template-Certificate-LMS-2.png');
 
-            if (!file_exists($template1Path) || !file_exists($template2Path)) {
-                Log::error("Certificate template not found");
+            $trainingType = strtoupper((string) ($training->type ?? ''));
+            // Use LMS-specific template for PAGE 2 if training type is LMS
+            $page2TemplatePath = $trainingType === 'LMS' ? $template3Path : $template2Path;
+
+            $page2Layout = $this->getPage2Layout($trainingType);
+
+            if (!file_exists($template1Path) || !file_exists($page2TemplatePath)) {
+                Log::error('Certificate template not found', [
+                    'template1' => $template1Path,
+                    'template2' => $page2TemplatePath,
+                    'training_type' => $trainingType,
+                ]);
                 return null;
             }
 
@@ -143,86 +154,140 @@ class TrainingCertificateService
             // === PAGE 2: Daftar Nilai ===
             $pdf->AddPage();
             // Add background image (full page)
-            $pdf->Image($template2Path, 0, 0, 297, 210);
+            $pdf->Image($page2TemplatePath, 0, 0, 297, 210);
 
             // Add training material name (Materi Training column)
             $pdf->SetFont('Times', '', 11);
             $pdf->SetTextColor(0, 0, 0);
-            $pdf->SetXY(40, 79);
-            $pdf->Cell(94, 20, $training->name ?? '', 0, 0, 'C');
+            $pdf->SetXY($page2Layout['materi']['x'], $page2Layout['materi']['y']);
+            $pdf->Cell($page2Layout['materi']['w'], $page2Layout['materi']['h'], $training->name ?? '', 0, 0, 'C');
 
             // Add theory score in words (Teori - Huruf column)
             if ($assessment->posttest_score !== null) {
                 $theoryWords = $this->getScoreInWords($assessment->posttest_score);
                 $pdf->SetFont('Times', 'I', 11);
-                $pdf->SetXY(136.5, 79);
-                $pdf->Cell(43, 20, $theoryWords, 0, 0, 'C');
+                $pdf->SetXY($page2Layout['teori_huruf']['x'], $page2Layout['teori_huruf']['y']);
+                $pdf->Cell($page2Layout['teori_huruf']['w'], $page2Layout['teori_huruf']['h'], $theoryWords, 0, 0, 'C');
             }
 
             // Add theory score number (Teori - Angka column)
             if ($assessment->posttest_score !== null) {
                 $pdf->SetFont('Times', '', 11);
-                $pdf->SetXY(180.2, 79);
-                $pdf->Cell(20, 20, number_format($assessment->posttest_score, 0), 0, 0, 'C');
+                $pdf->SetXY($page2Layout['teori_angka']['x'], $page2Layout['teori_angka']['y']);
+                $pdf->Cell(
+                    $page2Layout['teori_angka']['w'],
+                    $page2Layout['teori_angka']['h'],
+                    number_format($assessment->posttest_score, 0),
+                    0,
+                    0,
+                    'C'
+                );
             }
 
-            // Add practical score grade letter (Praktik - Angka column)
-            if ($assessment->practical_score !== null) {
-                $practicalGrade = $this->getGrade($assessment->practical_score);
-                $pdf->SetXY(200, 79);
-                $pdf->Cell(20, 20, $practicalGrade, 0, 0, 'C');
-            }
+            // LMS template does not have practical columns, averages, or instructor block.
+            if (!empty($page2Layout['has_practical'])) {
+                // Add practical score grade letter (Praktik - Angka column)
+                if ($assessment->practical_score !== null) {
+                    $practicalGrade = $this->getGrade($assessment->practical_score);
+                    $pdf->SetXY($page2Layout['praktik_angka']['x'], $page2Layout['praktik_angka']['y']);
+                    $pdf->Cell(
+                        $page2Layout['praktik_angka']['w'],
+                        $page2Layout['praktik_angka']['h'],
+                        $practicalGrade,
+                        0,
+                        0,
+                        'C'
+                    );
+                }
 
-            // Add practical score range (Praktik - Range Angka column)
-            if ($assessment->practical_score !== null) {
-                $rangeText = $this->getScoreRange($assessment->practical_score);
-                $pdf->SetXY(225, 79);
-                $pdf->Cell(30, 20, $rangeText, 0, 0, 'C');
-            }
-
-            // Add average score (Nilai Rata-Rata Peserta)
-            $avgScore = $this->calculateAverageScore($assessment);
-            $pdf->SetXY(180.2, 133);
-            // Tampilkan dengan 2 desimal (tanpa pembulatan ke bilangan bulat)
-            $pdf->Cell(20, 6, number_format($avgScore, 2), 0, 0, 'C');
-
-            // Add class average (Nilai Rata-Rata Kelas)
-            $classAvg = $this->calculateClassAverage($training);
-            $pdf->SetXY(180.2, 142.7);
-            $pdf->Cell(20, 6, number_format($classAvg, 2), 0, 0, 'C');
-
-            // Add instructor name (bottom right)
-            $firstSessionWithTrainer = $training->sessions()
-                ->whereHas('trainer')
-                ->with(['trainer.user'])
-                ->orderBy('date')
-                ->orderBy('start_time')
-                ->first();
-
-            $instructorName = 'Instructor';
-            $instructorSignaturePath = null;
-            if ($firstSessionWithTrainer && $firstSessionWithTrainer->trainer) {
-                $trainer = $firstSessionWithTrainer->trainer;
-                $instructorName = $trainer->name ?? ($trainer->user->name ?? 'Instructor');
-
-                if (!empty($trainer->signature_path)) {
-                    $sigPath = $trainer->signature_path;
-                    $fullPath = Storage::disk('public')->path($sigPath);
-                    if (file_exists($fullPath)) {
-                        $instructorSignaturePath = $fullPath;
-                    }
+                // Add practical score range (Praktik - Range Angka column)
+                if ($assessment->practical_score !== null) {
+                    $rangeText = $this->getScoreRange($assessment->practical_score);
+                    $pdf->SetXY($page2Layout['praktik_range']['x'], $page2Layout['praktik_range']['y']);
+                    $pdf->Cell(
+                        $page2Layout['praktik_range']['w'],
+                        $page2Layout['praktik_range']['h'],
+                        $rangeText,
+                        0,
+                        0,
+                        'C'
+                    );
                 }
             }
 
-            // Instructor signature (if available) above the name on page 2
-            if ($instructorSignaturePath) {
-                $pdf->Image($instructorSignaturePath, 215.3, 158, 34);
+            if (!empty($page2Layout['has_averages'])) {
+                // Add average score (Nilai Rata-Rata Peserta)
+                $avgScore = $this->calculateAverageScore($assessment);
+                $pdf->SetXY($page2Layout['avg_peserta']['x'], $page2Layout['avg_peserta']['y']);
+                // Tampilkan dengan 2 desimal (tanpa pembulatan ke bilangan bulat)
+                $pdf->Cell(
+                    $page2Layout['avg_peserta']['w'],
+                    $page2Layout['avg_peserta']['h'],
+                    number_format($avgScore, 2),
+                    0,
+                    0,
+                    'C'
+                );
+
+                // Add class average (Nilai Rata-Rata Kelas)
+                $classAvg = $this->calculateClassAverage($training);
+                $pdf->SetXY($page2Layout['avg_kelas']['x'], $page2Layout['avg_kelas']['y']);
+                $pdf->Cell(
+                    $page2Layout['avg_kelas']['w'],
+                    $page2Layout['avg_kelas']['h'],
+                    number_format($classAvg, 2),
+                    0,
+                    0,
+                    'C'
+                );
             }
 
-            // Instructor printed name
-            $pdf->SetFont('Times', 'BU', 10);
-            $pdf->SetXY(201.6, 180);
-            $pdf->Cell(60, 5, $instructorName, 0, 0, 'C');
+            if (!empty($page2Layout['has_instructor'])) {
+                // Add instructor name (bottom right)
+                $firstSessionWithTrainer = $training->sessions()
+                    ->whereHas('trainer')
+                    ->with(['trainer.user'])
+                    ->orderBy('date')
+                    ->orderBy('start_time')
+                    ->first();
+
+                $instructorName = 'Instructor';
+                $instructorSignaturePath = null;
+                if ($firstSessionWithTrainer && $firstSessionWithTrainer->trainer) {
+                    $trainer = $firstSessionWithTrainer->trainer;
+                    $instructorName = $trainer->name ?? ($trainer->user->name ?? 'Instructor');
+
+                    if (!empty($trainer->signature_path)) {
+                        $sigPath = $trainer->signature_path;
+                        $fullPath = Storage::disk('public')->path($sigPath);
+                        if (file_exists($fullPath)) {
+                            $instructorSignaturePath = $fullPath;
+                        }
+                    }
+                }
+
+                // Instructor signature (if available) above the name on page 2
+                if ($instructorSignaturePath) {
+                    $pdf->Image(
+                        $instructorSignaturePath,
+                        $page2Layout['instructor_sig']['x'],
+                        $page2Layout['instructor_sig']['y'],
+                        $page2Layout['instructor_sig']['w']
+                    );
+                }
+
+                // Instructor printed name
+                $pdf->SetFont('Times', 'BU', 10);
+                $pdf->SetXY($page2Layout['instructor_name']['x'], $page2Layout['instructor_name']['y']);
+                $pdf->Cell(
+                    $page2Layout['instructor_name']['w'],
+                    $page2Layout['instructor_name']['h'],
+                    $instructorName,
+                    0,
+                    0,
+                    'C'
+                );
+            }
 
             // Generate unique filename
             $fileName = 'certificate_' . $training->id . '_' . $employee->id . '_' . time() . '.pdf';
@@ -505,5 +570,46 @@ class TrainingCertificateService
             return Storage::delete($certificatePath);
         }
         return false;
+    }
+
+    /**
+     * Page 2 (Daftar Nilai) coordinates differ by certificate template.
+     *
+     * NOTE: The LMS template doesn't have practical columns, averages, or instructor block.
+     * If you need to fine-tune LMS placement, adjust the LMS coordinates here.
+     */
+    protected function getPage2Layout(string $trainingType): array
+    {
+        $type = strtoupper(trim($trainingType));
+
+        $default = [
+            'materi' => ['x' => 40, 'y' => 79, 'w' => 94, 'h' => 20],
+            'teori_huruf' => ['x' => 136.5, 'y' => 79, 'w' => 43, 'h' => 20],
+            'teori_angka' => ['x' => 180.2, 'y' => 79, 'w' => 20, 'h' => 20],
+            'praktik_angka' => ['x' => 200, 'y' => 79, 'w' => 20, 'h' => 20],
+            'praktik_range' => ['x' => 225, 'y' => 79, 'w' => 30, 'h' => 20],
+            'avg_peserta' => ['x' => 180.2, 'y' => 133, 'w' => 20, 'h' => 6],
+            'avg_kelas' => ['x' => 180.2, 'y' => 142.7, 'w' => 20, 'h' => 6],
+            'instructor_sig' => ['x' => 215.3, 'y' => 158, 'w' => 34],
+            'instructor_name' => ['x' => 201.6, 'y' => 180, 'w' => 60, 'h' => 5],
+            'has_practical' => true,
+            'has_averages' => true,
+            'has_instructor' => true,
+        ];
+
+        if ($type !== 'LMS') {
+            return $default;
+        }
+
+        // LMS template: only show training material and theory columns.
+        return [
+            // TODO: Adjust these coordinates to match Template-Certificate-LMS-2.png
+            'materi' => ['x' => 40, 'y' => 95.5, 'w' => 94, 'h' => 20],
+            'teori_huruf' => ['x' => 156.7, 'y' => 95.5, 'w' => 43, 'h' => 20],
+            'teori_angka' => ['x' => 230, 'y' => 95.5, 'w' => 20, 'h' => 20],
+            'has_practical' => false,
+            'has_averages' => false,
+            'has_instructor' => false,
+        ];
     }
 }
