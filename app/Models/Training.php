@@ -129,16 +129,17 @@ class Training extends Model
     }
 
     /**
-     * Check if all participants have passed the post-test and mark training as done.
-     * Only applies to LMS, BLENDED, and IN types. OUT is manual.
+     * Sync post-test scores to training assessments.
+     * Does NOT auto-close the training - that must be done manually by instructor/admin.
+     * Only applies to LMS, BLENDED, and IN types.
      * 
-     * @return bool True if training was marked as done
+     * @return int Number of assessments updated
      */
-    public function checkAndMarkAsDone(): bool
+    public function syncScoresFromPosttest(): int
     {
-        // Skip if already done or type is OUT (manual)
-        if ($this->status === 'done' || $this->type === 'OUT') {
-            return false;
+        // Skip if type is OUT (no post-test)
+        if ($this->type === 'OUT') {
+            return 0;
         }
 
         // Get post-test based on training type
@@ -150,33 +151,41 @@ class Training extends Model
         }
 
         if (!$posttest) {
-            return false;
+            return 0;
         }
 
-        // Get all assigned participant IDs
-        $participantIds = $this->assessments()->pluck('employee_id')->toArray();
-        
-        if (empty($participantIds)) {
-            return false;
+        $updated = 0;
+        $assessments = $this->assessments()->with('employee')->get();
+
+        foreach ($assessments as $assessment) {
+            $employeeId = $assessment->employee_id;
+            
+            // Get the best/latest attempt for this participant
+            $attempt = TestAttempt::where('test_id', $posttest->id)
+                ->where('user_id', $employeeId)
+                ->orderByDesc('total_score')
+                ->orderByDesc('submitted_at')
+                ->first();
+
+            if ($attempt) {
+                // Sync score to assessment (posttest_score field)
+                $assessment->posttest_score = $attempt->total_score;
+                $assessment->save();
+                $updated++;
+            }
         }
 
-        // Check if ALL participants have at least one passed attempt
-        $passedParticipantIds = TestAttempt::where('test_id', $posttest->id)
-            ->whereIn('user_id', $participantIds)
-            ->where('is_passed', true)
-            ->distinct('user_id')
-            ->pluck('user_id')
-            ->toArray();
+        return $updated;
+    }
 
-        // Compare: all participants must have passed
-        $allPassed = count($passedParticipantIds) === count($participantIds)
-            && empty(array_diff($participantIds, $passedParticipantIds));
-
-        if ($allPassed) {
-            $this->update(['status' => 'done']);
-            return true;
-        }
-
-        return false;
+    /**
+     * Legacy method - kept for backward compatibility.
+     * @deprecated Use syncScoresFromPosttest() instead. Training is now manually closed.
+     */
+    public function checkAndMarkAsDone(): bool
+    {
+        // Just sync scores, don't auto-close
+        $this->syncScoresFromPosttest();
+        return false; // Never auto-close
     }
 }

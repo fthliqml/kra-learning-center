@@ -854,16 +854,16 @@ class TrainingCloseTab extends Component
         $this->training->status = 'done';
         $this->training->save();
 
-        // Auto-create Level 1 survey with default template (except LMS - no surveys)
+        // Auto-create Level 1 and Level 3 surveys with default templates (except LMS - no surveys)
         if (!$isLms) {
             $surveyService = new TrainingSurveyService();
-            $surveyService->createSurveyForTraining($this->training);
+            $surveyService->createSurveysOnClose($this->training);
         }
       });
 
       $successMessage = $isLms
           ? 'Training has been closed successfully.'
-          : 'Training has been closed successfully. Survey Level 1 has been created for participants.';
+          : 'Training has been closed successfully. Surveys have been created for participants and their supervisors.';
       $this->success($successMessage, position: 'toast-top toast-center');
       $this->dispatch('training-closed', ['id' => $this->training->id]);
       $this->dispatch('close-modal');
