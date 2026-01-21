@@ -153,8 +153,8 @@ trait TrainingFormInteractions
             $this->end_time = $firstSession->end_time ? Carbon::parse($firstSession->end_time)->format('H:i') : '';
 
             $this->room = [
-                'name' => $firstSession->room ?? '',
-                'location' => $firstSession->location ?? ''
+                'name' => $firstSession->room_name ?? '',
+                'location' => $firstSession->room_location ?? ''
             ];
 
             // Trainer from first session
