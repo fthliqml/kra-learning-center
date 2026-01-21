@@ -42,11 +42,12 @@
 
                         {{-- Training Name / Course Select for LMS and BLENDED / Module Select for In-House --}}
                         @if ($training_type === 'LMS' || $training_type === 'BLENDED')
-                            <x-choices label="Course" wire:model.live="selected_module_id" :options="$courseOptions"
-                                option-value="id" option-label="title" placeholder="Select course"
-                                icon="o-rectangle-group" single searchable class="focus-within:border-0"
-                                search-function="searchCourse" debounce="300ms"
-                                wire:key="course-select-{{ $isEdit ? $trainingId : 'new' }}" />
+                            <div wire:key="course-select-wrap-{{ $isEdit ? $trainingId : 'new' }}-{{ $selected_module_id }}">
+                                <x-choices label="Course" wire:model.live="selected_module_id" :options="$courseOptions"
+                                    option-value="id" option-label="title" placeholder="Select course"
+                                    icon="o-rectangle-group" single searchable class="focus-within:border-0"
+                                    search-function="searchCourse" debounce="300ms" min-chars="0" />
+                            </div>
                         @elseif ($training_type === 'IN')
                             <x-choices label="Training Module" wire:model.live="selected_module_id" :options="$trainingModuleOptions"
                                 option-value="id" option-label="title" placeholder="Select training module"
