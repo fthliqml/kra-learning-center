@@ -42,11 +42,7 @@ class TrainingPersistService
                 'competency_id' => $data['training_type'] === 'OUT' ? $data['competency_id'] : null,
             ]);
 
-            // Create surveys (skip for LMS type)
-            if ($data['training_type'] !== 'LMS') {
-                $surveys = $sessionService->createSurveysForTraining($training);
-                $sessionService->createSurveyResponsesForParticipants($surveys, $participants);
-            }
+            // Note: Surveys are NOT created here. They will be created when training is closed.\n            // This ensures surveys only exist for completed trainings.
 
             // Create sessions
             $sessions = $sessionService->createSessionsForTraining(

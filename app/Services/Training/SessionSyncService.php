@@ -178,25 +178,18 @@ class SessionSyncService
         // Update SurveyResponse for all surveys of this training
         $surveys = TrainingSurvey::where('training_id', $training->id)->get();
 
-        // Level 1 & 2: responses belong to participants
-        foreach ($toAdd as $empId) {
-            foreach ($surveys as $survey) {
-                if ((int) ($survey->level ?? 0) === 3) {
-                    continue;
-                }
+        // Level 1: responses belong to participants (training attendees)
+        $level1Survey = $surveys->firstWhere('level', 1);
+        if ($level1Survey) {
+            foreach ($toAdd as $empId) {
                 SurveyResponse::firstOrCreate([
-                    'survey_id' => $survey->id,
+                    'survey_id' => $level1Survey->id,
                     'employee_id' => $empId,
                 ]);
             }
-        }
 
-        if (!empty($toRemove)) {
-            foreach ($surveys as $survey) {
-                if ((int) ($survey->level ?? 0) === 3) {
-                    continue;
-                }
-                SurveyResponse::where('survey_id', $survey->id)
+            if (!empty($toRemove)) {
+                SurveyResponse::where('survey_id', $level1Survey->id)
                     ->whereIn('employee_id', $toRemove)
                     ->delete();
             }
@@ -257,7 +250,8 @@ class SessionSyncService
     }
 
     /**
-     * Create surveys for each level (1,2,3) for a training.
+     * Create surveys for Level 1 (participant) and Level 3 (supervisor) for a training.
+     * Note: Level 2 does not exist in this system.
      *
      * @param Training $training
      * @return array Array of TrainingSurvey models indexed by level
@@ -265,18 +259,28 @@ class SessionSyncService
     public function createSurveysForTraining(Training $training): array
     {
         $surveys = [];
-        for ($level = 1; $level <= 3; $level++) {
-            $surveys[$level] = TrainingSurvey::create([
-                'training_id' => $training->id,
-                'level' => $level,
-                'status' => TrainingSurvey::STATUS_DRAFT,
-            ]);
-        }
+        
+        // Level 1: Filled by training participants
+        $surveys[1] = TrainingSurvey::create([
+            'training_id' => $training->id,
+            'level' => 1,
+            'status' => TrainingSurvey::STATUS_DRAFT,
+        ]);
+        
+        // Level 3: Filled by supervisors/approvers of participants
+        $surveys[3] = TrainingSurvey::create([
+            'training_id' => $training->id,
+            'level' => 3,
+            'status' => TrainingSurvey::STATUS_DRAFT,
+        ]);
+        
         return $surveys;
     }
 
     /**
-     * Create survey responses for each participant for each survey.
+     * Create survey responses for participants and their supervisors.
+     * - Level 1: Responses created for each participant
+     * - Level 3: Responses created for supervisors of participants
      */
     public function createSurveyResponsesForParticipants(array $surveys, array $participants): void
     {
@@ -284,22 +288,20 @@ class SessionSyncService
             return;
         }
 
-        // Level 1 & 2: responses belong to training participants
-        foreach ($participants as $participantId) {
-            foreach ($surveys as $survey) {
-                if ((int) ($survey->level ?? 0) === 3) {
-                    continue;
-                }
+        // Level 1: Responses belong to training participants
+        $level1Survey = $surveys[1] ?? null;
+        if ($level1Survey) {
+            foreach ($participants as $participantId) {
                 SurveyResponse::firstOrCreate([
-                    'survey_id' => $survey->id,
+                    'survey_id' => $level1Survey->id,
                     'employee_id' => $participantId,
                 ]);
             }
         }
 
-        // Level 3: responses belong to the participant's approver (SPV/Section Head/Dept Head)
+        // Level 3: Responses belong to the participant's supervisor (SPV/Section Head/Dept Head)
         $level3Survey = $surveys[3] ?? null;
-        if ($level3Survey && (int) ($level3Survey->level ?? 0) === 3) {
+        if ($level3Survey) {
             $approverIds = $this->resolveLevel3ApproverIds(array_map('intval', $participants));
             foreach ($approverIds as $approverId) {
                 SurveyResponse::firstOrCreate([
