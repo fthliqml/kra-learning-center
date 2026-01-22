@@ -35,7 +35,7 @@ class PretestQuestions extends Component
 
   // Test configuration
   public int $passingScore = 75;
-  public ?int $maxAttempts = null;
+  public ?int $maxAttempts = 1; // Default: 1 attempt for pretest
   public bool $randomizeQuestion = false;
 
   // Listen for parent event when a new course draft gets created so we can attach pretest.

@@ -33,7 +33,7 @@ class PostTestQuestions extends Component
 
   // Test configuration
   public int $passingScore = 75;
-  public ?int $maxAttempts = null;
+  public ?int $maxAttempts = 5; // Default: 5 attempts for post-test
   public bool $randomizeQuestion = false;
 
   // Listen for new course draft creation so we can attach and persist
@@ -295,8 +295,9 @@ class PostTestQuestions extends Component
       }
     }
 
-    // Full page redirect (not SPA) to ensure fresh data
-    $this->redirect(route('courses-management.index'));
+    // Dispatch browser event for JS to handle redirect after a delay
+    // This allows save-all-drafts listeners to complete before navigating away
+    $this->dispatch('course-finished', url: route('courses-management.index'));
   }
 
   public function saveDraft(): void
