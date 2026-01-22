@@ -33,12 +33,13 @@ class PostTestQuestions extends Component
 
   // Test configuration
   public int $passingScore = 75;
-  public ?int $maxAttempts = null;
+  public ?int $maxAttempts = 5; // Default: 5 attempts for post-test
   public bool $randomizeQuestion = false;
 
   // Listen for new course draft creation so we can attach and persist
   protected $listeners = [
     'courseCreated' => 'onCourseCreated',
+    'save-all-drafts' => 'saveIfDirty',
   ];
 
   public function onCourseCreated(int $newCourseId): void
@@ -281,17 +282,22 @@ class PostTestQuestions extends Component
 
   public function finish(): void
   {
+    // Auto-save all dirty sections before finishing
+    $this->dispatch('save-all-drafts');
+
     if ($this->courseId) {
       $course = Course::find($this->courseId);
       if ($course && $course->isComplete()) {
         $course->update(['status' => 'inactive']);
-        $this->success('Course completed and ready to be assigned!', timeout: 4000, position: 'toast-top toast-center');
+        session()->flash('success', 'Course completed and ready to be assigned!');
       } elseif ($course && $course->status === 'draft') {
-        $this->warning('Course saved as draft. Complete all sections to make it ready.', timeout: 5000, position: 'toast-top toast-center');
+        session()->flash('warning', 'Course saved as draft. Complete all sections to make it ready.');
       }
     }
 
-    $this->redirectRoute('courses-management.index', navigate: true);
+    // Dispatch browser event for JS to handle redirect after a delay
+    // This allows save-all-drafts listeners to complete before navigating away
+    $this->dispatch('course-finished', url: route('courses-management.index'));
   }
 
   public function saveDraft(): void
@@ -448,6 +454,17 @@ class PostTestQuestions extends Component
     $this->errorQuestionIndexes = [];
     $this->snapshot(); // Take snapshot after successful save
     $this->success('Post test questions saved successfully', timeout: 4000, position: 'toast-top toast-center');
+  }
+
+  /**
+   * Save only if there are unsaved changes.
+   * Called by 'save-all-drafts' event before finishing course.
+   */
+  public function saveIfDirty(): void
+  {
+    if ($this->isDirty && $this->courseId) {
+      $this->saveDraft();
+    }
   }
 
   /**

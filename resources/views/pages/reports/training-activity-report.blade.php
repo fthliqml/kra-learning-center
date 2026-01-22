@@ -8,14 +8,14 @@
             </h1>
 
             <div class="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-                <x-search-input placeholder="Search training..." wire:model.live.debounce.300ms="search"
-                    class="w-full sm:w-72" />
-
                 <x-button class="btn-success h-10 w-full sm:w-auto text-white shadow-sm" wire:click="export"
                     wire:loading.attr="disabled" spinner="export">
                     <x-icon name="o-arrow-down-on-square" class="size-4 mr-2" />
                     Export
                 </x-button>
+
+                <x-search-input placeholder="Search training..." wire:model.live.debounce.300ms="search"
+                    class="max-w-72" />
             </div>
         </div>
 

@@ -192,9 +192,9 @@ class Pretest extends Component
                 $canStillRetake = false;
                 $remaining = 0;
                 if ($maxAttempts === null) {
-                    // Pretest should not be unlimited - treat as exhausted
-                    $canStillRetake = false;
-                    $remaining = 0;
+                    // Unlimited attempts allowed
+                    $canStillRetake = true;
+                    $remaining = -1; // -1 indicates unlimited
                 } elseif ($maxAttempts <= 1) {
                     // Single attempt only
                     $canStillRetake = false;
@@ -275,25 +275,9 @@ class Pretest extends Component
         $sectionsTotal = count($orderedSectionRefs);
         $hasPretest = Test::where('course_id', $this->course->id)->where('type', 'pretest')->exists();
         $preUnits = $hasPretest ? 1 : 0;
-        $completedCount = max(0, min($currentStep - $preUnits, $sectionsTotal));
-        for ($i = 0; $i < $completedCount; $i++) {
-            if (isset($orderedSectionRefs[$i])) {
-                $orderedSectionRefs[$i]->is_completed = true;
-            }
-        }
 
-        $completedModuleIds = [];
-        foreach ($this->course->learningModules as $topic) {
-            $secs = $topic->sections ?? collect();
-            $count = $secs->count();
-            if ($count === 0) continue;
-            $doneInTopic = $secs->filter(fn($s) => !empty($s->is_completed))->count();
-            if ($doneInTopic > 0 && $doneInTopic === $count) {
-                $completedModuleIds[] = $topic->id;
-            }
-        }
-
-        // Check if user has posttest attempt for sidebar navigation
+        // Check if user has posttest attempt for sidebar navigation FIRST
+        // This determines if all prior sections should be marked as completed
         $posttest = Test::where('course_id', $this->course->id)
             ->where('type', 'posttest')
             ->select(['id', 'max_attempts'])
@@ -325,6 +309,31 @@ class Pretest extends Component
                         $canRetakePosttest = $attemptCount < $maxAttempts;
                     }
                 }
+            }
+        }
+
+        // If user has posttest attempt, mark ALL sections as completed
+        // This prevents sidebar from showing uncompleted sections when revisiting pretest
+        if ($hasPosttestAttempt) {
+            $completedCount = $sectionsTotal; // All sections completed
+        } else {
+            $completedCount = max(0, min($currentStep - $preUnits, $sectionsTotal));
+        }
+        
+        for ($i = 0; $i < $completedCount; $i++) {
+            if (isset($orderedSectionRefs[$i])) {
+                $orderedSectionRefs[$i]->is_completed = true;
+            }
+        }
+
+        $completedModuleIds = [];
+        foreach ($this->course->learningModules as $topic) {
+            $secs = $topic->sections ?? collect();
+            $count = $secs->count();
+            if ($count === 0) continue;
+            $doneInTopic = $secs->filter(fn($s) => !empty($s->is_completed))->count();
+            if ($doneInTopic > 0 && $doneInTopic === $count) {
+                $completedModuleIds[] = $topic->id;
             }
         }
 
@@ -612,8 +621,8 @@ class Pretest extends Component
             $canStillRetake = false;
             
             if ($maxAttempts === null) {
-                // Pretest should not be unlimited - treat as exhausted
-                $canStillRetake = false;
+                // Unlimited attempts allowed
+                $canStillRetake = true;
             } else {
                 $maxAttempts = max(1, (int) $maxAttempts);
                 $canStillRetake = $attemptCount < $maxAttempts;

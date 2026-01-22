@@ -88,4 +88,15 @@
             });
         });
     });
+
+    // Listen for course-finished event and redirect after delay
+    // This allows all save-all-drafts listeners to complete before navigating away
+    document.addEventListener('livewire:initialized', () => {
+        Livewire.on('course-finished', (event) => {
+            // Delay redirect to allow Livewire to process all pending save operations
+            setTimeout(() => {
+                window.location.href = event.url;
+            }, 600);
+        });
+    });
 </script>

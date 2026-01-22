@@ -43,20 +43,18 @@ $videoGateKey =
             {{-- Posttest Eligibility --}}
             @isset($eligibleForPosttest)
                 @if (!empty($hasPosttestAttempt))
-                    @if (empty($canRetakePosttest) && empty($hasPassedPosttest))
-                        {{-- Post-Test locked (max attempts reached / other lock): allow going to Result --}}
-                        <div
-                            class="mb-4 p-3 md:p-4 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 flex items-center justify-between">
-                            <div class="text-sm md:text-[13px] font-medium">
-                                Anda telah mengerjakan Post-Test. Retry Post-Test dapat dilakukan melalui halaman Hasil.
-                            </div>
-                            <a wire:navigate href="{{ route('courses-result.index', $course) }}"
-                                class="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-3 py-1.5 text-xs md:text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400/50">
-                                Lihat Hasil
-                                <x-icon name="o-arrow-right" class="size-4" />
-                            </a>
+                    {{-- User has posttest attempt - show Lihat Hasil banner --}}
+                    <div
+                        class="mb-4 p-3 md:p-4 rounded-lg border border-blue-200 bg-blue-50 text-blue-800 flex items-center justify-between">
+                        <div class="text-sm md:text-[13px] font-medium">
+                            Anda telah mengerjakan Post-Test. Retry Post-Test dapat dilakukan melalui halaman Hasil.
                         </div>
-                    @endif
+                        <a wire:navigate href="{{ route('courses-result.index', $course) }}"
+                            class="inline-flex items-center gap-2 rounded-md bg-blue-600 text-white px-3 py-1.5 text-xs md:text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400/50">
+                            Lihat Hasil
+                            <x-icon name="o-arrow-right" class="size-4" />
+                        </a>
+                    </div>
                 @elseif ($eligibleForPosttest)
                     <div
                         class="mb-4 p-3 md:p-4 rounded-lg border border-green-200 bg-green-50 text-green-800 flex items-center justify-between">
@@ -84,8 +82,9 @@ $videoGateKey =
                                 <span>Back</span>
                             </button>
                         @endif
-                        @if (!empty($hasPosttestAttempt) && empty($canRetakePosttest) && empty($hasPassedPosttest) && ($isLastSection ?? false))
-                            {{-- Post-Test locked and user is on last section - show Lihat Hasil --}}
+                        @if (!empty($hasPosttestAttempt) && ($isLastSection ?? false))
+                            {{-- User has posttest attempt - always show Lihat Hasil on last section --}}
+                            {{-- Retake must be done through Result page --}}
                             <a wire:navigate href="{{ route('courses-result.index', $course) }}"
                                 class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-3 py-2 text-xs md:text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400/40">
                                 <x-icon name="o-arrow-right" class="size-4" />
@@ -225,21 +224,30 @@ $videoGateKey =
                             <span>Back</span>
                         </button>
                     @endif
-                    <button wire:click="completeSubtopic" wire:loading.attr="disabled" wire:target="completeSubtopic"
-                        wire:loading.class="opacity-70 pointer-events-none"
-                        x-bind:title="!done ? 'Selesaikan menonton video terlebih dahulu.' : ''"
-                        x-bind:aria-disabled="(!done).toString()" x-bind:disabled="!done"
-                        x-bind:class="!done ? 'opacity-60 cursor-not-allowed' : ''"
-                        class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
-                        <x-icon name="o-arrow-right" class="size-5" />
-                        <span>
-                            @if (!empty($hasSectionQuiz) && empty($canRetakePosttest))
-                                Quiz
-                            @else
-                                {{ $isLastSection ?? false ? 'Posttest' : 'Next' }}
-                            @endif
-                        </span>
-                    </button>
+                    @if (!empty($hasPosttestAttempt) && ($isLastSection ?? false))
+                        {{-- User has posttest attempt - show Lihat Hasil on mobile --}}
+                        <a wire:navigate href="{{ route('courses-result.index', $course) }}"
+                            class="inline-flex items-center gap-2 rounded-md bg-blue-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400/40">
+                            <x-icon name="o-arrow-right" class="size-5" />
+                            <span>Lihat Hasil</span>
+                        </a>
+                    @else
+                        <button wire:click="completeSubtopic" wire:loading.attr="disabled" wire:target="completeSubtopic"
+                            wire:loading.class="opacity-70 pointer-events-none"
+                            x-bind:title="!done ? 'Selesaikan menonton video terlebih dahulu.' : ''"
+                            x-bind:aria-disabled="(!done).toString()" x-bind:disabled="!done"
+                            x-bind:class="!done ? 'opacity-60 cursor-not-allowed' : ''"
+                            class="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2.5 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 disabled:opacity-60 disabled:cursor-not-allowed">
+                            <x-icon name="o-arrow-right" class="size-5" />
+                            <span>
+                                @if (!empty($hasSectionQuiz) && empty($canRetakePosttest))
+                                    Quiz
+                                @else
+                                    {{ $isLastSection ?? false ? 'Posttest' : 'Next' }}
+                                @endif
+                            </span>
+                        </button>
+                    @endif
                 </div>
             @endif
         </main>

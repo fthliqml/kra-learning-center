@@ -16,10 +16,7 @@
                     icon-right="o-funnel" />
             </div>
 
-            <div class="flex items-center justify-center gap-2">
-                <x-search-input placeholder="Search training..." class="max-w-72"
-                    wire:model.live.debounce.600ms="search" />
-            </div>
+            <x-search-input placeholder="Search training..." class="max-w-72" wire:model.live.debounce.600ms="search" />
         </div>
     </div>
 

@@ -26,19 +26,21 @@
                 <div class="w-full">
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full items-end">
                         <div class="min-w-0">
-                            <x-select wire:key="dept-{{ $filterKey }}" label="Department"
+                            <x-choices wire:key="dept-{{ $filterKey }}" label="Department"
                                 wire:model.live="filterDepartment" :options="$departments" option-value="id"
-                                option-label="name" placeholder="All Departments" class="focus-within:border-0" />
+                                option-label="name" placeholder="All Departments" class="{{ $choicesEllipsis }}" single
+                                clearable searchable />
                         </div>
                         <div class="min-w-0">
-                            <x-select wire:key="sect-{{ $filterKey }}-{{ $filterDepartment }}" label="Section"
+                            <x-choices wire:key="sect-{{ $filterKey }}-{{ $filterDepartment }}" label="Section"
                                 wire:model.live="filterSection" :options="$sections" option-value="id" option-label="name"
-                                placeholder="All Sections" class="focus-within:border-0" />
+                                placeholder="All Sections" class="{{ $choicesEllipsis }}" single clearable searchable />
                         </div>
                         <div class="min-w-0">
-                            <x-select wire:key="emp-{{ $filterKey }}-{{ $filterDepartment }}-{{ $filterSection }}"
+                            <x-choices wire:key="emp-{{ $filterKey }}-{{ $filterDepartment }}-{{ $filterSection }}"
                                 label="Employee" wire:model.live="selectedUserId" :options="$employeeOptions" option-value="value"
-                                option-label="label" placeholder="Select employee" class="focus-within:border-0" />
+                                option-label="label" placeholder="Select employee" class="{{ $choicesEllipsis }}" single
+                                clearable searchable />
                         </div>
                     </div>
                 </div>
@@ -99,22 +101,26 @@
                 </noscript>
 
                 <div class="min-w-0 lg:col-span-2">
-                    <x-select label="Type" wire:model.live="recommendationType" :options="$recommendationTypeOptions" option-value="value"
-                        option-label="label" placeholder="Select type" class="focus-within:border-0" />
+                    <x-choices label="Type" wire:model.live="recommendationType" :options="$recommendationTypeOptions"
+                        option-value="value" option-label="label" placeholder="Select type"
+                        class="{{ $choicesEllipsis }}" single searchable />
                 </div>
                 <div class="min-w-0 lg:col-span-1">
-                    <x-select label="Group" wire:model.live="group" :options="$typeOptions" option-value="value"
-                        option-label="label" placeholder="Select group" class="focus-within:border-0" />
+                    <x-choices label="Group" wire:model.live="group" :options="$typeOptions" option-value="value"
+                        option-label="label" placeholder="Select group" class="{{ $choicesEllipsis }}" single clearable
+                        searchable />
                 </div>
                 <div class="min-w-0 lg:col-span-4">
                     @if ($recommendationType === 'training_module')
-                        <x-select wire:key="rec-tm-{{ $recommendationType }}-{{ $group }}"
+                        <x-choices wire:key="rec-tm-{{ $recommendationType }}-{{ $group }}"
                             label="Training Module" wire:model.live="selectedId" :options="$this->getTrainingModulesByType($group)" option-value="value"
-                            option-label="label" placeholder="Select training module" class="focus-within:border-0" />
+                            option-label="label" placeholder="Select training module" class="{{ $choicesEllipsis }}"
+                            single clearable searchable />
                     @else
-                        <x-select wire:key="rec-comp-{{ $recommendationType }}-{{ $group }}" label="Competency"
-                            wire:model.live="selectedId" :options="$this->getCompetenciesByType($group)" option-value="value" option-label="label"
-                            placeholder="Select competency" class="focus-within:border-0" />
+                        <x-choices wire:key="rec-comp-{{ $recommendationType }}-{{ $group }}"
+                            label="Competency" wire:model.live="selectedId" :options="$this->getCompetenciesByType($group)" option-value="value"
+                            option-label="label" placeholder="Select competency" class="{{ $choicesEllipsis }}" single
+                            clearable searchable />
                     @endif
                 </div>
             </div>

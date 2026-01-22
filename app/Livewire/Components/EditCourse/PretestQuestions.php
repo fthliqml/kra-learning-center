@@ -35,12 +35,13 @@ class PretestQuestions extends Component
 
   // Test configuration
   public int $passingScore = 75;
-  public ?int $maxAttempts = null;
+  public ?int $maxAttempts = 1; // Default: 1 attempt for pretest
   public bool $randomizeQuestion = false;
 
   // Listen for parent event when a new course draft gets created so we can attach pretest.
   protected $listeners = [
     'courseCreated' => 'onCourseCreated', // emitted with the new course id
+    'save-all-drafts' => 'saveIfDirty',
   ];
 
   public function onCourseCreated(int $newCourseId): void
@@ -480,6 +481,17 @@ class PretestQuestions extends Component
       timeout: 4000,
       position: 'toast-top toast-center'
     );
+  }
+
+  /**
+   * Save only if there are unsaved changes.
+   * Called by 'save-all-drafts' event before finishing course.
+   */
+  public function saveIfDirty(): void
+  {
+    if ($this->isDirty && $this->courseId) {
+      $this->saveDraft();
+    }
   }
 
   /**

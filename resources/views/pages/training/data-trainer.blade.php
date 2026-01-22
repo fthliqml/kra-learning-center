@@ -2,14 +2,12 @@
     @livewire('components.confirm-dialog')
 
     {{-- Header --}}
-    <div class="w-full flex flex-col lg:flex-row gap-5 mb-5 lg:mb-9 items-center justify-between">
-        <h1 class="text-primary text-4xl font-bold text-center lg:text-start">
+    <div class="w-full flex flex-col lg:flex-row gap-6 lg:gap-5 mb-5 lg:mb-9 items-start lg:items-center">
+        <h1 class="text-primary text-4xl font-bold text-center lg:text-start w-fit shrink-0">
             Data Trainer
         </h1>
 
-        <div
-            class="flex gap-3 flex-col w-full lg:w-auto items-center justify-center lg:justify-end md:gap-2 md:flex-row">
-
+        <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row flex-1">
             <div class="flex items-center justify-center gap-2">
                 {{-- Dropdown Export / Import --}}
                 <x-dropdown no-x-anchor right>
@@ -56,7 +54,7 @@
                 {{-- Filter --}}
                 <x-select wire:model.live="filter" :options="$groupOptions" option-value="value" option-label="label"
                     placeholder="All"
-                    class="!min-w-[120px] !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
+                    class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
             </div>
 
@@ -185,13 +183,14 @@
                         hint="Type at least 2 chars" searchable single clearable
                         wire:change="checkDuplicateTrainer" />
                 @else
-                    <x-input label="Trainer Name{{ $mode === 'preview' ? '' : '*' }}" placeholder="Name of the trainer..."
-                        wire:model.live.debounce.500ms="formData.name" class="focus-within:border-0"
-                        :error="$errors->first('formData.name')" />
+                    <x-input label="Trainer Name{{ $mode === 'preview' ? '' : '*' }}"
+                        placeholder="Name of the trainer..." wire:model.live.debounce.500ms="formData.name"
+                        class="focus-within:border-0" :error="$errors->first('formData.name')" />
                 @endif
             @endif
 
-            <x-input label="Institution{{ $mode === 'edit' || $mode === 'create' ? '*' : '' }}" placeholder="Institution name..." wire:model.defer="formData.institution"
+            <x-input label="Institution{{ $mode === 'edit' || $mode === 'create' ? '*' : '' }}"
+                placeholder="Institution name..." wire:model.defer="formData.institution"
                 class="focus-within:border-0" :error="$errors->first('formData.institution')" :readonly="$mode === 'preview'" />
 
             {{-- Signature Upload / Preview --}}

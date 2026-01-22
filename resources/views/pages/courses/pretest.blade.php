@@ -71,7 +71,7 @@
                     <h2 class="text-xl font-bold text-gray-900">Pre-Test Not Passed</h2>
                     <p class="text-sm text-gray-600 mt-2">
                         @if ($canRetake)
-                            You can try again. Remaining attempts: <strong>{{ $remainingAttempts }}</strong>
+                            You can try again. Remaining attempts: <strong>{{ $remainingAttempts === -1 ? 'Unlimited' : $remainingAttempts }}</strong>
                         @else
                             Your attempts are exhausted. Please proceed to the learning modules.
                         @endif
@@ -107,7 +107,7 @@
                         <button type="button" wire:click="startRetake"
                             class="inline-flex items-center gap-2 rounded-md bg-primary px-5 py-2.5 text-sm font-medium text-white hover:bg-primary/90 focus:outline-none focus:ring-2 focus:ring-primary/40 transition">
                             <x-icon name="o-arrow-path" class="size-4" />
-                            <span>Try Again ({{ $remainingAttempts }} remaining)</span>
+                            <span>Try Again {{ $remainingAttempts === -1 ? '(Unlimited)' : '(' . $remainingAttempts . ' remaining)' }}</span>
                         </button>
                     @endif
                     <a wire:navigate

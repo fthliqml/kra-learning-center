@@ -38,61 +38,6 @@
 
     {{-- Main Content --}}
     <div wire:loading.remove wire:target="selectedYear">
-        {{-- Stats Cards --}}
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {{-- Training Plans --}}
-            <div class="rounded-xl border border-gray-200 bg-white p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 rounded-lg bg-blue-100">
-                        <x-icon name="o-academic-cap" class="size-6 text-blue-600" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-800">{{ $trainingPlanCount }}</p>
-                        <p class="text-xs text-gray-500">Training Plans</p>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Self Learning --}}
-            <div class="rounded-xl border border-gray-200 bg-white p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 rounded-lg bg-green-100">
-                        <x-icon name="o-book-open" class="size-6 text-green-600" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-800">{{ $selfLearningCount }}</p>
-                        <p class="text-xs text-gray-500">Self Learning</p>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Mentoring --}}
-            <div class="rounded-xl border border-gray-200 bg-white p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 rounded-lg bg-purple-100">
-                        <x-icon name="o-user-group" class="size-6 text-purple-600" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-800">{{ $mentoringCount }}</p>
-                        <p class="text-xs text-gray-500">Mentoring</p>
-                    </div>
-                </div>
-            </div>
-
-            {{-- Project Assignment --}}
-            <div class="rounded-xl border border-gray-200 bg-white p-4">
-                <div class="flex items-center gap-3">
-                    <div class="p-2 rounded-lg bg-amber-100">
-                        <x-icon name="o-briefcase" class="size-6 text-amber-600" />
-                    </div>
-                    <div>
-                        <p class="text-2xl font-bold text-gray-800">{{ $projectCount }}</p>
-                        <p class="text-xs text-gray-500">Projects</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         {{-- Main Content --}}
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {{-- Left Column - Personal Info & Chart --}}
@@ -130,83 +75,56 @@
                     </div>
                 </div>
 
-                {{-- Realization Card --}}
-                <div class="rounded-xl border border-gray-200 bg-white p-6">
-                    <h3 class="text-lg font-semibold text-gray-800 mb-4">Realization</h3>
-                    <div class="space-y-4">
-                        {{-- Training --}}
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-3">
-                                <div class="p-2 rounded-lg bg-blue-100">
-                                    <x-icon name="o-academic-cap" class="size-4 text-blue-600" />
-                                </div>
-                                <span class="text-sm text-gray-600">Training</span>
+                {{-- Stats Cards (moved here; Realization removed) --}}
+                <div class="grid grid-cols-2 gap-4">
+                    {{-- Training Plans --}}
+                    <div class="rounded-xl border border-gray-200 bg-white p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-blue-100">
+                                <x-icon name="o-academic-cap" class="size-6 text-blue-600" />
                             </div>
-                            <div class="text-right">
-                                <span class="text-lg font-bold text-gray-800">{{ $trainingRealized }}</span>
-                                <span class="text-sm text-gray-500">/ {{ $trainingPlanCount }}</span>
+                            <div>
+                                <p class="text-2xl font-bold text-gray-800">{{ $trainingPlanCount }}</p>
+                                <p class="text-xs text-gray-500">Training Plans</p>
                             </div>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-blue-500 h-2 rounded-full"
-                                style="width: {{ $trainingPlanCount > 0 ? ($trainingRealized / $trainingPlanCount) * 100 : 0 }}%">
-                            </div>
-                        </div>
+                    </div>
 
-                        {{-- Self Learning --}}
-                        <div class="flex items-center justify-between mt-4">
-                            <div class="flex items-center gap-3">
-                                <div class="p-2 rounded-lg bg-green-100">
-                                    <x-icon name="o-book-open" class="size-4 text-green-600" />
-                                </div>
-                                <span class="text-sm text-gray-600">Self Learning</span>
+                    {{-- Self Learning --}}
+                    <div class="rounded-xl border border-gray-200 bg-white p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-green-100">
+                                <x-icon name="o-book-open" class="size-6 text-green-600" />
                             </div>
-                            <div class="text-right">
-                                <span class="text-lg font-bold text-gray-800">{{ $selfLearningRealized }}</span>
-                                <span class="text-sm text-gray-500">/ {{ $selfLearningCount }}</span>
+                            <div>
+                                <p class="text-2xl font-bold text-gray-800">{{ $selfLearningCount }}</p>
+                                <p class="text-xs text-gray-500">Self Learning</p>
                             </div>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-green-500 h-2 rounded-full"
-                                style="width: {{ $selfLearningCount > 0 ? ($selfLearningRealized / $selfLearningCount) * 100 : 0 }}%">
-                            </div>
-                        </div>
+                    </div>
 
-                        {{-- Mentoring --}}
-                        <div class="flex items-center justify-between mt-4">
-                            <div class="flex items-center gap-3">
-                                <div class="p-2 rounded-lg bg-purple-100">
-                                    <x-icon name="o-user-group" class="size-4 text-purple-600" />
-                                </div>
-                                <span class="text-sm text-gray-600">Mentoring</span>
+                    {{-- Mentoring --}}
+                    <div class="rounded-xl border border-gray-200 bg-white p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-purple-100">
+                                <x-icon name="o-user-group" class="size-6 text-purple-600" />
                             </div>
-                            <div class="text-right">
-                                <span class="text-lg font-bold text-gray-800">{{ $mentoringRealized }}</span>
-                                <span class="text-sm text-gray-500">/ {{ $mentoringCount }}</span>
+                            <div>
+                                <p class="text-2xl font-bold text-gray-800">{{ $mentoringCount }}</p>
+                                <p class="text-xs text-gray-500">Mentoring</p>
                             </div>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-purple-500 h-2 rounded-full"
-                                style="width: {{ $mentoringCount > 0 ? ($mentoringRealized / $mentoringCount) * 100 : 0 }}%">
-                            </div>
-                        </div>
+                    </div>
 
-                        {{-- Project --}}
-                        <div class="flex items-center justify-between mt-4">
-                            <div class="flex items-center gap-3">
-                                <div class="p-2 rounded-lg bg-amber-100">
-                                    <x-icon name="o-briefcase" class="size-4 text-amber-600" />
-                                </div>
-                                <span class="text-sm text-gray-600">Project</span>
+                    {{-- Project Assignment --}}
+                    <div class="rounded-xl border border-gray-200 bg-white p-4">
+                        <div class="flex items-center gap-3">
+                            <div class="p-2 rounded-lg bg-amber-100">
+                                <x-icon name="o-briefcase" class="size-6 text-amber-600" />
                             </div>
-                            <div class="text-right">
-                                <span class="text-lg font-bold text-gray-800">{{ $projectRealized }}</span>
-                                <span class="text-sm text-gray-500">/ {{ $projectCount }}</span>
-                            </div>
-                        </div>
-                        <div class="w-full bg-gray-200 rounded-full h-2">
-                            <div class="bg-amber-500 h-2 rounded-full"
-                                style="width: {{ $projectCount > 0 ? ($projectRealized / $projectCount) * 100 : 0 }}%">
+                            <div>
+                                <p class="text-2xl font-bold text-gray-800">{{ $projectCount }}</p>
+                                <p class="text-xs text-gray-500">Projects</p>
                             </div>
                         </div>
                     </div>
@@ -288,7 +206,8 @@
                                         class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2 text-xs text-gray-700">
                                         <div>
                                             <p class="text-[11px] uppercase tracking-wide text-gray-500">Group</p>
-                                            <p class="font-medium text-gray-800">{{ $plan->trainingModule?->competency?->type ?? ($plan->competency->type ?? '-') }}
+                                            <p class="font-medium text-gray-800">
+                                                {{ $plan->trainingModule?->competency?->type ?? ($plan->competency->type ?? '-') }}
                                             </p>
                                         </div>
                                     </div>
@@ -640,23 +559,21 @@
                     @endif
                     <div class="space-y-4">
                         @foreach ($trainingPlans as $index => $plan)
-                            <div class="flex flex-col md:flex-row md:items-end gap-3" wire:key="training-row-{{ $index }}-{{ $plan['group'] ?? 'empty' }}">
+                            <div class="flex flex-col md:flex-row md:items-end gap-3"
+                                wire:key="training-row-{{ $index }}-{{ $plan['group'] ?? 'empty' }}">
                                 {{-- Group Competency --}}
                                 <div class="w-full md:w-1/4">
                                     <x-choices label="{{ $index === 0 ? 'Group' : '' }}"
-                                        wire:model.live="trainingPlans.{{ $index }}.group"
-                                        :options="$this->getRecommendedGroupOptions()"
-                                        option-value="value" option-label="label"
-                                        placeholder="Group" single />
+                                        wire:model.live="trainingPlans.{{ $index }}.group" :options="$this->getRecommendedGroupOptions()"
+                                        option-value="value" option-label="label" placeholder="Group" single />
                                 </div>
 
                                 {{-- Training Plan - Combined Competency & Module --}}
                                 <div class="w-full md:flex-1">
                                     <x-choices label="{{ $index === 0 ? 'Training Plan' : '' }}"
-                                        wire:model="trainingPlans.{{ $index }}.plan_id"
-                                        :options="$this->getTrainingPlanOptions($plan['group'] ?? '')"
-                                        option-value="value" option-label="label"
-                                        placeholder="Select training plan" single />
+                                        wire:model="trainingPlans.{{ $index }}.plan_id" :options="$this->getTrainingPlanOptions($plan['group'] ?? '')"
+                                        option-value="value" option-label="label" placeholder="Select training plan"
+                                        single />
                                 </div>
 
                                 {{-- Delete button --}}
@@ -730,8 +647,7 @@
                                         <x-icon name="o-trash" class="size-4" />
                                     </button>
                                 @endif
-                                <x-choices label="Mentor/Superior"
-                                    id="mentoring-mentor-{{ $index }}"
+                                <x-choices label="Mentor/Superior" id="mentoring-mentor-{{ $index }}"
                                     wire:model="mentoringPlans.{{ $index }}.mentor_id" :options="$mentors"
                                     option-value="value" option-label="label" placeholder="Select mentor"
                                     class="focus-within:border-0" single />
@@ -742,9 +658,9 @@
 
                                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <x-choices label="Method" wire:model="mentoringPlans.{{ $index }}.method"
-                                        id="mentoring-method-{{ $index }}"
-                                        :options="$methodOptions" option-value="value" option-label="label"
-                                        placeholder="Select method" class="focus-within:border-0" single />
+                                        id="mentoring-method-{{ $index }}" :options="$methodOptions"
+                                        option-value="value" option-label="label" placeholder="Select method"
+                                        class="focus-within:border-0" single />
 
                                     <x-input label="Frequency"
                                         wire:model="mentoringPlans.{{ $index }}.frequency" type="number"
@@ -827,8 +743,7 @@
                                 <x-textarea label="Objective" wire:model="projectPlans.{{ $index }}.objective"
                                     placeholder="Enter objective" class="focus-within:border-0" rows="2" />
 
-                                <x-choices label="Mentor/Superior"
-                                    id="project-mentor-{{ $index }}"
+                                <x-choices label="Mentor/Superior" id="project-mentor-{{ $index }}"
                                     wire:model="projectPlans.{{ $index }}.mentor_id" :options="$mentors"
                                     option-value="value" option-label="label" placeholder="Select mentor"
                                     class="focus-within:border-0" single />
