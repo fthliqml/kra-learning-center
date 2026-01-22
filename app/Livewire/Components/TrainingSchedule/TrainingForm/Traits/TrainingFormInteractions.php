@@ -203,6 +203,8 @@ trait TrainingFormInteractions
 
         if (!$this->trainingId) return;
 
+        $deletedTrainingId = (int) $this->trainingId;
+
         try {
             $service = app(TrainingPersistService::class);
             $deleted = $service->delete($this->trainingId);
@@ -221,7 +223,7 @@ trait TrainingFormInteractions
                 $this->closeModal();
 
                 // 4. Finally refresh calendar
-                $this->dispatch('training-deleted', ['id' => $this->trainingId]);
+                $this->dispatch('training-deleted', ['id' => $deletedTrainingId]);
             }
         } catch (\Throwable $e) {
             $this->dispatch('confirm-done'); // Close confirmation first
