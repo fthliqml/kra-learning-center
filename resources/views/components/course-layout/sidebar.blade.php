@@ -198,12 +198,14 @@
                             $isCompletedStage =
                                 $thisIndex !== false && $currentIndex !== false && $thisIndex < $currentIndex;
 
-                            // Posttest logic: if hasPosttestAttempt, posttest shows as completed but not clickable
-                            $isPosttestWithAttempt = $s === 'posttest' && $hasPosttestAttempt && !$canRetakePosttest;
+                            // Posttest logic: if hasPosttestAttempt, posttest shows as completed (with checkmark)
+                            // Allow click for retake if canRetakePosttest is true
+                            $isPosttestWithAttempt = $s === 'posttest' && $hasPosttestAttempt;
                             // Course completed/locked after a posttest attempt (e.g. passed or under_review)
                             $isPosttestAttemptLocked = $hasPosttestAttempt && !$canRetakePosttest;
                             // Pretest should also show completed if we have posttest attempt
                             $isPretestCompleted = $s === 'pretest' && $hasPosttestAttempt;
+                            // Result shows completed only if passed
                             $isResultCompleted = $s === 'result' && $hasPassedPosttest;
                         @endphp
 

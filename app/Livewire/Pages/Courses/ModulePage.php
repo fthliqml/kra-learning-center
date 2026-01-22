@@ -381,9 +381,9 @@ class ModulePage extends Component
         // No quiz (or remedial): advance progress now
         $this->advanceProgressForActiveSection($totalUnits);
 
-        // If this was the last unit before posttest, go to posttest instead of modules
+        // If this was the last unit before posttest, determine correct destination
         if ($isLastBeforePosttest) {
-            return redirect()->route('courses-posttest.index', ['course' => $this->course->id]);
+            return $this->getPosttestOrResultRedirect();
         }
 
         // Otherwise, advance to next section/topic and return to modules
@@ -640,8 +640,8 @@ class ModulePage extends Component
         }
 
         if ($isLastBeforePosttest) {
-            // All sections done, go straight to posttest
-            return redirect()->route('courses-posttest.index', ['course' => $this->course->id]);
+            // All sections done, determine correct destination based on posttest status
+            return $this->getPosttestOrResultRedirect();
         }
 
         // Otherwise move to the next section and reload modules on that section
@@ -776,32 +776,9 @@ class ModulePage extends Component
         $sectionsTotal = count($orderedSectionRefs);
         $hasPretest = Test::where('course_id', $this->course->id)->where('type', 'pretest')->exists();
         $pretestUnits = $hasPretest ? 1 : 0;
-        $completedCount = max(0, min($currentStep - $pretestUnits, $sectionsTotal));
 
-        // Mark first N sections as completed
-        for ($i = 0; $i < $completedCount; $i++) {
-            if (isset($orderedSectionRefs[$i])) {
-                $orderedSectionRefs[$i]->is_completed = true;
-            }
-        }
-
-        // Compute completed module ids (all sections in module completed)
-        $completedModuleIds = [];
-        foreach ($this->course->learningModules as $topic) {
-            $secs = $topic->sections ?? collect();
-            $count = $secs->count();
-            if ($count === 0) continue;
-            $doneInTopic = $secs->filter(fn($s) => !empty($s->is_completed))->count();
-            if ($doneInTopic > 0 && $doneInTopic === $count) {
-                $completedModuleIds[] = $topic->id;
-            }
-        }
-
-        // Eligibility: can access posttest when all prior units (pretest + sections/topics) are completed
-        $totalUnits = (int) $this->course->progressUnitsCount();
-        $eligibleForPosttest = $currentStep >= max(0, $totalUnits - 1);
-
-        // Check if user has ANY posttest attempt (enables remedial navigation)
+        // Check if user has ANY posttest attempt FIRST
+        // This determines if all prior sections should be marked as completed
         $postRow = Test::where('course_id', $this->course->id)
             ->where('type', 'posttest')
             ->select(['id', 'max_attempts'])
@@ -835,6 +812,37 @@ class ModulePage extends Component
                 }
             }
         }
+
+        // If user has posttest attempt, mark ALL sections as completed
+        // This prevents sidebar from showing uncompleted sections when revisiting earlier pages
+        if ($hasPosttestAttempt) {
+            $completedCount = $sectionsTotal; // All sections completed
+        } else {
+            $completedCount = max(0, min($currentStep - $pretestUnits, $sectionsTotal));
+        }
+
+        // Mark first N sections as completed
+        for ($i = 0; $i < $completedCount; $i++) {
+            if (isset($orderedSectionRefs[$i])) {
+                $orderedSectionRefs[$i]->is_completed = true;
+            }
+        }
+
+        // Compute completed module ids (all sections in module completed)
+        $completedModuleIds = [];
+        foreach ($this->course->learningModules as $topic) {
+            $secs = $topic->sections ?? collect();
+            $count = $secs->count();
+            if ($count === 0) continue;
+            $doneInTopic = $secs->filter(fn($s) => !empty($s->is_completed))->count();
+            if ($doneInTopic > 0 && $doneInTopic === $count) {
+                $completedModuleIds[] = $topic->id;
+            }
+        }
+
+        // Eligibility: can access posttest when all prior units (pretest + sections/topics) are completed
+        $totalUnits = (int) $this->course->progressUnitsCount();
+        $eligibleForPosttest = $currentStep >= max(0, $totalUnits - 1);
 
         // Back button enablement: can go to previous section, or to pretest (if retakable OR passed/review mode)
         $canGoBackStep = false;
@@ -929,5 +937,75 @@ class ModulePage extends Component
             'hasPassedPosttest' => $hasPassedPosttest,
             'courseId' => $this->course->id,
         ]);
+    }
+
+    /**
+     * Determine the correct redirect after completing modules.
+     * If user has passed posttest -> Result
+     * If user has failed posttest and can't retry -> Result  
+     * Otherwise -> Posttest
+     */
+    private function getPosttestOrResultRedirect()
+    {
+        $userId = Auth::id();
+        $posttest = Test::where('course_id', $this->course->id)
+            ->where('type', 'posttest')
+            ->select(['id', 'max_attempts'])
+            ->first();
+
+        if (!$posttest) {
+            // No posttest configured, go to result
+            return redirect()->route('courses-result.index', ['course' => $this->course->id]);
+        }
+
+        $lastAttempt = TestAttempt::where('test_id', $posttest->id)
+            ->where('user_id', $userId)
+            ->orderByDesc('submitted_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$lastAttempt) {
+            // No attempt yet, go to posttest
+            return redirect()->route('courses-posttest.index', ['course' => $this->course->id]);
+        }
+
+        // User has attempt(s)
+        if ($lastAttempt->is_passed) {
+            // Passed, go to result
+            return redirect()->route('courses-result.index', ['course' => $this->course->id]);
+        }
+
+        // Not passed - check if can retry
+        if ($lastAttempt->status === TestAttempt::STATUS_UNDER_REVIEW) {
+            // Under review, go to result to wait
+            return redirect()->route('courses-result.index', ['course' => $this->course->id]);
+        }
+
+        // Failed - check retry eligibility
+        $attemptCount = TestAttempt::where('test_id', $posttest->id)
+            ->where('user_id', $userId)
+            ->whereIn('status', [
+                TestAttempt::STATUS_SUBMITTED,
+                TestAttempt::STATUS_UNDER_REVIEW,
+                TestAttempt::STATUS_EXPIRED,
+            ])
+            ->count();
+
+        $canRetry = false;
+        if ($posttest->max_attempts === null) {
+            // Unlimited
+            $canRetry = true;
+        } else {
+            $maxAttempts = max(1, (int) $posttest->max_attempts);
+            $canRetry = $attemptCount < $maxAttempts;
+        }
+
+        if ($canRetry) {
+            // Can retry, go to posttest
+            return redirect()->route('courses-posttest.index', ['course' => $this->course->id]);
+        }
+
+        // Cannot retry, go to result
+        return redirect()->route('courses-result.index', ['course' => $this->course->id]);
     }
 }

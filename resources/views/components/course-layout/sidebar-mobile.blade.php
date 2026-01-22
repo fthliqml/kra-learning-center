@@ -174,7 +174,8 @@
                             $thisIndex = array_search($s, $stageOrder, true);
                             $isCompletedStage =
                                 $thisIndex !== false && $currentIndex !== false && $thisIndex < $currentIndex;
-                            $isPosttestWithAttempt = $s === 'posttest' && $hasPosttestAttempt && !$canRetakePosttest;
+                            // Posttest shows as completed (with checkmark) if hasPosttestAttempt
+                            $isPosttestWithAttempt = $s === 'posttest' && $hasPosttestAttempt;
                             $isPosttestAttemptLocked = $hasPosttestAttempt && !$canRetakePosttest;
                             $isPretestCompleted = $s === 'pretest' && $hasPosttestAttempt;
                             $isResultCompleted = $s === 'result' && $hasPassedPosttest;
