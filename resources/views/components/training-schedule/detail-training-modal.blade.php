@@ -87,6 +87,109 @@
             </div>
 
             @if ($activeTab === 'information')
+                {{-- Tests Section for Employees --}}
+                @if($isEmployee)
+                    <div class="mb-6 bg-base-200 rounded-xl border border-base-300 overflow-hidden">
+                        <div class="px-4 py-3 bg-base-300 border-b border-base-300 flex items-center justify-between">
+                            <h3 class="font-semibold text-sm">Training Tests</h3>
+                            <span class="text-xs text-base-content/60">Complete in order</span>
+                        </div>
+                        <div class="p-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            {{-- Pre-Test --}}
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-base-100 border border-base-200 shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs
+                                        @if (($testStatus['pretest'] ?? '') === 'completed') bg-success/20 text-success
+                                        @elseif(($testStatus['pretest'] ?? '') === 'under_review') bg-warning/20 text-warning
+                                        @elseif(($testStatus['pretest'] ?? '') === 'available') bg-primary/20 text-primary
+                                        @else bg-base-300 text-base-content/40 @endif">
+                                        @if (($testStatus['pretest'] ?? '') === 'completed')
+                                            <x-icon name="o-check" class="size-4" />
+                                        @elseif(($testStatus['pretest'] ?? '') === 'under_review')
+                                            <x-icon name="o-clock" class="size-4" />
+                                        @elseif(($testStatus['pretest'] ?? '') === 'available')
+                                            <x-icon name="o-play" class="size-4" />
+                                        @else
+                                            <x-icon name="o-minus" class="size-4" />
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium">Pre-Test</p>
+                                        @if (($testStatus['pretest'] ?? '') === 'completed')
+                                            <p class="text-xs text-success">Score: {{ $testStatus['pretestScore'] ?? 0 }}%</p>
+                                        @elseif(($testStatus['pretest'] ?? '') === 'under_review')
+                                            <p class="text-xs text-warning">Under review</p>
+                                        @elseif(($testStatus['pretest'] ?? '') === 'available')
+                                            <p class="text-xs text-base-content/60">Ready to take</p>
+                                        @else
+                                            <p class="text-xs text-base-content/40">Not available</p>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if (($testStatus['pretest'] ?? '') === 'available')
+                                    <x-button wire:click="startPreTest" label="Start" class="btn-sm btn-primary" />
+                                @elseif(($testStatus['pretest'] ?? '') === 'completed')
+                                    <span class="badge badge-success badge-sm">Done</span>
+                                @endif
+                            </div>
+
+                            {{-- Post-Test --}}
+                            <div class="flex items-center justify-between p-3 rounded-lg bg-base-100 border border-base-200 shadow-sm">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-full flex items-center justify-center text-xs
+                                        @if (($testStatus['posttest'] ?? '') === 'completed') bg-success/20 text-success
+                                        @elseif(($testStatus['posttest'] ?? '') === 'under_review') bg-warning/20 text-warning
+                                        @elseif(($testStatus['posttest'] ?? '') === 'available') bg-primary/20 text-primary
+                                        @elseif(($testStatus['posttest'] ?? '') === 'retake') bg-error/20 text-error
+                                        @elseif(($testStatus['posttest'] ?? '') === 'failed') bg-error/20 text-error
+                                        @elseif(($testStatus['posttest'] ?? '') === 'locked') bg-base-300 text-base-content/50
+                                        @else bg-base-300 text-base-content/40 @endif">
+                                        @if (($testStatus['posttest'] ?? '') === 'completed')
+                                            <x-icon name="o-check" class="size-4" />
+                                        @elseif(($testStatus['posttest'] ?? '') === 'under_review')
+                                            <x-icon name="o-clock" class="size-4" />
+                                        @elseif(($testStatus['posttest'] ?? '') === 'available')
+                                            <x-icon name="o-play" class="size-4" />
+                                        @elseif(($testStatus['posttest'] ?? '') === 'retake')
+                                            <x-icon name="o-arrow-path" class="size-4" />
+                                        @elseif(($testStatus['posttest'] ?? '') === 'failed')
+                                            <x-icon name="o-x-mark" class="size-4" />
+                                        @elseif(($testStatus['posttest'] ?? '') === 'locked')
+                                            <x-icon name="o-lock-closed" class="size-4" />
+                                        @else
+                                            <x-icon name="o-minus" class="size-4" />
+                                        @endif
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-medium">Post-Test</p>
+                                        @if (($testStatus['posttest'] ?? '') === 'completed')
+                                            <p class="text-xs text-success">Passed: {{ $testStatus['posttestScore'] ?? 0 }}%</p>
+                                        @elseif(($testStatus['posttest'] ?? '') === 'under_review')
+                                            <p class="text-xs text-warning">Under review</p>
+                                        @elseif(($testStatus['posttest'] ?? '') === 'available')
+                                            <p class="text-xs text-base-content/60">Ready to take</p>
+                                        @elseif(($testStatus['posttest'] ?? '') === 'retake')
+                                            <p class="text-xs text-error">Failed: {{ $testStatus['posttestScore'] ?? 0 }}%</p>
+                                        @elseif(($testStatus['posttest'] ?? '') === 'failed')
+                                            <p class="text-xs text-error">Failed (Max attempts)</p>
+                                        @elseif(($testStatus['posttest'] ?? '') === 'locked')
+                                            <p class="text-xs text-base-content/50">Locked</p>
+                                        @else
+                                            <p class="text-xs text-base-content/40">Not available</p>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if (($testStatus['posttest'] ?? '') === 'available')
+                                    <x-button wire:click="startPostTest" label="Start" class="btn-sm btn-primary" />
+                                @elseif(($testStatus['posttest'] ?? '') === 'retake')
+                                    <x-button wire:click="startPostTest" label="Retake" class="btn-sm btn-error btn-outline" />
+                                @elseif(($testStatus['posttest'] ?? '') === 'completed')
+                                    <span class="badge badge-success badge-sm">Passed</span>
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                @endif
                 <livewire:components.training-schedule.tabs.training-information-tab :training-id="$selectedEvent['id']" :day-number="$dayNumber"
                     :key="'info-' . $selectedEvent['id'] . '-' . $dayNumber" />
             @endif
