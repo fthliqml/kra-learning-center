@@ -11,6 +11,7 @@ use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use Illuminate\Support\Facades\Auth;
 use Mary\Traits\Toast;
+use Illuminate\Support\Collection;
 
 class Approval extends Component
 {
@@ -22,6 +23,10 @@ class Approval extends Component
 
     public $search = '';
     public $filter = 'All';
+    public $filterType = 'All';
+
+    /** @var array<int, int|string> */
+    public array $selectedApprovalIds = [];
 
     public $signatureFile;
 
@@ -32,36 +37,328 @@ class Approval extends Component
     ];
 
     public $groupOptions = [
-        ['value' => 'done', 'label' => 'Done (Ready for Approval)'],
+        ['value' => 'done', 'label' => 'Need Approve'],
         ['value' => 'approved', 'label' => 'Approved'],
         ['value' => 'rejected', 'label' => 'Rejected'],
     ];
-
-    public function mount(): void
-    {
-        // No need for user searchable since we don't have create mode
-    }
 
     // Reset pagination only when relevant filters change
     public function updatingSearch(): void
     {
         $this->resetPage();
+        $this->selectedApprovalIds = [];
     }
 
     public function updatingFilter(): void
     {
         $this->resetPage();
+        $this->selectedApprovalIds = [];
+    }
+
+    public function updatingFilterType(): void
+    {
+        $this->resetPage();
+        $this->selectedApprovalIds = [];
     }
 
     public function headers(): array
     {
-        return [
-            ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-12 !md:w-[8%]'],
-            ['key' => 'training_name', 'label' => 'Training Name', 'class' => '!md:w-[50%]'],
-            ['key' => 'date', 'label' => 'Date', 'class' => '!text-center !md:w-[12%]'],
+        $isDeptHeadOnly = $this->canSignAsDeptHead() && !$this->canSignAsSectionHead();
+
+        $headers = [];
+        if ($isDeptHeadOnly) {
+            $headers[] = ['key' => 'select', 'label' => '', 'class' => '!text-center w-10'];
+        } else {
+            $headers[] = ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-12 !md:w-[8%]'];
+        }
+        $headers = array_merge($headers, [
+            ['key' => 'training_name', 'label' => 'Training Name', 'class' => '!md:w-[42%]'],
+            ['key' => 'type', 'label' => 'Type', 'class' => '!text-center !md:w-[10%]'],
+            ['key' => 'date', 'label' => 'Date', 'class' => '!text-center !md:w-[14%]'],
             ['key' => 'status', 'label' => 'Status', 'class' => '!text-center !md:w-[14%]'],
             ['key' => 'action', 'label' => 'Action', 'class' => '!text-center !md:w-[10%]'],
-        ];
+        ]);
+        return $headers;
+    }
+
+    protected function isEligibleForDeptHeadApproval(object $approvalRow): bool
+    {
+        $status = strtolower((string) ($approvalRow->status ?? ''));
+        $hasLevel1Approval = !empty($approvalRow->section_head_signed_at ?? null);
+        $hasLevel2Approval = !empty($approvalRow->dept_head_signed_at ?? null);
+
+        return $this->canSignAsDeptHead() && $status === 'done' && $hasLevel1Approval && !$hasLevel2Approval;
+    }
+
+    public function approveSelected(): void
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return;
+        }
+
+        if (!$this->canSignAsDeptHead() || $this->canSignAsSectionHead()) {
+            $this->error('Only LID Department Head can bulk approve.', position: 'toast-top toast-center');
+            return;
+        }
+
+        if (!$this->ensureApproverHasSignature($user)) {
+            return;
+        }
+
+        $ids = collect($this->selectedApprovalIds)
+            ->map(fn($v) => (int) $v)
+            ->filter(fn($v) => $v > 0)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            $this->error('Please select at least one training to approve.', position: 'toast-top toast-center');
+            return;
+        }
+
+        $certificateService = new TrainingCertificateService();
+        $approvedCount = 0;
+        $skippedCount = 0;
+        $certificatesGeneratedTotal = 0;
+
+        foreach ($ids as $trainingId) {
+            $training = Training::find($trainingId);
+
+            if (!$training) {
+                $skippedCount++;
+                continue;
+            }
+
+            $status = strtolower((string) $training->status);
+            if ($status !== 'done' || !$training->section_head_signed_at || $training->dept_head_signed_at) {
+                $skippedCount++;
+                continue;
+            }
+
+            $training->update([
+                'dept_head_signed_by' => $user->id,
+                'dept_head_signed_at' => now(),
+                'status' => 'approved',
+            ]);
+
+            $certificatesGeneratedTotal += (int) $certificateService->generateCertificatesForTraining($training);
+
+            $this->dispatch('training-closed', ['id' => $training->id, 'status' => 'approved']);
+            $approvedCount++;
+        }
+
+        $this->selectedApprovalIds = [];
+
+        if ($approvedCount === 0) {
+            $this->error('No trainings were approved.', position: 'toast-top toast-center');
+            return;
+        }
+
+        $extra = $skippedCount > 0 ? " Skipped {$skippedCount}." : '';
+        if ($certificatesGeneratedTotal > 0) {
+            $this->success("Approved {$approvedCount} training(s). {$certificatesGeneratedTotal} certificate(s) generated." . $extra, position: 'toast-top toast-center');
+        } else {
+            $this->success("Approved {$approvedCount} training(s)." . $extra, position: 'toast-top toast-center');
+        }
+    }
+
+    public function rejectSelected(): void
+    {
+        $user = Auth::user();
+        if (!$user) {
+            return;
+        }
+
+        if (!$this->canSignAsDeptHead() || $this->canSignAsSectionHead()) {
+            $this->error('Only LID Department Head can bulk reject.', position: 'toast-top toast-center');
+            return;
+        }
+
+        $ids = collect($this->selectedApprovalIds)
+            ->map(fn($v) => (int) $v)
+            ->filter(fn($v) => $v > 0)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            $this->error('Please select at least one training to reject.', position: 'toast-top toast-center');
+            return;
+        }
+
+        $rejectedCount = 0;
+        $skippedCount = 0;
+        $certificateService = new TrainingCertificateService();
+
+        foreach ($ids as $trainingId) {
+            $training = Training::find($trainingId);
+            if (!$training) {
+                $skippedCount++;
+                continue;
+            }
+            $status = strtolower((string) $training->status);
+            if ($status !== 'done' || !$training->section_head_signed_at || $training->dept_head_signed_at) {
+                $skippedCount++;
+                continue;
+            }
+            $training->update([
+                'status' => 'rejected',
+                'dept_head_signed_by' => $user->id,
+                'dept_head_signed_at' => now(),
+            ]);
+
+            // Hapus semua sertifikat yang sudah pernah digenerate untuk training ini
+            $assessmentsWithCertificate = $training->assessments()
+                ->whereNotNull('certificate_path')
+                ->get();
+            foreach ($assessmentsWithCertificate as $assessment) {
+                if (!empty($assessment->certificate_path)) {
+                    $certificateService->deleteCertificate($assessment->certificate_path);
+                }
+                $assessment->certificate_path = null;
+                $assessment->save();
+            }
+
+            $this->dispatch('training-closed', ['id' => $training->id, 'status' => 'rejected']);
+            $rejectedCount++;
+        }
+
+        $this->selectedApprovalIds = [];
+
+        if ($rejectedCount === 0) {
+            $this->error('No trainings were rejected.', position: 'toast-top toast-center');
+            return;
+        }
+        $extra = $skippedCount > 0 ? " Skipped {$skippedCount}." : '';
+        $this->error("Rejected {$rejectedCount} training(s)." . $extra, position: 'toast-top toast-center');
+    }
+
+    public function approveAll(): void
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return;
+        }
+
+        if (!$this->canSignAsDeptHead() || $this->canSignAsSectionHead()) {
+            $this->error('Only LID Department Head can bulk approve.', position: 'toast-top toast-center');
+            return;
+        }
+
+        if (!$this->ensureApproverHasSignature($user)) {
+            return;
+        }
+
+        // Respect current status filter: only DONE queue is eligible
+        $filterStatus = strtolower((string) ($this->filter ?? 'all'));
+        if ($filterStatus !== 'all' && $filterStatus !== 'done') {
+            $this->error('Approve All only applies to trainings waiting for approval (DONE).', position: 'toast-top toast-center');
+            return;
+        }
+
+        $query = Training::query()
+            ->where('status', 'done')
+            ->whereNotNull('section_head_signed_at')
+            ->whereNull('dept_head_signed_at');
+
+        if ($this->filterType && strtolower((string) $this->filterType) !== 'all') {
+            $query->where('type', $this->filterType);
+        }
+
+        if ($this->search) {
+            $term = $this->search;
+            $query->where(function ($q) use ($term) {
+                $q->where('name', 'like', "%{$term}%")
+                    ->orWhere('type', 'like', "%{$term}%")
+                    ->orWhereHas('competency', function ($cq) use ($term) {
+                        $cq->where('type', 'like', "%{$term}%")
+                            ->orWhere('name', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%");
+                    })
+                    ->orWhereHas('module.competency', function ($cq) use ($term) {
+                        $cq->where('type', 'like', "%{$term}%")
+                            ->orWhere('name', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%");
+                    })
+                    ->orWhereHas('course.competency', function ($cq) use ($term) {
+                        $cq->where('type', 'like', "%{$term}%")
+                            ->orWhere('name', 'like', "%{$term}%")
+                            ->orWhere('code', 'like', "%{$term}%");
+                    });
+            });
+        }
+
+        $certificateService = new TrainingCertificateService();
+        $approvedCount = 0;
+        $certificatesGeneratedTotal = 0;
+
+        $query->orderBy('id')->chunkById(50, function ($trainings) use ($user, $certificateService, &$approvedCount, &$certificatesGeneratedTotal) {
+            foreach ($trainings as $training) {
+                if (!$training->section_head_signed_at || $training->dept_head_signed_at) {
+                    continue;
+                }
+
+                $training->update([
+                    'dept_head_signed_by' => $user->id,
+                    'dept_head_signed_at' => now(),
+                    'status' => 'approved',
+                ]);
+
+                $certificatesGeneratedTotal += (int) $certificateService->generateCertificatesForTraining($training);
+                $this->dispatch('training-closed', ['id' => $training->id, 'status' => 'approved']);
+                $approvedCount++;
+            }
+        });
+
+        $this->selectedApprovalIds = [];
+
+        if ($approvedCount === 0) {
+            $this->error('No trainings were approved.', position: 'toast-top toast-center');
+            return;
+        }
+
+        if ($certificatesGeneratedTotal > 0) {
+            $this->success("Approved {$approvedCount} training(s). {$certificatesGeneratedTotal} certificate(s) generated.", position: 'toast-top toast-center');
+        } else {
+            $this->success("Approved {$approvedCount} training(s).", position: 'toast-top toast-center');
+        }
+    }
+
+    public function typeOptions(): array
+    {
+        $isSectionHead = $this->canSignAsSectionHead();
+        $isDeptHead = $this->canSignAsDeptHead();
+
+        $query = Training::query()
+            ->select('type')
+            ->whereIn('status', ['done', 'approved', 'rejected'])
+            ->whereNotNull('type')
+            ->where('type', '!=', '')
+            ->distinct();
+
+        if ($isDeptHead && !$isSectionHead) {
+            $query->where(function ($q) {
+                $q->whereIn('status', ['approved', 'rejected'])
+                    ->orWhere(function ($qq) {
+                        $qq->where('status', 'done')
+                            ->whereNotNull('section_head_signed_at')
+                            ->whereNull('dept_head_signed_at');
+                    });
+            });
+        }
+
+        /** @var Collection<int, string> $types */
+        $types = $query
+            ->orderBy('type')
+            ->pluck('type')
+            ->filter(fn($t) => is_string($t) && trim($t) !== '')
+            ->values();
+
+        return $types
+            ->map(fn($t) => ['value' => $t, 'label' => strtoupper($t)])
+            ->all();
     }
 
     public function participantHeaders(): array
@@ -234,6 +531,11 @@ class Approval extends Component
             }
         }
 
+        // Filter by training type
+        if ($this->filterType && strtolower($this->filterType) !== 'all') {
+            $query->where('type', $this->filterType);
+        }
+
         return $query
             ->orderBy('created_at', 'desc')
             ->orderBy('id', 'desc')
@@ -261,6 +563,7 @@ class Approval extends Component
         return view('pages.training.training-approval', [
             'headers' => $this->headers(),
             'approvals' => $this->approvals(),
+            'typeOptions' => $this->typeOptions(),
         ]);
     }
 
@@ -365,9 +668,19 @@ class Approval extends Component
             return;
         }
 
-        $this->validate([
-            'signatureFile' => 'required|image|max:2048', // max 2MB
-        ]);
+        $this->validate(
+            [
+                'signatureFile' => 'required|image|max:2048', // max 2MB
+            ],
+            [
+                'signatureFile.required' => 'Signature is required.',
+                'signatureFile.image' => 'Signature must be an image file.',
+                'signatureFile.max' => 'Signature must be 2MB or less.',
+            ],
+            [
+                'signatureFile' => 'signature',
+            ]
+        );
 
         $path = $this->signatureFile->store('signatures', 'public');
 

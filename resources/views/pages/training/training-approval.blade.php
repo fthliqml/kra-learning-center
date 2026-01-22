@@ -12,7 +12,7 @@
     @endphp
 
     @if ($showGenerateCertificatesOverlay)
-        <div wire:loading.flex wire:target="approve"
+        <div wire:loading.flex wire:target="approve,approveSelected,approveAll"
             class="fixed inset-0 z-[60] bg-black/40 backdrop-blur-sm items-center justify-center">
             <div class="bg-white rounded-lg shadow-lg px-6 py-4 flex items-center gap-3 max-w-sm mx-4">
                 <x-icon name="o-arrow-path" class="size-6 text-primary animate-spin" />
@@ -40,6 +40,11 @@
                     placeholder="All"
                     class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
                     icon-right="o-funnel" />
+
+                <x-select wire:model.live="filterType" :options="$typeOptions" option-value="value" option-label="label"
+                    placeholder="All Types"
+                    class="!w-fit !h-10 focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_select+div_svg]:!hidden"
+                    icon-right="o-tag" />
             </div>
 
             <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.600ms="search" />
@@ -118,11 +123,12 @@
     @endif
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="5" :rows="10" targets="search,filter,approve,reject" />
+    <x-skeletons.table :columns="$showGenerateCertificatesOverlay ? 7 : 6" :rows="10"
+        targets="search,filter,filterType,approve,reject,approveSelected,approveAll" />
 
     {{-- No Data State --}}
     @if ($approvals->isEmpty())
-        <div wire:loading.remove wire:target="search,filter,approve,reject"
+        <div wire:loading.remove wire:target="search,filter,filterType,approve,reject,approveSelected,approveAll"
             class="rounded-lg border-2 border-dashed border-gray-300 p-2 overflow-x-auto">
             <div class="flex flex-col items-center justify-center py-16 px-4">
                 <svg class="w-20 h-20 text-gray-300 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -137,18 +143,45 @@
         </div>
     @else
         {{-- Table --}}
-        <div wire:loading.remove wire:target="search,filter,approve,reject"
+        <div wire:loading.remove wire:target="search,filter,filterType,approve,reject,approveSelected,approveAll"
             class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$approvals" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
-                {{-- No --}}
-                @scope('cell_no', $approval, $approvals)
-                    {{ ($approvals->currentPage() - 1) * $approvals->perPage() + $loop->iteration }}
-                @endscope
+
+                @if (!$showGenerateCertificatesOverlay)
+                    {{-- No --}}
+                    @scope('cell_no', $approval, $approvals)
+                        {{ ($approvals->currentPage() - 1) * $approvals->perPage() + $loop->iteration }}
+                    @endscope
+                @endif
+
+                @if ($showGenerateCertificatesOverlay)
+                    @scope('cell_select', $approval)
+                        @php
+                            $rowStatus = strtolower($approval->status ?? '');
+                            $hasLevel1Approval = !empty($approval->section_head_signed_at ?? null);
+                            $hasLevel2Approval = !empty($approval->dept_head_signed_at ?? null);
+                            $canSelect = $rowStatus === 'done' && $hasLevel1Approval && !$hasLevel2Approval;
+                        @endphp
+                        <div class="flex justify-center">
+                            <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                                wire:model.defer="selectedApprovalIds" value="{{ $approval->id }}"
+                                @disabled(!$canSelect) />
+                        </div>
+                    @endscope
+                @endif
 
                 {{-- Training Name --}}
                 @scope('cell_training_name', $approval)
                     <div class="truncate max-w-[50ch] xl:max-w-[60ch]">{{ $approval->training_name ?? '-' }}</div>
+                @endscope
+
+                {{-- Type --}}
+                @scope('cell_type', $approval)
+                    <span
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 whitespace-nowrap">
+                        {{ strtoupper($approval->type ?? '-') }}
+                    </span>
                 @endscope
 
                 {{-- Date --}}
@@ -194,7 +227,8 @@
                             [$classes, $statusLabel] = $map[$status] ?? ['bg-gray-100 text-gray-700', ucfirst($status)];
                         }
                     @endphp
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }} whitespace-nowrap">
+                    <span
+                        class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold {{ $classes }} whitespace-nowrap">
                         {{ $statusLabel }}
                     </span>
                 @endscope
@@ -236,6 +270,56 @@
                     </div>
                 @endscope
             </x-table>
+        </div>
+    @endif
+
+    {{-- Approve Button --}}
+    @if ($showGenerateCertificatesOverlay)
+        <div class="relative w-full" style="min-height:56px;">
+            <div class="absolute left-0 bottom-0 flex items-center gap-2 z-10 p-2">
+                {{-- Reject Selected --}}
+                <x-ui.button variant="danger" type="button" wire:click="rejectSelected"
+                    wire:target="rejectSelected" wire:loading.attr="disabled"
+                    class="bg-rose-600 hover:bg-rose-700 border-rose-600 text-white">
+                    <span wire:loading.remove wire:target="rejectSelected" class="inline-flex items-center gap-2">
+                        <x-icon name="o-x-mark" class="size-4" />
+                        Reject Selected
+                    </span>
+                    <span wire:loading wire:target="rejectSelected" class="inline-flex items-center gap-2">
+                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                        Processing...
+                    </span>
+                </x-ui.button>
+
+                {{-- Approve Selected --}}
+                <x-ui.button variant="success" type="button" wire:click="approveSelected"
+                    wire:target="approveSelected" wire:loading.attr="disabled"
+                    class="bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white">
+                    <span wire:loading.remove wire:target="approveSelected" class="inline-flex items-center gap-2">
+                        <x-icon name="o-check" class="size-4" />
+                        Approve Selected
+                    </span>
+                    <span wire:loading wire:target="approveSelected" class="inline-flex items-center gap-2">
+                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                        Processing...
+                    </span>
+                </x-ui.button>
+            </div>
+
+            <div class="absolute right-0 bottom-0 flex items-center gap-2 z-10 p-2">
+                {{-- Approve All --}}
+                <x-ui.button variant="primary" type="button" wire:click="approveAll" wire:target="approveAll"
+                    wire:loading.attr="disabled">
+                    <span wire:loading.remove wire:target="approveAll" class="inline-flex items-center gap-2">
+                        <x-icon name="o-check-badge" class="size-4" />
+                        Approve All
+                    </span>
+                    <span wire:loading wire:target="approveAll" class="inline-flex items-center gap-2">
+                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                        Processing...
+                    </span>
+                </x-ui.button>
+            </div>
         </div>
     @endif
 
