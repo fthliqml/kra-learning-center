@@ -271,56 +271,57 @@
                 @endscope
             </x-table>
         </div>
-    @endif
 
-    {{-- Approve Button --}}
-    @if ($showGenerateCertificatesOverlay)
-        <div class="relative w-full" style="min-height:56px;">
-            <div class="absolute left-0 bottom-0 flex items-center gap-2 z-10 p-2">
-                {{-- Reject Selected --}}
-                <x-ui.button variant="danger" type="button" wire:click="rejectSelected"
-                    wire:target="rejectSelected" wire:loading.attr="disabled"
-                    class="bg-rose-600 hover:bg-rose-700 border-rose-600 text-white">
-                    <span wire:loading.remove wire:target="rejectSelected" class="inline-flex items-center gap-2">
-                        <x-icon name="o-x-mark" class="size-4" />
-                        Reject Selected
-                    </span>
-                    <span wire:loading wire:target="rejectSelected" class="inline-flex items-center gap-2">
-                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                        Processing...
-                    </span>
-                </x-ui.button>
+        {{-- Approve Button --}}
+        @if ($showGenerateCertificatesOverlay)
+            <div class="relative w-full" style="min-height:56px;">
+                <div class="absolute left-0 bottom-0 flex items-center gap-2 z-10 p-2">
+                    {{-- Reject Selected --}}
+                    <x-ui.button variant="danger" type="button" wire:click="rejectSelected"
+                        wire:target="rejectSelected" wire:loading.attr="disabled"
+                        class="bg-rose-600 hover:bg-rose-700 border-rose-600 text-white">
+                        <span wire:loading.remove wire:target="rejectSelected" class="inline-flex items-center gap-2">
+                            <x-icon name="o-x-mark" class="size-4" />
+                            Reject Selected
+                        </span>
+                        <span wire:loading wire:target="rejectSelected" class="inline-flex items-center gap-2">
+                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                            Processing...
+                        </span>
+                    </x-ui.button>
 
-                {{-- Approve Selected --}}
-                <x-ui.button variant="success" type="button" wire:click="approveSelected"
-                    wire:target="approveSelected" wire:loading.attr="disabled"
-                    class="bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white">
-                    <span wire:loading.remove wire:target="approveSelected" class="inline-flex items-center gap-2">
-                        <x-icon name="o-check" class="size-4" />
-                        Approve Selected
-                    </span>
-                    <span wire:loading wire:target="approveSelected" class="inline-flex items-center gap-2">
-                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                        Processing...
-                    </span>
-                </x-ui.button>
+                    {{-- Approve Selected --}}
+                    <x-ui.button variant="success" type="button" wire:click="approveSelected"
+                        wire:target="approveSelected" wire:loading.attr="disabled"
+                        class="bg-emerald-600 hover:bg-emerald-700 border-emerald-600 text-white">
+                        <span wire:loading.remove wire:target="approveSelected"
+                            class="inline-flex items-center gap-2">
+                            <x-icon name="o-check" class="size-4" />
+                            Approve Selected
+                        </span>
+                        <span wire:loading wire:target="approveSelected" class="inline-flex items-center gap-2">
+                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                            Processing...
+                        </span>
+                    </x-ui.button>
+                </div>
+
+                <div class="absolute right-0 bottom-0 flex items-center gap-2 z-10 p-2">
+                    {{-- Approve All --}}
+                    <x-ui.button variant="primary" type="button" wire:click="approveAll" wire:target="approveAll"
+                        wire:loading.attr="disabled">
+                        <span wire:loading.remove wire:target="approveAll" class="inline-flex items-center gap-2">
+                            <x-icon name="o-check-badge" class="size-4" />
+                            Approve All
+                        </span>
+                        <span wire:loading wire:target="approveAll" class="inline-flex items-center gap-2">
+                            <x-icon name="o-arrow-path" class="size-4 animate-spin" />
+                            Processing...
+                        </span>
+                    </x-ui.button>
+                </div>
             </div>
-
-            <div class="absolute right-0 bottom-0 flex items-center gap-2 z-10 p-2">
-                {{-- Approve All --}}
-                <x-ui.button variant="primary" type="button" wire:click="approveAll" wire:target="approveAll"
-                    wire:loading.attr="disabled">
-                    <span wire:loading.remove wire:target="approveAll" class="inline-flex items-center gap-2">
-                        <x-icon name="o-check-badge" class="size-4" />
-                        Approve All
-                    </span>
-                    <span wire:loading wire:target="approveAll" class="inline-flex items-center gap-2">
-                        <x-icon name="o-arrow-path" class="size-4 animate-spin" />
-                        Processing...
-                    </span>
-                </x-ui.button>
-            </div>
-        </div>
+        @endif
     @endif
 
     {{-- Modal Training Approval --}}
