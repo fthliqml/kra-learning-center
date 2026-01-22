@@ -36,7 +36,7 @@ class TestConfig extends Component
 
     // Post test settings
     public $posttest_passing_score = 75; // 0-100 (business rule: must be >=20 to save)
-    public $posttest_max_attempts = null;
+    public $posttest_max_attempts = 5; // default 5 attempts for post-test
     public bool $posttest_randomize_question = false; // show_result_immediately fixed in DB
 
     public bool $hasEverSaved = false;
