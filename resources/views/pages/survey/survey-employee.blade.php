@@ -11,9 +11,7 @@
                     class="!h-10 w-full focus-within:border-0 hover:outline-1 focus-within:outline-1 cursor-pointer [&_svg]:!opacity-100"
                     icon-right="o-funnel" />
             </div>
-            <div class="w-full sm:w-64">
-                <x-search-input placeholder="Search..." class="!w-full" wire:model.live.debounce.600ms="search" />
-            </div>
+            <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.600ms="search" />
         </div>
     </div>
 
@@ -36,7 +34,8 @@
                                 {{ $survey->date ?? '-' }}
                             </p>
                         </div>
-                        <x-badge :value="$survey->badge_label" class="{{ $survey->badge_class }} badge-xs sm:badge-sm whitespace-nowrap" />
+                        <x-badge :value="$survey->badge_label"
+                            class="{{ $survey->badge_class }} badge-xs sm:badge-sm whitespace-nowrap" />
                     </div>
 
                     @php
