@@ -267,8 +267,8 @@
                                     </span>
                                 </a>
                             @elseif (($isPretestCompleted || ($s === 'pretest' && $isCompletedStage)) && $courseId)
-                                {{-- Pretest review allowed: always clickable for status check --}}
-                                <a href="{{ route('courses-pretest.index', ['course' => $courseId]) }}" wire:navigate
+                                {{-- Pretest completed: disable navigation back to pretest --}}
+                                <div
                                     class="w-full flex items-center gap-2 pl-4 pr-3 py-2.5 text-left focus:outline-none focus:ring-2 focus:ring-primary/30 rounded-md font-medium text-gray-700 hover:text-primary">
                                     <span class="flex-1 truncate capitalize" x-show="openSidebar"
                                         x-transition.opacity>
@@ -280,7 +280,7 @@
                                     <span class="relative w-5 h-5 flex items-center justify-center ml-0.5">
                                         <x-icon name="o-check-circle" class="size-5 text-green-500" />
                                     </span>
-                                </a>
+                                </div>
                             @elseif ($s === 'result' && $courseId && ($hasPassedPosttest || $hasPosttestAttempt))
                                 {{-- Result review allowed: user has a posttest attempt (passed/failed/under_review) --}}
                                 <a href="{{ route('courses-result.index', ['course' => $courseId]) }}" wire:navigate

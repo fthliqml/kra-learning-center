@@ -21,7 +21,7 @@ class DetailTrainingModal extends Component
     public $selectedEvent = null; // associative array (minimal training info)
     public $dayNumber = 1;
     public $activeTab = 'information';
-    
+
     // Test Status Properties
     public $userId = null;
     public $testStatus = [];
@@ -43,8 +43,8 @@ class DetailTrainingModal extends Component
 
     public function triggerCloseTraining(): void
     {
-        // Forward action to Close tab component
-        $this->dispatch('training-close-close');
+        // Ask Close tab component to show confirmation first
+        $this->dispatch('training-close-request-close');
     }
 
     // Session helper methods removed; handled inside child tabs
@@ -70,13 +70,13 @@ class DetailTrainingModal extends Component
             $this->dayNumber = max(1, (int) $payload['initial_day_number']);
         }
         $this->modal = true;
-        
+
         // Calculate Test Status if user is employee
         $this->userId = Auth::id();
         /** @var User */
         $user = Auth::user();
         $this->isEmployee = $user && !$user->hasRole('admin');
-        
+
         if ($this->isEmployee && isset($this->selectedEvent['id'])) {
             $this->loadTestStatus($this->selectedEvent['id']);
         }
@@ -100,7 +100,7 @@ class DetailTrainingModal extends Component
         ])->find($trainingId);
 
         if (!$training) return;
-        
+
         $this->testStatus = $this->getTestStatus($training, $this->userId);
     }
 
@@ -199,19 +199,19 @@ class DetailTrainingModal extends Component
     public function startPreTest()
     {
         if (isset($this->selectedEvent['type']) && in_array($this->selectedEvent['type'], ['LMS', 'BLENDED'])) {
-             // For LMS/BLENDED we might need training ID to link context, but course pretest usually keyed by course
-             // But TrainingTestList uses courses-pretest.index with course param.
-             // We need to fetch course_id. It's not in selectedEvent minimal payload.
-             // Let's refetch training to be safe.
-             $training = Training::find($this->selectedEvent['id']);
-             if ($training && $training->course_id) {
-                 $this->redirectRoute('courses-pretest.index', ['course' => $training->course_id], navigate: true);
-             }
-             return;
+            // For LMS/BLENDED we might need training ID to link context, but course pretest usually keyed by course
+            // But TrainingTestList uses courses-pretest.index with course param.
+            // We need to fetch course_id. It's not in selectedEvent minimal payload.
+            // Let's refetch training to be safe.
+            $training = Training::find($this->selectedEvent['id']);
+            if ($training && $training->course_id) {
+                $this->redirectRoute('courses-pretest.index', ['course' => $training->course_id], navigate: true);
+            }
+            return;
         }
 
         $this->redirectRoute('training-test.take', [
-            'training' => $this->selectedEvent['id'], 
+            'training' => $this->selectedEvent['id'],
             'type' => 'pretest'
         ], navigate: true);
     }
@@ -219,15 +219,15 @@ class DetailTrainingModal extends Component
     public function startPostTest()
     {
         if (isset($this->selectedEvent['type']) && in_array($this->selectedEvent['type'], ['LMS', 'BLENDED'])) {
-             $training = Training::find($this->selectedEvent['id']);
-             if ($training && $training->course_id) {
-                 $this->redirectRoute('courses-posttest.index', ['course' => $training->course_id], navigate: true);
-             }
-             return;
+            $training = Training::find($this->selectedEvent['id']);
+            if ($training && $training->course_id) {
+                $this->redirectRoute('courses-posttest.index', ['course' => $training->course_id], navigate: true);
+            }
+            return;
         }
 
         $this->redirectRoute('training-test.take', [
-            'training' => $this->selectedEvent['id'], 
+            'training' => $this->selectedEvent['id'],
             'type' => 'posttest'
         ], navigate: true);
     }

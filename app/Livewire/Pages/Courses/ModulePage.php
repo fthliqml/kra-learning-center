@@ -73,23 +73,14 @@ class ModulePage extends Component
         // NOTE: After passing, users are allowed to re-open learning materials in review mode.
         // Do not redirect completed/passed users away from modules.
 
-        // Gate: require pretest PASS or EXHAUSTED attempts before accessing modules
-        // User must either:
-        // 1. Pass the pretest, OR
-        // 2. Exhaust all retake attempts (if not unlimited)
+        // Gate: require pretest to be attempted once before accessing modules
         $pretest = Test::where('course_id', $course->id)
             ->where('type', 'pretest')
             ->select(['id', 'max_attempts'])
             ->first();
-        
+
         if ($pretest && $userId) {
-            // Check if user has passed pretest
-            $hasPassedPretest = TestAttempt::where('test_id', $pretest->id)
-                ->where('user_id', $userId)
-                ->where('is_passed', true)
-                ->exists();
-            
-            // Check if user has at least submitted once (to determine if they can access modules at all)
+            // Check if user has at least submitted once
             $hasAttemptedPretest = TestAttempt::where('test_id', $pretest->id)
                 ->where('user_id', $userId)
                 ->whereIn('status', [
@@ -98,38 +89,10 @@ class ModulePage extends Component
                     TestAttempt::STATUS_EXPIRED,
                 ])
                 ->exists();
-            
+
             if (!$hasAttemptedPretest) {
                 // Never attempted pretest - must do it first
                 return redirect()->route('courses-pretest.index', ['course' => $course->id]);
-            }
-            
-            if (!$hasPassedPretest) {
-                // User has NOT passed pretest - check if they can still retake
-                $attemptCount = (int) TestAttempt::where('test_id', $pretest->id)
-                    ->where('user_id', $userId)
-                    ->whereIn('status', [
-                        TestAttempt::STATUS_SUBMITTED,
-                        TestAttempt::STATUS_UNDER_REVIEW,
-                        TestAttempt::STATUS_EXPIRED,
-                    ])
-                    ->count();
-                
-                $canStillRetake = false;
-                if ($pretest->max_attempts === null) {
-                    // Pretest should NOT be unlimited - treat as single attempt (attempts exhausted)
-                    // User can proceed after 1 attempt even if not passed
-                    $canStillRetake = false;
-                } else {
-                    $maxAttempts = max(1, (int) $pretest->max_attempts);
-                    $canStillRetake = $attemptCount < $maxAttempts;
-                }
-                
-                if ($canStillRetake) {
-                    // Block modules: user must pass pretest or exhaust attempts first
-                    return redirect()->route('courses-pretest.index', ['course' => $course->id]);
-                }
-                // If attempts exhausted but not passed, allow to proceed to modules
             }
         }
 

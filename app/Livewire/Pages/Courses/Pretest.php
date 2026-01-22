@@ -20,12 +20,22 @@ class Pretest extends Component
     public array $questions = [];
 
     public bool $isRetakeFlow = false;
-    
+
     // Stats mode: show result stats without revealing answers
     public bool $isStatsMode = false;
     public ?TestAttempt $lastAttempt = null;
     public bool $canRetake = false;
     public int $remainingAttempts = 0;
+
+    private function firstSectionId(): ?int
+    {
+        try {
+            $firstTopic = $this->course?->learningModules?->first();
+            return $firstTopic?->sections?->first()?->id;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
 
     public function mount(Course $course)
     {
@@ -163,59 +173,24 @@ class Pretest extends Component
             if ($existingAttempt) {
                 // Check if force retake via query param
                 $forceRetake = (string) request()->query('retake', '') === '1';
-                
+
                 // If course is completed (posttest passed), show stats mode (read only)
                 if ($hasPassedPosttestAttempt) {
                     $this->isStatsMode = true;
                     $this->lastAttempt = $existingAttempt;
-                    $this->canRetake = false; // Course completed, no more retakes
+                    $this->canRetake = false;
                     $this->remainingAttempts = 0;
                     return;
                 }
-                
-                // Check if user passed pretest
-                $hasPassed = TestAttempt::where('test_id', $this->pretest->id)
-                    ->where('user_id', $userId)
-                    ->where('is_passed', true)
-                    ->exists();
-                
-                if ($hasPassed) {
-                    // Passed - show stats mode (user can proceed next via button)
-                    $this->isStatsMode = true;
-                    $this->lastAttempt = $existingAttempt;
-                    $this->canRetake = false; // Already passed, no need to retake
-                    $this->remainingAttempts = 0;
-                    return; // Render stats
-                }
-                
-                // Not passed - calculate retake eligibility
-                $canStillRetake = false;
-                $remaining = 0;
-                if ($maxAttempts === null) {
-                    // Pretest should not be unlimited - treat as exhausted
-                    $canStillRetake = false;
-                    $remaining = 0;
-                } elseif ($maxAttempts <= 1) {
-                    // Single attempt only
-                    $canStillRetake = false;
-                    $remaining = 0;
-                } else {
-                    // Multiple attempts allowed
-                    $canStillRetake = $attemptCount < $maxAttempts;
-                    $remaining = max(0, $maxAttempts - $attemptCount);
-                }
-                
-                // If force retake AND can retake, show form
-                if ($forceRetake && $canStillRetake) {
-                    // Continue to form mode below
-                } else {
-                    // Show stats mode
-                    $this->isStatsMode = true;
-                    $this->lastAttempt = $existingAttempt;
-                    $this->canRetake = $canStillRetake;
-                    $this->remainingAttempts = $remaining;
-                    
-                    return; // Don't load questions for stats mode
+
+                // Normal course flow: once pretest is submitted, user should proceed to modules.
+                // Block going back to Pretest page (sidebar/direct URL), except when explicitly retaking/remedial.
+                if (!$forceRetake && !$isRemedial) {
+                    $sectionId = $this->firstSectionId();
+                    return redirect()->route('courses-modules.index', [
+                        'course' => $this->course->id,
+                        'section' => $sectionId,
+                    ]);
                 }
             }
 
@@ -589,46 +564,11 @@ class Pretest extends Component
             }
         });
 
-        // Check the latest attempt result to determine redirect
-        $latestAttempt = TestAttempt::where('test_id', $this->pretest->id)
-            ->where('user_id', $userId)
-            ->orderByDesc('submitted_at')->orderByDesc('id')
-            ->first();
-        
-        $isPassed = $latestAttempt?->is_passed ?? false;
-        
-        // If not passed, check if user can still retake
-        if (!$isPassed) {
-            $attemptCount = (int) TestAttempt::where('test_id', $this->pretest->id)
-                ->where('user_id', $userId)
-                ->whereIn('status', [
-                    TestAttempt::STATUS_SUBMITTED,
-                    TestAttempt::STATUS_UNDER_REVIEW,
-                    TestAttempt::STATUS_EXPIRED,
-                ])
-                ->count();
-            
-            $maxAttempts = $this->pretest->max_attempts;
-            $canStillRetake = false;
-            
-            if ($maxAttempts === null) {
-                // Pretest should not be unlimited - treat as exhausted
-                $canStillRetake = false;
-            } else {
-                $maxAttempts = max(1, (int) $maxAttempts);
-                $canStillRetake = $attemptCount < $maxAttempts;
-            }
-            
-            if ($canStillRetake) {
-                // Failed but can retake - redirect to pretest to try again
-                session()->flash('pretest_failed', 'Anda belum lulus Pre-Test. Silakan coba lagi. Sisa kesempatan: ' . ($maxAttempts - $attemptCount));
-                return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
-            }
-            // Attempts exhausted - proceed to modules even though failed
-        }
-
-        // Always redirect back to Pretest page to show stats (Passed/Failed)
-        // From there, user can click "Lanjut ke Materi"
-        return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
+        // After submitting pretest, always continue to learning modules (no result screen here).
+        $sectionId = $this->firstSectionId();
+        return redirect()->route('courses-modules.index', [
+            'course' => $this->course->id,
+            'section' => $sectionId,
+        ]);
     }
 }
