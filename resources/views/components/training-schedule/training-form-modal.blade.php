@@ -106,13 +106,12 @@
                 <x-tab name="session" label="Session Config" icon="o-cog-6-tooth">
                     <div class="{{ $errors->any() ? 'space-y-1' : 'space-y-4' }}">
                         @if ($training_type === 'LMS')
-                            <!-- Participants first for LMS -->
+                            {{-- LMS: Only participants and optional room --}}
                             <x-choices label="Select Participants" wire:model="participants" :options="$usersSearchable"
                                 search-function="userSearch" debounce="300ms" option-value="id" option-label="name"
                                 class="focus-within:border-0" placeholder="Search name of participant..." min-chars=2
                                 hint="Type at least 2 chars" searchable multiple clearable />
 
-                            <!-- Room fields immediately after participants -->
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full mt-2">
                                 <x-input label="Room Name (Optional)" placeholder="Room name"
                                     class="focus-within:border-0" wire:model="room.name" />
@@ -120,33 +119,122 @@
                                     class="focus-within:border-0" wire:model="room.location" />
                             </div>
                         @else
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center justify-center w-full">
-                                <!-- Trainer -->
-                                <x-choices label="Trainer" wire:model="trainerId" :options="$trainersSearchable"
-                                    search-function="trainerSearch" debounce="300ms" option-value="id"
-                                    option-label="name" placeholder="Search name of trainer..."
-                                    class="focus-within:border-0" hint="Type at least 2 chars" searchable single
-                                    clearable />
+                            {{-- Non-LMS: Full session config with per-day override support --}}
+                            
+                            {{-- Trainer (Global - same for all days) --}}
+                            <x-choices label="Trainer" wire:model="trainerId" :options="$trainersSearchable"
+                                search-function="trainerSearch" debounce="300ms" option-value="id"
+                                option-label="name" placeholder="Search name of trainer..."
+                                class="focus-within:border-0" hint="Same trainer for all days" searchable single
+                                clearable />
 
-                                <!-- Participants Section -->
-                                <x-choices label="Select Participants" wire:model="participants" :options="$usersSearchable"
-                                    search-function="userSearch" debounce="300ms" option-value="id"
-                                    option-label="name" class="focus-within:border-0"
-                                    placeholder="Search name of participant..." min-chars=2
-                                    hint="Type at least 2 chars" searchable multiple clearable />
-                            </div>
+                            {{-- Participants --}}
+                            <x-choices label="Select Participants" wire:model="participants" :options="$usersSearchable"
+                                search-function="userSearch" debounce="300ms" option-value="id"
+                                option-label="name" class="focus-within:border-0"
+                                placeholder="Search name of participant..." min-chars=2
+                                hint="Type at least 2 chars" searchable multiple clearable />
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full">
-                                <x-input label="Room Name" placeholder="Room name" class="focus-within:border-0"
-                                    wire:model="room.name" />
-                                <x-input label="Room Location/Office" placeholder="Room location"
-                                    class="focus-within:border-0" wire:model="room.location" />
-                            </div>
-                            <div class="grid grid-cols-2 gap-5 items-center w-full">
-                                <x-input type="time" label="Start Time" wire:model="start_time"
-                                    class="focus-within:border-0" placeholder="HH:MM" />
-                                <x-input type="time" label="End Time" wire:model="end_time"
-                                    class="focus-within:border-0" placeholder="HH:MM" />
+                            {{-- Per-Day Settings Toggle --}}
+                            @php
+                                $totalDays = $this->getTotalDays();
+                                $dayOptions = $this->getTrainingDayOptions();
+                            @endphp
+                            
+                            @if ($totalDays > 1)
+                                <div class="p-3 bg-base-200 rounded-lg border border-base-300">
+                                    <label class="flex items-center gap-3 cursor-pointer">
+                                        <input type="checkbox" 
+                                            wire:click="toggleApplyToAllDays"
+                                            @checked($applyToAllDays)
+                                            class="checkbox checkbox-primary checkbox-sm" />
+                                        <span class="text-sm font-medium">Apply same room & time settings to all days</span>
+                                    </label>
+                                    @if (!$applyToAllDays)
+                                        <p class="text-xs text-base-content/60 mt-1 ml-7">
+                                            Configure different room and time for each day below
+                                        </p>
+                                    @endif
+                                </div>
+                            @endif
+
+                            {{-- Per-Day Configuration (when toggle is OFF) --}}
+                            @if (!$applyToAllDays && $totalDays > 1)
+                                {{-- Day Selector --}}
+                                <div class="flex flex-col sm:flex-row sm:items-center gap-3">
+                                    <x-select 
+                                        label="Select Day to Configure" 
+                                        wire:model.live="selectedDayNumber" 
+                                        :options="$dayOptions"
+                                        option-label="name"
+                                        option-value="id"
+                                        class="flex-1"
+                                    />
+                                </div>
+
+                                {{-- Day Navigation Dots --}}
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-xs text-base-content/60 mr-1">Quick nav:</span>
+                                    @for ($d = 1; $d <= $totalDays; $d++)
+                                        <button 
+                                            type="button"
+                                            wire:click="loadDayConfig({{ $d }})"
+                                            class="w-8 h-8 rounded-full text-xs font-medium flex items-center justify-center transition-all
+                                            {{ $selectedDayNumber === $d ? 'ring-2 ring-primary ring-offset-2' : '' }}
+                                            {{ $this->dayHasOverride($d) ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content hover:bg-base-400' }}"
+                                            title="{{ $this->dayHasOverride($d) ? 'Day ' . $d . ' has custom settings' : 'Day ' . $d . ' uses default settings' }}"
+                                        >
+                                            {{ $d }}
+                                        </button>
+                                    @endfor
+                                </div>
+                                <div class="flex items-center gap-4 text-xs text-base-content/60">
+                                    <span class="flex items-center gap-1">
+                                        <span class="inline-block w-3 h-3 rounded-full bg-primary"></span> Custom
+                                    </span>
+                                    <span class="flex items-center gap-1">
+                                        <span class="inline-block w-3 h-3 rounded-full bg-base-300"></span> Default
+                                    </span>
+                                </div>
+                            @endif
+
+                            {{-- Room & Time Fields --}}
+                            <div class="p-4 bg-base-100 rounded-lg border border-base-200 space-y-4">
+                                @if (!$applyToAllDays && $totalDays > 1)
+                                    <div class="text-sm font-medium text-base-content/80 mb-2">
+                                        Settings for Day {{ $selectedDayNumber }}
+                                        @if ($selectedDayNumber === 1)
+                                            <span class="text-xs font-normal text-base-content/50">(Reference day)</span>
+                                        @endif
+                                    </div>
+                                @endif
+                                
+                                <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full">
+                                    <x-input label="Room Name" placeholder="Room name" class="focus-within:border-0"
+                                        wire:model.blur="room.name" />
+                                    <x-input label="Room Location/Office" placeholder="Room location"
+                                        class="focus-within:border-0" wire:model.blur="room.location" />
+                                </div>
+                                <div class="grid grid-cols-2 gap-5 items-center w-full">
+                                    <x-input type="time" label="Start Time" wire:model.blur="start_time"
+                                        class="focus-within:border-0" placeholder="HH:MM" />
+                                    <x-input type="time" label="End Time" wire:model.blur="end_time"
+                                        class="focus-within:border-0" placeholder="HH:MM" />
+                                </div>
+                                
+                                {{-- Save Day Override Button --}}
+                                @if (!$applyToAllDays && $totalDays > 1 && $selectedDayNumber > 1)
+                                    <div class="flex justify-end pt-2">
+                                        <x-button 
+                                            wire:click="saveDayOverride" 
+                                            class="btn-sm btn-outline btn-primary"
+                                            spinner="saveDayOverride"
+                                        >
+                                            <x-icon name="o-check" class="w-4 h-4" />
+                                            Save Day {{ $selectedDayNumber }} Settings
+                                        </x-button>
+                                    </div>
+                                @endif
                             </div>
                         @endif
                     </div>
