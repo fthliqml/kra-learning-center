@@ -27,7 +27,8 @@ class TrainingFormModal extends Component
         'open-add-training-modal' => 'openModalWithDate',
         'schedule-month-context' => 'setDefaultMonth',
         'open-training-form-edit' => 'openEdit',
-        'confirm-delete-training-form' => 'onConfirmDelete'
+        'confirm-delete-training-form' => 'onConfirmDelete',
+        'confirm-reset-day-overrides' => 'onConfirmResetDayOverrides',
     ];
 
     public function mount()
@@ -100,6 +101,12 @@ class TrainingFormModal extends Component
         $persistService = app(TrainingPersistService::class);
         $sessionService = app(SessionSyncService::class);
 
+        // Prepare session override config for per-day settings
+        $sessionOverrideConfig = [
+            'applyToAllDays' => $this->applyToAllDays,
+            'dayOverrides' => $this->dayOverrides,
+        ];
+
         try {
             if ($this->isEdit && $this->trainingId) {
                 // Update existing training
@@ -107,7 +114,8 @@ class TrainingFormModal extends Component
                     $this->trainingId,
                     $formData,
                     $this->participants,
-                    $sessionService
+                    $sessionService,
+                    $sessionOverrideConfig
                 );
                 
                 if (!$training) {
@@ -122,7 +130,8 @@ class TrainingFormModal extends Component
                 $training = $persistService->create(
                     $formData,
                     $this->participants,
-                    $sessionService
+                    $sessionService,
+                    $sessionOverrideConfig
                 );
                 
                 $this->success('Training data created successfully!', position: 'toast-top toast-center');
