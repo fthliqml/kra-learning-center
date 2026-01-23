@@ -29,6 +29,7 @@ class SessionSyncService
      * @param array $room ['name' => '', 'location' => '']
      * @param string|null $startTime
      * @param string|null $endTime
+     * @param array $sessionOverrideConfig ['applyToAllDays' => bool, 'dayOverrides' => array]
      * @return array Array of created TrainingSession models
      */
     public function createSessionsForTraining(
@@ -39,7 +40,8 @@ class SessionSyncService
         ?int $trainerId = null,
         array $room = ['name' => '', 'location' => ''],
         ?string $startTime = null,
-        ?string $endTime = null
+        ?string $endTime = null,
+        array $sessionOverrideConfig = []
     ): array {
         $sessions = [];
         
@@ -50,17 +52,42 @@ class SessionSyncService
         $period = CarbonPeriod::create($startDate, $endDate);
         $day = 1;
         $isLms = $trainingType === 'LMS';
+        
+        $applyToAllDays = $sessionOverrideConfig['applyToAllDays'] ?? true;
+        $dayOverrides = $sessionOverrideConfig['dayOverrides'] ?? [];
 
         foreach ($period as $dateObj) {
+            // Start with global config
+            $sessionRoom = $room;
+            $sessionStartTime = $startTime;
+            $sessionEndTime = $endTime;
+            
+            // Apply per-day override if exists
+            if (!$applyToAllDays && isset($dayOverrides[$day])) {
+                $override = $dayOverrides[$day];
+                if (isset($override['room_name'])) {
+                    $sessionRoom['name'] = $override['room_name'];
+                }
+                if (isset($override['room_location'])) {
+                    $sessionRoom['location'] = $override['room_location'];
+                }
+                if (isset($override['start_time'])) {
+                    $sessionStartTime = $override['start_time'];
+                }
+                if (isset($override['end_time'])) {
+                    $sessionEndTime = $override['end_time'];
+                }
+            }
+            
             $sessions[] = TrainingSession::create([
                 'training_id' => $training->id,
                 'day_number' => $day,
                 'date' => $dateObj->format('Y-m-d'),
                 'trainer_id' => $isLms ? null : $trainerId,
-                'room_name' => $isLms ? ($room['name'] ?: null) : $room['name'],
-                'room_location' => $isLms ? ($room['location'] ?: null) : $room['location'],
-                'start_time' => $isLms ? null : $startTime,
-                'end_time' => $isLms ? null : $endTime,
+                'room_name' => $isLms ? ($sessionRoom['name'] ?: null) : $sessionRoom['name'],
+                'room_location' => $isLms ? ($sessionRoom['location'] ?: null) : $sessionRoom['location'],
+                'start_time' => $isLms ? null : $sessionStartTime,
+                'end_time' => $isLms ? null : $sessionEndTime,
             ]);
             $day++;
         }
@@ -81,7 +108,8 @@ class SessionSyncService
         ?int $trainerId = null,
         array $room = ['name' => '', 'location' => ''],
         ?string $startTime = null,
-        ?string $endTime = null
+        ?string $endTime = null,
+        array $sessionOverrideConfig = []
     ): void {
         // Delete all old sessions
         $training->sessions()->delete();
@@ -93,17 +121,42 @@ class SessionSyncService
         $period = CarbonPeriod::create($startDate, $endDate);
         $day = 1;
         $isLms = $newType === 'LMS';
+        
+        $applyToAllDays = $sessionOverrideConfig['applyToAllDays'] ?? true;
+        $dayOverrides = $sessionOverrideConfig['dayOverrides'] ?? [];
 
         foreach ($period as $dateObj) {
+            // Start with global config
+            $sessionRoom = $room;
+            $sessionStartTime = $startTime;
+            $sessionEndTime = $endTime;
+            
+            // Apply per-day override if exists
+            if (!$applyToAllDays && isset($dayOverrides[$day])) {
+                $override = $dayOverrides[$day];
+                if (isset($override['room_name'])) {
+                    $sessionRoom['name'] = $override['room_name'];
+                }
+                if (isset($override['room_location'])) {
+                    $sessionRoom['location'] = $override['room_location'];
+                }
+                if (isset($override['start_time'])) {
+                    $sessionStartTime = $override['start_time'];
+                }
+                if (isset($override['end_time'])) {
+                    $sessionEndTime = $override['end_time'];
+                }
+            }
+            
             TrainingSession::create([
                 'training_id' => $training->id,
                 'day_number' => $day,
                 'date' => $dateObj->format('Y-m-d'),
                 'trainer_id' => $isLms ? null : $trainerId,
-                'room_name' => $isLms ? ($room['name'] ?: null) : $room['name'],
-                'room_location' => $isLms ? ($room['location'] ?: null) : $room['location'],
-                'start_time' => $isLms ? null : $startTime,
-                'end_time' => $isLms ? null : $endTime,
+                'room_name' => $isLms ? ($sessionRoom['name'] ?: null) : $sessionRoom['name'],
+                'room_location' => $isLms ? ($sessionRoom['location'] ?: null) : $sessionRoom['location'],
+                'start_time' => $isLms ? null : $sessionStartTime,
+                'end_time' => $isLms ? null : $sessionEndTime,
             ]);
             $day++;
         }
