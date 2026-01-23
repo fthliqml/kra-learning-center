@@ -195,12 +195,14 @@
                                         </div>
                                         @if ($this->canApprovePlan($plan))
                                             <div class="flex items-center gap-2 flex-shrink-0">
-                                                <x-button icon="o-check" class="btn-sm btn-success text-white"
-                                                    wire:click="approvePlan('training', {{ $plan['id'] }})"
-                                                    title="Approve" />
-                                                <x-button icon="o-x-mark" class="btn-sm btn-error text-white"
+                                                <x-button icon="o-x-mark"
+                                                    class="btn-sm !bg-red-500 hover:!bg-red-600 !text-white !border-red-500"
                                                     wire:click="rejectPlan('training', {{ $plan['id'] }})"
                                                     title="Reject" />
+                                                <x-button icon="o-check"
+                                                    class="btn-sm !bg-green-500 hover:!bg-green-600 !text-white !border-green-500"
+                                                    wire:click="approvePlan('training', {{ $plan['id'] }})"
+                                                    title="Approve" />
                                             </div>
                                         @endif
                                     </div>
@@ -280,12 +282,14 @@
                                         </div>
                                         @if ($this->canApprovePlan($plan))
                                             <div class="flex items-center gap-2 flex-shrink-0">
-                                                <x-button icon="o-check" class="btn-sm btn-success text-white"
-                                                    wire:click="approvePlan('self-learning', {{ $plan['id'] }})"
-                                                    title="Approve" />
-                                                <x-button icon="o-x-mark" class="btn-sm btn-error text-white"
+                                                <x-button icon="o-x-mark"
+                                                    class="btn-sm !bg-red-500 hover:!bg-red-600 !text-white !border-red-500"
                                                     wire:click="rejectPlan('self-learning', {{ $plan['id'] }})"
                                                     title="Reject" />
+                                                <x-button icon="o-check"
+                                                    class="btn-sm !bg-green-500 hover:!bg-green-600 !text-white !border-green-500"
+                                                    wire:click="approvePlan('self-learning', {{ $plan['id'] }})"
+                                                    title="Approve" />
                                             </div>
                                         @endif
                                     </div>
@@ -397,12 +401,14 @@
                                         </div>
                                         @if ($this->canApprovePlan($plan))
                                             <div class="flex items-center gap-2 flex-shrink-0">
-                                                <x-button icon="o-check" class="btn-sm btn-success text-white"
-                                                    wire:click="approvePlan('mentoring', {{ $plan['id'] }})"
-                                                    title="Approve" />
-                                                <x-button icon="o-x-mark" class="btn-sm btn-error text-white"
+                                                <x-button icon="o-x-mark"
+                                                    class="btn-sm !bg-red-500 hover:!bg-red-600 !text-white !border-red-500"
                                                     wire:click="rejectPlan('mentoring', {{ $plan['id'] }})"
                                                     title="Reject" />
+                                                <x-button icon="o-check"
+                                                    class="btn-sm !bg-green-500 hover:!bg-green-600 !text-white !border-green-500"
+                                                    wire:click="approvePlan('mentoring', {{ $plan['id'] }})"
+                                                    title="Approve" />
                                             </div>
                                         @endif
                                     </div>
@@ -472,12 +478,14 @@
                                         </div>
                                         @if ($this->canApprovePlan($plan))
                                             <div class="flex items-center gap-2 flex-shrink-0">
-                                                <x-button icon="o-check" class="btn-sm btn-success text-white"
-                                                    wire:click="approvePlan('project', {{ $plan['id'] }})"
-                                                    title="Approve" />
-                                                <x-button icon="o-x-mark" class="btn-sm btn-error text-white"
+                                                <x-button icon="o-x-mark"
+                                                    class="btn-sm !bg-red-500 hover:!bg-red-600 !text-white !border-red-500"
                                                     wire:click="rejectPlan('project', {{ $plan['id'] }})"
                                                     title="Reject" />
+                                                <x-button icon="o-check"
+                                                    class="btn-sm !bg-green-500 hover:!bg-green-600 !text-white !border-green-500"
+                                                    wire:click="approvePlan('project', {{ $plan['id'] }})"
+                                                    title="Approve" />
                                             </div>
                                         @endif
                                     </div>
@@ -500,7 +508,7 @@
                                 <x-icon name="o-x-mark" class="size-4" />
                                 Reject All
                             </x-ui.button>
-                            <x-ui.button wire:click="approveAll" variant="primary"
+                            <x-ui.button wire:click="approveAll"
                                 class="!bg-green-500 hover:!bg-green-600 !text-white !border-green-500"
                                 spinner="approveAll">
                                 <x-icon name="o-check" class="size-4" />
