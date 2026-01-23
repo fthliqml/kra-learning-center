@@ -158,7 +158,11 @@
                                         <div class="flex-1 space-y-3">
                                             <div class="flex items-center justify-between gap-2">
                                                 <p class="font-semibold text-gray-900 text-sm md:text-base">
-                                                    {{ $plan['competency']['name'] ?? 'N/A' }}
+                                                    @if (!empty($plan['training_module']['title']))
+                                                        {{ $plan['training_module']['title'] }}
+                                                    @else
+                                                        {{ $plan['competency']['name'] ?? 'N/A' }}
+                                                    @endif
                                                 </p>
                                                 @include('pages.development.partials.status-badge', [
                                                     'status' => $plan['status'],
@@ -168,8 +172,9 @@
                                                 <div class="space-y-0.5">
                                                     <span
                                                         class="block text-xs font-medium text-gray-500 uppercase tracking-wide">Group</span>
-                                                    <span
-                                                        class="block text-gray-800">{{ $plan['competency']['type'] ?? '-' }}</span>
+                                                    <span class="block text-gray-800">
+                                                        {{ $plan['training_module']['competency']['type'] ?? ($plan['competency']['type'] ?? '-') }}
+                                                    </span>
                                                 </div>
                                             </div>
                                             {{-- Show rejection reason if rejected --}}
