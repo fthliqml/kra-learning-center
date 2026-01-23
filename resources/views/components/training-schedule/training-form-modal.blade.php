@@ -170,29 +170,33 @@
                                 />
                             </div>
 
-                            {{-- Day Navigation Dots --}}
-                            <div class="flex items-center gap-2 flex-wrap">
-                                <span class="text-xs text-base-content/60 mr-1">Quick nav:</span>
-                                @for ($d = 1; $d <= $totalDays; $d++)
-                                    <button 
-                                        type="button"
-                                        wire:click="loadDayConfig({{ $d }})"
-                                        class="w-8 h-8 rounded-full text-xs font-medium flex items-center justify-center transition-all
-                                        {{ $selectedDayNumber === $d ? 'ring-2 ring-primary ring-offset-2' : '' }}
-                                        {{ $this->dayHasOverride($d) ? 'bg-primary text-primary-content' : 'bg-base-300 text-base-content hover:bg-base-400' }}"
-                                        title="{{ $this->dayHasOverride($d) ? 'Day ' . $d . ' has custom settings' : 'Day ' . $d . ' uses default settings' }}"
-                                    >
-                                        {{ $d }}
-                                    </button>
-                                @endfor
-                            </div>
-                            <div class="flex items-center gap-4 text-xs text-base-content/60">
-                                <span class="flex items-center gap-1">
-                                    <span class="inline-block w-3 h-3 rounded-full bg-primary"></span> Custom
-                                </span>
-                                <span class="flex items-center gap-1">
-                                    <span class="inline-block w-3 h-3 rounded-full bg-base-300"></span> Default
-                                </span>
+                            {{-- Day Navigation Dots - Wrapped in styled container --}}
+                            <div class="p-4 bg-base-200/50 rounded-lg border border-base-300 space-y-3">
+                                <div class="flex items-center gap-2 flex-wrap">
+                                    <span class="text-xs font-medium text-base-content/70">Quick nav:</span>
+                                    @for ($d = 1; $d <= $totalDays; $d++)
+                                        <button 
+                                            type="button"
+                                            wire:click="loadDayConfig({{ $d }})"
+                                            class="w-9 h-9 rounded-full text-xs font-medium flex items-center justify-center transition-all shadow-sm
+                                            {{ $selectedDayNumber === $d ? 'ring-2 ring-primary ring-offset-2 ring-offset-base-200' : '' }}
+                                            {{ $this->dayHasOverride($d) ? 'bg-primary text-primary-content hover:bg-primary-focus' : 'bg-base-100 text-base-content border border-base-300 hover:bg-base-300' }}"
+                                            title="{{ $this->dayHasOverride($d) ? 'Day ' . $d . ' has custom settings' : 'Day ' . $d . ' uses default settings' }}"
+                                        >
+                                            {{ $d }}
+                                        </button>
+                                    @endfor
+                                </div>
+                                <div class="flex items-center gap-6 text-xs text-base-content/60 pt-1">
+                                    <span class="flex items-center gap-1.5">
+                                        <span class="inline-block w-3 h-3 rounded-full bg-primary shadow-sm"></span> 
+                                        <span>Customized</span>
+                                    </span>
+                                    <span class="flex items-center gap-1.5">
+                                        <span class="inline-block w-3 h-3 rounded-full bg-base-100 border border-base-300 shadow-sm"></span> 
+                                        <span>Default (same as Day 1)</span>
+                                    </span>
+                                </div>
                             </div>
                         @endif
 
@@ -202,37 +206,25 @@
                                 <div class="text-sm font-medium text-base-content/80 mb-2">
                                     Settings for Day {{ $selectedDayNumber }}
                                     @if ($selectedDayNumber === 1)
-                                        <span class="text-xs font-normal text-base-content/50">(Reference day)</span>
+                                        <span class="text-xs font-normal text-base-content/50">(Reference day - other days inherit from here)</span>
+                                    @else
+                                        <span class="text-xs font-normal text-primary ml-1">(Auto-saved when you switch days)</span>
                                     @endif
                                 </div>
                             @endif
                             
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-5 items-center w-full">
                                 <x-input label="Room Name" placeholder="Room name" class="focus-within:border-0"
-                                    wire:model.blur="room.name" />
+                                    wire:model.live.debounce.500ms="room.name" />
                                 <x-input label="Room Location/Office" placeholder="Room location"
-                                    class="focus-within:border-0" wire:model.blur="room.location" />
+                                    class="focus-within:border-0" wire:model.live.debounce.500ms="room.location" />
                             </div>
                             <div class="grid grid-cols-2 gap-5 items-center w-full">
-                                <x-input type="time" label="Start Time" wire:model.blur="start_time"
+                                <x-input type="time" label="Start Time" wire:model.live.debounce.500ms="start_time"
                                     class="focus-within:border-0" placeholder="HH:MM" />
-                                <x-input type="time" label="End Time" wire:model.blur="end_time"
+                                <x-input type="time" label="End Time" wire:model.live.debounce.500ms="end_time"
                                     class="focus-within:border-0" placeholder="HH:MM" />
                             </div>
-                            
-                            {{-- Save Day Override Button --}}
-                            @if (!$applyToAllDays && $totalDays > 1 && $selectedDayNumber > 1)
-                                <div class="flex justify-end pt-2">
-                                    <x-button 
-                                        wire:click="saveDayOverride" 
-                                        class="btn-sm btn-outline btn-primary"
-                                        spinner="saveDayOverride"
-                                    >
-                                        <x-icon name="o-check" class="w-4 h-4" />
-                                        Save Day {{ $selectedDayNumber }} Settings
-                                    </x-button>
-                                </div>
-                            @endif
                         </div>
                     </div>
                 </x-tab>

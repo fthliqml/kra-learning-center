@@ -55,28 +55,40 @@ class SessionSyncService
         
         $applyToAllDays = $sessionOverrideConfig['applyToAllDays'] ?? true;
         $dayOverrides = $sessionOverrideConfig['dayOverrides'] ?? [];
+        
+        // Get base config (day 1 reference) - from _base key or global params
+        $baseConfig = [
+            'room_name' => $room['name'] ?? '',
+            'room_location' => $room['location'] ?? '',
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+        ];
+        
+        if (!$applyToAllDays && isset($dayOverrides['_base'])) {
+            $baseConfig = array_merge($baseConfig, $dayOverrides['_base']);
+        }
 
         foreach ($period as $dateObj) {
-            // Start with global config
-            $sessionRoom = $room;
-            $sessionStartTime = $startTime;
-            $sessionEndTime = $endTime;
-            
-            // Apply per-day override if exists
-            if (!$applyToAllDays && isset($dayOverrides[$day])) {
+            // Determine session config for this day
+            if ($applyToAllDays || $day === 1) {
+                // Uniform mode or day 1: use base config
+                $sessionRoom = ['name' => $baseConfig['room_name'], 'location' => $baseConfig['room_location']];
+                $sessionStartTime = $baseConfig['start_time'];
+                $sessionEndTime = $baseConfig['end_time'];
+            } elseif (isset($dayOverrides[$day]) && is_array($dayOverrides[$day])) {
+                // Day 2+ with override: use full stored config
                 $override = $dayOverrides[$day];
-                if (isset($override['room_name'])) {
-                    $sessionRoom['name'] = $override['room_name'];
-                }
-                if (isset($override['room_location'])) {
-                    $sessionRoom['location'] = $override['room_location'];
-                }
-                if (isset($override['start_time'])) {
-                    $sessionStartTime = $override['start_time'];
-                }
-                if (isset($override['end_time'])) {
-                    $sessionEndTime = $override['end_time'];
-                }
+                $sessionRoom = [
+                    'name' => $override['room_name'] ?? $baseConfig['room_name'],
+                    'location' => $override['room_location'] ?? $baseConfig['room_location'],
+                ];
+                $sessionStartTime = $override['start_time'] ?? $baseConfig['start_time'];
+                $sessionEndTime = $override['end_time'] ?? $baseConfig['end_time'];
+            } else {
+                // Day 2+ without override: inherit from base
+                $sessionRoom = ['name' => $baseConfig['room_name'], 'location' => $baseConfig['room_location']];
+                $sessionStartTime = $baseConfig['start_time'];
+                $sessionEndTime = $baseConfig['end_time'];
             }
             
             $sessions[] = TrainingSession::create([
@@ -124,28 +136,40 @@ class SessionSyncService
         
         $applyToAllDays = $sessionOverrideConfig['applyToAllDays'] ?? true;
         $dayOverrides = $sessionOverrideConfig['dayOverrides'] ?? [];
+        
+        // Get base config (day 1 reference) - from _base key or global params
+        $baseConfig = [
+            'room_name' => $room['name'] ?? '',
+            'room_location' => $room['location'] ?? '',
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+        ];
+        
+        if (!$applyToAllDays && isset($dayOverrides['_base'])) {
+            $baseConfig = array_merge($baseConfig, $dayOverrides['_base']);
+        }
 
         foreach ($period as $dateObj) {
-            // Start with global config
-            $sessionRoom = $room;
-            $sessionStartTime = $startTime;
-            $sessionEndTime = $endTime;
-            
-            // Apply per-day override if exists
-            if (!$applyToAllDays && isset($dayOverrides[$day])) {
+            // Determine session config for this day
+            if ($applyToAllDays || $day === 1) {
+                // Uniform mode or day 1: use base config
+                $sessionRoom = ['name' => $baseConfig['room_name'], 'location' => $baseConfig['room_location']];
+                $sessionStartTime = $baseConfig['start_time'];
+                $sessionEndTime = $baseConfig['end_time'];
+            } elseif (isset($dayOverrides[$day]) && is_array($dayOverrides[$day])) {
+                // Day 2+ with override: use full stored config
                 $override = $dayOverrides[$day];
-                if (isset($override['room_name'])) {
-                    $sessionRoom['name'] = $override['room_name'];
-                }
-                if (isset($override['room_location'])) {
-                    $sessionRoom['location'] = $override['room_location'];
-                }
-                if (isset($override['start_time'])) {
-                    $sessionStartTime = $override['start_time'];
-                }
-                if (isset($override['end_time'])) {
-                    $sessionEndTime = $override['end_time'];
-                }
+                $sessionRoom = [
+                    'name' => $override['room_name'] ?? $baseConfig['room_name'],
+                    'location' => $override['room_location'] ?? $baseConfig['room_location'],
+                ];
+                $sessionStartTime = $override['start_time'] ?? $baseConfig['start_time'];
+                $sessionEndTime = $override['end_time'] ?? $baseConfig['end_time'];
+            } else {
+                // Day 2+ without override: inherit from base
+                $sessionRoom = ['name' => $baseConfig['room_name'], 'location' => $baseConfig['room_location']];
+                $sessionStartTime = $baseConfig['start_time'];
+                $sessionEndTime = $baseConfig['end_time'];
             }
             
             TrainingSession::create([

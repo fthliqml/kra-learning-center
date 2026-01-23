@@ -40,6 +40,12 @@ class TrainingFormModal extends Component
 
     public function saveTraining()
     {
+        // Auto-save current day's config before persisting to database
+        // This ensures edits made without navigating away are captured
+        if (!$this->applyToAllDays && $this->selectedDayNumber > 0) {
+            $this->autoSaveCurrentDayConfig($this->selectedDayNumber);
+        }
+
         // Validation using FormRequest
         $request = new TrainingFormRequest();
         $request->merge($this->getValidationData());

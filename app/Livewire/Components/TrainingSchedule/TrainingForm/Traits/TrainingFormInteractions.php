@@ -426,12 +426,20 @@ trait TrainingFormInteractions
     // ===== SESSION OVERRIDE HANDLERS =====
 
     /**
-     * When admin selects a different day, load that day's config into view.
+     * When admin selects a different day, auto-save current and load the new day's config.
      */
     public function updatedSelectedDayNumber($value): void
     {
-        $this->selectedDayNumber = max(1, (int) $value);
-        $this->loadDayConfig($this->selectedDayNumber);
+        $previousDay = $this->selectedDayNumber;
+        $newDay = max(1, (int) $value);
+        
+        // Auto-save the previous day's settings before switching
+        if (!$this->applyToAllDays && $previousDay !== $newDay) {
+            $this->autoSaveCurrentDayConfig($previousDay);
+        }
+        
+        $this->selectedDayNumber = $newDay;
+        $this->loadDayConfigFromState($newDay);
     }
 
     /**
@@ -447,6 +455,20 @@ trait TrainingFormInteractions
                 'confirm-reset-day-overrides'
             );
             return;
+        }
+        
+        // When enabling per-day mode, save current form values as day 1 baseline
+        if ($this->applyToAllDays) {
+            // Switching to per-day mode - save current fields as _base immediately
+            $this->dayOverrides = [
+                '_base' => [
+                    'room_name' => $this->room['name'] ?? '',
+                    'room_location' => $this->room['location'] ?? '',
+                    'start_time' => $this->start_time,
+                    'end_time' => $this->end_time,
+                ],
+            ];
+            $this->selectedDayNumber = 1;
         }
         
         $this->applyToAllDays = !$this->applyToAllDays;
@@ -467,14 +489,40 @@ trait TrainingFormInteractions
     }
 
     /**
-     * Load specific day config into form fields for editing.
+     * Load day config from internal state (dayOverrides or global fields).
+     * ALWAYS restores form fields from stored config to prevent cross-day pollution.
      */
-    public function loadDayConfig(int $dayNumber): void
+    public function loadDayConfigFromState(int $dayNumber): void
     {
         $this->selectedDayNumber = $dayNumber;
-        $config = $this->getSessionConfigForDay($dayNumber);
         
-        // Only update room/time fields, not global trainer
+        if ($this->applyToAllDays) {
+            // Uniform mode - nothing to load, global fields are correct
+            return;
+        }
+        
+        // Get the config for the target day
+        if ($dayNumber === 1) {
+            // Day 1: restore from _base if exists
+            if (isset($this->dayOverrides['_base'])) {
+                $config = $this->dayOverrides['_base'];
+            } else {
+                // No base saved yet, use current global (first time)
+                return;
+            }
+        } else {
+            // Day 2+: use stored override or fall back to _base
+            if (isset($this->dayOverrides[$dayNumber])) {
+                $config = $this->dayOverrides[$dayNumber];
+            } elseif (isset($this->dayOverrides['_base'])) {
+                $config = $this->dayOverrides['_base'];
+            } else {
+                // No config stored, keep current
+                return;
+            }
+        }
+        
+        // Restore form fields from stored config
         $this->room = [
             'name' => $config['room_name'] ?? '',
             'location' => $config['room_location'] ?? '',
@@ -484,11 +532,14 @@ trait TrainingFormInteractions
     }
 
     /**
-     * Save current form values as override for selected day.
+     * Auto-save the current form field values for the specified day.
+     * Called automatically when switching days.
+     * Day 1 is saved to _base.
+     * Day 2+ only saved if different from day 1 (to keep quick nav colors accurate).
      */
-    public function saveDayOverride(): void
+    protected function autoSaveCurrentDayConfig(int $dayNumber): void
     {
-        if ($this->applyToAllDays || $this->selectedDayNumber <= 1) {
+        if ($this->applyToAllDays) {
             return;
         }
         
@@ -499,23 +550,63 @@ trait TrainingFormInteractions
             'end_time' => $this->end_time,
         ];
         
-        // Get day 1 config as reference (global)
-        $day1Config = $this->getSessionConfigForDay(1);
-        
-        $diff = [];
-        foreach ($currentConfig as $key => $val) {
-            if ($val !== ($day1Config[$key] ?? '')) {
-                $diff[$key] = $val;
+        if ($dayNumber === 1) {
+            // Day 1 values go to _base
+            $this->dayOverrides['_base'] = $currentConfig;
+        } else {
+            // Day 2+: only save as override if different from day 1
+            $baseConfig = $this->getDay1BaseConfig();
+            
+            $isDifferent = false;
+            foreach ($currentConfig as $key => $value) {
+                if (($baseConfig[$key] ?? '') !== $value) {
+                    $isDifferent = true;
+                    break;
+                }
+            }
+            
+            if ($isDifferent) {
+                // Values differ from day 1 - save as override
+                $this->dayOverrides[$dayNumber] = $currentConfig;
+            } else {
+                // Values same as day 1 - remove any existing override
+                unset($this->dayOverrides[$dayNumber]);
             }
         }
-        
-        if (!empty($diff)) {
-            $this->dayOverrides[$this->selectedDayNumber] = $diff;
-        } else {
-            unset($this->dayOverrides[$this->selectedDayNumber]);
+    }
+
+    /**
+     * Get day 1 base configuration (from _base storage).
+     */
+    protected function getDay1BaseConfig(): array
+    {
+        if (isset($this->dayOverrides['_base'])) {
+            return $this->dayOverrides['_base'];
         }
         
-        $this->success('Day ' . $this->selectedDayNumber . ' settings saved.', position: 'toast-top toast-center');
+        // Fallback to current global fields
+        return [
+            'room_name' => $this->room['name'] ?? '',
+            'room_location' => $this->room['location'] ?? '',
+            'start_time' => $this->start_time,
+            'end_time' => $this->end_time,
+        ];
+    }
+
+    /**
+     * Quick navigation to a specific day (from dot buttons).
+     */
+    public function loadDayConfig(int $dayNumber): void
+    {
+        $previousDay = $this->selectedDayNumber;
+        
+        // Auto-save current day before switching
+        if (!$this->applyToAllDays && $previousDay !== $dayNumber) {
+            $this->autoSaveCurrentDayConfig($previousDay);
+        }
+        
+        $this->selectedDayNumber = $dayNumber;
+        $this->loadDayConfigFromState($dayNumber);
     }
 
     /**
@@ -541,8 +632,8 @@ trait TrainingFormInteractions
             return;
         }
         
-        // Use first session as reference (global)
-        $globalConfig = [
+        // Use first session as reference (day 1 global/base)
+        $day1Config = [
             'room_name' => $firstSession->room_name ?? '',
             'room_location' => $firstSession->room_location ?? '',
             'start_time' => $firstSession->start_time ? Carbon::parse($firstSession->start_time)->format('H:i') : '',
@@ -550,6 +641,7 @@ trait TrainingFormInteractions
         ];
         
         $this->dayOverrides = [];
+        $hasAnyDiff = false;
         
         foreach ($sessions->skip(1) as $session) {
             $sessionConfig = [
@@ -559,18 +651,27 @@ trait TrainingFormInteractions
                 'end_time' => $session->end_time ? Carbon::parse($session->end_time)->format('H:i') : '',
             ];
             
-            $diff = [];
-            foreach ($globalConfig as $key => $globalVal) {
-                if (($sessionConfig[$key] ?? '') !== $globalVal) {
-                    $diff[$key] = $sessionConfig[$key] ?? '';
+            // Check if this day differs from day 1
+            $isDifferent = false;
+            foreach ($day1Config as $key => $day1Val) {
+                if (($sessionConfig[$key] ?? '') !== $day1Val) {
+                    $isDifferent = true;
+                    break;
                 }
             }
             
-            if (!empty($diff)) {
-                $this->dayOverrides[$session->day_number] = $diff;
+            if ($isDifferent) {
+                // Store complete config for this day (not diff)
+                $this->dayOverrides[$session->day_number] = $sessionConfig;
+                $hasAnyDiff = true;
             }
         }
         
-        $this->applyToAllDays = empty($this->dayOverrides);
+        $this->applyToAllDays = !$hasAnyDiff;
+        
+        // Store day 1 as base reference for when we switch days
+        if (!$this->applyToAllDays) {
+            $this->dayOverrides['_base'] = $day1Config;
+        }
     }
 }

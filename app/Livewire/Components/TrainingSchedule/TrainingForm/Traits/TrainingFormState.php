@@ -182,22 +182,41 @@ trait TrainingFormState
 
     /**
      * Get effective session config for a specific day.
-     * Returns global settings merged with any day-specific overrides.
+     * Returns day-specific config if exists, otherwise base/global settings.
      */
     public function getSessionConfigForDay(int $dayNumber): array
     {
-        $global = [
-            'room_name' => $this->room['name'] ?? '',
-            'room_location' => $this->room['location'] ?? '',
-            'start_time' => $this->start_time,
-            'end_time' => $this->end_time,
-        ];
-        
-        if ($this->applyToAllDays || !isset($this->dayOverrides[$dayNumber])) {
-            return $global;
+        // If uniform mode, return global fields
+        if ($this->applyToAllDays) {
+            return [
+                'room_name' => $this->room['name'] ?? '',
+                'room_location' => $this->room['location'] ?? '',
+                'start_time' => $this->start_time,
+                'end_time' => $this->end_time,
+            ];
         }
         
-        return array_merge($global, $this->dayOverrides[$dayNumber]);
+        // Day 1 uses global fields directly
+        if ($dayNumber === 1) {
+            // Use stored base if available, otherwise current global fields
+            if (isset($this->dayOverrides['_base'])) {
+                return $this->dayOverrides['_base'];
+            }
+            return [
+                'room_name' => $this->room['name'] ?? '',
+                'room_location' => $this->room['location'] ?? '',
+                'start_time' => $this->start_time,
+                'end_time' => $this->end_time,
+            ];
+        }
+        
+        // Day 2+ use stored override (complete config), fallback to base/global
+        if (isset($this->dayOverrides[$dayNumber])) {
+            return $this->dayOverrides[$dayNumber];
+        }
+        
+        // No override, use base
+        return $this->getSessionConfigForDay(1);
     }
 
     /**
@@ -205,6 +224,10 @@ trait TrainingFormState
      */
     public function dayHasOverride(int $dayNumber): bool
     {
+        // Day 1 never shows as "override" - it's the reference
+        if ($dayNumber === 1) {
+            return false;
+        }
         return !$this->applyToAllDays && isset($this->dayOverrides[$dayNumber]) && !empty($this->dayOverrides[$dayNumber]);
     }
 
@@ -233,6 +256,7 @@ trait TrainingFormState
 
     /**
      * Cleanup orphan overrides when date range shrinks.
+     * Preserves the _base key used for day 1 reference.
      */
     public function cleanupOrphanOverrides(): void
     {
@@ -243,7 +267,7 @@ trait TrainingFormState
         
         $this->dayOverrides = array_filter(
             $this->dayOverrides,
-            fn($key) => $key <= $totalDays,
+            fn($key) => $key === '_base' || (is_int($key) && $key <= $totalDays),
             ARRAY_FILTER_USE_KEY
         );
     }
