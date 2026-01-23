@@ -32,6 +32,12 @@ trait TrainingFormState
     public array $room = ['name' => '', 'location' => ''];
     public array $participants = [];
     
+    // ===== PER-DAY SESSION OVERRIDE =====
+    public bool $applyToAllDays = true;      // Toggle: true = uniform, false = per-day
+    public int $selectedDayNumber = 1;       // Currently selected day in UI
+    public array $dayOverrides = [];         // Per-day override data
+    // Structure: [dayNumber => ['room_name' => '', 'room_location' => '', 'start_time' => '', 'end_time' => '']]
+    
     // ===== ORIGINAL TYPE (for edit mode type change detection) =====
     public ?string $originalTrainingType = null;
     
@@ -86,6 +92,9 @@ trait TrainingFormState
         $this->trainingNameWasAutoFilled = false;
         $this->pendingTypeChange = null;
         $this->showTypeChangeConfirm = false;
+        $this->applyToAllDays = true;
+        $this->selectedDayNumber = 1;
+        $this->dayOverrides = [];
     }
 
     /**
@@ -113,6 +122,9 @@ trait TrainingFormState
         $this->trainingNameWasAutoFilled = false;
         $this->pendingTypeChange = null;
         $this->showTypeChangeConfirm = false;
+        $this->applyToAllDays = true;
+        $this->selectedDayNumber = 1;
+        $this->dayOverrides = [];
         
         $this->resetErrorBag();
         $this->resetValidation();
@@ -165,6 +177,102 @@ trait TrainingFormState
         $this->trainingNameWasAutoFilled = $autoFilled;
         if ($autoFilled) {
             $this->trainingNameManuallyEdited = false;
+        }
+    }
+
+    /**
+     * Get effective session config for a specific day.
+     * Returns global settings merged with any day-specific overrides.
+     */
+    public function getSessionConfigForDay(int $dayNumber): array
+    {
+        $global = [
+            'room_name' => $this->room['name'] ?? '',
+            'room_location' => $this->room['location'] ?? '',
+            'start_time' => $this->start_time,
+            'end_time' => $this->end_time,
+        ];
+        
+        if ($this->applyToAllDays || !isset($this->dayOverrides[$dayNumber])) {
+            return $global;
+        }
+        
+        return array_merge($global, $this->dayOverrides[$dayNumber]);
+    }
+
+    /**
+     * Check if a specific day has overrides.
+     */
+    public function dayHasOverride(int $dayNumber): bool
+    {
+        return !$this->applyToAllDays && isset($this->dayOverrides[$dayNumber]) && !empty($this->dayOverrides[$dayNumber]);
+    }
+
+    /**
+     * Get total number of training days from date range.
+     */
+    public function getTotalDays(): int
+    {
+        if (empty($this->date)) {
+            return 0;
+        }
+        
+        $range = $this->parseDateRange($this->date);
+        if (empty($range['start']) || empty($range['end'])) {
+            return 0;
+        }
+        
+        try {
+            $start = \Carbon\Carbon::parse($range['start']);
+            $end = \Carbon\Carbon::parse($range['end']);
+            return $start->diffInDays($end) + 1;
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Cleanup orphan overrides when date range shrinks.
+     */
+    public function cleanupOrphanOverrides(): void
+    {
+        $totalDays = $this->getTotalDays();
+        if ($totalDays <= 0) {
+            return;
+        }
+        
+        $this->dayOverrides = array_filter(
+            $this->dayOverrides,
+            fn($key) => $key <= $totalDays,
+            ARRAY_FILTER_USE_KEY
+        );
+    }
+
+    /**
+     * Get all training dates as array of day options for dropdowns.
+     */
+    public function getTrainingDayOptions(): array
+    {
+        if (empty($this->date)) {
+            return [];
+        }
+        
+        $range = $this->parseDateRange($this->date);
+        if (empty($range['start']) || empty($range['end'])) {
+            return [];
+        }
+        
+        try {
+            $period = \Carbon\CarbonPeriod::create($range['start'], $range['end']);
+            $options = [];
+            $d = 1;
+            foreach ($period as $dt) {
+                $options[] = ['id' => $d, 'name' => 'Day ' . $d . ': ' . $dt->format('d M Y')];
+                $d++;
+            }
+            return $options;
+        } catch (\Throwable $e) {
+            return [];
         }
     }
 }

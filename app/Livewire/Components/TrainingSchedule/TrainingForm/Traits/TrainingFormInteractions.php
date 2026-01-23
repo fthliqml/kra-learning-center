@@ -177,6 +177,9 @@ trait TrainingFormInteractions
             $this->userSearch('');
         }
 
+        // Detect per-day session overrides from existing sessions
+        $this->detectSessionOverrides($training);
+
         $this->showModal = true;
 
         // Dispatch event for parent components to hide loading overlay
@@ -418,5 +421,156 @@ trait TrainingFormInteractions
         if ($this->isEdit && $this->originalTrainingType) {
             $this->training_type = $this->originalTrainingType;
         }
+    }
+
+    // ===== SESSION OVERRIDE HANDLERS =====
+
+    /**
+     * When admin selects a different day, load that day's config into view.
+     */
+    public function updatedSelectedDayNumber($value): void
+    {
+        $this->selectedDayNumber = max(1, (int) $value);
+        $this->loadDayConfig($this->selectedDayNumber);
+    }
+
+    /**
+     * Toggle "Apply same settings to all days" with confirmation.
+     */
+    public function toggleApplyToAllDays(): void
+    {
+        if (!$this->applyToAllDays && !empty($this->dayOverrides)) {
+            // Switching from per-day to uniform - needs confirmation
+            $this->dispatch('confirm',
+                'Reset Per-Day Settings',
+                'This will reset all custom per-day settings. All days will use the same room and time. Proceed?',
+                'confirm-reset-day-overrides'
+            );
+            return;
+        }
+        
+        $this->applyToAllDays = !$this->applyToAllDays;
+        if ($this->applyToAllDays) {
+            $this->dayOverrides = [];
+        }
+    }
+
+    /**
+     * Confirm handler for resetting overrides.
+     */
+    public function onConfirmResetDayOverrides(): void
+    {
+        $this->applyToAllDays = true;
+        $this->dayOverrides = [];
+        $this->selectedDayNumber = 1;
+        $this->dispatch('confirm-done');
+    }
+
+    /**
+     * Load specific day config into form fields for editing.
+     */
+    public function loadDayConfig(int $dayNumber): void
+    {
+        $this->selectedDayNumber = $dayNumber;
+        $config = $this->getSessionConfigForDay($dayNumber);
+        
+        // Only update room/time fields, not global trainer
+        $this->room = [
+            'name' => $config['room_name'] ?? '',
+            'location' => $config['room_location'] ?? '',
+        ];
+        $this->start_time = $config['start_time'] ?? '';
+        $this->end_time = $config['end_time'] ?? '';
+    }
+
+    /**
+     * Save current form values as override for selected day.
+     */
+    public function saveDayOverride(): void
+    {
+        if ($this->applyToAllDays || $this->selectedDayNumber <= 1) {
+            return;
+        }
+        
+        $currentConfig = [
+            'room_name' => $this->room['name'] ?? '',
+            'room_location' => $this->room['location'] ?? '',
+            'start_time' => $this->start_time,
+            'end_time' => $this->end_time,
+        ];
+        
+        // Get day 1 config as reference (global)
+        $day1Config = $this->getSessionConfigForDay(1);
+        
+        $diff = [];
+        foreach ($currentConfig as $key => $val) {
+            if ($val !== ($day1Config[$key] ?? '')) {
+                $diff[$key] = $val;
+            }
+        }
+        
+        if (!empty($diff)) {
+            $this->dayOverrides[$this->selectedDayNumber] = $diff;
+        } else {
+            unset($this->dayOverrides[$this->selectedDayNumber]);
+        }
+        
+        $this->success('Day ' . $this->selectedDayNumber . ' settings saved.', position: 'toast-top toast-center');
+    }
+
+    /**
+     * Handle date range changes - cleanup orphan overrides.
+     */
+    public function updatedDate($value): void
+    {
+        // Cleanup orphan overrides if date range shrinks
+        $this->cleanupOrphanOverrides();
+    }
+
+    /**
+     * Detect if existing sessions have different configs and populate overrides.
+     */
+    protected function detectSessionOverrides(Training $training): void
+    {
+        $sessions = $training->sessions->sortBy('day_number');
+        $firstSession = $sessions->first();
+        
+        if (!$firstSession || $sessions->count() <= 1) {
+            $this->applyToAllDays = true;
+            $this->dayOverrides = [];
+            return;
+        }
+        
+        // Use first session as reference (global)
+        $globalConfig = [
+            'room_name' => $firstSession->room_name ?? '',
+            'room_location' => $firstSession->room_location ?? '',
+            'start_time' => $firstSession->start_time ? Carbon::parse($firstSession->start_time)->format('H:i') : '',
+            'end_time' => $firstSession->end_time ? Carbon::parse($firstSession->end_time)->format('H:i') : '',
+        ];
+        
+        $this->dayOverrides = [];
+        
+        foreach ($sessions->skip(1) as $session) {
+            $sessionConfig = [
+                'room_name' => $session->room_name ?? '',
+                'room_location' => $session->room_location ?? '',
+                'start_time' => $session->start_time ? Carbon::parse($session->start_time)->format('H:i') : '',
+                'end_time' => $session->end_time ? Carbon::parse($session->end_time)->format('H:i') : '',
+            ];
+            
+            $diff = [];
+            foreach ($globalConfig as $key => $globalVal) {
+                if (($sessionConfig[$key] ?? '') !== $globalVal) {
+                    $diff[$key] = $sessionConfig[$key] ?? '';
+                }
+            }
+            
+            if (!empty($diff)) {
+                $this->dayOverrides[$session->day_number] = $diff;
+            }
+        }
+        
+        $this->applyToAllDays = empty($this->dayOverrides);
     }
 }
