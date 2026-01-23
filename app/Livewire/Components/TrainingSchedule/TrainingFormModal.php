@@ -21,7 +21,7 @@ class TrainingFormModal extends Component
     use TrainingFormDropdowns;
     use TrainingFormInteractions;
 
-    public $activeTab = 'training'; // training or session
+    public $activeTab = 'training'; // training, personnel, or schedule
 
     protected $listeners = [
         'open-add-training-modal' => 'openModalWithDate',
