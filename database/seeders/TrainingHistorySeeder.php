@@ -106,21 +106,60 @@ class TrainingHistorySeeder extends Seeder
             ]);
 
             // Create training sessions
+            // Decide if this training has per-day variation (every 3rd training has different room/time per day)
+            $hasPerDayVariation = ($i % 3 === 0);
+            
             $sessions = [];
             $dayNumber = 1;
+            
+            // Base settings for uniform trainings
+            $baseRoom = 'Room ' . chr(64 + rand(1, 5)); // A-E
+            $baseLocation = 'Floor ' . rand(1, 5);
+            $baseStartTime = '08:00:00';
+            $baseEndTime = '16:00:00';
+            
+            // Variation options for per-day trainings
+            $roomOptions = ['Room A', 'Room B', 'Room C', 'Meeting Hall', 'Lab 1', 'Lab 2'];
+            $locationOptions = ['Floor 1', 'Floor 2', 'Floor 3', 'Building A', 'Building B'];
+            $timeSlots = [
+                ['start' => '08:00:00', 'end' => '16:00:00'],
+                ['start' => '09:00:00', 'end' => '17:00:00'],
+                ['start' => '10:00:00', 'end' => '18:00:00'],
+                ['start' => '08:30:00', 'end' => '15:30:00'],
+                ['start' => '09:30:00', 'end' => '16:30:00'],
+            ];
+            
             foreach (CarbonPeriod::create($training->start_date, $training->end_date) as $date) {
                 $trainer = $trainers->random();
-                $sessions[] = TrainingSession::create([
-                    'training_id' => $training->id,
-                    'trainer_id' => $trainer->id,
-                    'room_name' => 'Room ' . chr(64 + rand(1, 5)), // A-E
-                    'room_location' => 'Floor ' . rand(1, 5),
-                    'date' => $date->toDateString(),
-                    'start_time' => '08:00:00',
-                    'end_time' => '16:00:00',
-                    'day_number' => $dayNumber,
-                    'status' => 'done',
-                ]);
+                
+                if ($hasPerDayVariation) {
+                    // Different room/time for each day
+                    $timeSlot = $timeSlots[array_rand($timeSlots)];
+                    $sessions[] = TrainingSession::create([
+                        'training_id' => $training->id,
+                        'trainer_id' => $trainer->id,
+                        'room_name' => $roomOptions[array_rand($roomOptions)],
+                        'room_location' => $locationOptions[array_rand($locationOptions)],
+                        'date' => $date->toDateString(),
+                        'start_time' => $timeSlot['start'],
+                        'end_time' => $timeSlot['end'],
+                        'day_number' => $dayNumber,
+                        'status' => 'done',
+                    ]);
+                } else {
+                    // Uniform room/time for all days
+                    $sessions[] = TrainingSession::create([
+                        'training_id' => $training->id,
+                        'trainer_id' => $trainer->id,
+                        'room_name' => $baseRoom,
+                        'room_location' => $baseLocation,
+                        'date' => $date->toDateString(),
+                        'start_time' => $baseStartTime,
+                        'end_time' => $baseEndTime,
+                        'day_number' => $dayNumber,
+                        'status' => 'done',
+                    ]);
+                }
                 $dayNumber++;
             }
 
