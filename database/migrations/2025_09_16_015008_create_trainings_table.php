@@ -24,7 +24,7 @@ return new class extends Migration
             $table->enum('type', ['IN', 'OUT', 'LMS', 'BLENDED']);
             $table->date('start_date');
             $table->date('end_date')->nullable();
-            $table->enum('status', ['canceled', 'in_progress', 'done', 'approved', 'rejected'])->default('in_progress');
+            $table->enum('status', ['cancelled', 'in_progress', 'done', 'approved', 'rejected'])->default('in_progress');
 
             // Multi-level approval tracking
             $table->foreignId('section_head_signed_by')->nullable()->constrained('users')->nullOnDelete();

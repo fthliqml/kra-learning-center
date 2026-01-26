@@ -100,7 +100,7 @@
                                             'in_progress' => 'badge-primary',
                                             'done' => 'badge-success',
                                             'approved' => 'badge-info',
-                                            'canceled' => 'badge-error',
+                                            'cancelled' => 'badge-error',
                                             'rejected' => 'badge-warning',
                                             default => 'badge-ghost',
                                         };
