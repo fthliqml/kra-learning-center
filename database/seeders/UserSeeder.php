@@ -54,7 +54,7 @@ class UserSeeder extends Seeder
                 'position' => 'employee',
             ],
             [
-                'name' => 'LID Employee 2',
+                'name' => 'LID Admin',
                 'nrp' => 1002,
                 'email' => 'admin@example.com',
                 'password' => Hash::make('password'),
@@ -64,7 +64,7 @@ class UserSeeder extends Seeder
                 'position' => 'employee',
             ],
             [
-                'name' => 'LID Employee 3',
+                'name' => 'LID Instructor',
                 'nrp' => 1003,
                 'email' => 'instructor@example.com',
                 'password' => Hash::make('password'),
