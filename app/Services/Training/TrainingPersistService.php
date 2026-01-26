@@ -23,11 +23,12 @@ class TrainingPersistService
      * @param array $data Form data
      * @param array $participants Array of participant user IDs
      * @param SessionSyncService $sessionService
+     * @param array $sessionOverrideConfig Session override config
      * @return Training
      */
-    public function create(array $data, array $participants, SessionSyncService $sessionService): Training
+    public function create(array $data, array $participants, SessionSyncService $sessionService, array $sessionOverrideConfig = []): Training
     {
-        return DB::transaction(function () use ($data, $participants, $sessionService) {
+        return DB::transaction(function () use ($data, $participants, $sessionService, $sessionOverrideConfig) {
             // Resolve training name
             $trainingName = $this->resolveTrainingName($data);
 
@@ -42,9 +43,10 @@ class TrainingPersistService
                 'competency_id' => $data['training_type'] === 'OUT' ? $data['competency_id'] : null,
             ]);
 
-            // Note: Surveys are NOT created here. They will be created when training is closed.\n            // This ensures surveys only exist for completed trainings.
+            // Note: Surveys are NOT created here. They will be created when training is closed.
+            // This ensures surveys only exist for completed trainings.
 
-            // Create sessions
+            // Create sessions with per-day override support
             $sessions = $sessionService->createSessionsForTraining(
                 $training,
                 $data['start_date'],
@@ -53,7 +55,8 @@ class TrainingPersistService
                 $data['trainer_id'] ?? null,
                 $data['room'] ?? ['name' => '', 'location' => ''],
                 $data['start_time'] ?? null,
-                $data['end_time'] ?? null
+                $data['end_time'] ?? null,
+                $sessionOverrideConfig
             );
 
             // Create assessments for participants
@@ -89,11 +92,12 @@ class TrainingPersistService
      * @param array $data Form data
      * @param array $participants Array of participant user IDs
      * @param SessionSyncService $sessionService
+     * @param array $sessionOverrideConfig Session override config
      * @return Training|null
      */
-    public function update(int $trainingId, array $data, array $participants, SessionSyncService $sessionService): ?Training
+    public function update(int $trainingId, array $data, array $participants, SessionSyncService $sessionService, array $sessionOverrideConfig = []): ?Training
     {
-        return DB::transaction(function () use ($trainingId, $data, $participants, $sessionService) {
+        return DB::transaction(function () use ($trainingId, $data, $participants, $sessionService, $sessionOverrideConfig) {
             $training = Training::with('sessions')->find($trainingId);
             if (!$training) {
                 return null;
@@ -109,8 +113,11 @@ class TrainingPersistService
             // Check if sessions need to be rebuilt
             $dateChanged = ($originalStart !== $data['start_date']) || ($originalEnd !== $data['end_date']);
             $typeChanged = $originalType !== $data['training_type'];
+            
+            // Also rebuild if session overrides changed
+            $hasOverrides = !($sessionOverrideConfig['applyToAllDays'] ?? true);
 
-            if ($dateChanged || $typeChanged) {
+            if ($dateChanged || $typeChanged || $hasOverrides) {
                 $sessionService->rebuildSessions(
                     $training,
                     $data['start_date'],
@@ -120,7 +127,8 @@ class TrainingPersistService
                     $data['trainer_id'] ?? null,
                     $data['room'] ?? ['name' => '', 'location' => ''],
                     $data['start_time'] ?? null,
-                    $data['end_time'] ?? null
+                    $data['end_time'] ?? null,
+                    $sessionOverrideConfig
                 );
             } else {
                 $sessionService->updateSessionFields(

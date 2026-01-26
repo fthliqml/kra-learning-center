@@ -98,20 +98,51 @@ class TrainingSeeder extends Seeder
             ]);
 
             // Sessions for this training
+            // Add per-day variation for every other training (i = 2, 4, 6)
+            $hasPerDayVariation = ($i % 2 === 0);
+            
             $sessions = [];
             $dayNumber = 1;
+            
+            // Variation options for per-day trainings
+            $roomOptions = ['Wakatobi', 'Komodo', 'Bunaken', 'Raja Ampat', 'Derawan'];
+            $locationOptions = ['EDC Lt.1', 'EDC Lt.2', 'EDC Lt.3', 'Training Center A', 'Training Center B'];
+            $timeSlots = [
+                ['start' => '08:00:00', 'end' => '12:00:00'],
+                ['start' => '09:00:00', 'end' => '13:00:00'],
+                ['start' => '13:00:00', 'end' => '17:00:00'],
+                ['start' => '10:00:00', 'end' => '14:00:00'],
+            ];
+            
             foreach (CarbonPeriod::create($training->start_date, $training->end_date) as $date) {
-                $sessions[] = TrainingSession::create([
-                    'training_id' => $training->id,
-                    'trainer_id' => $trainer->id,
-                    'room_name' => 'Wakatobi',
-                    'date' => $date->toDateString(),
-                    'room_location' => "EDC {$i}-{$dayNumber}",
-                    'start_time' => '09:00:00',
-                    'end_time' => '12:00:00',
-                    'day_number' => $dayNumber,
-                    'status' => 'in_progress',
-                ]);
+                if ($hasPerDayVariation) {
+                    // Different room/time for each day
+                    $timeSlot = $timeSlots[array_rand($timeSlots)];
+                    $sessions[] = TrainingSession::create([
+                        'training_id' => $training->id,
+                        'trainer_id' => $trainer->id,
+                        'room_name' => $roomOptions[array_rand($roomOptions)],
+                        'date' => $date->toDateString(),
+                        'room_location' => $locationOptions[array_rand($locationOptions)],
+                        'start_time' => $timeSlot['start'],
+                        'end_time' => $timeSlot['end'],
+                        'day_number' => $dayNumber,
+                        'status' => 'in_progress',
+                    ]);
+                } else {
+                    // Uniform room/time for all days
+                    $sessions[] = TrainingSession::create([
+                        'training_id' => $training->id,
+                        'trainer_id' => $trainer->id,
+                        'room_name' => 'Wakatobi',
+                        'date' => $date->toDateString(),
+                        'room_location' => "EDC {$i}-{$dayNumber}",
+                        'start_time' => '09:00:00',
+                        'end_time' => '12:00:00',
+                        'day_number' => $dayNumber,
+                        'status' => 'in_progress',
+                    ]);
+                }
                 $dayNumber++;
             }
 
@@ -155,22 +186,51 @@ class TrainingSeeder extends Seeder
                 ]);
 
                 // Create offline sessions for BLENDED training
+                // First BLENDED training has uniform sessions, second has per-day variation
+                $hasBlendedVariation = ($index === 1);
+                
                 $blendedSessions = [];
                 $blendedDayNumber = 1;
                 $availableTrainers = [$trainer, $trainer2, $trainer3];
                 
+                // Variation options for BLENDED
+                $blendedRoomOptions = ['Ruang Blended Learning', 'Lab Komputer A', 'Lab Komputer B', 'Smart Classroom'];
+                $blendedLocationOptions = ['Gedung Training Lt. 1', 'Gedung Training Lt. 2', 'Gedung IT Lt. 3'];
+                $blendedTimeSlots = [
+                    ['start' => '09:00:00', 'end' => '12:00:00'],
+                    ['start' => '13:00:00', 'end' => '16:00:00'],
+                    ['start' => '14:00:00', 'end' => '17:00:00'],
+                ];
+                
                 foreach (CarbonPeriod::create($blendedTraining->start_date, $blendedTraining->end_date) as $date) {
-                    $blendedSessions[] = TrainingSession::create([
-                        'training_id' => $blendedTraining->id,
-                        'trainer_id' => $availableTrainers[array_rand($availableTrainers)]->id,
-                        'room_name' => 'Ruang Blended Learning',
-                        'date' => $date->toDateString(),
-                        'room_location' => 'Gedung Training Lt. 2',
-                        'start_time' => '13:00:00',
-                        'end_time' => '16:00:00',
-                        'day_number' => $blendedDayNumber,
-                        'status' => 'in_progress',
-                    ]);
+                    if ($hasBlendedVariation) {
+                        // Different room/time for each day
+                        $timeSlot = $blendedTimeSlots[array_rand($blendedTimeSlots)];
+                        $blendedSessions[] = TrainingSession::create([
+                            'training_id' => $blendedTraining->id,
+                            'trainer_id' => $availableTrainers[array_rand($availableTrainers)]->id,
+                            'room_name' => $blendedRoomOptions[array_rand($blendedRoomOptions)],
+                            'date' => $date->toDateString(),
+                            'room_location' => $blendedLocationOptions[array_rand($blendedLocationOptions)],
+                            'start_time' => $timeSlot['start'],
+                            'end_time' => $timeSlot['end'],
+                            'day_number' => $blendedDayNumber,
+                            'status' => 'in_progress',
+                        ]);
+                    } else {
+                        // Uniform room/time for all days
+                        $blendedSessions[] = TrainingSession::create([
+                            'training_id' => $blendedTraining->id,
+                            'trainer_id' => $availableTrainers[array_rand($availableTrainers)]->id,
+                            'room_name' => 'Ruang Blended Learning',
+                            'date' => $date->toDateString(),
+                            'room_location' => 'Gedung Training Lt. 2',
+                            'start_time' => '13:00:00',
+                            'end_time' => '16:00:00',
+                            'day_number' => $blendedDayNumber,
+                            'status' => 'in_progress',
+                        ]);
+                    }
                     $blendedDayNumber++;
                 }
 
