@@ -118,17 +118,34 @@
 
                 {{-- Group Comp --}}
                 @scope('cell_group_comp', $report)
-                    <div class="text-center">
-                        <span
-                            class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700">
-                            {{ $report->group_comp }}
-                        </span>
+                    <div class="text-center text-xs font-medium text-gray-700">
+                        {{ $report->group_comp }}
                     </div>
                 @endscope
 
                 {{-- Type --}}
                 @scope('cell_type', $report)
-                    <div class="text-center text-xs">{{ $report->type }}</div>
+                    <div class="text-center">
+                        @php
+                            $typeBadge = match($report->type) {
+                                'IN' => 'bg-green-100 text-green-700 border-green-300',
+                                'OUT' => 'bg-amber-100 text-amber-700 border-amber-300',
+                                'LMS' => 'bg-indigo-100 text-indigo-700 border-indigo-300',
+                                'BLENDED' => 'bg-purple-100 text-purple-700 border-purple-300',
+                                default => 'bg-gray-100 text-gray-700 border-gray-300',
+                            };
+                            $typeLabel = match($report->type) {
+                                'IN' => 'In-House',
+                                'OUT' => 'Out-House',
+                                'LMS' => 'LMS',
+                                'BLENDED' => 'Blended',
+                                default => $report->type,
+                            };
+                        @endphp
+                        <span class="badge badge-sm border whitespace-nowrap {{ $typeBadge }}">
+                            {{ $typeLabel }}
+                        </span>
+                    </div>
                 @endscope
 
                 {{-- Instructor --}}

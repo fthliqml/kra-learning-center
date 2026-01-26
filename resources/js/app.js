@@ -12,6 +12,7 @@ window.monthSelectPlugin = monthSelectPlugin;
 import "./flipbook"; // initialize flipbook viewer globally
 import "./modulePage"; // module page scripts (video gate, yt api, accordion)
 import "./posttest"; // post-test page form helper (Alpine x-data)
+import "./dashboard-charts"; // dashboard ApexCharts module
 
 // ApexCharts for dashboard charts
 import ApexCharts from "apexcharts";

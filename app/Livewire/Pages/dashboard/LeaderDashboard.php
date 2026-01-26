@@ -42,6 +42,78 @@ class leaderDashboard extends Component
         $this->loadCalendarEvents();
     }
 
+    /**
+     * Get available years for selection (current year and 5 years back)
+     */
+    public function getAvailableYearsProperty(): array
+    {
+        $currentYear = now()->year;
+        $years = [];
+        for ($i = 0; $i <= 5; $i++) {
+            $years[] = $currentYear - $i;
+        }
+        return $years;
+    }
+
+    /**
+     * Navigate to previous year
+     */
+    public function previousYear()
+    {
+        $minYear = now()->year - 5;
+        if ($this->selectedYear > $minYear) {
+            $this->selectedYear--;
+            $this->selectedMonth = null;
+            $this->monthBreakdown = [];
+            $this->loadChartData();
+            $this->dispatch('year-changed', year: $this->selectedYear);
+        }
+    }
+
+    /**
+     * Navigate to next year
+     */
+    public function nextYear()
+    {
+        $maxYear = now()->year;
+        if ($this->selectedYear < $maxYear) {
+            $this->selectedYear++;
+            $this->selectedMonth = null;
+            $this->monthBreakdown = [];
+            $this->loadChartData();
+            $this->dispatch('year-changed', year: $this->selectedYear);
+        }
+    }
+
+    /**
+     * Set specific year
+     */
+    public function setYear($year)
+    {
+        $year = (int) $year;
+        $minYear = now()->year - 5;
+        $maxYear = now()->year;
+        
+        if ($year >= $minYear && $year <= $maxYear) {
+            $this->selectedYear = $year;
+            $this->selectedMonth = null;
+            $this->monthBreakdown = [];
+            $this->loadChartData();
+            $this->dispatch('year-changed', year: $this->selectedYear);
+        }
+    }
+
+    /**
+     * Hook for wire:model.live on selectedYear
+     */
+    public function updatedSelectedYear($value)
+    {
+        $this->selectedMonth = null;
+        $this->monthBreakdown = [];
+        $this->loadChartData();
+        $this->dispatch('year-changed', year: $this->selectedYear);
+    }
+
     public function loadCalendarEvents()
     {
         $this->calendarEvents = [];
@@ -149,8 +221,10 @@ class leaderDashboard extends Component
             $startOfMonth = Carbon::create($year, $month, 1)->startOfMonth();
             $endOfMonth = Carbon::create($year, $month, 1)->endOfMonth();
 
-            // Count trainings that started in this month
-            $count = Training::whereBetween('start_date', [$startOfMonth, $endOfMonth])->count();
+            // Count trainings that started in this month (exclude cancelled and rejected)
+            $count = Training::whereBetween('start_date', [$startOfMonth, $endOfMonth])
+                ->whereNotIn('status', ['cancelled', 'rejected'])
+                ->count();
 
             $monthlyData[] = $count;
             $labels[] = $startOfMonth->format('M');
@@ -169,11 +243,15 @@ class leaderDashboard extends Component
         /** @var User|null $user */
         $user = Auth::user();
 
-        // Total training this year - all trainings in current year
-        $this->totalTrainingThisYear = Training::whereBetween('start_date', [$startOfYear, $endOfYear])->count();
+        // Total training this year - all trainings in current year (exclude cancelled and rejected)
+        $this->totalTrainingThisYear = Training::whereBetween('start_date', [$startOfYear, $endOfYear])
+            ->whereNotIn('status', ['cancelled', 'rejected'])
+            ->count();
 
-        // Upcoming schedules - trainings with start_date >= today
-        $this->upcomingSchedules = Training::where('start_date', '>=', $now->startOfDay())->count();
+        // Upcoming schedules - trainings with start_date >= today (exclude cancelled and rejected)
+        $this->upcomingSchedules = Training::where('start_date', '>=', $now->startOfDay())
+            ->whereNotIn('status', ['cancelled', 'rejected'])
+            ->count();
 
         // Pending approvals (actionable for the logged-in user)
         if (!$user) {
@@ -473,8 +551,10 @@ class leaderDashboard extends Component
         $startOfMonth = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->startOfMonth();
         $endOfMonth = Carbon::create($this->selectedYear, $this->selectedMonth, 1)->endOfMonth();
 
-        // Get trainings for selected month
-        $trainings = Training::whereBetween('start_date', [$startOfMonth, $endOfMonth])->get();
+        // Get trainings for selected month (exclude cancelled and rejected)
+        $trainings = Training::whereBetween('start_date', [$startOfMonth, $endOfMonth])
+            ->whereNotIn('status', ['cancelled', 'rejected'])
+            ->get();
 
         // Breakdown by type
         $byType = $trainings->groupBy('type')->map(fn($items) => $items->count())->toArray();
