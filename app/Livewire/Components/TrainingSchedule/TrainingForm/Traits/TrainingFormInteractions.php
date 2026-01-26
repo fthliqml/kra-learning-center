@@ -22,11 +22,32 @@ trait TrainingFormInteractions
 
     public function openModalWithDate($data)
     {
+        $this->resetFormState(); // from TrainingFormState
+        $this->isEdit = false;
+
+        $prefillModuleId = (int) ($data['prefill_module_id'] ?? 0);
+        $prefillCompetencyId = (int) ($data['prefill_competency_id'] ?? 0);
+
+        if ($prefillModuleId > 0) {
+            $this->training_type = 'IN';
+            $this->trainingModuleCompetencyFilterId = null;
+            $this->selected_module_id = $prefillModuleId;
+        } elseif ($prefillCompetencyId > 0) {
+            $this->training_type = 'IN';
+            $this->trainingModuleCompetencyFilterId = $prefillCompetencyId;
+            $this->selected_module_id = null;
+            $this->group_comp = $this->getCompetencyGroupComp($prefillCompetencyId) ?? $this->group_comp;
+        }
+
         // PERFORMANCE: Load dropdown data lazily via Trait
         $this->loadDropdownData();
 
-        $this->resetFormState(); // from TrainingFormState
-        $this->isEdit = false;
+        // Keep training module options in sync with optional competency filter
+        $this->loadTrainingModuleOptions();
+
+        if ($prefillModuleId > 0) {
+            $this->updatedSelectedModuleId($prefillModuleId);
+        }
 
         // Only set date if explicitly provided
         if (!empty($data['date'])) {

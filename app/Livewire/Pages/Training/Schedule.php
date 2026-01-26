@@ -28,9 +28,22 @@ class Schedule extends Component
             ->values()
             ->toArray();
 
-        if (!empty($participants)) {
-            $this->dispatch('open-add-training-modal', ['participants' => $participants]);
+        if (empty($participants)) {
+            return;
         }
+
+        $prefillModuleId = (int) request()->query('prefill_module_id', 0);
+        $prefillCompetencyId = (int) request()->query('prefill_competency_id', 0);
+
+        $payload = ['participants' => $participants];
+        if ($prefillModuleId > 0) {
+            $payload['prefill_module_id'] = $prefillModuleId;
+        }
+        if ($prefillCompetencyId > 0) {
+            $payload['prefill_competency_id'] = $prefillCompetencyId;
+        }
+
+        $this->dispatch('open-add-training-modal', $payload);
     }
 
     public function render()
