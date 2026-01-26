@@ -30,7 +30,8 @@ class TrainingActivityReport extends Component
 
     /**
      * Check if current user has full access to all training data
-     * Full access: admin, instructor, certificator, multimedia roles, or section_head with section "LID"
+     * Full access: admin, instructor, certificator, multimedia roles, 
+     * section_head with section "LID", or division_head with LID division
      */
     protected function hasFullAccess(): bool
     {
@@ -50,13 +51,21 @@ class TrainingActivityReport extends Component
             return true;
         }
 
+        // Division head of LID division (Human Capital, Finance & General Support) has full access
+        if ($user->hasPosition('division_head')) {
+            $lidDivision = 'human capital, finance & general support';
+            if (strtolower(trim($user->division ?? '')) === $lidDivision) {
+                return true;
+            }
+        }
+
         return false;
     }
 
     /**
      * Get the access filter type and value for current user
-     * Based on menu.php: only section_head position and specific roles can access this menu
-     * Returns: ['type' => 'full'|'section'|'department'|'none', 'value' => string|null]
+     * Based on menu.php: section_head, department_head, division_head positions and specific roles can access
+     * Returns: ['type' => 'full'|'section'|'department'|'division'|'none', 'value' => string|null]
      */
     protected function getAccessFilter(): array
     {
@@ -66,9 +75,14 @@ class TrainingActivityReport extends Component
             return ['type' => 'none', 'value' => null];
         }
 
-        // Full access for admin, instructor, certificator, multimedia, or section_head LID
+        // Full access for admin, instructor, certificator, multimedia, section_head LID, or division_head LID
         if ($this->hasFullAccess()) {
             return ['type' => 'full', 'value' => null];
+        }
+
+        // Division head (non-LID) - filter by their division
+        if ($user->hasPosition('division_head')) {
+            return ['type' => 'division', 'value' => $user->division];
         }
 
         // Section head (non-LID) - filter by their section
@@ -225,6 +239,11 @@ class TrainingActivityReport extends Component
                     $q->where('section', $this->filterSection);
                 });
             }
+        } elseif ($accessFilter['type'] === 'division' && $accessFilter['value']) {
+            // Filter trainings that have assessments with employees in the specified division
+            $query->whereHas('assessments.employee', function ($q) use ($accessFilter) {
+                $q->where('division', $accessFilter['value']);
+            });
         } elseif ($accessFilter['type'] === 'section' && $accessFilter['value']) {
             // Filter trainings that have assessments with employees in the specified section
             $query->whereHas('assessments.employee', function ($q) use ($accessFilter) {
@@ -295,6 +314,10 @@ class TrainingActivityReport extends Component
                         return $assessment->employee && $assessment->employee->section === $this->filterSection;
                     });
                 }
+            } elseif ($accessFilter['type'] === 'division' && $accessFilter['value']) {
+                $assessments = $assessments->filter(function ($assessment) use ($accessFilter) {
+                    return $assessment->employee && $assessment->employee->division === $accessFilter['value'];
+                });
             } elseif ($accessFilter['type'] === 'section' && $accessFilter['value']) {
                 $assessments = $assessments->filter(function ($assessment) use ($accessFilter) {
                     return $assessment->employee && $assessment->employee->section === $accessFilter['value'];
