@@ -28,6 +28,13 @@ class CoursesManagement extends Component
         ['value' => 'TOC', 'label' => 'TOC'],
     ];
 
+    public $statusOptions = [
+        ['value' => 'draft', 'label' => 'Draft'],
+        ['value' => 'inactive', 'label' => 'Inactive'],
+        ['value' => 'assigned', 'label' => 'Assigned'],
+    ];
+
+
     public function updated($property): void
     {
         if (!is_array($property) && $property !== '') {

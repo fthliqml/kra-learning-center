@@ -39,6 +39,19 @@
             <x-search-input placeholder="Search employee..." class="max-w-xs" wire:model.live="search" />
         </div>
 
+        @if (($missingPretestCount ?? 0) > 0 || ($missingPosttestCount ?? 0) > 0)
+            <div class="p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm">
+                @if (($missingPretestCount ?? 0) > 0)
+                    <div>Pre-test belum selesai (belum dikerjakan / masih review) oleh {{ $missingPretestCount }}
+                        peserta.</div>
+                @endif
+                @if (($missingPosttestCount ?? 0) > 0)
+                    <div>Post-test belum selesai (belum dikerjakan / masih review) oleh {{ $missingPosttestCount }}
+                        peserta.</div>
+                @endif
+            </div>
+        @endif
+
         {{-- Table --}}
         <div class="rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
             <x-table :headers="$headers" :rows="$assessments" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
@@ -70,12 +83,16 @@
                             $isLmsType = !empty($assessment->is_lms);
                             $reviewStatus = $testReviewStatus[$assessment->employee_id] ?? [];
                             $pretestNeedReview = $reviewStatus['pretest_need_review'] ?? false;
+                            $pretestAttempted = (bool) ($tempScores[$assessment->id]['pretest_attempted'] ?? true);
                         @endphp
                         @if ($isLmsType)
                             {{-- LMS: Pretest is read-only, synced from course pretest --}}
                             <div tabindex="-1"
                                 class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
                                 {{ $assessment->temp_pretest ?? '-' }}</div>
+                            @if (!$pretestAttempted)
+                                <span class="badge badge-warning badge-xs">Belum dikerjakan</span>
+                            @endif
                         @else
                             {{-- Non-LMS: Pretest is editable unless training is done --}}
                             @if ($pretestNeedReview)
@@ -85,15 +102,11 @@
                                     Need Review
                                 </a>
                             @endif
-                            @if ($trainingDone)
-                                <div tabindex="-1"
-                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
-                                    {{ $assessment->pretest_score ?? '-' }}</div>
-                            @else
-                                <input type="number" min="0" max="100" step="0.1"
-                                    wire:model.live="tempScores.{{ $assessment->id }}.pretest_score"
-                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary {{ $pretestNeedReview ? 'border-warning' : '' }}"
-                                    placeholder="0-100" {{ $pretestNeedReview ? 'readonly' : '' }}>
+                            <div tabindex="-1"
+                                class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none {{ $pretestNeedReview ? 'border-warning' : '' }}">
+                                {{ $assessment->temp_pretest ?? 0 }}</div>
+                            @if (!$pretestAttempted && !$pretestNeedReview)
+                                <span class="badge badge-warning badge-xs">Belum dikerjakan</span>
                             @endif
                         @endif
                     </div>
@@ -106,11 +119,15 @@
                             $trainingDone = $assessment->training_done ?? false;
                             $reviewStatus = $testReviewStatus[$assessment->employee_id] ?? [];
                             $posttestNeedReview = $reviewStatus['posttest_need_review'] ?? false;
+                            $posttestAttempted = (bool) ($tempScores[$assessment->id]['posttest_attempted'] ?? true);
                         @endphp
                         @if (!empty($assessment->is_lms))
                             <div tabindex="-1"
                                 class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
                                 {{ $assessment->temp_posttest ?? '-' }}</div>
+                            @if (!$posttestAttempted)
+                                <span class="badge badge-warning badge-xs">Belum dikerjakan</span>
+                            @endif
                         @else
                             @if ($posttestNeedReview)
                                 <a href="{{ route('test-review.answers', ['training' => $training->id, 'user' => $assessment->employee_id]) }}"
@@ -124,10 +141,12 @@
                                     class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
                                     {{ $assessment->posttest_score ?? '-' }}</div>
                             @else
-                                <input type="number" min="0" max="100" step="0.1"
-                                    wire:model.live="tempScores.{{ $assessment->id }}.posttest_score"
-                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded outline-none focus:ring-1 focus:ring-primary focus:border-primary {{ $posttestNeedReview ? 'border-warning' : '' }}"
-                                    placeholder="0-100" {{ $posttestNeedReview ? 'readonly' : '' }}>
+                                <div tabindex="-1"
+                                    class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none {{ $posttestNeedReview ? 'border-warning' : '' }}">
+                                    {{ $assessment->temp_posttest ?? 0 }}</div>
+                            @endif
+                            @if (!$posttestAttempted && !$posttestNeedReview)
+                                <span class="badge badge-warning badge-xs">Belum dikerjakan</span>
                             @endif
                         @endif
                     </div>
@@ -223,6 +242,50 @@
                 @endif
             </x-table>
         </div>
+
+        <x-modal wire:model="confirmCloseModal" title="Confirm Close Training" separator box-class="max-w-md">
+            <div class="space-y-3">
+                <p class="text-sm text-gray-700">
+                    Anda akan menutup training ini. Peserta yang belum menyelesaikan pre-test / post-test akan tetap
+                    berstatus <span class="font-semibold">Failed</span>.
+                </p>
+
+                @if (($missingPretestCount ?? 0) > 0 || ($missingPosttestCount ?? 0) > 0)
+                    <div class="p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm">
+                        @if (!empty($missingTestParticipants ?? []))
+                            <div class="mt-2 max-h-40 overflow-auto space-y-1">
+                                @foreach ($missingTestParticipants ?? [] as $row)
+                                    @php
+                                        $missing = $row['missing'] ?? [];
+                                        $parts = [];
+                                        if (in_array('pretest', $missing, true)) {
+                                            $parts[] = 'belum pre-test';
+                                        }
+                                        if (in_array('posttest', $missing, true)) {
+                                            $parts[] = 'belum post-test';
+                                        }
+                                        $missingText = implode(' dan ', $parts);
+                                    @endphp
+                                    <div class="text-sm">
+                                        <span class="font-medium">{{ $row['name'] ?? 'Unknown' }}</span>:
+                                        {{ $missingText }}
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <div class="p-3 rounded-lg border border-green-200 bg-green-50 text-green-800 text-sm">
+                        Semua peserta sudah menyelesaikan pre-test dan post-test.
+                    </div>
+                @endif
+
+                <div class="flex justify-end gap-2 pt-2">
+                    <x-button label="Cancel" wire:click="$set('confirmCloseModal', false)" class="btn-ghost" />
+                    <x-button label="Yes, Close Training" wire:click="confirmCloseTraining" class="btn btn-primary" />
+                </div>
+            </div>
+        </x-modal>
     @else
         <div class="p-4 bg-gray-50 border border-gray-200 rounded-lg text-center">
             <p class="text-sm text-gray-600">Training data not found.</p>

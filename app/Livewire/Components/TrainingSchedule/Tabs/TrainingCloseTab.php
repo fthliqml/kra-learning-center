@@ -23,6 +23,16 @@ class TrainingCloseTab extends Component
   public $search = '';
   public $tempScores = []; // Temporary scores before saving
 
+  public int $missingPretestCount = 0;
+  public int $missingPosttestCount = 0;
+
+  /**
+   * Array of ['name' => string, 'missing' => array<'pretest'|'posttest'>]
+   */
+  public array $missingTestParticipants = [];
+
+  public bool $confirmCloseModal = false;
+
   public array $practicalGradeOptions = [
     ['value' => 'A', 'label' => 'A'],
     ['value' => 'B', 'label' => 'B'],
@@ -34,7 +44,58 @@ class TrainingCloseTab extends Component
   protected $listeners = [
     'training-close-save-draft' => 'saveDraft',
     'training-close-close' => 'closeTraining',
+    'training-close-request-close' => 'openCloseConfirm',
   ];
+
+  protected function refreshMissingTestParticipants(): void
+  {
+    $this->missingTestParticipants = [];
+
+    $assessments = TrainingAssessment::where('training_id', $this->trainingId)
+      ->with('employee')
+      ->get(['id', 'employee_id', 'pretest_score', 'posttest_score']);
+
+    foreach ($assessments as $assessment) {
+      $scores = $this->tempScores[$assessment->id] ?? [];
+      $pretestAttempted = (bool) ($scores['pretest_attempted'] ?? ($assessment->pretest_score !== null));
+      $posttestAttempted = (bool) ($scores['posttest_attempted'] ?? ($assessment->posttest_score !== null));
+
+      $missing = [];
+      if (!$pretestAttempted) {
+        $missing[] = 'pretest';
+      }
+      if (!$posttestAttempted) {
+        $missing[] = 'posttest';
+      }
+
+      if (!empty($missing)) {
+        $this->missingTestParticipants[] = [
+          'name' => $assessment->employee->name ?? 'Unknown',
+          'missing' => $missing,
+        ];
+      }
+    }
+  }
+
+  public function openCloseConfirm(): void
+  {
+    // Recompute counts to show accurate info in confirmation
+    if ($this->isLms()) {
+      $this->syncLmsScoresFromPosttest();
+    } else {
+      $this->syncInternalTrainingScores();
+    }
+
+    $this->refreshMissingTestParticipants();
+
+    $this->confirmCloseModal = true;
+  }
+
+  public function confirmCloseTraining(): void
+  {
+    $this->confirmCloseModal = false;
+    $this->closeTraining();
+  }
 
   // Add validation rules for tempScores to validate on update
   protected function rules()
@@ -71,13 +132,16 @@ class TrainingCloseTab extends Component
   {
     $assessments = TrainingAssessment::where('training_id', $this->trainingId)->get();
     foreach ($assessments as $assessment) {
+      $isLms = $this->isLms();
       $grade = $assessment->practical_score !== null
         ? $this->getGradeFromScore((float) $assessment->practical_score)
         : null;
 
       $this->tempScores[$assessment->id] = [
-        'pretest_score' => $assessment->pretest_score,
-        'posttest_score' => $assessment->posttest_score,
+        'pretest_score' => $assessment->pretest_score ?? 0,
+        'posttest_score' => $assessment->posttest_score ?? 0,
+        'pretest_attempted' => $assessment->pretest_score !== null,
+        'posttest_attempted' => $assessment->posttest_score !== null,
         'practical_score' => $assessment->practical_score,
         'practical_grade' => $grade,
       ];
@@ -220,6 +284,9 @@ class TrainingCloseTab extends Component
    */
   protected function syncLmsScoresFromPosttest(): void
   {
+    $this->missingPretestCount = 0;
+    $this->missingPosttestCount = 0;
+
     if (!$this->isLms()) {
       return;
     }
@@ -279,8 +346,10 @@ class TrainingCloseTab extends Component
       $aid = (int) $assessment->id;
       if (!isset($this->tempScores[$aid])) {
         $this->tempScores[$aid] = [
-          'pretest_score' => null,
-          'posttest_score' => null,
+          'pretest_score' => 0,
+          'posttest_score' => 0,
+          'pretest_attempted' => false,
+          'posttest_attempted' => false,
           'practical_score' => null,
           'practical_grade' => null,
         ];
@@ -289,22 +358,28 @@ class TrainingCloseTab extends Component
       // Sync pretest score
       if ($pretest) {
         $pretestAttempt = $pretestAttemptsByUser->get($assessment->employee_id);
+        $this->tempScores[$aid]['pretest_attempted'] = (bool) $pretestAttempt;
         if ($pretestAttempt) {
           $score = (int) ($pretestAttempt->auto_score ?? 0) + (int) ($pretestAttempt->manual_score ?? 0);
           $percent = $pretestMaxPoints > 0 ? (int) round(($score / $pretestMaxPoints) * 100) : 0;
           $this->tempScores[$aid]['pretest_score'] = $percent;
+        } else {
+          $this->tempScores[$aid]['pretest_score'] = $this->tempScores[$aid]['pretest_score'] ?? 0;
+          $this->missingPretestCount++;
         }
       }
 
       // Sync posttest score
       if ($posttest) {
         $posttestAttempt = $posttestAttemptsByUser->get($assessment->employee_id);
-        if (!$posttestAttempt) {
-          $this->tempScores[$aid]['posttest_score'] = null;
-        } else {
+        $this->tempScores[$aid]['posttest_attempted'] = (bool) $posttestAttempt;
+        if ($posttestAttempt) {
           $score = (int) ($posttestAttempt->auto_score ?? 0) + (int) ($posttestAttempt->manual_score ?? 0);
           $percent = $posttestMaxPoints > 0 ? (int) round(($score / $posttestMaxPoints) * 100) : 0;
           $this->tempScores[$aid]['posttest_score'] = $percent;
+        } else {
+          $this->tempScores[$aid]['posttest_score'] = $this->tempScores[$aid]['posttest_score'] ?? 0;
+          $this->missingPosttestCount++;
         }
       }
 
@@ -322,6 +397,9 @@ class TrainingCloseTab extends Component
    */
   protected function syncInternalTrainingScores(): void
   {
+    $this->missingPretestCount = 0;
+    $this->missingPosttestCount = 0;
+
     if ($this->isLms()) {
       return;
     }
@@ -389,22 +467,44 @@ class TrainingCloseTab extends Component
     foreach ($assessments as $assessment) {
       $aid = (int) $assessment->id;
       if (!isset($this->tempScores[$aid])) {
-        $this->tempScores[$aid] = ['pretest_score' => null, 'posttest_score' => null, 'practical_score' => null];
+        $this->tempScores[$aid] = [
+          'pretest_score' => 0,
+          'posttest_score' => 0,
+          'pretest_attempted' => false,
+          'posttest_attempted' => false,
+          'practical_score' => null,
+          'practical_grade' => null,
+        ];
       }
+
+      // Ensure defaults exist even if loaded earlier
+      $this->tempScores[$aid]['pretest_score'] = $this->tempScores[$aid]['pretest_score'] ?? 0;
+      $this->tempScores[$aid]['posttest_score'] = $this->tempScores[$aid]['posttest_score'] ?? 0;
+      $this->tempScores[$aid]['practical_grade'] = $this->tempScores[$aid]['practical_grade'] ?? null;
+      $this->tempScores[$aid]['pretest_attempted'] = $this->tempScores[$aid]['pretest_attempted'] ?? false;
+      $this->tempScores[$aid]['posttest_attempted'] = $this->tempScores[$aid]['posttest_attempted'] ?? false;
 
       // Sync pretest score from fully reviewed web test
       if ($pretest) {
         $pretestAttempt = $pretestAttemptsByUser->get($assessment->employee_id);
+        $this->tempScores[$aid]['pretest_attempted'] = (bool) $pretestAttempt;
         if ($pretestAttempt) {
           $this->tempScores[$aid]['pretest_score'] = (int) ($pretestAttempt->total_score ?? 0);
+        } else {
+          $this->tempScores[$aid]['pretest_score'] = $this->tempScores[$aid]['pretest_score'] ?? 0;
+          $this->missingPretestCount++;
         }
       }
 
       // Sync posttest score from fully reviewed web test (highest score)
       if ($posttest) {
         $posttestAttempt = $posttestBestScoreByUser->get($assessment->employee_id);
+        $this->tempScores[$aid]['posttest_attempted'] = (bool) $posttestAttempt;
         if ($posttestAttempt) {
           $this->tempScores[$aid]['posttest_score'] = (int) ($posttestAttempt->total_score ?? 0);
+        } else {
+          $this->tempScores[$aid]['posttest_score'] = $this->tempScores[$aid]['posttest_score'] ?? 0;
+          $this->missingPosttestCount++;
         }
       }
     }
@@ -542,8 +642,10 @@ class TrainingCloseTab extends Component
           : null;
 
         $this->tempScores[$assessment->id] = [
-          'pretest_score' => $assessment->pretest_score,
-          'posttest_score' => $assessment->posttest_score,
+          'pretest_score' => $assessment->pretest_score ?? 0,
+          'posttest_score' => $assessment->posttest_score ?? 0,
+          'pretest_attempted' => $assessment->pretest_score !== null,
+          'posttest_attempted' => $assessment->posttest_score !== null,
           'practical_score' => $assessment->practical_score,
           'practical_grade' => $grade,
         ];
@@ -553,6 +655,9 @@ class TrainingCloseTab extends Component
       $pretestScore = $this->tempScores[$assessment->id]['pretest_score'];
       $posttestScore = $this->tempScores[$assessment->id]['posttest_score'];
       $practicalScore = $this->getPracticalNumericScore((int) $assessment->id, $assessment);
+
+      $pretestAttempted = (bool) ($this->tempScores[$assessment->id]['pretest_attempted'] ?? ($assessment->pretest_score !== null));
+      $posttestAttempted = (bool) ($this->tempScores[$assessment->id]['posttest_attempted'] ?? ($assessment->posttest_score !== null));
 
       $isLms = $this->isLms();
       $course = $this->training?->course;
@@ -580,12 +685,14 @@ class TrainingCloseTab extends Component
       }
 
       // Calculate temp status
-      $hasPosttest = is_numeric($posttestScore) && $posttestScore !== '';
+      $hasPosttest = (bool) ($this->tempScores[$assessment->id]['posttest_attempted'] ?? $this->isValidScore($posttestScore));
       $attendancePassed = $assessment->attendance_percentage >= 75;
 
       if ($isLms) {
         // LMS has no attendance sessions, so skip attendance check
-        if (!$hasPosttest) {
+        if (!$pretestAttempted || !$posttestAttempted) {
+          $assessment->temp_status = 'failed';
+        } elseif (!$hasPosttest) {
           $assessment->temp_status = 'pending';
         } else {
           $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
@@ -595,7 +702,9 @@ class TrainingCloseTab extends Component
         }
       } else {
         $hasPractical = $practicalScore !== null;
-        if (!$hasPosttest || !$hasPractical) {
+        if (!$pretestAttempted || !$posttestAttempted) {
+          $assessment->temp_status = 'failed';
+        } elseif (!$hasPosttest || !$hasPractical) {
           $assessment->temp_status = 'pending';
         } else {
           // Check attendance first
@@ -633,8 +742,11 @@ class TrainingCloseTab extends Component
           if (!$assessment)
             continue;
 
-          $assessment->pretest_score = $scores['pretest_score'];
-          $assessment->posttest_score = $scores['posttest_score'];
+          $pretestAttempted = (bool) ($scores['pretest_attempted'] ?? ($scores['pretest_score'] !== null));
+          $posttestAttempted = (bool) ($scores['posttest_attempted'] ?? ($scores['posttest_score'] !== null));
+
+          $assessment->pretest_score = $pretestAttempted ? $scores['pretest_score'] : null;
+          $assessment->posttest_score = $posttestAttempted ? $scores['posttest_score'] : null;
           $assessment->practical_score = $isLms
             ? null
             : $this->getPracticalNumericScore((int) $assessmentId, $assessment);
@@ -657,10 +769,12 @@ class TrainingCloseTab extends Component
           $assessment->attendance_percentage = $attendancePercentage;
 
           // Calculate status
-          $posttest = $scores['posttest_score'];
+          $posttest = $posttestAttempted ? $scores['posttest_score'] : null;
           if ($isLms) {
             // LMS has no attendance sessions, so skip attendance check
-            if (is_numeric($posttest)) {
+            if (!$pretestAttempted || !$posttestAttempted) {
+              $assessment->status = 'failed';
+            } elseif (is_numeric($posttest)) {
               $passing = (int) (Test::where('course_id', (int) ($this->training?->course_id ?? 0))
                 ->where('type', 'posttest')
                 ->value('passing_score') ?? 0);
@@ -670,7 +784,9 @@ class TrainingCloseTab extends Component
             }
           } else {
             $practical = $this->getPracticalNumericScore((int) $assessmentId, $assessment);
-            if ($this->isValidScore($posttest) && $practical !== null) {
+            if (!$pretestAttempted || !$posttestAttempted) {
+              $assessment->status = 'failed';
+            } elseif ($this->isValidScore($posttest) && $practical !== null) {
               // Check attendance first
               if (!$attendancePassed) {
                 $assessment->status = 'failed';
@@ -754,14 +870,6 @@ class TrainingCloseTab extends Component
     foreach ($assessments as $assessment) {
       $employeeName = $assessment->employee->name ?? 'Unknown';
 
-      // Check from tempScores first, then fallback to database value
-      $posttest = $this->tempScores[$assessment->id]['posttest_score'] ?? $assessment->posttest_score;
-
-      // Check if posttest is filled - must be numeric (0 is valid, but null/empty is not)
-      if (!$this->isValidScore($posttest)) {
-        $missingScores[] = $employeeName . ' (Theory Score)';
-      }
-
       // For non-LMS, also check practical score
       if (!$isLms) {
         $practical = $this->getPracticalNumericScore((int) $assessment->id, $assessment);
@@ -795,8 +903,11 @@ class TrainingCloseTab extends Component
           if (!$assessment)
             continue;
 
-          $assessment->pretest_score = $scores['pretest_score'];
-          $assessment->posttest_score = $scores['posttest_score'];
+          $pretestAttempted = (bool) ($scores['pretest_attempted'] ?? ($scores['pretest_score'] !== null));
+          $posttestAttempted = (bool) ($scores['posttest_attempted'] ?? ($scores['posttest_score'] !== null));
+
+          $assessment->pretest_score = $pretestAttempted ? $scores['pretest_score'] : null;
+          $assessment->posttest_score = $posttestAttempted ? $scores['posttest_score'] : null;
           $assessment->practical_score = $isLms
             ? null
             : $this->getPracticalNumericScore((int) $assessmentId, $assessment);
@@ -822,7 +933,12 @@ class TrainingCloseTab extends Component
           $posttest = $assessment->posttest_score;
           if ($isLms) {
             // LMS has no attendance sessions, so skip attendance check
-            if ($posttest === null || $posttest === '') {
+            $pretestAttempted = (bool) ($scores['pretest_attempted'] ?? ($assessment->pretest_score !== null));
+            $posttestAttempted = (bool) ($scores['posttest_attempted'] ?? ($assessment->posttest_score !== null));
+
+            if (!$pretestAttempted || !$posttestAttempted) {
+              $assessment->status = 'failed';
+            } elseif ($posttest === null || $posttest === '') {
               $assessment->status = 'pending';
             } else {
               $assessment->status = ($lmsPassingScore > 0 && (float) $posttest >= $lmsPassingScore)
@@ -831,7 +947,12 @@ class TrainingCloseTab extends Component
             }
           } else {
             $practical = $assessment->practical_score;
-            if (!$this->isValidScore($posttest) || !$this->isValidScore($practical)) {
+            $pretestAttempted = (bool) ($scores['pretest_attempted'] ?? ($assessment->pretest_score !== null));
+            $posttestAttempted = (bool) ($scores['posttest_attempted'] ?? ($assessment->posttest_score !== null));
+
+            if (!$pretestAttempted || !$posttestAttempted) {
+              $assessment->status = 'failed';
+            } elseif (!$this->isValidScore($posttest) || !$this->isValidScore($practical)) {
               $assessment->status = 'pending';
             } else {
               // Check attendance first
@@ -856,14 +977,14 @@ class TrainingCloseTab extends Component
 
         // Auto-create Level 1 and Level 3 surveys with default templates (except LMS - no surveys)
         if (!$isLms) {
-            $surveyService = new TrainingSurveyService();
-            $surveyService->createSurveysOnClose($this->training);
+          $surveyService = new TrainingSurveyService();
+          $surveyService->createSurveysOnClose($this->training);
         }
       });
 
       $successMessage = $isLms
-          ? 'Training has been closed successfully.'
-          : 'Training has been closed successfully. Surveys have been created for participants and their supervisors.';
+        ? 'Training has been closed successfully.'
+        : 'Training has been closed successfully. Surveys have been created for participants and their supervisors.';
       $this->success($successMessage, position: 'toast-top toast-center');
       $this->dispatch('training-closed', ['id' => $this->training->id]);
       $this->dispatch('close-modal');

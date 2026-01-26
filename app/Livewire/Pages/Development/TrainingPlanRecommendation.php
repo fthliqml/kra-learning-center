@@ -350,6 +350,14 @@ class TrainingPlanRecommendation extends Component
             'recommendationType' => 'required|in:competency,training_module',
             'group' => 'required|string',
             'selectedId' => 'required|integer',
+        ], [
+            'selectedYear.required' => 'Year is required.',
+            'recommendationType.required' => 'Type is required.',
+            'recommendationType.in' => 'Type must be valid.',
+            'group.required' => 'Group is required.',
+            'group.string' => 'Group is required.',
+            'selectedId.required' => $this->recommendationType === 'training_module' ? 'Training module is required.' : 'Competency is required.',
+            'selectedId.integer' => $this->recommendationType === 'training_module' ? 'Training module is required.' : 'Competency is required.',
         ]);
 
         $year = (int) $this->selectedYear;

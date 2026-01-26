@@ -563,38 +563,21 @@
                                 wire:key="training-row-{{ $index }}-{{ $plan['group'] ?? 'empty' }}">
                                 {{-- Group Competency --}}
                                 <div class="w-full md:w-1/4">
-                                    <x-choices label="{{ $index === 0 ? 'Group' : '' }}"
+                                    <x-select label="{{ $index === 0 ? 'Group' : '' }}"
                                         wire:model.live="trainingPlans.{{ $index }}.group" :options="$this->getRecommendedGroupOptions()"
-                                        option-value="value" option-label="label" placeholder="Group" single />
+                                        option-value="value" option-label="label" placeholder="Group"
+                                        placeholder-value="" />
                                 </div>
 
                                 {{-- Training Plan - Combined Competency & Module --}}
                                 <div class="w-full md:flex-1">
-                                    <x-choices label="{{ $index === 0 ? 'Training Plan' : '' }}"
+                                    <x-select label="{{ $index === 0 ? 'Training Plan' : '' }}"
                                         wire:model="trainingPlans.{{ $index }}.plan_id" :options="$this->getTrainingPlanOptions($plan['group'] ?? '')"
                                         option-value="value" option-label="label" placeholder="Select training plan"
-                                        single />
+                                        placeholder-value="" />
                                 </div>
-
-                                {{-- Delete button --}}
-                                @if (count($trainingPlans) > 1)
-                                    <div class="flex justify-end md:pb-1">
-                                        <button type="button" wire:click="removeTrainingRow({{ $index }})"
-                                            class="p-2 text-red-500 hover:bg-red-50 rounded-lg">
-                                            <x-icon name="o-trash" class="size-4" />
-                                        </button>
-                                    </div>
-                                @endif
                             </div>
                         @endforeach
-
-                        @if (count($trainingPlans) < 3)
-                            <button type="button" wire:click="addTrainingRow"
-                                class="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1">
-                                <x-icon name="o-plus" class="size-4" />
-                                Add Training
-                            </button>
-                        @endif
                     </div>
                 @endif
 

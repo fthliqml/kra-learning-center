@@ -29,18 +29,18 @@
                             <x-choices wire:key="dept-{{ $filterKey }}" label="Department"
                                 wire:model.live="filterDepartment" :options="$departments" option-value="id"
                                 option-label="name" placeholder="All Departments" class="{{ $choicesEllipsis }}" single
-                                clearable searchable />
+                                clearable />
                         </div>
                         <div class="min-w-0">
                             <x-choices wire:key="sect-{{ $filterKey }}-{{ $filterDepartment }}" label="Section"
                                 wire:model.live="filterSection" :options="$sections" option-value="id" option-label="name"
-                                placeholder="All Sections" class="{{ $choicesEllipsis }}" single clearable searchable />
+                                placeholder="All Sections" class="{{ $choicesEllipsis }}" single clearable />
                         </div>
                         <div class="min-w-0">
                             <x-choices wire:key="emp-{{ $filterKey }}-{{ $filterDepartment }}-{{ $filterSection }}"
                                 label="Employee" wire:model.live="selectedUserId" :options="$employeeOptions" option-value="value"
                                 option-label="label" placeholder="Select employee" class="{{ $choicesEllipsis }}" single
-                                clearable searchable />
+                                clearable />
                         </div>
                     </div>
                 </div>

@@ -20,12 +20,22 @@ class Pretest extends Component
     public array $questions = [];
 
     public bool $isRetakeFlow = false;
-    
+
     // Stats mode: show result stats without revealing answers
     public bool $isStatsMode = false;
     public ?TestAttempt $lastAttempt = null;
     public bool $canRetake = false;
     public int $remainingAttempts = 0;
+
+    private function firstSectionId(): ?int
+    {
+        try {
+            $firstTopic = $this->course?->learningModules?->first();
+            return $firstTopic?->sections?->first()?->id;
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
 
     public function mount(Course $course)
     {
@@ -161,40 +171,23 @@ class Pretest extends Component
             }
 
             if ($existingAttempt) {
-                // Check if force retake via query param
-                $forceRetake = (string) request()->query('retake', '') === '1';
-                
+                $forceRetake = $this->isRetakeFlow;
+
                 // If course is completed (posttest passed), show stats mode (read only)
                 if ($hasPassedPosttestAttempt) {
                     $this->isStatsMode = true;
                     $this->lastAttempt = $existingAttempt;
-                    $this->canRetake = false; // Course completed, no more retakes
+                    $this->canRetake = false;
                     $this->remainingAttempts = 0;
                     return;
                 }
-                
-                // Check if user passed pretest
-                $hasPassed = TestAttempt::where('test_id', $this->pretest->id)
-                    ->where('user_id', $userId)
-                    ->where('is_passed', true)
-                    ->exists();
-                
-                if ($hasPassed) {
-                    // Passed - show stats mode (user can proceed next via button)
-                    $this->isStatsMode = true;
-                    $this->lastAttempt = $existingAttempt;
-                    $this->canRetake = false; // Already passed, no need to retake
-                    $this->remainingAttempts = 0;
-                    return; // Render stats
-                }
-                
-                // Not passed - calculate retake eligibility
+
                 $canStillRetake = false;
                 $remaining = 0;
                 if ($maxAttempts === null) {
-                    // Unlimited attempts allowed
-                    $canStillRetake = true;
-                    $remaining = -1; // -1 indicates unlimited
+                    // Pretest should not be unlimited - treat as exhausted
+                    $canStillRetake = false;
+                    $remaining = 0;
                 } elseif ($maxAttempts <= 1) {
                     // Single attempt only
                     $canStillRetake = false;
@@ -204,18 +197,17 @@ class Pretest extends Component
                     $canStillRetake = $attemptCount < $maxAttempts;
                     $remaining = max(0, $maxAttempts - $attemptCount);
                 }
-                
+
                 // If force retake AND can retake, show form
                 if ($forceRetake && $canStillRetake) {
                     // Continue to form mode below
                 } else {
-                    // Show stats mode
-                    $this->isStatsMode = true;
-                    $this->lastAttempt = $existingAttempt;
-                    $this->canRetake = $canStillRetake;
-                    $this->remainingAttempts = $remaining;
-                    
-                    return; // Don't load questions for stats mode
+                    $firstSectionId = $this->firstSectionId();
+                    return redirect()->route('courses-modules.index', array_filter([
+                        'course' => $this->course->id,
+                        'section' => $firstSectionId,
+                        'start' => $firstSectionId ? null : 'first',
+                    ], fn($v) => $v !== null));
                 }
             }
 
@@ -319,7 +311,7 @@ class Pretest extends Component
         } else {
             $completedCount = max(0, min($currentStep - $preUnits, $sectionsTotal));
         }
-        
+
         for ($i = 0; $i < $completedCount; $i++) {
             if (isset($orderedSectionRefs[$i])) {
                 $orderedSectionRefs[$i]->is_completed = true;
@@ -442,7 +434,12 @@ class Pretest extends Component
         if ($this->pretest->max_attempts !== null) {
             $maxAttempts = max(1, (int) $this->pretest->max_attempts);
             if ($attemptCount >= $maxAttempts) {
-                return redirect()->route('courses-modules.index', ['course' => $this->course->id]);
+                $firstSectionId = $this->firstSectionId();
+                return redirect()->route('courses-modules.index', array_filter([
+                    'course' => $this->course->id,
+                    'section' => $firstSectionId,
+                    'start' => $firstSectionId ? null : 'first',
+                ], fn($v) => $v !== null));
             }
         }
 
@@ -603,41 +600,15 @@ class Pretest extends Component
             ->where('user_id', $userId)
             ->orderByDesc('submitted_at')->orderByDesc('id')
             ->first();
-        
-        $isPassed = $latestAttempt?->is_passed ?? false;
-        
-        // If not passed, check if user can still retake
-        if (!$isPassed) {
-            $attemptCount = (int) TestAttempt::where('test_id', $this->pretest->id)
-                ->where('user_id', $userId)
-                ->whereIn('status', [
-                    TestAttempt::STATUS_SUBMITTED,
-                    TestAttempt::STATUS_UNDER_REVIEW,
-                    TestAttempt::STATUS_EXPIRED,
-                ])
-                ->count();
-            
-            $maxAttempts = $this->pretest->max_attempts;
-            $canStillRetake = false;
-            
-            if ($maxAttempts === null) {
-                // Unlimited attempts allowed
-                $canStillRetake = true;
-            } else {
-                $maxAttempts = max(1, (int) $maxAttempts);
-                $canStillRetake = $attemptCount < $maxAttempts;
-            }
-            
-            if ($canStillRetake) {
-                // Failed but can retake - redirect to pretest to try again
-                session()->flash('pretest_failed', 'Anda belum lulus Pre-Test. Silakan coba lagi. Sisa kesempatan: ' . ($maxAttempts - $attemptCount));
-                return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
-            }
-            // Attempts exhausted - proceed to modules even though failed
-        }
 
-        // Always redirect back to Pretest page to show stats (Passed/Failed)
-        // From there, user can click "Lanjut ke Materi"
-        return redirect()->route('courses-pretest.index', ['course' => $this->course->id]);
+        $isPassed = $latestAttempt?->is_passed ?? false;
+
+        // After finishing pretest (passed/failed/under review), always continue to learning modules.
+        $firstSectionId = $this->firstSectionId();
+        return redirect()->route('courses-modules.index', array_filter([
+            'course' => $this->course->id,
+            'section' => $firstSectionId,
+            'start' => $firstSectionId ? null : 'first',
+        ], fn($v) => $v !== null));
     }
 }

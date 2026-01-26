@@ -43,6 +43,8 @@ class DevelopmentPlan extends Component
     // Training Plan form (multiple rows)
     public $trainingPlans = [
         ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null],
+        ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null],
+        ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null],
     ];
 
     public $trainingPlanKindOptions = [
@@ -192,14 +194,14 @@ class DevelopmentPlan extends Component
                 'status' => $plan->status,
             ];
         }
-        // Ensure at least 1 row for UI
-        if (count($this->trainingPlans) === 0) {
-            $this->trainingPlans[] = ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null];
-        }
-
         // Cap to 3 rows in UI
         if (count($this->trainingPlans) > 3) {
             $this->trainingPlans = array_slice($this->trainingPlans, 0, 3);
+        }
+
+        // Ensure exactly 3 rows for UI (pad with empty rows)
+        while (count($this->trainingPlans) < 3) {
+            $this->trainingPlans[] = ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null];
         }
 
         // Load Self Learning Plans
@@ -467,6 +469,8 @@ class DevelopmentPlan extends Component
         $this->activeTab = 'training';
         $this->isEdit = false;
         $this->trainingPlans = [
+            ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null],
+            ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null],
             ['id' => null, 'group' => '', 'plan_id' => '', 'status' => null],
         ];
         $this->selfLearningPlans = [
@@ -936,11 +940,11 @@ class DevelopmentPlan extends Component
      * - Level 1 approver routing (non-LID):
      *   - employee submits:
      *     - if any SPV exists in area -> pending_spv
-    *     - else if any Section Head exists in area -> pending_section_head
+     *     - else if any Section Head exists in area -> pending_section_head
      *     - else if any Dept Head exists in area -> pending_dept_head
      *     - else -> pending_lid
      *   - SPV submits:
-    *     - if any Section Head exists in area -> pending_section_head
+     *     - if any Section Head exists in area -> pending_section_head
      *     - else if any Dept Head exists in area -> pending_dept_head
      *     - else -> pending_lid
      *   - Section Head submits:
