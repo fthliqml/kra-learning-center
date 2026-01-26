@@ -54,7 +54,37 @@
                         <p class="text-sm text-gray-500 dark:text-gray-400">Training statistics for year
                             {{ $selectedYear }}</p>
                     </div>
-                    <div class="flex items-center gap-2">
+                    <div class="flex items-center gap-3">
+                        {{-- Year Navigation --}}
+                        <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
+                            {{-- Previous Year Button --}}
+                            <button wire:click="previousYear" 
+                                class="p-1.5 rounded-md hover:bg-white dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                @if($selectedYear <= now()->year - 5) disabled @endif
+                                title="Previous Year">
+                                <x-mary-icon name="o-chevron-left" class="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                            </button>
+                            
+                            {{-- Year Selector Dropdown (MaryUI) --}}
+                            @php
+                                $yearOptions = collect($this->availableYears)->map(fn($y) => ['id' => $y, 'name' => (string)$y]);
+                            @endphp
+                            <x-select 
+                                wire:model.live="selectedYear"
+                                :options="$yearOptions"
+                                class="select-sm !min-h-0 !h-8 !w-24 !border-0 bg-white dark:bg-gray-600 font-semibold"
+                            />
+                            
+                            {{-- Next Year Button --}}
+                            <button wire:click="nextYear" 
+                                class="p-1.5 rounded-md hover:bg-white dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                @if($selectedYear >= now()->year) disabled @endif
+                                title="Next Year">
+                                <x-mary-icon name="o-chevron-right" class="w-4 h-4 text-gray-600 dark:text-gray-300" />
+                            </button>
+                        </div>
+
+                        {{-- Legend Badge --}}
                         <span class="inline-flex items-center px-3 py-1 rounded-full text-sm bg-secondary text-white">
                             <span class="w-2 h-2 rounded-full bg-white mr-2"></span>
                             Training Count

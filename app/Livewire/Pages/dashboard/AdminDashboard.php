@@ -36,6 +36,78 @@ class AdminDashboard extends Component
     $this->loadCalendarEvents();
   }
 
+  /**
+   * Get available years for selection (current year and 5 years back)
+   */
+  public function getAvailableYearsProperty(): array
+  {
+    $currentYear = now()->year;
+    $years = [];
+    for ($i = 0; $i <= 5; $i++) {
+      $years[] = $currentYear - $i;
+    }
+    return $years;
+  }
+
+  /**
+   * Navigate to previous year
+   */
+  public function previousYear()
+  {
+    $minYear = now()->year - 5;
+    if ($this->selectedYear > $minYear) {
+      $this->selectedYear--;
+      $this->selectedMonth = null;
+      $this->monthBreakdown = [];
+      $this->loadChartData();
+      $this->dispatch('year-changed', year: $this->selectedYear);
+    }
+  }
+
+  /**
+   * Navigate to next year
+   */
+  public function nextYear()
+  {
+    $maxYear = now()->year;
+    if ($this->selectedYear < $maxYear) {
+      $this->selectedYear++;
+      $this->selectedMonth = null;
+      $this->monthBreakdown = [];
+      $this->loadChartData();
+      $this->dispatch('year-changed', year: $this->selectedYear);
+    }
+  }
+
+  /**
+   * Set specific year
+   */
+  public function setYear($year)
+  {
+    $year = (int) $year;
+    $minYear = now()->year - 5;
+    $maxYear = now()->year;
+    
+    if ($year >= $minYear && $year <= $maxYear) {
+      $this->selectedYear = $year;
+      $this->selectedMonth = null;
+      $this->monthBreakdown = [];
+      $this->loadChartData();
+      $this->dispatch('year-changed', year: $this->selectedYear);
+    }
+  }
+
+  /**
+   * Hook for wire:model.live on selectedYear
+   */
+  public function updatedSelectedYear($value)
+  {
+    $this->selectedMonth = null;
+    $this->monthBreakdown = [];
+    $this->loadChartData();
+    $this->dispatch('year-changed', year: $this->selectedYear);
+  }
+
   public function loadCalendarEvents()
   {
     $this->calendarEvents = [];

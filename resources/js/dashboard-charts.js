@@ -392,10 +392,11 @@ function handleSidebarResize() {
 }
 
 /**
- * Setup Livewire event listener for breakdown data
+ * Setup Livewire event listeners for breakdown data and year change
  */
 function setupBreakdownListener() {
     if (typeof Livewire !== 'undefined') {
+        // Listen for breakdown data updates
         Livewire.on('breakdown-loaded', ({ byType, byGroupComp, total }) => {
             setTimeout(() => {
                 if (byType && Object.keys(byType).length > 0) {
@@ -405,6 +406,34 @@ function setupBreakdownListener() {
                     renderDonutGroupChart(byGroupComp);
                 }
             }, 150);
+        });
+
+        // Listen for year change - reinitialize chart with new data
+        Livewire.on('year-changed', ({ year }) => {
+            // The Livewire component will re-render with new data
+            // We need to wait for DOM update then reinit chart
+            setTimeout(() => {
+                const chartElement = document.querySelector("#training-chart");
+                if (chartElement && window.trainingChart) {
+                    // Get new data from Livewire component
+                    const component = Livewire.find(chartElement.closest('[wire\\:id]')?.getAttribute('wire:id'));
+                    if (component) {
+                        const newData = component.get('monthlyTrainingData');
+                        const newLabels = component.get('monthLabels');
+                        
+                        // Update chart with new data
+                        window.trainingChart.updateOptions({
+                            xaxis: {
+                                categories: newLabels
+                            }
+                        });
+                        window.trainingChart.updateSeries([{
+                            name: 'Training Count',
+                            data: newData
+                        }]);
+                    }
+                }
+            }, 100);
         });
     }
 }
