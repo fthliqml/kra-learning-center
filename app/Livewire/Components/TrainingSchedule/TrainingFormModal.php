@@ -21,13 +21,14 @@ class TrainingFormModal extends Component
     use TrainingFormDropdowns;
     use TrainingFormInteractions;
 
-    public $activeTab = 'training'; // training or session
+    public $activeTab = 'training'; // training, personnel, or schedule
 
     protected $listeners = [
         'open-add-training-modal' => 'openModalWithDate',
         'schedule-month-context' => 'setDefaultMonth',
         'open-training-form-edit' => 'openEdit',
-        'confirm-delete-training-form' => 'onConfirmDelete'
+        'confirm-delete-training-form' => 'onConfirmDelete',
+        'confirm-reset-day-overrides' => 'onConfirmResetDayOverrides',
     ];
 
     public function mount()
@@ -39,6 +40,12 @@ class TrainingFormModal extends Component
 
     public function saveTraining()
     {
+        // Auto-save current day's config before persisting to database
+        // This ensures edits made without navigating away are captured
+        if (!$this->applyToAllDays && $this->selectedDayNumber > 0) {
+            $this->autoSaveCurrentDayConfig($this->selectedDayNumber);
+        }
+
         // Validation using FormRequest
         $request = new TrainingFormRequest();
         $request->merge($this->getValidationData());
@@ -100,6 +107,12 @@ class TrainingFormModal extends Component
         $persistService = app(TrainingPersistService::class);
         $sessionService = app(SessionSyncService::class);
 
+        // Prepare session override config for per-day settings
+        $sessionOverrideConfig = [
+            'applyToAllDays' => $this->applyToAllDays,
+            'dayOverrides' => $this->dayOverrides,
+        ];
+
         try {
             if ($this->isEdit && $this->trainingId) {
                 // Update existing training
@@ -107,7 +120,8 @@ class TrainingFormModal extends Component
                     $this->trainingId,
                     $formData,
                     $this->participants,
-                    $sessionService
+                    $sessionService,
+                    $sessionOverrideConfig
                 );
                 
                 if (!$training) {
@@ -122,7 +136,8 @@ class TrainingFormModal extends Component
                 $training = $persistService->create(
                     $formData,
                     $this->participants,
-                    $sessionService
+                    $sessionService,
+                    $sessionOverrideConfig
                 );
                 
                 $this->success('Training data created successfully!', position: 'toast-top toast-center');

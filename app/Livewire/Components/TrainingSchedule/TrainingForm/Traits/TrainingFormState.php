@@ -32,6 +32,12 @@ trait TrainingFormState
     public array $room = ['name' => '', 'location' => ''];
     public array $participants = [];
     
+    // ===== PER-DAY SESSION OVERRIDE =====
+    public bool $applyToAllDays = true;      // Toggle: true = uniform, false = per-day
+    public int $selectedDayNumber = 1;       // Currently selected day in UI
+    public array $dayOverrides = [];         // Per-day override data
+    // Structure: [dayNumber => ['room_name' => '', 'room_location' => '', 'start_time' => '', 'end_time' => '']]
+    
     // ===== ORIGINAL TYPE (for edit mode type change detection) =====
     public ?string $originalTrainingType = null;
     
@@ -86,6 +92,9 @@ trait TrainingFormState
         $this->trainingNameWasAutoFilled = false;
         $this->pendingTypeChange = null;
         $this->showTypeChangeConfirm = false;
+        $this->applyToAllDays = true;
+        $this->selectedDayNumber = 1;
+        $this->dayOverrides = [];
     }
 
     /**
@@ -113,6 +122,9 @@ trait TrainingFormState
         $this->trainingNameWasAutoFilled = false;
         $this->pendingTypeChange = null;
         $this->showTypeChangeConfirm = false;
+        $this->applyToAllDays = true;
+        $this->selectedDayNumber = 1;
+        $this->dayOverrides = [];
         
         $this->resetErrorBag();
         $this->resetValidation();
@@ -165,6 +177,126 @@ trait TrainingFormState
         $this->trainingNameWasAutoFilled = $autoFilled;
         if ($autoFilled) {
             $this->trainingNameManuallyEdited = false;
+        }
+    }
+
+    /**
+     * Get effective session config for a specific day.
+     * Returns day-specific config if exists, otherwise base/global settings.
+     */
+    public function getSessionConfigForDay(int $dayNumber): array
+    {
+        // If uniform mode, return global fields
+        if ($this->applyToAllDays) {
+            return [
+                'room_name' => $this->room['name'] ?? '',
+                'room_location' => $this->room['location'] ?? '',
+                'start_time' => $this->start_time,
+                'end_time' => $this->end_time,
+            ];
+        }
+        
+        // Day 1 uses global fields directly
+        if ($dayNumber === 1) {
+            // Use stored base if available, otherwise current global fields
+            if (isset($this->dayOverrides['_base'])) {
+                return $this->dayOverrides['_base'];
+            }
+            return [
+                'room_name' => $this->room['name'] ?? '',
+                'room_location' => $this->room['location'] ?? '',
+                'start_time' => $this->start_time,
+                'end_time' => $this->end_time,
+            ];
+        }
+        
+        // Day 2+ use stored override (complete config), fallback to base/global
+        if (isset($this->dayOverrides[$dayNumber])) {
+            return $this->dayOverrides[$dayNumber];
+        }
+        
+        // No override, use base
+        return $this->getSessionConfigForDay(1);
+    }
+
+    /**
+     * Check if a specific day has overrides.
+     */
+    public function dayHasOverride(int $dayNumber): bool
+    {
+        // Day 1 never shows as "override" - it's the reference
+        if ($dayNumber === 1) {
+            return false;
+        }
+        return !$this->applyToAllDays && isset($this->dayOverrides[$dayNumber]) && !empty($this->dayOverrides[$dayNumber]);
+    }
+
+    /**
+     * Get total number of training days from date range.
+     */
+    public function getTotalDays(): int
+    {
+        if (empty($this->date)) {
+            return 0;
+        }
+        
+        $range = $this->parseDateRange($this->date);
+        if (empty($range['start']) || empty($range['end'])) {
+            return 0;
+        }
+        
+        try {
+            $start = \Carbon\Carbon::parse($range['start']);
+            $end = \Carbon\Carbon::parse($range['end']);
+            return $start->diffInDays($end) + 1;
+        } catch (\Throwable $e) {
+            return 0;
+        }
+    }
+
+    /**
+     * Cleanup orphan overrides when date range shrinks.
+     * Preserves the _base key used for day 1 reference.
+     */
+    public function cleanupOrphanOverrides(): void
+    {
+        $totalDays = $this->getTotalDays();
+        if ($totalDays <= 0) {
+            return;
+        }
+        
+        $this->dayOverrides = array_filter(
+            $this->dayOverrides,
+            fn($key) => $key === '_base' || (is_int($key) && $key <= $totalDays),
+            ARRAY_FILTER_USE_KEY
+        );
+    }
+
+    /**
+     * Get all training dates as array of day options for dropdowns.
+     */
+    public function getTrainingDayOptions(): array
+    {
+        if (empty($this->date)) {
+            return [];
+        }
+        
+        $range = $this->parseDateRange($this->date);
+        if (empty($range['start']) || empty($range['end'])) {
+            return [];
+        }
+        
+        try {
+            $period = \Carbon\CarbonPeriod::create($range['start'], $range['end']);
+            $options = [];
+            $d = 1;
+            foreach ($period as $dt) {
+                $options[] = ['id' => $d, 'name' => 'Day ' . $d . ': ' . $dt->format('d M Y')];
+                $d++;
+            }
+            return $options;
+        } catch (\Throwable $e) {
+            return [];
         }
     }
 }

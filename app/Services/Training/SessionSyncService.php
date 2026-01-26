@@ -29,6 +29,7 @@ class SessionSyncService
      * @param array $room ['name' => '', 'location' => '']
      * @param string|null $startTime
      * @param string|null $endTime
+     * @param array $sessionOverrideConfig ['applyToAllDays' => bool, 'dayOverrides' => array]
      * @return array Array of created TrainingSession models
      */
     public function createSessionsForTraining(
@@ -39,7 +40,8 @@ class SessionSyncService
         ?int $trainerId = null,
         array $room = ['name' => '', 'location' => ''],
         ?string $startTime = null,
-        ?string $endTime = null
+        ?string $endTime = null,
+        array $sessionOverrideConfig = []
     ): array {
         $sessions = [];
         
@@ -50,17 +52,54 @@ class SessionSyncService
         $period = CarbonPeriod::create($startDate, $endDate);
         $day = 1;
         $isLms = $trainingType === 'LMS';
+        
+        $applyToAllDays = $sessionOverrideConfig['applyToAllDays'] ?? true;
+        $dayOverrides = $sessionOverrideConfig['dayOverrides'] ?? [];
+        
+        // Get base config (day 1 reference) - from _base key or global params
+        $baseConfig = [
+            'room_name' => $room['name'] ?? '',
+            'room_location' => $room['location'] ?? '',
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+        ];
+        
+        if (!$applyToAllDays && isset($dayOverrides['_base'])) {
+            $baseConfig = array_merge($baseConfig, $dayOverrides['_base']);
+        }
 
         foreach ($period as $dateObj) {
+            // Determine session config for this day
+            if ($applyToAllDays || $day === 1) {
+                // Uniform mode or day 1: use base config
+                $sessionRoom = ['name' => $baseConfig['room_name'], 'location' => $baseConfig['room_location']];
+                $sessionStartTime = $baseConfig['start_time'];
+                $sessionEndTime = $baseConfig['end_time'];
+            } elseif (isset($dayOverrides[$day]) && is_array($dayOverrides[$day])) {
+                // Day 2+ with override: use full stored config
+                $override = $dayOverrides[$day];
+                $sessionRoom = [
+                    'name' => $override['room_name'] ?? $baseConfig['room_name'],
+                    'location' => $override['room_location'] ?? $baseConfig['room_location'],
+                ];
+                $sessionStartTime = $override['start_time'] ?? $baseConfig['start_time'];
+                $sessionEndTime = $override['end_time'] ?? $baseConfig['end_time'];
+            } else {
+                // Day 2+ without override: inherit from base
+                $sessionRoom = ['name' => $baseConfig['room_name'], 'location' => $baseConfig['room_location']];
+                $sessionStartTime = $baseConfig['start_time'];
+                $sessionEndTime = $baseConfig['end_time'];
+            }
+            
             $sessions[] = TrainingSession::create([
                 'training_id' => $training->id,
                 'day_number' => $day,
                 'date' => $dateObj->format('Y-m-d'),
                 'trainer_id' => $isLms ? null : $trainerId,
-                'room_name' => $isLms ? ($room['name'] ?: null) : $room['name'],
-                'room_location' => $isLms ? ($room['location'] ?: null) : $room['location'],
-                'start_time' => $isLms ? null : $startTime,
-                'end_time' => $isLms ? null : $endTime,
+                'room_name' => $isLms ? ($sessionRoom['name'] ?: null) : $sessionRoom['name'],
+                'room_location' => $isLms ? ($sessionRoom['location'] ?: null) : $sessionRoom['location'],
+                'start_time' => $isLms ? null : $sessionStartTime,
+                'end_time' => $isLms ? null : $sessionEndTime,
             ]);
             $day++;
         }
@@ -81,7 +120,8 @@ class SessionSyncService
         ?int $trainerId = null,
         array $room = ['name' => '', 'location' => ''],
         ?string $startTime = null,
-        ?string $endTime = null
+        ?string $endTime = null,
+        array $sessionOverrideConfig = []
     ): void {
         // Delete all old sessions
         $training->sessions()->delete();
@@ -93,17 +133,54 @@ class SessionSyncService
         $period = CarbonPeriod::create($startDate, $endDate);
         $day = 1;
         $isLms = $newType === 'LMS';
+        
+        $applyToAllDays = $sessionOverrideConfig['applyToAllDays'] ?? true;
+        $dayOverrides = $sessionOverrideConfig['dayOverrides'] ?? [];
+        
+        // Get base config (day 1 reference) - from _base key or global params
+        $baseConfig = [
+            'room_name' => $room['name'] ?? '',
+            'room_location' => $room['location'] ?? '',
+            'start_time' => $startTime,
+            'end_time' => $endTime,
+        ];
+        
+        if (!$applyToAllDays && isset($dayOverrides['_base'])) {
+            $baseConfig = array_merge($baseConfig, $dayOverrides['_base']);
+        }
 
         foreach ($period as $dateObj) {
+            // Determine session config for this day
+            if ($applyToAllDays || $day === 1) {
+                // Uniform mode or day 1: use base config
+                $sessionRoom = ['name' => $baseConfig['room_name'], 'location' => $baseConfig['room_location']];
+                $sessionStartTime = $baseConfig['start_time'];
+                $sessionEndTime = $baseConfig['end_time'];
+            } elseif (isset($dayOverrides[$day]) && is_array($dayOverrides[$day])) {
+                // Day 2+ with override: use full stored config
+                $override = $dayOverrides[$day];
+                $sessionRoom = [
+                    'name' => $override['room_name'] ?? $baseConfig['room_name'],
+                    'location' => $override['room_location'] ?? $baseConfig['room_location'],
+                ];
+                $sessionStartTime = $override['start_time'] ?? $baseConfig['start_time'];
+                $sessionEndTime = $override['end_time'] ?? $baseConfig['end_time'];
+            } else {
+                // Day 2+ without override: inherit from base
+                $sessionRoom = ['name' => $baseConfig['room_name'], 'location' => $baseConfig['room_location']];
+                $sessionStartTime = $baseConfig['start_time'];
+                $sessionEndTime = $baseConfig['end_time'];
+            }
+            
             TrainingSession::create([
                 'training_id' => $training->id,
                 'day_number' => $day,
                 'date' => $dateObj->format('Y-m-d'),
                 'trainer_id' => $isLms ? null : $trainerId,
-                'room_name' => $isLms ? ($room['name'] ?: null) : $room['name'],
-                'room_location' => $isLms ? ($room['location'] ?: null) : $room['location'],
-                'start_time' => $isLms ? null : $startTime,
-                'end_time' => $isLms ? null : $endTime,
+                'room_name' => $isLms ? ($sessionRoom['name'] ?: null) : $sessionRoom['name'],
+                'room_location' => $isLms ? ($sessionRoom['location'] ?: null) : $sessionRoom['location'],
+                'start_time' => $isLms ? null : $sessionStartTime,
+                'end_time' => $isLms ? null : $sessionEndTime,
             ]);
             $day++;
         }
