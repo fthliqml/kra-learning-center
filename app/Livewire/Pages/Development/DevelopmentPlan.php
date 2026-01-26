@@ -655,26 +655,9 @@ class DevelopmentPlan extends Component
 
         $userId = Auth::id();
         $year = (int) $this->selectedYear;
-        $options = [];
 
-        // Get recommended competencies for this group
-        $recommendedCompetencyIds = $this->getRecommendedCompetencyIdsForType($group);
-        if (!empty($recommendedCompetencyIds)) {
-            $competencies = Competency::query()
-                ->whereIn('id', $recommendedCompetencyIds)
-                ->where('type', $group)
-                ->orderBy('name')
-                ->get();
-
-            foreach ($competencies as $comp) {
-                $options[] = [
-                    'value' => 'competency:' . $comp->id,
-                    'label' => $comp->name,
-                ];
-            }
-        }
-
-        // Get recommended training modules for this group
+        // Combine recommended competencies + modules.
+        // Hide competency options that are already covered by a recommended module's competency (avoid duplicates).
         $moduleIds = TrainingPlanRecom::query()
             ->where('user_id', $userId)
             ->where('year', $year)
@@ -686,6 +669,10 @@ class DevelopmentPlan extends Component
             ->unique()
             ->values()
             ->all();
+        $options = [];
+
+        $modules = collect();
+        $moduleCompetencyIds = [];
 
         if (!empty($moduleIds)) {
             $modules = TrainingModule::query()
@@ -695,6 +682,37 @@ class DevelopmentPlan extends Component
                 ->orderBy('title')
                 ->get();
 
+            $moduleCompetencyIds = $modules
+                ->pluck('competency_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
+        }
+
+        $recommendedCompetencyIds = $this->getRecommendedCompetencyIdsForType($group);
+        if (!empty($recommendedCompetencyIds)) {
+            $competenciesQuery = Competency::query()
+                ->whereIn('id', $recommendedCompetencyIds)
+                ->where('type', $group);
+
+            if (!empty($moduleCompetencyIds)) {
+                $competenciesQuery->whereNotIn('id', $moduleCompetencyIds);
+            }
+
+            $competencies = $competenciesQuery
+                ->orderBy('name')
+                ->get();
+
+            foreach ($competencies as $comp) {
+                $options[] = [
+                    'value' => 'competency:' . $comp->id,
+                    'label' => $comp->name,
+                ];
+            }
+        }
+
+        if ($modules->isNotEmpty()) {
             foreach ($modules as $module) {
                 $options[] = [
                     'value' => 'module:' . $module->id,

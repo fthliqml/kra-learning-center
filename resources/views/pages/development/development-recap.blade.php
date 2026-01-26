@@ -8,20 +8,6 @@
         <div
             class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row md:flex-wrap">
             <div class="flex flex-wrap items-center justify-center lg:justify-end gap-2">
-                @role('admin')
-                    <x-button class="btn-primary h-10 text-white shadow-sm" wire:click="createTrainingSchedule"
-                        wire:loading.attr="disabled" spinner="createTrainingSchedule">
-                        <x-icon name="o-calendar-days" class="size-4 mr-2" />
-                        Create Schedule
-                        @if (!empty($this->selectedEmployeeIds))
-                            <span
-                                class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-white/20">
-                                {{ count($this->selectedEmployeeIds) }} selected
-                            </span>
-                        @endif
-                    </x-button>
-                @endrole
-
                 {{-- Export to Excel (align style with Training Request) --}}
                 <x-button class="btn-success h-10 text-white shadow-sm" wire:click="export" wire:loading.attr="disabled"
                     spinner="export">
@@ -42,7 +28,7 @@
     </div>
 
     {{-- Skeleton Loading --}}
-    <x-skeletons.table :columns="9" :rows="10" targets="selectedYear,search" />
+    <x-skeletons.table :columns="6" :rows="10" targets="selectedYear,search" />
 
     {{-- No Data State --}}
     @if ($rows->isEmpty())
@@ -60,24 +46,42 @@
             </div>
         </div>
     @else
+        @role('admin')
+            <div class="mb-4 p-4 bg-white border border-gray-200 rounded-xl shadow-sm">
+                <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                    <div class="min-w-0">
+                        <div class="text-sm font-semibold text-gray-900">Create Schedule</div>
+                        <div class="text-xs text-gray-500 mt-0.5">
+                            Select employees from the Plan column, then create the schedule.
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-2 shrink-0">
+                        <x-button class="btn-primary h-10 text-white shadow-sm" wire:click="createTrainingSchedule"
+                            wire:loading.attr="disabled" spinner="createTrainingSchedule">
+                            <x-icon name="o-calendar-days" class="size-4 mr-2" />
+                            Create Schedule
+                            @if (!empty($this->selectedTrainingPlanIds))
+                                <span
+                                    class="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-white/20">
+                                    {{ count($this->selectedTrainingPlanIds) }} selected
+                                </span>
+                            @endif
+                        </x-button>
+                    </div>
+                </div>
+
+                @error('selectedTrainingPlanIds')
+                    <p class="text-red-600 text-sm mt-2">{{ $message }}</p>
+                @enderror
+            </div>
+        @endrole
+
         {{-- Table --}}
         <div wire:loading.remove wire:target="selectedYear,search"
             class="rounded-lg border border-gray-200 shadow-all p-2 overflow-x-auto">
             <x-table :headers="$headers" :rows="$rows" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
                 with-pagination>
-                @role('admin')
-                    @scope('cell_select', $row)
-                        <div class="flex justify-center">
-                            <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
-                                wire:model.live="selectedEmployeeIds" value="{{ $row->user_id }}" />
-                        </div>
-                    @endscope
-                @endrole
-
-                @scope('cell_no', $row)
-                    <div class="text-center">{{ $row->no }}</div>
-                @endscope
-
                 @scope('cell_nrp', $row)
                     <div class="text-center font-mono text-sm">{{ $row->nrp }}</div>
                 @endscope
@@ -91,30 +95,110 @@
                 @endscope
 
                 @scope('cell_plan1', $row)
-                    <div class="truncate max-w-[24ch] xl:max-w-[32ch]">{{ $row->plan1 }}</div>
+                    <div class="max-w-[24ch] xl:max-w-[32ch]">
+                        <div class="flex items-start gap-2">
+                            @role('admin')
+                                @if (!empty($row->plan1['id']))
+                                    <div class="pt-0.5">
+                                        <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                                            wire:model.live="selectedTrainingPlanIds" value="{{ $row->plan1['id'] }}" />
+                                    </div>
+                                @endif
+                            @endrole
+
+                            <div class="min-w-0">
+                                <div class="truncate">{{ $row->plan1['label'] ?? '-' }}</div>
+                                @if (!empty($row->plan1['label']) && ($row->plan1['label'] ?? '-') !== '-')
+                                    @if (!empty($row->plan1['scheduled']))
+                                        <div class="mt-0.5">
+                                            <span
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                                Scheduled
+                                            </span>
+                                        </div>
+                                    @else
+                                        <div class="mt-0.5">
+                                            <span
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700">
+                                                Waiting
+                                            </span>
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                    </div>
                 @endscope
 
                 @scope('cell_plan2', $row)
-                    <div class="truncate max-w-[24ch] xl:max-w-[32ch]">{{ $row->plan2 }}</div>
+                    <div class="max-w-[24ch] xl:max-w-[32ch]">
+                        <div class="flex items-start gap-2">
+                            @role('admin')
+                                @if (!empty($row->plan2['id']))
+                                    <div class="pt-0.5">
+                                        <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                                            wire:model.live="selectedTrainingPlanIds" value="{{ $row->plan2['id'] }}" />
+                                    </div>
+                                @endif
+                            @endrole
+
+                            <div class="min-w-0">
+                                <div class="truncate">{{ $row->plan2['label'] ?? '-' }}</div>
+                                @if (!empty($row->plan2['label']) && ($row->plan2['label'] ?? '-') !== '-')
+                                    @if (!empty($row->plan2['scheduled']))
+                                        <div class="mt-0.5">
+                                            <span
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                                Scheduled
+                                            </span>
+                                        </div>
+                                    @else
+                                        <div class="mt-0.5">
+                                            <span
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700">
+                                                Waiting
+                                            </span>
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
+                    </div>
                 @endscope
 
                 @scope('cell_plan3', $row)
-                    <div class="truncate max-w-[24ch] xl:max-w-[32ch]">{{ $row->plan3 }}</div>
-                @endscope
+                    <div class="max-w-[24ch] xl:max-w-[32ch]">
+                        <div class="flex items-start gap-2">
+                            @role('admin')
+                                @if (!empty($row->plan3['id']))
+                                    <div class="pt-0.5">
+                                        <input type="checkbox" class="checkbox checkbox-sm checkbox-primary"
+                                            wire:model.live="selectedTrainingPlanIds" value="{{ $row->plan3['id'] }}" />
+                                    </div>
+                                @endif
+                            @endrole
 
-                @scope('cell_status', $row)
-                    <div class="flex justify-center">
-                        @if ($row->status === 'scheduled')
-                            <span
-                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
-                                Scheduled
-                            </span>
-                        @else
-                            <span
-                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700">
-                                Waiting
-                            </span>
-                        @endif
+                            <div class="min-w-0">
+                                <div class="truncate">{{ $row->plan3['label'] ?? '-' }}</div>
+                                @if (!empty($row->plan3['label']) && ($row->plan3['label'] ?? '-') !== '-')
+                                    @if (!empty($row->plan3['scheduled']))
+                                        <div class="mt-0.5">
+                                            <span
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                                Scheduled
+                                            </span>
+                                        </div>
+                                    @else
+                                        <div class="mt-0.5">
+                                            <span
+                                                class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-amber-100 text-amber-700">
+                                                Waiting
+                                            </span>
+                                        </div>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
                     </div>
                 @endscope
             </x-table>

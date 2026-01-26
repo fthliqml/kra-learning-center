@@ -453,7 +453,12 @@ class DevelopmentApproval extends Component
         ];
 
         // Load user's plans
-        $this->userTrainingPlans = TrainingPlan::with(['competency', 'spvApprover', 'leaderApprover'])
+        $this->userTrainingPlans = TrainingPlan::with([
+            'competency',
+            'trainingModule.competency',
+            'spvApprover',
+            'leaderApprover',
+        ])
             ->where('user_id', $userId)
             ->where('year', $year)
             ->where('status', '!=', 'draft')

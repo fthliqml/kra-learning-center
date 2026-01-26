@@ -82,7 +82,24 @@ class PendingApprovals extends Component
         // Get pending IDP (Individual Development Plan) approvals that are actionable for the current user
         $pendingIdpPlans = $this->actionableIdpPlans($user);
 
+
+        // Group IDP plans by user so each employee only appears once
+        $idpByUser = [];
         foreach ($pendingIdpPlans as $plan) {
+            $userId = $plan->user_id;
+            if (!isset($idpByUser[$userId])) {
+                $idpByUser[$userId] = $plan;
+            } else {
+                // Keep the most recently updated plan for sorting
+                $existing = $idpByUser[$userId];
+                $existingTime = $existing->updated_at ?? $existing->created_at;
+                $planTime = $plan->updated_at ?? $plan->created_at;
+                if (strtotime((string)$planTime) > strtotime((string)$existingTime)) {
+                    $idpByUser[$userId] = $plan;
+                }
+            }
+        }
+        foreach ($idpByUser as $plan) {
             $this->items[] = [
                 'title' => 'Development Plan',
                 'info' => $plan->user->name ?? 'Unknown',
@@ -368,7 +385,8 @@ class PendingApprovals extends Component
     public function getUrl(string $type, int $id): string
     {
         return match ($type) {
-            'idp' => route('development-approval.index'),
+            // Add filter param for IDP (Development Plan)
+            'idp' => route('development-approval.index', ['filter' => 'pending_lid']),
             'training_request' => route('training-request.index'),
             'training' => route('training-approval.index'),
             'certification' => route('certification-approval.index'),

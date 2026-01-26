@@ -10,7 +10,7 @@ use App\Models\User;
 
 /**
  * Trait TrainingFormDropdowns
- * 
+ *
  * Handles dropdown options loading and search functionality.
  * Extracted from TrainingFormModal for better separation of concerns.
  */
@@ -20,14 +20,14 @@ trait TrainingFormDropdowns
     public array $courseOptions = [];
     public array $trainingModuleOptions = [];
     public array $competencyOptions = [];
-    
+
     // ===== SEARCHABLE COLLECTIONS =====
     public $usersSearchable;
     public $trainersSearchable;
-    
+
     // ===== LOADING FLAGS =====
     public bool $dataLoaded = false;
-    
+
     // ===== CACHES =====
     private array $courseGroupCache = [];
     private array $competencyGroupCache = [];
@@ -57,7 +57,7 @@ trait TrainingFormDropdowns
         $this->loadCompetencyOptions();
         $this->userSearch();
         $this->trainerSearch();
-        
+
         $this->dataLoaded = true;
     }
 
@@ -72,8 +72,8 @@ trait TrainingFormDropdowns
                 ->orderBy('title')
                 ->get()
                 ->map(fn($c) => [
-                    'id' => $c->id, 
-                    'title' => $c->title, 
+                    'id' => $c->id,
+                    'title' => $c->title,
                     'group_comp' => $c->competency->type ?? null
                 ])
                 ->toArray();
@@ -85,6 +85,25 @@ trait TrainingFormDropdowns
      */
     protected function loadTrainingModuleOptions(): void
     {
+        $filterCompetencyId = isset($this->trainingModuleCompetencyFilterId)
+            ? (int) $this->trainingModuleCompetencyFilterId
+            : 0;
+
+        // When filtering by competency, do not use global cache (filter differs per request).
+        if ($filterCompetencyId > 0) {
+            $this->trainingModuleOptions = TrainingModule::with('competency')
+                ->where('competency_id', $filterCompetencyId)
+                ->orderBy('title')
+                ->get()
+                ->map(fn($m) => [
+                    'id' => $m->id,
+                    'title' => $m->title,
+                    'group_comp' => $m->competency?->type ?? null
+                ])
+                ->toArray();
+            return;
+        }
+
         $this->trainingModuleOptions = cache()->remember('training_form_module_options', 3600, function () {
             return TrainingModule::with('competency')
                 ->orderBy('title')
@@ -179,7 +198,7 @@ trait TrainingFormDropdowns
                     ])
                     ->toArray();
             });
-            
+
             $merged = collect($results);
             if ($selected->isNotEmpty()) {
                 $selectedMapped = $selected->map(fn($t) => [
@@ -188,7 +207,7 @@ trait TrainingFormDropdowns
                 ]);
                 $merged = $merged->concat($selectedMapped)->unique('id');
             }
-            
+
             $this->trainersSearchable = $merged;
             return;
         }
@@ -239,8 +258,18 @@ trait TrainingFormDropdowns
             return;
         }
 
-        $this->trainingModuleOptions = TrainingModule::with('competency')
-            ->where('title', 'like', "%{$value}%")
+        $filterCompetencyId = isset($this->trainingModuleCompetencyFilterId)
+            ? (int) $this->trainingModuleCompetencyFilterId
+            : 0;
+
+        $query = TrainingModule::with('competency')
+            ->where('title', 'like', "%{$value}%");
+
+        if ($filterCompetencyId > 0) {
+            $query->where('competency_id', $filterCompetencyId);
+        }
+
+        $this->trainingModuleOptions = $query
             ->orderBy('title')
             ->get()
             ->map(fn($m) => [
@@ -312,9 +341,9 @@ trait TrainingFormDropdowns
 
         $group = trim((string) ($course?->competency?->type ?? ''));
         $result = $group !== '' ? $group : null;
-        
+
         $this->courseGroupCache[$courseId] = $result;
-        
+
         return $result;
     }
 
@@ -337,9 +366,9 @@ trait TrainingFormDropdowns
 
         $group = trim((string) ($competency?->type ?? ''));
         $result = $group !== '' ? $group : null;
-        
+
         $this->competencyGroupCache[$competencyId] = $result;
-        
+
         return $result;
     }
 
@@ -362,9 +391,9 @@ trait TrainingFormDropdowns
 
         $name = trim((string) ($competency?->name ?? ''));
         $result = $name !== '' ? $name : null;
-        
+
         $this->competencyNameCache[$competencyId] = $result;
-        
+
         return $result;
     }
 

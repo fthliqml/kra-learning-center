@@ -4,7 +4,7 @@ namespace App\Livewire\Components\TrainingSchedule\TrainingForm\Traits;
 
 /**
  * Trait TrainingFormState
- * 
+ *
  * Shared state properties and reset methods for Training Form.
  * Used by TrainingFormModal as the main state holder.
  */
@@ -13,16 +13,17 @@ trait TrainingFormState
     // ===== MODAL STATE =====
     public bool $showModal = false;
     public bool $loading = true;
-    
+
     // ===== MODE & IDENTITY =====
     public bool $isEdit = false;
     public ?int $trainingId = null;
-    
+
     // ===== FORM FIELDS =====
     public string $training_name = '';
     public string $training_type = 'IN';
     public string $group_comp = 'BMC';
     public ?int $selected_module_id = null;
+    public ?int $trainingModuleCompetencyFilterId = null;
     public ?int $course_id = null;
     public $competency_id = null;
     public string $date = '';
@@ -31,6 +32,7 @@ trait TrainingFormState
     public ?int $trainerId = null;
     public array $room = ['name' => '', 'location' => ''];
     public array $participants = [];
+
     
     // ===== PER-DAY SESSION OVERRIDE =====
     public bool $applyToAllDays = true;      // Toggle: true = uniform, false = per-day
@@ -40,20 +42,20 @@ trait TrainingFormState
     
     // ===== ORIGINAL TYPE (for edit mode type change detection) =====
     public ?string $originalTrainingType = null;
-    
+
     // ===== UI FLAGS =====
     public bool $trainingNameManuallyEdited = false;
     public bool $trainingNameWasAutoFilled = false;
     protected bool $isSettingTrainingNameProgrammatically = false;
-    
+
     // Pending type change for confirmation modal
     public ?string $pendingTypeChange = null;
     public bool $showTypeChangeConfirm = false;
-    
+
     // Default month context from calendar
     public int $defaultYear;
     public int $defaultMonth;
-    
+
     // ===== STATIC OPTIONS =====
     public array $trainingTypeOptions = [
         ['id' => 'IN', 'name' => 'In-House'],
@@ -61,7 +63,7 @@ trait TrainingFormState
         ['id' => 'LMS', 'name' => 'LMS'],
         ['id' => 'BLENDED', 'name' => 'Blended'],
     ];
-    
+
     public array $groupCompOptions = [
         ['id' => 'BMC', 'name' => 'Basic Mandatory Competencies'],
         ['id' => 'FC', 'name' => 'Functional Competencies'],
@@ -79,6 +81,7 @@ trait TrainingFormState
         $this->training_type = 'IN';
         $this->group_comp = 'BMC';
         $this->selected_module_id = null;
+        $this->trainingModuleCompetencyFilterId = null;
         $this->course_id = null;
         $this->competency_id = null;
         $this->date = '';
@@ -109,6 +112,7 @@ trait TrainingFormState
         $this->training_type = 'IN';
         $this->group_comp = 'BMC';
         $this->selected_module_id = null;
+        $this->trainingModuleCompetencyFilterId = null;
         $this->course_id = null;
         $this->competency_id = null;
         $this->date = '';
@@ -129,7 +133,7 @@ trait TrainingFormState
         $this->resetErrorBag();
         $this->resetValidation();
     }
-    
+
     /**
      * Get form data as array for service calls.
      */
@@ -140,7 +144,7 @@ trait TrainingFormState
             'training_type' => $this->training_type,
             'group_comp' => $this->group_comp,
             'module_id' => $this->selected_module_id,
-            'course_id' => in_array($this->training_type, ['LMS', 'BLENDED']) 
+            'course_id' => in_array($this->training_type, ['LMS', 'BLENDED'])
                 ? $this->selected_module_id  // Form binds course to selected_module_id for LMS/BLENDED
                 : $this->course_id,
             'competency_id' => $this->competency_id,
@@ -164,7 +168,7 @@ trait TrainingFormState
             'end' => trim($dates[1] ?? $dates[0] ?? ''),
         ];
     }
-    
+
     /**
      * Set training name programmatically (prevents triggering manual edit flag).
      */
