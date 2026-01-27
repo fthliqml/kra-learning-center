@@ -1,24 +1,24 @@
-<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
+<div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-4">
     {{-- Header Navigation --}}
-    <div class="flex items-center justify-between mb-6">
+    <div class="flex items-center justify-between mb-3">
         {{-- Prev Button --}}
         <button wire:click="goToPrevMonth"
-            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
             </svg>
         </button>
 
         {{-- Month & Year Display --}}
         <button wire:click="openJumpModal"
-            class="px-5 py-2 bg-secondary text-white rounded-full text-sm hover:bg-secondary/90 transition-colors">
+            class="px-3 py-1.5 bg-secondary text-white rounded-full text-xs hover:bg-secondary/90 transition-colors">
             {{ $this->monthName }} {{ $currentYear }}
         </button>
 
         {{-- Next Button --}}
         <button wire:click="goToNextMonth"
-            class="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
-            <svg class="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor"
+            class="p-1.5 rounded-full hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
+            <svg class="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor"
                 viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
             </svg>
@@ -26,18 +26,18 @@
     </div>
 
     {{-- Days of Week Header --}}
-    <div class="grid grid-cols-7 gap-1 mb-2">
+    <div class="grid grid-cols-7 gap-0.5 mb-1">
         @foreach (['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'] as $dayName)
-            <div class="text-center text-xs font-medium text-gray-400 dark:text-gray-500 py-2">
+            <div class="text-center text-[10px] font-medium text-gray-400 dark:text-gray-500 py-1">
                 {{ $dayName }}
             </div>
         @endforeach
     </div>
 
     {{-- Calendar Grid --}}
-    <div class="grid grid-cols-7 gap-1">
+    <div class="grid grid-cols-7 gap-0.5">
         @foreach ($calendarDays as $dayData)
-            <div class="relative aspect-square p-1" x-data="{ showDetail: false, showHint: false }">
+            <div class="relative h-8 sm:h-9 p-0.5" x-data="{ showDetail: false, showHint: false }">
                 @if ($dayData['day'])
                     @php
                         // Filter out past events (only show today and future)
@@ -46,7 +46,7 @@
                         });
                         $hasEvents = count($futureEvents) > 0;
                     @endphp
-                    <div class="h-full flex flex-col items-center justify-start pt-1 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors {{ $hasEvents ? 'cursor-pointer' : 'cursor-default' }} {{ $dayData['isToday'] ? 'bg-secondary/10' : '' }}"
+                    <div class="h-full flex flex-col items-center justify-start pt-0.5 rounded-md hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors {{ $hasEvents ? 'cursor-pointer' : 'cursor-default' }} {{ $dayData['isToday'] ? 'bg-secondary/10' : '' }}"
                         @if ($hasEvents) @click="showDetail = !showDetail"
                             @mouseenter="showHint = true"
                             @mouseleave="showHint = false" @endif
@@ -54,15 +54,15 @@
 
                         {{-- Day Number --}}
                         <span
-                            class="text-sm {{ $dayData['isToday']
-                                ? 'w-7 h-7 flex items-center justify-center bg-secondary text-white rounded-full'
+                            class="text-xs {{ $dayData['isToday']
+                                ? 'w-6 h-6 flex items-center justify-center bg-secondary text-white rounded-full'
                                 : 'text-gray-500 dark:text-gray-400' }}">
                             {{ $dayData['day'] }}
                         </span>
 
                         {{-- Event Indicators (dots for multiple events) - only for future/today events --}}
                         @if ($hasEvents)
-                            <div class="flex flex-wrap justify-center gap-0.5 mt-1 w-full px-0.5">
+                            <div class="flex flex-wrap justify-center gap-0.5 mt-0.5 w-full px-0.5">
                                 @php
                                     $maxDots = 4;
                                     $eventsToShow = array_slice($futureEvents, 0, $maxDots);
@@ -77,7 +77,7 @@
                                             default => 'bg-blue-400',
                                         };
                                     @endphp
-                                    <span class="w-1.5 h-1.5 rounded-full {{ $dotColor }}"></span>
+                                    <span class="w-1 h-1 rounded-full {{ $dotColor }}"></span>
                                 @endforeach
                                 @if ($remaining > 0)
                                     <span class="text-[8px] text-gray-400 leading-none">+{{ $remaining }}</span>
@@ -196,7 +196,7 @@
     </div>
 
     {{-- Today Button --}}
-    <div class="mt-4 flex justify-center">
+    <div class="mt-3 flex justify-center">
         <button wire:click="goToToday" class="text-xs text-secondary hover:text-secondary/80 font-medium">
             Go to Today
         </button>
