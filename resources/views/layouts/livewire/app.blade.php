@@ -7,7 +7,7 @@
 </head>
 
 <body class="bg-white min-h-screen">
-    <main class="flex pt-8 md:pt-12 px-6 md:px-15">
+    <main class="flex pt-8 md:pt-12 px-4 sm:px-6 lg:px-8">
         @persist('main-sidebar')
             <x-main-sidebar />
         @endpersist

@@ -24,6 +24,7 @@ trait TrainingFormInteractions
     {
         $this->resetFormState(); // from TrainingFormState
         $this->isEdit = false;
+        $this->activeTab = 'training';
 
         $prefillModuleId = (int) ($data['prefill_module_id'] ?? 0);
         $prefillCompetencyId = (int) ($data['prefill_competency_id'] ?? 0);
@@ -66,7 +67,11 @@ trait TrainingFormInteractions
             if (!empty($this->participants)) {
                 // Ensure selected users appear in the searchable list (for Choices display)
                 $this->userSearch('');
-                $this->activeTab = 'session';
+                // If only participants are provided (no plan prefill), jump to Participants tab.
+                // If coming from Development Recap (plan prefill provided), keep starting on Training Config.
+                if ($prefillModuleId <= 0 && $prefillCompetencyId <= 0) {
+                    $this->activeTab = 'personnel';
+                }
             }
         }
         $this->showModal = true;
@@ -79,6 +84,7 @@ trait TrainingFormInteractions
     {
         $this->loadDropdownData();
         $this->resetFormState();
+        $this->activeTab = 'training';
         $this->showModal = true;
     }
 
@@ -109,6 +115,7 @@ trait TrainingFormInteractions
         // Reset form without triggering search queries
         $this->resetFormFieldsOnly();
         $this->isEdit = true;
+        $this->activeTab = 'training';
         $this->trainingId = (int) $id;
 
         // Load training with relations (include assessments for participants)
@@ -453,12 +460,12 @@ trait TrainingFormInteractions
     {
         $previousDay = $this->selectedDayNumber;
         $newDay = max(1, (int) $value);
-        
+
         // Auto-save the previous day's settings before switching
         if (!$this->applyToAllDays && $previousDay !== $newDay) {
             $this->autoSaveCurrentDayConfig($previousDay);
         }
-        
+
         $this->selectedDayNumber = $newDay;
         $this->loadDayConfigFromState($newDay);
     }
@@ -470,14 +477,15 @@ trait TrainingFormInteractions
     {
         if (!$this->applyToAllDays && !empty($this->dayOverrides)) {
             // Switching from per-day to uniform - needs confirmation
-            $this->dispatch('confirm',
+            $this->dispatch(
+                'confirm',
                 'Reset Per-Day Settings',
                 'This will reset all custom per-day settings. All days will use the same room and time. Proceed?',
                 'confirm-reset-day-overrides'
             );
             return;
         }
-        
+
         // When enabling per-day mode, save current form values as day 1 baseline
         if ($this->applyToAllDays) {
             // Switching to per-day mode - save current fields as _base immediately
@@ -491,7 +499,7 @@ trait TrainingFormInteractions
             ];
             $this->selectedDayNumber = 1;
         }
-        
+
         $this->applyToAllDays = !$this->applyToAllDays;
         if ($this->applyToAllDays) {
             $this->dayOverrides = [];
@@ -516,12 +524,12 @@ trait TrainingFormInteractions
     public function loadDayConfigFromState(int $dayNumber): void
     {
         $this->selectedDayNumber = $dayNumber;
-        
+
         if ($this->applyToAllDays) {
             // Uniform mode - nothing to load, global fields are correct
             return;
         }
-        
+
         // Get the config for the target day
         if ($dayNumber === 1) {
             // Day 1: restore from _base if exists
@@ -542,7 +550,7 @@ trait TrainingFormInteractions
                 return;
             }
         }
-        
+
         // Restore form fields from stored config
         $this->room = [
             'name' => $config['room_name'] ?? '',
@@ -563,21 +571,21 @@ trait TrainingFormInteractions
         if ($this->applyToAllDays) {
             return;
         }
-        
+
         $currentConfig = [
             'room_name' => $this->room['name'] ?? '',
             'room_location' => $this->room['location'] ?? '',
             'start_time' => $this->start_time,
             'end_time' => $this->end_time,
         ];
-        
+
         if ($dayNumber === 1) {
             // Day 1 values go to _base
             $this->dayOverrides['_base'] = $currentConfig;
         } else {
             // Day 2+: only save as override if different from day 1
             $baseConfig = $this->getDay1BaseConfig();
-            
+
             $isDifferent = false;
             foreach ($currentConfig as $key => $value) {
                 if (($baseConfig[$key] ?? '') !== $value) {
@@ -585,7 +593,7 @@ trait TrainingFormInteractions
                     break;
                 }
             }
-            
+
             if ($isDifferent) {
                 // Values differ from day 1 - save as override
                 $this->dayOverrides[$dayNumber] = $currentConfig;
@@ -604,7 +612,7 @@ trait TrainingFormInteractions
         if (isset($this->dayOverrides['_base'])) {
             return $this->dayOverrides['_base'];
         }
-        
+
         // Fallback to current global fields
         return [
             'room_name' => $this->room['name'] ?? '',
@@ -620,12 +628,12 @@ trait TrainingFormInteractions
     public function loadDayConfig(int $dayNumber): void
     {
         $previousDay = $this->selectedDayNumber;
-        
+
         // Auto-save current day before switching
         if (!$this->applyToAllDays && $previousDay !== $dayNumber) {
             $this->autoSaveCurrentDayConfig($previousDay);
         }
-        
+
         $this->selectedDayNumber = $dayNumber;
         $this->loadDayConfigFromState($dayNumber);
     }
@@ -646,13 +654,13 @@ trait TrainingFormInteractions
     {
         $sessions = $training->sessions->sortBy('day_number');
         $firstSession = $sessions->first();
-        
+
         if (!$firstSession || $sessions->count() <= 1) {
             $this->applyToAllDays = true;
             $this->dayOverrides = [];
             return;
         }
-        
+
         // Use first session as reference (day 1 global/base)
         $day1Config = [
             'room_name' => $firstSession->room_name ?? '',
@@ -660,10 +668,10 @@ trait TrainingFormInteractions
             'start_time' => $firstSession->start_time ? Carbon::parse($firstSession->start_time)->format('H:i') : '',
             'end_time' => $firstSession->end_time ? Carbon::parse($firstSession->end_time)->format('H:i') : '',
         ];
-        
+
         $this->dayOverrides = [];
         $hasAnyDiff = false;
-        
+
         foreach ($sessions->skip(1) as $session) {
             $sessionConfig = [
                 'room_name' => $session->room_name ?? '',
@@ -671,7 +679,7 @@ trait TrainingFormInteractions
                 'start_time' => $session->start_time ? Carbon::parse($session->start_time)->format('H:i') : '',
                 'end_time' => $session->end_time ? Carbon::parse($session->end_time)->format('H:i') : '',
             ];
-            
+
             // Check if this day differs from day 1
             $isDifferent = false;
             foreach ($day1Config as $key => $day1Val) {
@@ -680,16 +688,16 @@ trait TrainingFormInteractions
                     break;
                 }
             }
-            
+
             if ($isDifferent) {
                 // Store complete config for this day (not diff)
                 $this->dayOverrides[$session->day_number] = $sessionConfig;
                 $hasAnyDiff = true;
             }
         }
-        
+
         $this->applyToAllDays = !$hasAnyDiff;
-        
+
         // Store day 1 as base reference for when we switch days
         if (!$this->applyToAllDays) {
             $this->dayOverrides['_base'] = $day1Config;

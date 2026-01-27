@@ -23,20 +23,44 @@
     {{-- Cards Grid for Employee --}}
     <div wire:loading.remove class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4 md:gap-6">
         @forelse ($surveys as $survey)
-            <div class="card bg-base-100 border border-primary/20 shadow h-48">
-                <div class="card-body p-4 md:p-5 flex flex-col h-full">
+            <div
+                class="rounded-2xl bg-base-100 border border-base-200 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition duration-200 min-h-56">
+                <div class="p-4 md:p-5 flex flex-col h-full">
                     <div class="flex items-start justify-between gap-3">
-                        <div>
-                            <h3 class="text-sm sm:text-base md:text-lg font-semibold text-base-content/90 leading-snug">
+                        <div class="min-w-0">
+                            <h3
+                                class="text-sm sm:text-base md:text-lg font-semibold text-base-content leading-snug truncate">
                                 {{ $survey->training_name ?? '-' }}
                             </h3>
-                            <p class="text-xs md:text-sm text-base-content/60 mt-1">
-                                {{ $survey->date ?? '-' }}
-                            </p>
+                            <div class="mt-1 flex items-center gap-2 text-xs md:text-sm text-base-content/60">
+                                <x-icon name="o-calendar-days" class="size-4 opacity-70" />
+                                <span class="truncate">{{ $survey->date ?? '-' }}</span>
+                            </div>
                         </div>
                         <x-badge :value="$survey->badge_label"
                             class="{{ $survey->badge_class }} badge-xs sm:badge-sm whitespace-nowrap" />
                     </div>
+
+                    @if ((int) ($survey->level ?? 0) === 3)
+                        <div class="mt-4 rounded-xl border border-base-200 bg-base-200/40 p-3 space-y-2">
+                            <div class="grid grid-cols-[70px_1fr] gap-2 items-start text-xs md:text-sm">
+                                <div class="text-base-content/60 font-medium">Name</div>
+                                <div class="text-base-content/80 leading-snug break-words">
+                                    {{ $survey->target_employees_label ?? '-' }}
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-[70px_1fr] gap-2 items-center text-xs md:text-sm">
+                                <div class="text-base-content/60 font-medium">Ready at</div>
+                                <div class="inline-flex items-center gap-2">
+                                    <span
+                                        class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-lg border border-base-300 bg-base-100 text-base-content/80">
+                                        <x-icon name="o-clock" class="size-4 opacity-70" />
+                                        {{ $survey->can_start_label ?? '-' }}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     @php
                         $type = strtoupper($survey->training?->type ?? '');
@@ -52,13 +76,13 @@
                         <div class="flex items-center gap-2 flex-wrap">
                             @if ($type)
                                 <span
-                                    class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] bg-white/70 border {{ $colorClasses['badge'] }} whitespace-nowrap">
+                                    class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] bg-base-100/70 border {{ $colorClasses['badge'] }} whitespace-nowrap">
                                     {{ $type }}
                                 </span>
                             @endif
                             @if ($groupComp)
                                 <span
-                                    class="inline-flex items-center px-1.5 sm:px-2 py-0.5 rounded text-[10px] sm:text-[11px] border border-primary bg-primary/10 whitespace-nowrap">
+                                    class="inline-flex items-center px-2 py-0.5 rounded-lg text-[10px] sm:text-[11px] border border-primary/30 bg-primary/10 whitespace-nowrap">
                                     {{ $groupComp }}
                                 </span>
                             @endif
@@ -71,7 +95,7 @@
                             </a>
                         @elseif ($survey->start_disabled)
                             <x-button type="button"
-                                class="btn-xs sm:btn-sm border-primary/30 bg-gray-200 text-gray-400 cursor-not-allowed"
+                                class="btn-xs sm:btn-sm border-base-300 bg-base-200 text-base-content/40 cursor-not-allowed"
                                 icon="o-play" label="Start Survey" disabled />
                         @else
                             <a
