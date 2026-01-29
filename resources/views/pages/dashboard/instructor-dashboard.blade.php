@@ -1,26 +1,6 @@
 <div>
     {{-- Quick Action Section --}}
     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        {{-- Training Schedule Card --}}
-        <a href="{{ route('training-schedule.index') }}" wire:navigate
-            class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 hover:shadow-md hover:border-secondary/30 transition-all duration-200">
-            <div class="flex items-center gap-4">
-                <div
-                    class="p-3 bg-gradient-to-br from-secondary to-secondary/80 rounded-xl group-hover:scale-105 transition-transform">
-                    <x-mary-icon name="o-calendar-days" class="w-7 h-7 text-white" />
-                </div>
-                <div class="flex-1">
-                    <h3
-                        class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-secondary transition-colors">
-                        Training Schedule
-                    </h3>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">View and manage your training schedules</p>
-                </div>
-                <x-mary-icon name="o-chevron-right"
-                    class="w-5 h-5 text-gray-400 group-hover:text-secondary group-hover:translate-x-1 transition-all" />
-            </div>
-        </a>
-
         {{-- Instructor Daily Record Card --}}
         <a href="{{ route('reports.instructor-daily-record') }}" wire:navigate
             class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 hover:shadow-md hover:border-primary/30 transition-all duration-200">
