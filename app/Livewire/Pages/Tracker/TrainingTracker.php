@@ -56,19 +56,18 @@ class TrainingTracker extends Component
   public function headers(): array
   {
     return [
-      ['key' => 'no', 'label' => 'No', 'class' => '!text-center w-12'],
-      ['key' => 'training_name', 'label' => 'Training Name', 'class' => 'min-w-[200px]', 'sortable' => true],
-      ['key' => 'request_date', 'label' => 'Request Date', 'class' => '!text-center w-[120px]', 'sortable' => true],
-      ['key' => 'current_stage', 'label' => 'Current Stage', 'class' => '!text-center w-[200px]'],
-      ['key' => 'pending_approver', 'label' => 'Pending Approver', 'class' => 'w-[180px]'],
-      ['key' => 'days_pending', 'label' => 'Days Pending', 'class' => '!text-center w-[100px]', 'sortable' => true],
+      ['key' => 'no', 'label' => 'No', 'class' => '!text-center !py-4 w-12'],
+      ['key' => 'training_name', 'label' => 'Training Name', 'class' => '!py-4 min-w-[200px]', 'sortable' => true],
+      ['key' => 'request_date', 'label' => 'Request Date', 'class' => '!text-center !py-4 w-[120px]', 'sortable' => true],
+      ['key' => 'current_stage', 'label' => 'Current Stage', 'class' => '!text-center !py-4 w-[200px]'],
+      ['key' => 'pending_approver', 'label' => 'Pending Approver', 'class' => '!py-4 w-[180px]'],
+      ['key' => 'days_pending', 'label' => 'Days Pending', 'class' => '!text-center !py-4 w-[100px]', 'sortable' => true],
     ];
   }
 
   public function stageOptions(): array
   {
     return [
-      ['value' => 'all', 'label' => 'All Stages'],
       ['value' => 'pending_section_head', 'label' => 'Pending Section Head LID'],
       ['value' => 'pending_dept_head', 'label' => 'Pending Dept Head HC'],
       ['value' => 'approved', 'label' => 'Approved'],
