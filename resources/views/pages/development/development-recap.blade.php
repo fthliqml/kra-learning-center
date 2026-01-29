@@ -21,7 +21,7 @@
             </div>
 
             <div class="flex items-center justify-center gap-2">
-                <x-search-input placeholder="Search employee..." class="max-w-72"
+                <x-search-input placeholder="Search..." class="max-w-72"
                     wire:model.live.debounce.600ms="search" />
             </div>
         </div>

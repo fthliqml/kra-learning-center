@@ -22,7 +22,7 @@
                     icon-right="o-adjustments-horizontal" />
             </div>
             <div class="w-full sm:w-64">
-                <x-search-input placeholder="Search training..." class="!w-full"
+                <x-search-input placeholder="Search..." class="!w-full"
                     wire:model.live.debounce.400ms="search" />
             </div>
         </div>

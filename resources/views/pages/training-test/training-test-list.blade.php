@@ -11,7 +11,7 @@
         </div>
 
         <div class="flex gap-2 w-full lg:w-auto items-center justify-center lg:justify-end">
-            <x-search-input placeholder="Search training..." class="max-w-64" wire:model.live.debounce.400ms="search" />
+            <x-search-input placeholder="Search..." class="max-w-72" wire:model.live.debounce.400ms="search" />
         </div>
     </div>
 
