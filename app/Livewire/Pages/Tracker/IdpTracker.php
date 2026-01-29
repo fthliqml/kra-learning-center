@@ -60,14 +60,14 @@ class IdpTracker extends Component
   public function headers(): array
   {
     return [
-      ['key' => 'no', 'label' => 'No', 'class' => '!text-center !py-3 w-12'],
-      ['key' => 'employee_name', 'label' => 'Employee Name', 'class' => '!py-3 min-w-[180px]', 'sortable' => true],
-      ['key' => 'employee_nrp', 'label' => 'NRP', 'class' => '!py-3 w-[100px]'],
-      ['key' => 'section', 'label' => 'Section', 'class' => '!py-3 w-[120px]'],
-      ['key' => 'plan_count', 'label' => 'Plans', 'class' => '!text-center !py-3 w-[80px]'],
-      ['key' => 'current_stage', 'label' => 'Current Stage', 'class' => '!text-center !py-3 w-[200px]'],
-      ['key' => 'pending_approver', 'label' => 'Pending Approver', 'class' => '!py-3 w-[180px]'],
-      ['key' => 'days_pending', 'label' => 'Days Pending', 'class' => '!text-center !py-3 w-[100px]', 'sortable' => true],
+      ['key' => 'no', 'label' => 'No', 'class' => '!text-center !py-4 w-12'],
+      ['key' => 'employee_name', 'label' => 'Employee Name', 'class' => '!py-4 min-w-[180px]', 'sortable' => true],
+      ['key' => 'employee_nrp', 'label' => 'NRP', 'class' => '!py-4 w-[100px]'],
+      ['key' => 'section', 'label' => 'Section', 'class' => '!py-4 w-[120px]'],
+      ['key' => 'plan_count', 'label' => 'Plans', 'class' => '!text-center !py-4 w-[80px]'],
+      ['key' => 'current_stage', 'label' => 'Current Stage', 'class' => '!text-center !py-4 w-[200px]'],
+      ['key' => 'pending_approver', 'label' => 'Pending Approver', 'class' => '!py-4 w-[180px]'],
+      ['key' => 'days_pending', 'label' => 'Days Pending', 'class' => '!text-center !py-4 w-[100px]', 'sortable' => true],
     ];
   }
 
