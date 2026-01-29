@@ -41,12 +41,38 @@
                     class="w-5 h-5 text-gray-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
             </div>
         </a>
+
+        {{-- Pending Survey 1 Card --}}
+        <a href="{{ route('instructor.survey1.pending') }}" wire:navigate
+            class="group bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5 hover:shadow-md hover:border-amber-400/40 transition-all duration-200">
+            <div class="flex items-center gap-4">
+                <div
+                    class="p-3 bg-gradient-to-br from-amber-500 to-amber-500/80 rounded-xl group-hover:scale-105 transition-transform">
+                    <x-mary-icon name="o-clipboard-document-check" class="w-7 h-7 text-white" />
+                </div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between gap-3">
+                        <h3
+                            class="text-lg font-semibold text-gray-900 dark:text-white group-hover:text-amber-600 transition-colors">
+                            Pending Survey 1
+                        </h3>
+                        <span class="badge badge-warning badge-soft whitespace-nowrap">
+                            {{ (int) ($pendingSurvey1Count ?? 0) }} belum isi
+                        </span>
+                    </div>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">See participants who haven’t completed Survey 1
+                    </p>
+                </div>
+                <x-mary-icon name="o-chevron-right"
+                    class="w-5 h-5 text-gray-400 group-hover:text-amber-600 group-hover:translate-x-1 transition-all" />
+            </div>
+        </a>
     </div>
 
-    {{-- Main Content: 2 Columns Layout --}}
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {{-- Left Column: Upcoming Schedule + Test Review (65-70%) --}}
-        <div class="lg:col-span-2 space-y-6">
+    {{-- Main Content: single column layout (calendar removed) --}}
+    <div class="grid grid-cols-1 gap-6">
+        {{-- Main cards: Upcoming Schedule + Test Review side-by-side on large screens --}}
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {{-- Upcoming Schedule List --}}
             <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
                 <div class="flex items-center justify-between mb-5">
@@ -143,10 +169,14 @@
                                 @if (!$isCertification && !empty($schedule['type']))
                                     @php
                                         $typeBadgeClass = match ($schedule['type']) {
-                                            'IN' => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
-                                            'OUT' => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
-                                            'LMS' => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
-                                            'BLENDED' => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
+                                            'IN'
+                                                => 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400',
+                                            'OUT'
+                                                => 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400',
+                                            'LMS'
+                                                => 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400',
+                                            'BLENDED'
+                                                => 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400',
                                             default => 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300',
                                         };
                                         $typeLabel = match ($schedule['type']) {
@@ -189,7 +219,8 @@
             </div>
 
             {{-- Test Review Section --}}
-            <div class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6">
+            <div
+                class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-6 h-full flex flex-col">
                 <div class="flex items-center justify-between mb-5">
                     <div class="flex items-center gap-3">
                         <div class="p-2 bg-warning/10 rounded-lg">
@@ -218,11 +249,16 @@
                                     <div class="flex-shrink-0">
                                         @php
                                             $typeClass = match ($training['type']) {
-                                                'IN' => 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
-                                                'OUT' => 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
-                                                'LMS' => 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400',
-                                                'BLENDED' => 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
-                                                default => 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
+                                                'IN'
+                                                    => 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400',
+                                                'OUT'
+                                                    => 'bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400',
+                                                'LMS'
+                                                    => 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400',
+                                                'BLENDED'
+                                                    => 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-400',
+                                                default
+                                                    => 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300',
                                             };
                                             $typeLabel = match ($training['type']) {
                                                 'IN' => 'IN',
@@ -270,7 +306,7 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="text-center py-8">
+                    <div class="flex-1 flex flex-col items-center justify-center text-center py-8">
                         <div class="inline-flex items-center justify-center w-14 h-14 bg-success/10 rounded-full mb-3">
                             <x-mary-icon name="o-check-circle" class="w-7 h-7 text-success" />
                         </div>
@@ -281,10 +317,6 @@
             </div>
         </div>
 
-        {{-- Right Column: Calendar (30-35%) --}}
-        <div class="lg:col-span-1">
-            {{-- Calendar View (Mini) --}}
-            <livewire:components.dashboard.calendar-view :events="$calendarEvents" />
-        </div>
+        {{-- Note: Calendar removed from instructor dashboard per request --}}
     </div>
 </div>
