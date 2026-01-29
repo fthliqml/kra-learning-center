@@ -35,6 +35,62 @@ class DetailTrainingModal extends Component
         'close-modal' => 'closeModal',
     ];
 
+    public function mount(): void
+    {
+        // Support deep-linking from dashboard: /training/schedule?training_id=123
+        $trainingId = (int) request()->query('training_id', 0);
+        if ($trainingId <= 0) {
+            return;
+        }
+
+        if (!$this->canAccessTraining($trainingId)) {
+            return;
+        }
+
+        $training = Training::query()
+            ->select(['id', 'name', 'type', 'status', 'start_date', 'end_date'])
+            ->find($trainingId);
+
+        if (!$training) {
+            return;
+        }
+
+        $this->open([
+            'id' => $training->id,
+            'name' => $training->name,
+            'group_comp' => $training->getAttribute('group_comp'),
+            'type' => $training->type,
+            'status' => $training->status,
+            'start_date' => $training->start_date,
+            'end_date' => $training->end_date,
+        ]);
+    }
+
+    private function canAccessTraining(int $trainingId): bool
+    {
+        /** @var User|null $user */
+        $user = Auth::user();
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        // Non-admin: only trainings where user is a participant or the trainer
+        return Training::query()
+            ->whereKey($trainingId)
+            ->where(function ($q) use ($user) {
+                $q->whereHas('assessments', function ($qq) use ($user) {
+                    $qq->where('employee_id', $user->id);
+                })->orWhereHas('sessions.trainer.user', function ($qq) use ($user) {
+                    $qq->where('users.id', $user->id);
+                });
+            })
+            ->exists();
+    }
+
     public function triggerSaveDraft(): void
     {
         // Forward action to Close tab component
@@ -75,10 +131,17 @@ class DetailTrainingModal extends Component
         $this->userId = Auth::id();
         /** @var User */
         $user = Auth::user();
-        $this->isEmployee = $user && !$user->hasRole('admin');
+        $this->isEmployee = false;
+        if ($user && isset($this->selectedEvent['id']) && $this->userId) {
+            // Only show tests for actual participants (employee assessments), not instructors.
+            $this->isEmployee = DB::table('training_assessments')
+                ->where('training_id', (int) $this->selectedEvent['id'])
+                ->where('employee_id', (int) $this->userId)
+                ->exists();
 
-        if ($this->isEmployee && isset($this->selectedEvent['id'])) {
-            $this->loadTestStatus($this->selectedEvent['id']);
+            if ($this->isEmployee) {
+                $this->loadTestStatus((int) $this->selectedEvent['id']);
+            }
         }
 
         // Notify front-end that detail is ready (browser event). Fallback approach without dispatchBrowserEvent helper.
