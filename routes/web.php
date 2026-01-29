@@ -45,6 +45,8 @@ use App\Livewire\Pages\TestReview\TestReviewAnswers;
 use App\Livewire\Pages\Reports\TrainingActivityReport;
 use App\Livewire\Pages\Reports\CertificationActivityReport;
 use App\Livewire\Pages\Reports\InstructorDailyRecordReport;
+use App\Livewire\Pages\Tracker\TrainingTracker;
+use App\Livewire\Pages\Tracker\IdpTracker;
 use Illuminate\Support\Facades\Route;
 
 // Public (guest) routes
@@ -135,4 +137,8 @@ Route::middleware('auth')->group(function () {
   Route::get('/development/approval', DevelopmentApproval::class)->name('development-approval.index');
   Route::get('/development/recommendation', TrainingPlanRecommendation::class)->name('development-recommendation.index');
   Route::get('/development/recap', DevelopmentRecap::class)->name('development-recap.index');
+
+  // Trackers (Admin Only)
+  Route::get('/trackers/training', TrainingTracker::class)->name('trackers.training');
+  Route::get('/trackers/idp', IdpTracker::class)->name('trackers.idp');
 });
