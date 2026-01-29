@@ -197,8 +197,8 @@ class TrainingTracker extends Component
         $pendingSince = null;
       }
 
-      // Calculate days pending
-      $daysPending = $pendingSince ? Carbon::parse($pendingSince)->diffInDays(now()) : null;
+      // Calculate days pending (cast to int to get whole days)
+      $daysPending = $pendingSince ? (int) Carbon::parse($pendingSince)->diffInDays(now()) : null;
 
       return (object) [
         'id' => $training->id,

@@ -234,7 +234,7 @@ class IdpTracker extends Component
       $planStatus = $this->getPlanStatusForUser($user);
 
       $daysPending = $planStatus['pending_since']
-        ? Carbon::parse($planStatus['pending_since'])->diffInDays(now())
+        ? (int) Carbon::parse($planStatus['pending_since'])->diffInDays(now())
         : null;
 
       return (object) [
