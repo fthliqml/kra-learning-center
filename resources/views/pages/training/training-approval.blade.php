@@ -200,9 +200,19 @@
 
         {{-- Type --}}
         @scope('cell_type', $approval)
+        @php
+          $type = strtoupper($approval->type ?? '');
+          $typeClass = match ($type) {
+            'IN' => 'bg-green-100 text-green-700 border border-green-300',
+            'OUT' => 'bg-amber-100 text-amber-700 border border-amber-300',
+            'LMS' => 'bg-indigo-100 text-indigo-700 border border-indigo-300',
+            'BLENDED' => 'bg-purple-100 text-purple-700 border border-purple-300',
+            default => 'bg-slate-100 text-slate-700',
+          };
+        @endphp
         <span
-          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-700 whitespace-nowrap">
-          {{ strtoupper($approval->type ?? '-') }}
+          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap {{ $typeClass }}">
+          {{ $type ?: '-' }}
         </span>
         @endscope
 
