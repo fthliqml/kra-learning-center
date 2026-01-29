@@ -74,11 +74,9 @@ class IdpTracker extends Component
   public function stageOptions(): array
   {
     return [
-      ['value' => 'all', 'label' => 'All Stages'],
+      ['value' => 'all', 'label' => 'All Pending'],
       ['value' => 'pending_spv', 'label' => 'Pending SPV/Section Head'],
       ['value' => 'pending_lid', 'label' => 'Pending Section Head LID'],
-      ['value' => 'approved', 'label' => 'Approved'],
-      ['value' => 'rejected', 'label' => 'Rejected'],
     ];
   }
 
@@ -250,13 +248,14 @@ class IdpTracker extends Component
       ];
     });
 
+    // Only show employees with pending plans (exclude fully approved/rejected)
+    $processed = $processed->filter(fn($p) => str_starts_with($p->current_stage, 'Pending'));
+
     // Filter by stage
     if ($this->filterStage !== 'all') {
       $stageMap = [
         'pending_spv' => 'Pending SPV/Section Head',
         'pending_lid' => 'Pending Section Head LID',
-        'approved' => 'Approved',
-        'rejected' => 'Rejected',
       ];
       $targetStage = $stageMap[$this->filterStage] ?? null;
       if ($targetStage) {
@@ -264,29 +263,9 @@ class IdpTracker extends Component
       }
     }
 
-    // Sort: non-approved (pending) first sorted by pending_since oldest first
-    // Approved/rejected items go at the bottom
-    $processed = $processed->sort(function ($a, $b) {
-      // Priority: Pending first (0), Approved (1), Rejected (2), Others (3)
-      $getPriority = fn($stage) => match (true) {
-        str_starts_with($stage, 'Pending') => 0,
-        $stage === 'Approved' => 1,
-        $stage === 'Rejected' => 2,
-        default => 3,
-      };
-
-      $priorityA = $getPriority($a->current_stage);
-      $priorityB = $getPriority($b->current_stage);
-
-      if ($priorityA !== $priorityB) {
-        return $priorityA - $priorityB;
-      }
-
-      // Within same priority, sort by pending_since oldest first
-      $dateA = $a->pending_since ? Carbon::parse($a->pending_since)->timestamp : PHP_INT_MAX;
-      $dateB = $b->pending_since ? Carbon::parse($b->pending_since)->timestamp : PHP_INT_MAX;
-
-      return $dateA - $dateB;
+    // Sort by pending_since oldest first (longest pending at top)
+    $processed = $processed->sortBy(function ($item) {
+      return $item->pending_since ? Carbon::parse($item->pending_since)->timestamp : PHP_INT_MAX;
     })->values();
 
     // Manual pagination

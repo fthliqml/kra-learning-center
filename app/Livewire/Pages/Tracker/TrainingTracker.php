@@ -68,10 +68,9 @@ class TrainingTracker extends Component
   public function stageOptions(): array
   {
     return [
+      ['value' => 'all', 'label' => 'All Pending'],
       ['value' => 'pending_section_head', 'label' => 'Pending Section Head LID'],
       ['value' => 'pending_dept_head', 'label' => 'Pending Dept Head HC'],
-      ['value' => 'approved', 'label' => 'Approved'],
-      ['value' => 'rejected', 'label' => 'Rejected'],
     ];
   }
 
@@ -119,26 +118,19 @@ class TrainingTracker extends Component
 
   public function getTrainingsProperty()
   {
+    // Only show pending trainings (status = 'done', not yet fully approved/rejected)
     $query = Training::query()
-      ->whereIn('status', ['done', 'approved', 'rejected']);
+      ->where('status', 'done');
 
     // Filter by stage
     if ($this->filterStage !== 'all') {
       switch ($this->filterStage) {
         case 'pending_section_head':
-          $query->where('status', 'done')
-            ->whereNull('section_head_signed_at');
+          $query->whereNull('section_head_signed_at');
           break;
         case 'pending_dept_head':
-          $query->where('status', 'done')
-            ->whereNotNull('section_head_signed_at')
+          $query->whereNotNull('section_head_signed_at')
             ->whereNull('dept_head_signed_at');
-          break;
-        case 'approved':
-          $query->where('status', 'approved');
-          break;
-        case 'rejected':
-          $query->where('status', 'rejected');
           break;
       }
     }
@@ -157,15 +149,8 @@ class TrainingTracker extends Component
       $query->where('name', 'like', "%{$term}%");
     }
 
-    // Default sort: non-approved (pending) first sorted by request date oldest first
-    // Approved/rejected items go at the bottom
-    $query->orderByRaw("CASE 
-            WHEN status = 'done' THEN 0
-            WHEN status = 'approved' THEN 1
-            WHEN status = 'rejected' THEN 2
-            ELSE 3
-        END")
-      ->orderBy('created_at', 'asc'); // Request date oldest first (No 1 = oldest pending)
+    // Sort by created_at oldest first (longest pending at top)
+    $query->orderBy('created_at', 'asc');
 
     $sectionHeadLid = $this->getSectionHeadLid();
     $deptHeadHc = $this->getDeptHeadHc();
