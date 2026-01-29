@@ -78,7 +78,7 @@
             <div class="mt-0.5">
               <x-icon name="o-check-circle" class="size-5 text-emerald-500" />
             </div>
-            <div class="text-xs text-emerald-800">
+            <div class="text-xs text-emerald-800 flex-1">
               <div class="font-semibold">Digital signature is already uploaded.</div>
               <div class="mt-1 flex items-center gap-2">
                 <span class="text-emerald-700">Current signature preview:</span>
@@ -86,6 +86,18 @@
                   class="h-8 object-contain border border-emerald-200 bg-white px-2 py-1 rounded" />
               </div>
             </div>
+            <x-ui.button type="button" variant="danger"
+              wire:click="$dispatch('confirm', { title: 'Delete Signature', text: 'Are you sure you want to delete your signature?', action: 'deleteSignatureConfirmed' })"
+              wire:target="deleteSignatureConfirmed" wire:loading.attr="disabled"
+              class="!btn-sm bg-rose-600 hover:bg-rose-700 border-rose-600 text-white">
+              <span wire:loading.remove wire:target="deleteSignatureConfirmed" class="flex items-center gap-1">
+                <x-icon name="o-trash" class="size-3" />
+                Delete
+              </span>
+              <span wire:loading wire:target="deleteSignatureConfirmed" class="flex items-center gap-1">
+                <x-icon name="o-arrow-path" class="size-3 animate-spin" />
+              </span>
+            </x-ui.button>
           </div>
         @else
           <div class="flex items-start gap-3 p-3 rounded-md bg-amber-50 border border-amber-200">
