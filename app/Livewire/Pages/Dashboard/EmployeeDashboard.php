@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Pages\dashboard;
+namespace App\Livewire\Pages\Dashboard;
 
 use App\Models\Certification;
 use App\Models\Training;

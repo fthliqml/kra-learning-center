@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Pages\dashboard;
+namespace App\Livewire\Pages\Dashboard;
 
 use App\Models\Certification;
 use App\Models\Request;
@@ -87,7 +87,7 @@ class AdminDashboard extends Component
     $year = (int) $year;
     $minYear = now()->year - 5;
     $maxYear = now()->year;
-    
+
     if ($year >= $minYear && $year <= $maxYear) {
       $this->selectedYear = $year;
       $this->selectedMonth = null;
