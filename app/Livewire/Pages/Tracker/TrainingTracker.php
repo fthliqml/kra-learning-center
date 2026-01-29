@@ -79,8 +79,10 @@ class TrainingTracker extends Component
   public function sectionOptions(): array
   {
     // Get unique sections from employees who have training requests
+    // Join path: trainings -> training_sessions -> training_attendances -> users
     $sections = Training::query()
-      ->join('training_attendances', 'trainings.id', '=', 'training_attendances.training_id')
+      ->join('training_sessions', 'trainings.id', '=', 'training_sessions.training_id')
+      ->join('training_attendances', 'training_sessions.id', '=', 'training_attendances.session_id')
       ->join('users', 'training_attendances.employee_id', '=', 'users.id')
       ->whereIn('trainings.status', ['done', 'approved', 'rejected'])
       ->whereNotNull('users.section')
@@ -143,8 +145,9 @@ class TrainingTracker extends Component
     }
 
     // Filter by section (participants' section)
+    // Relationship path: sessions.attendances.employee
     if ($this->filterSection !== 'all') {
-      $query->whereHas('attendances.employee', function ($q) {
+      $query->whereHas('sessions.attendances.employee', function ($q) {
         $q->where('section', $this->filterSection);
       });
     }
