@@ -246,6 +246,7 @@ class IdpTracker extends Component
         'current_stage' => $planStatus['stage'],
         'pending_approver' => $planStatus['pending_approver'],
         'days_pending' => $daysPending,
+        'pending_since' => $planStatus['pending_since'],
       ];
     });
 
@@ -263,13 +264,29 @@ class IdpTracker extends Component
       }
     }
 
-    // Sort by days pending (longest first for pending items)
-    $processed = $processed->sortByDesc(function ($item) {
-      // Pending items first, sorted by days pending
-      if (str_starts_with($item->current_stage, 'Pending')) {
-        return 10000 + ($item->days_pending ?? 0);
+    // Sort: non-approved (pending) first sorted by pending_since oldest first
+    // Approved/rejected items go at the bottom
+    $processed = $processed->sort(function ($a, $b) {
+      // Priority: Pending first (0), Approved (1), Rejected (2), Others (3)
+      $getPriority = fn($stage) => match (true) {
+        str_starts_with($stage, 'Pending') => 0,
+        $stage === 'Approved' => 1,
+        $stage === 'Rejected' => 2,
+        default => 3,
+      };
+
+      $priorityA = $getPriority($a->current_stage);
+      $priorityB = $getPriority($b->current_stage);
+
+      if ($priorityA !== $priorityB) {
+        return $priorityA - $priorityB;
       }
-      return 0;
+
+      // Within same priority, sort by pending_since oldest first
+      $dateA = $a->pending_since ? Carbon::parse($a->pending_since)->timestamp : PHP_INT_MAX;
+      $dateB = $b->pending_since ? Carbon::parse($b->pending_since)->timestamp : PHP_INT_MAX;
+
+      return $dateA - $dateB;
     })->values();
 
     // Manual pagination

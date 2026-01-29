@@ -157,13 +157,15 @@ class TrainingTracker extends Component
       $query->where('name', 'like', "%{$term}%");
     }
 
-    // Default sort: pending trainings first, then by days pending (longest first)
+    // Default sort: non-approved (pending) first sorted by request date oldest first
+    // Approved/rejected items go at the bottom
     $query->orderByRaw("CASE 
-            WHEN status = 'done' AND section_head_signed_at IS NULL THEN 0
-            WHEN status = 'done' AND section_head_signed_at IS NOT NULL AND dept_head_signed_at IS NULL THEN 1
-            ELSE 2
+            WHEN status = 'done' THEN 0
+            WHEN status = 'approved' THEN 1
+            WHEN status = 'rejected' THEN 2
+            ELSE 3
         END")
-      ->orderBy('created_at', 'asc'); // Oldest first (longest pending)
+      ->orderBy('created_at', 'asc'); // Request date oldest first (No 1 = oldest pending)
 
     $sectionHeadLid = $this->getSectionHeadLid();
     $deptHeadHc = $this->getDeptHeadHc();
