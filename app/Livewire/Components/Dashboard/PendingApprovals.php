@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Components\Dashboard;
 
-use App\Models\Certification;
 use App\Models\Request;
 use App\Models\Training;
 use App\Models\TrainingPlan;
@@ -59,23 +58,6 @@ class PendingApprovals extends Component
                 'type' => 'training',
                 'id' => $training->id,
                 'sort_at' => $training->updated_at ?? $training->created_at,
-            ];
-        }
-
-        // Get certifications that are actionable for the current user
-        $pendingCertifications = $this->actionableCertifications($user);
-
-        foreach ($pendingCertifications as $cert) {
-            $dateInfo = $cert->created_at
-                ? $cert->created_at->format('d M Y')
-                : 'No date';
-
-            $this->items[] = [
-                'title' => $cert->name ?? 'Certification',
-                'info' => $dateInfo,
-                'type' => 'certification',
-                'id' => $cert->id,
-                'sort_at' => $cert->updated_at ?? $cert->created_at,
             ];
         }
 
@@ -155,20 +137,6 @@ class PendingApprovals extends Component
         }
 
         return collect();
-    }
-
-    private function actionableCertifications(User $user)
-    {
-        if (!$this->isLidSectionHead($user)) {
-            return collect();
-        }
-
-        // In certification approval page, status 'completed' is treated as pending.
-        return Certification::query()
-            ->where('status', 'completed')
-            ->latest()
-            ->take(5)
-            ->get();
     }
 
     private function actionableTrainingRequests(User $user)
@@ -366,7 +334,6 @@ class PendingApprovals extends Component
             'idp' => 'from-green-400 to-green-200',
             'training_request' => 'from-blue-500 to-blue-300',
             'training' => 'from-blue-400 to-blue-200',
-            'certification' => 'from-orange-400 to-yellow-300',
             default => 'from-gray-300 to-gray-100',
         };
     }
@@ -377,7 +344,6 @@ class PendingApprovals extends Component
             'idp' => 'o-clipboard-document-list',
             'training_request' => 'o-document-text',
             'training' => 'o-academic-cap',
-            'certification' => 'o-check-badge',
             default => 'o-document',
         };
     }
@@ -389,7 +355,6 @@ class PendingApprovals extends Component
             'idp' => route('development-approval.index', ['filter' => 'pending_lid']),
             'training_request' => route('training-request.index'),
             'training' => route('training-approval.index'),
-            'certification' => route('certification-approval.index'),
             default => '#',
         };
     }

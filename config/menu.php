@@ -2,7 +2,6 @@
 
 return [
     'sidebar' => [
-        // Home
         [
             'id' => 'home',
             'label' => 'Home',
@@ -235,12 +234,6 @@ return [
                 //     'positions' => ['section_head'],
                 //     'roles' => ['certificator', 'admin'],
                 // ],
-                [
-                    'label' => 'Certification Approval',
-                    'href' => '/certification/approval',
-                    'sections' => ['lid'],
-                    'positions' => ['section_head', 'department_head', 'division_head'],
-                ],
             ],
         ],
 
