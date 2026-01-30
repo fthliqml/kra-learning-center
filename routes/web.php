@@ -44,99 +44,105 @@ use App\Livewire\Pages\TestReview\TestReviewAnswers;
 use App\Livewire\Pages\Reports\TrainingActivityReport;
 use App\Livewire\Pages\Reports\CertificationActivityReport;
 use App\Livewire\Pages\Reports\InstructorDailyRecordReport;
+use App\Livewire\Pages\Tracker\TrainingTracker;
+use App\Livewire\Pages\Tracker\IdpTracker;
 use App\Livewire\Pages\Dashboard\InstructorPendingSurvey1;
 use App\Livewire\Pages\Dashboard\AdminPendingSurveys;
 use Illuminate\Support\Facades\Route;
 
 // Public (guest) routes
 Route::middleware('guest')->group(function () {
-    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    Route::post('/login', [AuthController::class, 'login']);
+  Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+  Route::post('/login', [AuthController::class, 'login']);
 });
 
 // Protected (auth) routes
 Route::middleware('auth')->group(function () {
-    Route::get('/', function () {
-        return view('pages.dashboard');
-    })->name('dashboard');
+  Route::get('/', function () {
+    return view('pages.dashboard');
+  })->name('dashboard');
 
-    // Logout
-    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+  // Logout
+  Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
 
-    // Training
-    Route::get('/training/module', Module::class)->name('training-module.index');
-    Route::get('/training/module/{module}/edit', ModuleEdit::class)->name('training-module.edit');
-    Route::get('/training/module/create', ModuleEdit::class)->name('training-module.create');
-    Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
-    Route::get('/training/request', Request::class)->name('training-request.index');
-    Route::get('/training/approval', Approval::class)->name('training-approval.index');
-    Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
-    Route::get('/training/history', History::class)->name('training-history.index');
-    Route::get('/training/{assessment}/certificate', [CertificateController::class, 'viewTrainingCertificate'])
-        ->name('certificate.training.view');
-    // Training Test (Employee)
-    Route::get('/training-test', TrainingTestList::class)->name('training-test.index');
-    Route::get('/training-test/{training}/{type}', TakeTrainingTest::class)
-        ->where('type', 'pretest|posttest')
-        ->name('training-test.take');
+  // Training
+  Route::get('/training/module', Module::class)->name('training-module.index');
+  Route::get('/training/module/{module}/edit', ModuleEdit::class)->name('training-module.edit');
+  Route::get('/training/module/create', ModuleEdit::class)->name('training-module.create');
+  Route::get('/training/schedule', Schedule::class)->name('training-schedule.index');
+  Route::get('/training/request', Request::class)->name('training-request.index');
+  Route::get('/training/approval', Approval::class)->name('training-approval.index');
+  Route::get('/training/trainer', DataTrainer::class)->name('data-trainer.index');
+  Route::get('/training/history', History::class)->name('training-history.index');
+  Route::get('/training/{assessment}/certificate', [CertificateController::class, 'viewTrainingCertificate'])
+    ->name('certificate.training.view');
+  // Training Test (Employee)
+  Route::get('/training-test', TrainingTestList::class)->name('training-test.index');
+  Route::get('/training-test/{training}/{type}', TakeTrainingTest::class)
+    ->where('type', 'pretest|posttest')
+    ->name('training-test.take');
 
-    // Test Review (Trainer/Instructor)
-    Route::get('/test-review', TestReviewList::class)->name('test-review.index');
-    Route::get('/test-review/{training}', TestReviewParticipants::class)->name('test-review.participants');
-    Route::get('/test-review/{training}/participant/{user}', TestReviewAnswers::class)->name('test-review.answers');
+  // Test Review (Trainer/Instructor)
+  Route::get('/test-review', TestReviewList::class)->name('test-review.index');
+  Route::get('/test-review/{training}', TestReviewParticipants::class)->name('test-review.participants');
+  Route::get('/test-review/{training}/participant/{user}', TestReviewAnswers::class)->name('test-review.answers');
 
-    // Courses
-    Route::get('/courses', Courses::class)->name('courses.index');
-    Route::get('/courses/{course}/overview', Overview::class)->name('courses-overview.show');
-    Route::get('/courses/{course}/pretest', Pretest::class)->name('courses-pretest.index');
-    Route::get('/courses/{course}/modules', ModulePage::class)->name('courses-modules.index');
-    Route::get('/courses/{course}/sections/{section}/quiz', SectionQuiz::class)->name('courses-section-quiz.show');
-    Route::get('/courses/{course}/posttest', Posttest::class)->name('courses-posttest.index');
-    Route::get('/courses/{course}/result', Result::class)->name('courses-result.index');
-    Route::get('/courses/management', CoursesManagement::class)->name('courses-management.index');
-    Route::get('/courses/{course}/edit', EditCourse::class)->name('edit-course.index');
-    Route::get('/courses/add', EditCourse::class)->name('add-course.index');
+  // Courses
+  Route::get('/courses', Courses::class)->name('courses.index');
+  Route::get('/courses/{course}/overview', Overview::class)->name('courses-overview.show');
+  Route::get('/courses/{course}/pretest', Pretest::class)->name('courses-pretest.index');
+  Route::get('/courses/{course}/modules', ModulePage::class)->name('courses-modules.index');
+  Route::get('/courses/{course}/sections/{section}/quiz', SectionQuiz::class)->name('courses-section-quiz.show');
+  Route::get('/courses/{course}/posttest', Posttest::class)->name('courses-posttest.index');
+  Route::get('/courses/{course}/result', Result::class)->name('courses-result.index');
+  Route::get('/courses/management', CoursesManagement::class)->name('courses-management.index');
+  Route::get('/courses/{course}/edit', EditCourse::class)->name('edit-course.index');
+  Route::get('/courses/add', EditCourse::class)->name('add-course.index');
 
-    // Survey
-    Route::get('/survey/{level}', SurveyEmployee::class)->name('survey.index');
-    Route::get('/survey/{level}/take/{surveyId}', TakeSurvey::class)->name('survey.take');
-    Route::get('/survey/{level}/preview/{surveyId}', SurveyPreview::class)->name('survey.preview');
-    Route::get('/survey/{level}/management', SurveyManagement::class)->name('survey-management.index');
-    Route::get('/survey/{level}/edit/{surveyId}', SurveyManagementDetail::class)->name('survey.edit');
+  // Survey
+  Route::get('/survey/{level}', SurveyEmployee::class)->name('survey.index');
+  Route::get('/survey/{level}/take/{surveyId}', TakeSurvey::class)->name('survey.take');
+  Route::get('/survey/{level}/preview/{surveyId}', SurveyPreview::class)->name('survey.preview');
+  Route::get('/survey/{level}/management', SurveyManagement::class)->name('survey-management.index');
+  Route::get('/survey/{level}/edit/{surveyId}', SurveyManagementDetail::class)->name('survey.edit');
 
-    // Survey Templates
-    Route::get('/survey-template', SurveyTemplate::class)->name('survey-template.index');
-    Route::get('/survey-template/{level}/edit/{surveyId}', EditSurveyTemplate::class)->name('survey-template.edit');
+  // Survey Templates
+  Route::get('/survey-template', SurveyTemplate::class)->name('survey-template.index');
+  Route::get('/survey-template/{level}/edit/{surveyId}', EditSurveyTemplate::class)->name('survey-template.edit');
 
-    // Certification
-    Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
-    Route::get('/certification/schedule', CertificationSchedule::class)->name('certification-schedule.index');
-    //   Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
-    Route::get('/certification/history', CertificationHistory::class)->name('certification-history.index');
+  // Certification
+  Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
+  Route::get('/certification/schedule', CertificationSchedule::class)->name('certification-schedule.index');
+  //   Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
+  Route::get('/certification/history', CertificationHistory::class)->name('certification-history.index');
 
-    // Reports
-    Route::get('/reports/training-activity', TrainingActivityReport::class)->name('reports.training-activity');
-    Route::get('/reports/certification-activity', CertificationActivityReport::class)->name('reports.certification-activity');
-    Route::get('/reports/instructor-daily-record', InstructorDailyRecordReport::class)->name('reports.instructor-daily-record');
+  // Reports
+  Route::get('/reports/training-activity', TrainingActivityReport::class)->name('reports.training-activity');
+  Route::get('/reports/certification-activity', CertificationActivityReport::class)->name('reports.certification-activity');
+  Route::get('/reports/instructor-daily-record', InstructorDailyRecordReport::class)->name('reports.instructor-daily-record');
 
-    // Pending surveys
-    Route::get('/dashboard/instructor/survey-1/pending', InstructorPendingSurvey1::class)->name('instructor.survey1.pending');
-    Route::get('/dashboard/admin/pending-surveys', AdminPendingSurveys::class)->name('admin.pending-surveys.index');
+  // Pending surveys
+  Route::get('/dashboard/instructor/survey-1/pending', InstructorPendingSurvey1::class)->name('instructor.survey1.pending');
+  Route::get('/dashboard/admin/pending-surveys', AdminPendingSurveys::class)->name('admin.pending-surveys.index');
 
-    // Certificate (placeholder route for training certificates)
-    Route::get('/certificate/training/{training}/employee/{employee}', function ($training, $employee) {
-        // TODO: Implement certificate generation/download
-        return response()->json(['message' => 'Certificate route - To be implemented']);
-    })->name('certificate.training');
+  // Certificate (placeholder route for training certificates)
+  Route::get('/certificate/training/{training}/employee/{employee}', function ($training, $employee) {
+    // TODO: Implement certificate generation/download
+    return response()->json(['message' => 'Certificate route - To be implemented']);
+  })->name('certificate.training');
 
-    // Competency
-    Route::get('/competency/book', CompetencyBook::class)->name('competency-book.index');
-    Route::get('/competency/value', CompetencyValue::class)->name('competency-value.index');
-    Route::get('/competency/matrix', CompetencyMatrix::class)->name('competency-matrix.index');
+  // Competency
+  Route::get('/competency/book', CompetencyBook::class)->name('competency-book.index');
+  Route::get('/competency/value', CompetencyValue::class)->name('competency-value.index');
+  Route::get('/competency/matrix', CompetencyMatrix::class)->name('competency-matrix.index');
 
-    // Development
-    Route::get('/development/plan', DevelopmentPlan::class)->name('development-plan.index');
-    Route::get('/development/approval', DevelopmentApproval::class)->name('development-approval.index');
-    Route::get('/development/recommendation', TrainingPlanRecommendation::class)->name('development-recommendation.index');
-    Route::get('/development/recap', DevelopmentRecap::class)->name('development-recap.index');
+  // Development
+  Route::get('/development/plan', DevelopmentPlan::class)->name('development-plan.index');
+  Route::get('/development/approval', DevelopmentApproval::class)->name('development-approval.index');
+  Route::get('/development/recommendation', TrainingPlanRecommendation::class)->name('development-recommendation.index');
+  Route::get('/development/recap', DevelopmentRecap::class)->name('development-recap.index');
+
+  // Trackers (Admin Only)
+  Route::get('/trackers/training', TrainingTracker::class)->name('trackers.training');
+  Route::get('/trackers/idp', IdpTracker::class)->name('trackers.idp');
 });
