@@ -2,7 +2,6 @@
 
 use App\Http\Controllers\Auth\AuthController;
 use App\Http\Controllers\CertificateController;
-use App\Livewire\Pages\Certification\CertificationApproval;
 use App\Livewire\Pages\Certification\CertificationPoint;
 use App\Livewire\Pages\Certification\CertificationModule;
 use App\Livewire\Pages\Certification\CertificationSchedule;
@@ -47,6 +46,8 @@ use App\Livewire\Pages\Reports\CertificationActivityReport;
 use App\Livewire\Pages\Reports\InstructorDailyRecordReport;
 use App\Livewire\Pages\Tracker\TrainingTracker;
 use App\Livewire\Pages\Tracker\IdpTracker;
+use App\Livewire\Pages\Dashboard\InstructorPendingSurvey1;
+use App\Livewire\Pages\Dashboard\AdminPendingSurveys;
 use Illuminate\Support\Facades\Route;
 
 // Public (guest) routes
@@ -113,13 +114,16 @@ Route::middleware('auth')->group(function () {
   Route::get('/certification/module', CertificationModule::class)->name('certification-module.index');
   Route::get('/certification/schedule', CertificationSchedule::class)->name('certification-schedule.index');
   //   Route::get('/certification/point', CertificationPoint::class)->name('certification-point.index');
-  Route::get('/certification/approval', CertificationApproval::class)->name('certification-approval.index');
   Route::get('/certification/history', CertificationHistory::class)->name('certification-history.index');
 
   // Reports
   Route::get('/reports/training-activity', TrainingActivityReport::class)->name('reports.training-activity');
   Route::get('/reports/certification-activity', CertificationActivityReport::class)->name('reports.certification-activity');
   Route::get('/reports/instructor-daily-record', InstructorDailyRecordReport::class)->name('reports.instructor-daily-record');
+
+  // Pending surveys
+  Route::get('/dashboard/instructor/survey-1/pending', InstructorPendingSurvey1::class)->name('instructor.survey1.pending');
+  Route::get('/dashboard/admin/pending-surveys', AdminPendingSurveys::class)->name('admin.pending-surveys.index');
 
   // Certificate (placeholder route for training certificates)
   Route::get('/certificate/training/{training}/employee/{employee}', function ($training, $employee) {

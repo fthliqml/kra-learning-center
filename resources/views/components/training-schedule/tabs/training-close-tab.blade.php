@@ -39,19 +39,6 @@
             <x-search-input placeholder="Search employee..." class="max-w-xs" wire:model.live="search" />
         </div>
 
-        @if (($missingPretestCount ?? 0) > 0 || ($missingPosttestCount ?? 0) > 0)
-            <div class="p-3 rounded-lg border border-amber-200 bg-amber-50 text-amber-800 text-sm">
-                @if (($missingPretestCount ?? 0) > 0)
-                    <div>Pre-test belum selesai (belum dikerjakan / masih review) oleh {{ $missingPretestCount }}
-                        peserta.</div>
-                @endif
-                @if (($missingPosttestCount ?? 0) > 0)
-                    <div>Post-test belum selesai (belum dikerjakan / masih review) oleh {{ $missingPosttestCount }}
-                        peserta.</div>
-                @endif
-            </div>
-        @endif
-
         {{-- Table --}}
         <div class="rounded-lg border border-gray-200 shadow-sm overflow-x-auto">
             <x-table :headers="$headers" :rows="$assessments" striped class="[&>tbody>tr>td]:py-2 [&>thead>tr>th]:!py-3"
@@ -83,14 +70,21 @@
                             $isLmsType = !empty($assessment->is_lms);
                             $reviewStatus = $testReviewStatus[$assessment->employee_id] ?? [];
                             $pretestNeedReview = $reviewStatus['pretest_need_review'] ?? false;
-                            $pretestAttempted = (bool) ($tempScores[$assessment->id]['pretest_attempted'] ?? true);
+                            $pretestAttempted = (bool) ($tempScores[$assessment->id]['pretest_attempted'] ?? false);
                         @endphp
                         @if ($isLmsType)
                             {{-- LMS: Pretest is read-only, synced from course pretest --}}
+                            @if ($pretestNeedReview)
+                                <a href="{{ route('test-review.answers', ['training' => $training->id, 'user' => $assessment->employee_id]) }}"
+                                    class="badge badge-warning badge-xs cursor-pointer hover:badge-outline gap-1"
+                                    wire:navigate title="Click to review">
+                                    Need Review
+                                </a>
+                            @endif
                             <div tabindex="-1"
                                 class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
-                                {{ $assessment->temp_pretest ?? '-' }}</div>
-                            @if (!$pretestAttempted)
+                                {{ $pretestAttempted ? $assessment->temp_pretest ?? '-' : '-' }}</div>
+                            @if (!$pretestAttempted && !$pretestNeedReview)
                                 <span class="badge badge-warning badge-xs">Belum dikerjakan</span>
                             @endif
                         @else
@@ -104,7 +98,7 @@
                             @endif
                             <div tabindex="-1"
                                 class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none {{ $pretestNeedReview ? 'border-warning' : '' }}">
-                                {{ $assessment->temp_pretest ?? 0 }}</div>
+                                {{ $pretestAttempted ? $assessment->temp_pretest ?? '-' : '-' }}</div>
                             @if (!$pretestAttempted && !$pretestNeedReview)
                                 <span class="badge badge-warning badge-xs">Belum dikerjakan</span>
                             @endif
@@ -119,13 +113,20 @@
                             $trainingDone = $assessment->training_done ?? false;
                             $reviewStatus = $testReviewStatus[$assessment->employee_id] ?? [];
                             $posttestNeedReview = $reviewStatus['posttest_need_review'] ?? false;
-                            $posttestAttempted = (bool) ($tempScores[$assessment->id]['posttest_attempted'] ?? true);
+                            $posttestAttempted = (bool) ($tempScores[$assessment->id]['posttest_attempted'] ?? false);
                         @endphp
                         @if (!empty($assessment->is_lms))
+                            @if ($posttestNeedReview)
+                                <a href="{{ route('test-review.answers', ['training' => $training->id, 'user' => $assessment->employee_id]) }}"
+                                    class="badge badge-warning badge-xs cursor-pointer hover:badge-outline gap-1"
+                                    wire:navigate title="Click to review">
+                                    Need Review
+                                </a>
+                            @endif
                             <div tabindex="-1"
                                 class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none">
-                                {{ $assessment->temp_posttest ?? '-' }}</div>
-                            @if (!$posttestAttempted)
+                                {{ $posttestAttempted ? $assessment->temp_posttest ?? '-' : '-' }}</div>
+                            @if (!$posttestAttempted && !$posttestNeedReview)
                                 <span class="badge badge-warning badge-xs">Belum dikerjakan</span>
                             @endif
                         @else
@@ -143,7 +144,7 @@
                             @else
                                 <div tabindex="-1"
                                     class="w-20 px-2 py-1 text-sm text-center border border-gray-300 rounded bg-gray-50 opacity-60 select-none {{ $posttestNeedReview ? 'border-warning' : '' }}">
-                                    {{ $assessment->temp_posttest ?? 0 }}</div>
+                                    {{ $posttestAttempted ? $assessment->temp_posttest ?? '-' : '-' }}</div>
                             @endif
                             @if (!$posttestAttempted && !$posttestNeedReview)
                                 <span class="badge badge-warning badge-xs">Belum dikerjakan</span>

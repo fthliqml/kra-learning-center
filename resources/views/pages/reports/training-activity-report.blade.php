@@ -14,7 +14,7 @@
                     Export
                 </x-button>
 
-                <x-search-input placeholder="Search training..." wire:model.live.debounce.300ms="search"
+                <x-search-input placeholder="Search..." wire:model.live.debounce.300ms="search"
                     class="max-w-72" />
             </div>
         </div>

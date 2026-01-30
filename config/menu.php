@@ -235,18 +235,12 @@ return [
         //     'positions' => ['section_head'],
         //     'roles' => ['certificator', 'admin'],
         // ],
-        [
-          'label' => 'Certification Approval',
-          'href' => '/certification/approval',
-          'sections' => ['lid'],
-          'positions' => ['section_head', 'department_head', 'division_head'],
-        ],
       ],
     ],
 
     // Survey Management [LID]
     [
-      'id' => 'survey',
+      'id' => 'survey-management',
       'label' => 'Survey',
       'icon' => 'document-text',
       'href' => '#',

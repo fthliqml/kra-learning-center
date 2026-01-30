@@ -45,7 +45,7 @@
                 @endif
             </div>
 
-            <x-search-input placeholder="Search name, certification..." class="max-w-72"
+            <x-search-input placeholder="Search..." class="max-w-72"
                 wire:model.live.debounce.300ms="search" />
         </div>
     </div>

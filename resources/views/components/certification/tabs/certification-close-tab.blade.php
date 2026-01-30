@@ -35,7 +35,7 @@
 
         <div class="flex justify-between items-center">
             <h3 class="text-lg font-semibold text-gray-800">Participant Scores</h3>
-            <x-search-input placeholder="Search participant..." class="max-w-xs" wire:model.live="search" />
+            <x-search-input placeholder="Search..." class="max-w-xs" wire:model.live="search" />
         </div>
 
         <div class="rounded-lg border border-gray-200 shadow-sm overflow-x-auto">

@@ -38,7 +38,7 @@
                     icon-right="o-funnel" />
             </div>
             <div class="w-full sm:w-64">
-                <x-search-input placeholder="Search participant..." class="!w-full"
+                <x-search-input placeholder="Search..." class="!max-w-72"
                     wire:model.live.debounce.400ms="search" />
             </div>
         </div>
