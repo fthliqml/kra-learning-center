@@ -5,23 +5,30 @@
         <div class="lg:col-span-2 space-y-6">
             {{-- Stats Cards (2 cards) --}}
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {{-- Total Training This Year --}}
+                {{-- Total Survey Pending (Survey 1 & 3) --}}
                 <div
                     class="bg-white dark:bg-gray-800 rounded-xl shadow-sm border border-gray-100 dark:border-gray-700 p-5">
                     <div class="flex items-center justify-between">
                         <div>
-                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Training This Year</p>
+                            <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Survey Pending</p>
                             <p class="text-3xl font-bold text-gray-900 dark:text-white mt-1 whitespace-nowrap">
-                                {{ $totalTrainingThisYear }}
-                                <span class="text-base font-normal text-gray-400">trainings</span>
+                                {{ (int) ($totalPendingSurveys ?? 0) }}
+                                <span class="text-base font-normal text-gray-400">responses</span>
                             </p>
                         </div>
                         <div class="p-3 bg-secondary rounded-xl">
-                            <x-mary-icon name="o-academic-cap" class="w-7 h-7 text-white" />
+                            <x-mary-icon name="o-clipboard-document-check" class="w-7 h-7 text-white" />
                         </div>
                     </div>
                     <div class="mt-3 flex items-center text-sm">
-                        <span class="text-gray-500 dark:text-gray-400">Year {{ now()->format('Y') }}</span>
+                        <div class="flex items-center justify-between w-full">
+                            <span class="text-gray-500 dark:text-gray-400">Survey 1 &amp; Survey 3</span>
+                            <a href="{{ route('admin.pending-surveys.index') }}" wire:navigate
+                                class="text-sm text-secondary hover:text-secondary/80 font-medium flex items-center gap-1 transition-colors">
+                                See all
+                                <x-mary-icon name="o-arrow-right" class="w-4 h-4" />
+                            </a>
+                        </div>
                     </div>
                 </div>
 
@@ -60,28 +67,25 @@
                         {{-- Year Navigation --}}
                         <div class="flex items-center gap-1 bg-gray-100 dark:bg-gray-700 rounded-lg p-1">
                             {{-- Previous Year Button --}}
-                            <button wire:click="previousYear" 
+                            <button wire:click="previousYear"
                                 class="p-1.5 rounded-md hover:bg-white dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                @if($selectedYear <= now()->year - 5) disabled @endif
-                                title="Previous Year">
+                                @if ($selectedYear <= now()->year - 5) disabled @endif title="Previous Year">
                                 <x-mary-icon name="o-chevron-left" class="w-4 h-4 text-gray-600 dark:text-gray-300" />
                             </button>
-                            
+
                             {{-- Year Selector Dropdown (MaryUI) --}}
                             @php
-                                $yearOptions = collect($this->availableYears)->map(fn($y) => ['id' => $y, 'name' => (string)$y]);
+                                $yearOptions = collect($this->availableYears)->map(
+                                    fn($y) => ['id' => $y, 'name' => (string) $y],
+                                );
                             @endphp
-                            <x-select 
-                                wire:model.live="selectedYear"
-                                :options="$yearOptions"
-                                class="select-sm !min-h-0 !h-8 !w-24 !border-0 bg-white dark:bg-gray-600 font-semibold"
-                            />
-                            
+                            <x-select wire:model.live="selectedYear" :options="$yearOptions"
+                                class="select-sm !min-h-0 !h-8 !w-24 !border-0 bg-white dark:bg-gray-600 font-semibold" />
+
                             {{-- Next Year Button --}}
-                            <button wire:click="nextYear" 
+                            <button wire:click="nextYear"
                                 class="p-1.5 rounded-md hover:bg-white dark:hover:bg-gray-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                @if($selectedYear >= now()->year) disabled @endif
-                                title="Next Year">
+                                @if ($selectedYear >= now()->year) disabled @endif title="Next Year">
                                 <x-mary-icon name="o-chevron-right" class="w-4 h-4 text-gray-600 dark:text-gray-300" />
                             </button>
                         </div>

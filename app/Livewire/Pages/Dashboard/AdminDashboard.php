@@ -5,7 +5,9 @@ namespace App\Livewire\Pages\Dashboard;
 use App\Models\Certification;
 use App\Models\Request;
 use App\Models\Training;
+use App\Models\TrainingSurvey;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 use Livewire\Component;
 
 class AdminDashboard extends Component
@@ -21,7 +23,7 @@ class AdminDashboard extends Component
   public array $monthBreakdown = [];
 
   // Stats cards
-  public int $totalTrainingThisYear = 0;
+  public int $totalPendingSurveys = 0;
   public int $upcomingSchedules = 0;
   public int $totalEmployees = 0;
 
@@ -213,13 +215,33 @@ class AdminDashboard extends Component
   public function loadStatsCards()
   {
     $now = Carbon::now();
-    $startOfYear = $now->copy()->startOfYear();
-    $endOfYear = $now->copy()->endOfYear();
 
-    // Total training this year - all trainings in current year (exclude cancelled and rejected)
-    $this->totalTrainingThisYear = Training::whereBetween('start_date', [$startOfYear, $endOfYear])
-      ->whereNotIn('status', ['cancelled', 'rejected'])
+    // Total pending surveys (Level 1 + Level 3)
+    // Pending = survey published (not draft), training done/approved, and response not completed.
+    // Special rule (Level 3): only count surveys that are available now (>= training end_date + 3 months).
+    $level3AvailableThreshold = $now->copy()->subMonthsNoOverflow(3)->endOfDay();
+
+    $pendingSurveyLevel1 = (int) DB::table('survey_responses as sr')
+      ->join('training_surveys as ts', 'ts.id', '=', 'sr.survey_id')
+      ->join('trainings as t', 't.id', '=', 'ts.training_id')
+      ->where('ts.level', 1)
+      ->where('ts.status', '!=', TrainingSurvey::STATUS_DRAFT)
+      ->whereIn('t.status', ['done', 'approved'])
+      ->where('sr.is_completed', 0)
       ->count();
+
+    $pendingSurveyLevel3 = (int) DB::table('survey_responses as sr')
+      ->join('training_surveys as ts', 'ts.id', '=', 'sr.survey_id')
+      ->join('trainings as t', 't.id', '=', 'ts.training_id')
+      ->where('ts.level', 3)
+      ->where('ts.status', '!=', TrainingSurvey::STATUS_DRAFT)
+      ->whereIn('t.status', ['done', 'approved'])
+      ->whereNotNull('t.end_date')
+      ->where('t.end_date', '<=', $level3AvailableThreshold)
+      ->where('sr.is_completed', 0)
+      ->count();
+
+    $this->totalPendingSurveys = $pendingSurveyLevel1 + $pendingSurveyLevel3;
 
     // Upcoming schedules - trainings with start_date >= today (exclude cancelled and rejected)
     $this->upcomingSchedules = Training::where('start_date', '>=', $now->startOfDay())

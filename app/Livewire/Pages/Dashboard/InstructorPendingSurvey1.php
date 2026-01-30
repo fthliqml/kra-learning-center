@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Livewire\Pages\dashboard;
+namespace App\Livewire\Pages\Dashboard;
 
 use App\Models\Trainer;
 use App\Models\TrainingSurvey;
@@ -39,6 +39,7 @@ class InstructorPendingSurvey1 extends Component
             ->where('ts.level', 1)
             ->where('ts.status', '!=', TrainingSurvey::STATUS_DRAFT)
             ->whereIn('t.status', ['done', 'approved'])
+            // Only trainings where this trainer is assigned in any session
             ->whereExists(function ($q) use ($trainerId) {
                 $q->select(DB::raw(1))
                     ->from('training_sessions as s')
@@ -70,6 +71,7 @@ class InstructorPendingSurvey1 extends Component
                 });
             }
 
+            // Count distinct pairs (survey_id + employee_id)
             $totalPending = (clone $base)->count(DB::raw('DISTINCT CONCAT(ts.id, ":", a.employee_id)'));
 
             $rows = (clone $base)
@@ -95,12 +97,12 @@ class InstructorPendingSurvey1 extends Component
 
         $headers = [
             ['key' => 'training_name', 'label' => 'Training'],
-            ['key' => 'employee_name', 'label' => 'Employee'],
+            ['key' => 'employee_name', 'label' => 'Responder'],
             ['key' => 'employee_nrp', 'label' => 'NRP'],
             ['key' => 'response_status', 'label' => 'Status'],
         ];
 
-        return view('pages.dashboard.instructor-pending-survey-1', [
+        return view('pages.dashboard.pending-surveys', [
             'headers' => $headers,
             'rows' => $rows,
             'totalPending' => $totalPending,
