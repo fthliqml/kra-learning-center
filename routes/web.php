@@ -44,6 +44,8 @@ use App\Livewire\Pages\TestReview\TestReviewAnswers;
 use App\Livewire\Pages\Reports\TrainingActivityReport;
 use App\Livewire\Pages\Reports\CertificationActivityReport;
 use App\Livewire\Pages\Reports\InstructorDailyRecordReport;
+use App\Livewire\Pages\Dashboard\InstructorPendingSurvey1;
+use App\Livewire\Pages\Dashboard\AdminPendingSurveys;
 use Illuminate\Support\Facades\Route;
 
 // Public (guest) routes
@@ -116,6 +118,10 @@ Route::middleware('auth')->group(function () {
     Route::get('/reports/training-activity', TrainingActivityReport::class)->name('reports.training-activity');
     Route::get('/reports/certification-activity', CertificationActivityReport::class)->name('reports.certification-activity');
     Route::get('/reports/instructor-daily-record', InstructorDailyRecordReport::class)->name('reports.instructor-daily-record');
+
+    // Pending surveys
+    Route::get('/dashboard/instructor/survey-1/pending', InstructorPendingSurvey1::class)->name('instructor.survey1.pending');
+    Route::get('/dashboard/admin/pending-surveys', AdminPendingSurveys::class)->name('admin.pending-surveys.index');
 
     // Certificate (placeholder route for training certificates)
     Route::get('/certificate/training/{training}/employee/{employee}', function ($training, $employee) {

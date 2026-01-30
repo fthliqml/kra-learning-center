@@ -48,7 +48,7 @@
                         <div class="space-y-2">
                             <x-choices label="Participants" wire:model="participants" :options="$usersSearchable"
                                 search-function="userSearch" debounce="300ms" option-value="id" option-label="name"
-                                class="focus-within:border-0" placeholder="Search name of participant..." min-chars=2
+                                class="focus-within:border-0" placeholder="Search..." min-chars=2
                                 hint="Type at least 2 chars" searchable multiple clearable />
                         </div>
                     </div>

@@ -7,7 +7,7 @@
         </h1>
 
         <div class="flex gap-3 flex-col w-full items-center justify-center lg:justify-end md:gap-2 md:flex-row">
-            <x-search-input placeholder="Search certification..." class="max-w-72"
+            <x-search-input placeholder="Search..." class="max-w-72"
                 wire:model.live.debounce.600ms="search" />
         </div>
     </div>
